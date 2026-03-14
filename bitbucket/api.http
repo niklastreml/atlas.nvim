@@ -1,0 +1,28 @@
+@bitbucket_workspace = {{BITBUCKET_WORKSPACE}}
+@bitbucket_repo = your-repo
+@bitbucket_pr_id = 1
+@bitbucket_commit_hash = abcdef1234567890abcdef1234567890abcdef12
+
+### Get open pull requests
+GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests?state=OPEN&pagelen=50
+Authorization: {{BITBUCKET_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+### Get pull request details
+GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests/{{bitbucket_pr_id}}
+Authorization: {{BITBUCKET_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+### Get pull request comments
+GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests/{{bitbucket_pr_id}}/comments
+Authorization: {{BITBUCKET_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+### Get build statuses for commit
+GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/commit/{{bitbucket_commit_hash}}/statuses
+Authorization: {{BITBUCKET_AUTH}}
+Content-Type: application/json
+Accept: application/json

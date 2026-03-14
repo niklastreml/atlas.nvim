@@ -1,0 +1,187 @@
+@jira_api_version = 3
+@jira_issue_key = XXXX-9005
+@jira_project_key = XXXX
+@jira_transition_id = 31
+@jira_account_id = 123456:abcd-efgh-ijkl
+@jira_comment_id = 10001
+
+### Get current user
+GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/myself
+Authorization: {{JIRA_AUTH}}
+Accept: application/json
+Content-Type: application/json
+
+### Search issues (v3)
+POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/search/jql
+Authorization: {{JIRA_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "jql": "project = {{jira_project_key}} ORDER BY updated DESC",
+  "fields": ["summary", "status", "assignee"],
+  "nextPageToken": "",
+  "maxResults": 10
+}
+
+
+### Get transitions
+GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/transitions
+Authorization: {{JIRA_AUTH}}
+Accept: application/json
+
+
+### Transition issue
+POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/transitions
+Authorization: {{JIRA_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "transition": {
+    "id": "{{jira_transition_id}}"
+  }
+}
+
+
+### Add worklog
+POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/worklog
+Authorization: {{JIRA_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "timeSpent": "1h",
+  "comment": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Worked on implementation"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+
+### Assign issue
+PUT {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/assignee
+Authorization: {{JIRA_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "accountId": "{{jira_account_id}}"
+}
+
+
+### Get issue details
+GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}
+Authorization: {{JIRA_AUTH}}
+Accept: application/json
+
+
+### Get project statuses
+GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/project/{{jira_project_key}}/statuses
+Authorization: {{JIRA_AUTH}}
+Accept: application/json
+
+
+### Get comments
+GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/comment
+Authorization: {{JIRA_AUTH}}
+Accept: application/json
+
+
+### Add comment
+POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/comment
+Authorization: {{JIRA_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "body": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "This is a comment from atlas.nvim"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+
+### Edit comment
+PUT {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/comment/{{jira_comment_id}}
+Authorization: {{JIRA_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "body": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Updated comment text"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+
+### Update issue fields
+PUT {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}
+Authorization: {{JIRA_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "fields": {
+    "summary": "Updated summary from atlas.nvim"
+  }
+}
+
+
+### Create issue
+POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue
+Authorization: {{JIRA_AUTH}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "fields": {
+    "project": {
+      "key": "{{jira_project_key}}"
+    },
+    "summary": "New issue from atlas.nvim",
+    "issuetype": {
+      "name": "Task"
+    }
+  }
+}
+
+
+### Get create metadata
+GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/createmeta?projectKeys={{jira_project_key}}
+Authorization: {{JIRA_AUTH}}
+Accept: application/json
