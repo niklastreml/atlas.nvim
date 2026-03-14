@@ -1,28 +1,43 @@
-@bitbucket_workspace = {{BITBUCKET_WORKSPACE}}
-@bitbucket_repo = your-repo
-@bitbucket_pr_id = 1
-@bitbucket_commit_hash = abcdef1234567890abcdef1234567890abcdef12
+@bitbucket_workspace = emrearmaganxx
+@bitbucket_repo = atlas
 
 ### Get open pull requests
 GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests?state=OPEN&pagelen=50
-Authorization: {{BITBUCKET_AUTH}}
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
+> {%
+  const pr = response.body?.values?.[0];
+  if (!pr) throw new Error("No OPEN pull requests found");
+  const prId = pr.id;
+  const sourceHash = pr.source?.commit?.hash;
+  const destinationHash = pr.destination?.commit?.hash; 
+  if (!prId) throw new Error("PR id missing");
+  if (!sourceHash) throw new Error("Source commit hash missing");
+  client.global.set("bitbucket_pr_id", String(prId));
+  client.global.set("bitbucket_commit_hash", String(sourceHash));
+  client.global.set("bitbucket_source_commit_hash", String(sourceHash));
+  if (destinationHash) {
+    client.global.set("bitbucket_destination_commit_hash", String(destinationHash));
+  }
+%}
+
+
 ### Get pull request details
 GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests/{{bitbucket_pr_id}}
-Authorization: {{BITBUCKET_AUTH}}
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
 ### Get pull request comments
 GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests/{{bitbucket_pr_id}}/comments
-Authorization: {{BITBUCKET_AUTH}}
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
 ### Get build statuses for commit
-GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/commit/{{bitbucket_commit_hash}}/statuses
-Authorization: {{BITBUCKET_AUTH}}
+GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests/{{bitbucket_pr_id}}/statuses
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
