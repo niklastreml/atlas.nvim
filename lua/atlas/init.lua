@@ -1,8 +1,8 @@
 local M = {}
 
 M.setup = function(opts)
-	-- local atlas = require("atlas")
-	-- atlas.setup(opts)
+	require("atlas.config").setup(opts)
+  require("atlas.ui.highlights").setup()
 end
 
 return M
