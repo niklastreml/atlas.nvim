@@ -1,12 +1,9 @@
 local M = {}
 
 local palette = {
-	fg = "#cad3f5",
-	muted = "#8087a2",
 	blue = "#8aadf4",
 	green = "#a6da95",
 	orange = "#f5a97f",
-	red = "#ed8796",
 	tab_inactive_bg = "#494d64",
 	tab_inactive_fg = "#a5adcb",
 	column_header = "#939ab7",
@@ -19,12 +16,9 @@ local groups = {
 	AtlasActionRefresh = { bg = palette.green, fg = "#1e1e2e", bold = true },
 	AtlasActionHelp = { bg = palette.orange, fg = "#1e1e2e", bold = true },
 	AtlasColumnHeader = { fg = palette.column_header, bold = true },
-	AtlasMuted = { fg = palette.muted },
 
 	AtlasNavActive = { link = "AtlasTabActive" },
 	AtlasNavInactive = { link = "AtlasTabInactive" },
-	AtlasBorder = { link = "FloatBorder" },
-	AtlasNormal = { link = "Normal" },
 
 	AtlasTitleJira = { fg = "#0f172a", bg = "#38bdf8", bold = true },
 	AtlasTitleBitbucket = { fg = "#e5e7eb", bg = "#2563eb", bold = true },

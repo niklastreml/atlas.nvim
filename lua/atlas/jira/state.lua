@@ -1,2 +1,6 @@
-local M = { line_map = {} }
+local M = {
+	current_view = nil,
+	line_map = {},
+}
+
 return M

@@ -3,7 +3,6 @@ local M = {}
 function M.panel_win_config()
 	local total_w = vim.o.columns
 	local total_h = vim.o.lines
-
 	local width = math.floor(total_w * 0.9)
 	local height = math.floor(total_h * 0.9)
 	local row = math.floor((total_h - height) / 2)
@@ -16,14 +15,13 @@ function M.panel_win_config()
 		row = row,
 		col = col,
 		style = "minimal",
-		border = "rounded",
+		border = "none",
+		title_pos = "center",
+		title = "Atlas",
 		zindex = 100,
 	}
 end
 
----@param name string
----@param filetype string
----@return number
 function M.create_buf(name, filetype)
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_name(buf, name)
@@ -35,7 +33,6 @@ function M.create_buf(name, filetype)
 	return buf
 end
 
----@param win number
 function M.apply_win_config(win)
 	vim.api.nvim_set_option_value("number", false, { win = win })
 	vim.api.nvim_set_option_value("relativenumber", false, { win = win })
@@ -48,5 +45,4 @@ function M.apply_win_config(win)
 		{ win = win }
 	)
 end
-
 return M
