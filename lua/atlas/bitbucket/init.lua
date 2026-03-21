@@ -1,5 +1,5 @@
 local M = {}
 
-M.open = function(opts) end
+function M.setup() end
 
 return M

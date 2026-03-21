@@ -121,47 +121,20 @@ local function normalize_views()
 	end
 end
 
----@param provider "jira"|"bitbucket"|"github"
----@return table[]
-function M.get_views(provider)
-	if provider == "jira" then
-		return M.options.jira.views or {}
-	elseif provider == "bitbucket" then
-		return M.options.bitbucket.views or {}
-	elseif provider == "github" then
-		return M.options.github.views or {}
-	end
-	return {}
-end
-
----@param provider "jira"|"bitbucket"|"github"
----@return string[]
-function M.get_view_labels(provider)
-	local labels = {}
-	for _, view in ipairs(M.get_views(provider)) do
-		if view.key and view.key ~= "" then
-			table.insert(labels, string.format("%s (%s)", view.name, view.key))
-		else
-			table.insert(labels, view.name)
-		end
-	end
-	return labels
-end
-
 local function register_commands()
-	pcall(vim.api.nvim_del_user_command, "Jira", nil)
-	pcall(vim.api.nvim_del_user_command, "Bitbucket", nil)
-	pcall(vim.api.nvim_del_user_command, "Github", nil)
+	pcall(vim.api.nvim_del_user_command, "AtlasJira", nil)
+	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket", nil)
+	pcall(vim.api.nvim_del_user_command, "AtlasGithub", nil)
 
-	vim.api.nvim_create_user_command("Jira", function()
+	vim.api.nvim_create_user_command("AtlasJira", function()
 		require("atlas.ui.renderer").render()
 	end, { desc = "Open Jira issue picker" })
 
-	vim.api.nvim_create_user_command("Bitbucket", function()
+	vim.api.nvim_create_user_command("AtlasBitbucket", function()
 		require("atlas.ui.renderer").render()
 	end, { desc = "Open Bitbucket picker" })
 
-	vim.api.nvim_create_user_command("Github", function()
+	vim.api.nvim_create_user_command("AtlasGithub", function()
 		require("atlas.ui.renderer").render()
 	end, { desc = "Open Github picker" })
 end

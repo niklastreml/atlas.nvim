@@ -17,9 +17,6 @@ local groups = {
 	AtlasActionHelp = { bg = palette.orange, fg = "#1e1e2e", bold = true },
 	AtlasColumnHeader = { fg = palette.column_header, bold = true },
 
-	AtlasNavActive = { link = "AtlasTabActive" },
-	AtlasNavInactive = { link = "AtlasTabInactive" },
-
 	AtlasTitleJira = { fg = "#0f172a", bg = "#38bdf8", bold = true },
 	AtlasTitleBitbucket = { fg = "#e5e7eb", bg = "#2563eb", bold = true },
 	AtlasTitleGithub = { fg = "#e5e7eb", bg = "#111827", bold = true },
