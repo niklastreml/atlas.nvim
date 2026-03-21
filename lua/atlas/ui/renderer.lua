@@ -1,59 +1,50 @@
 local M = {}
 
 local state = require("atlas.ui.state")
-local resize_id = nil
 
-local function render_current_view(opts)
-	if opts == "jira" then
-		state.current_view = "jira"
-		require("atlas.jira").setup()
-	elseif opts == "bitbucket" then
-		state.current_view = "bitbucket"
-		require("atlas.bitbucket").setup()
-	elseif opts == "github" then
-		state.current_view = "github"
-		require("atlas.jira").setup()
+local ns = vim.api.nvim_create_namespace("atlas.ui")
+
+local function apply_spans(buf, spans)
+	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+	for _, span in ipairs(spans) do
+		vim.api.nvim_buf_set_extmark(buf, ns, span.line, span.start_col, {
+			end_row = span.line,
+			end_col = span.end_col,
+			hl_group = span.hl_group,
+		})
 	end
 end
 
-local function setup_resize_handler()
-	if resize_id ~= nil then
-		vim.api.nvim_del_autocmd(resize_id)
-	end
-
-	local resize_group = vim.api.nvim_create_augroup("AtlasUIResize", { clear = true })
-	resize_id = vim.api.nvim_create_autocmd("VimResized", {
-		group = resize_group,
-		callback = function()
-			local window = require("atlas.ui.window")
-			if not window.is_open() then
-				return
-			end
-
-			window.resize()
-			render_current_view(state.current_view)
-		end,
-	})
-end
-
----@param opts { view: "jira"|"bitbucket"|"github"}
-function M.render(opts)
+---@param view "bitbucket"|"github"|"jira"
+function M.render(view)
 	local window = require("atlas.ui.window")
 	if not window.is_open() then
 		window.open()
 	end
 
-	setup_resize_handler()
+	local lines = {}
+	local spans = {}
+	local line_map = {}
 
-	if opts == "jira" then
+	local width = vim.api.nvim_win_get_width(state.win_id)
+	if view == "jira" then
 		state.current_view = "jira"
-	elseif opts == "bitbucket" then
+		lines, spans, line_map = require("atlas.jira.ui.renderer").render(width)
+	elseif view == "bitbucket" then
 		state.current_view = "bitbucket"
-	elseif opts == "github" then
+		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render(width)
+	elseif view == "github" then
 		state.current_view = "github"
+		lines, spans, line_map = require("atlas.github.ui.renderer").render(width)
 	end
 
-	render_current_view(opts)
+	local buf = state.buf_id
+	state.line_map = line_map or {}
+
+	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines or {})
+	apply_spans(buf, spans)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
 
 return M

@@ -41,8 +41,24 @@ function M.apply_win_config(win)
 	vim.api.nvim_set_option_value("cursorline", true, { win = win })
 	vim.api.nvim_set_option_value(
 		"winhighlight",
-		"Normal:NormalFloat,NormalFloat:NormalFloat,FloatBorder:FloatBorder,CursorLine:CursorLine",
+		"Normal:Normal,NormalFloat:Normal,FloatBorder:FloatBorder,CursorLine:CursorLine",
 		{ win = win }
 	)
 end
+
+function M.append_block(lines, spans, block)
+	local base = #lines
+	for _, line in ipairs(block.lines or {}) do
+		table.insert(lines, line)
+	end
+	for _, span in ipairs(block.highlights or {}) do
+		table.insert(spans, {
+			line = base + span.line,
+			start_col = span.start_col,
+			end_col = span.end_col,
+			hl_group = span.hl_group,
+		})
+	end
+end
+
 return M

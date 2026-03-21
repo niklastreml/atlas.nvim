@@ -1,30 +1,15 @@
 local M = {}
 
-local icons = require("atlas.ui.icons")
-
 local function text_width(text)
 	return vim.fn.strdisplaywidth(text)
 end
 
-local function title_case(text)
-	if text == nil or text == "" then
-		return ""
-	end
-	return text:sub(1, 1):upper() .. text:sub(2)
-end
-
 function M.render(opts)
 	local width = opts.width or vim.o.columns
-	local current_view = opts.current_view or "---"
-	local views = opts.views or {}
-
-	local width = opts.width or vim.o.columns
-	local items = opts.items or {}
-
-	local actions = {
-		{ label = string.format(" %s Refresh (r) ", icons.action("refresh")), hl = "AtlasActionRefresh" },
-		{ label = string.format(" %s Help (?) ", icons.action("help")), hl = "AtlasActionHelp" },
-	}
+	local items = opts.items or {} -- { label, icon, active }
+	local actions = opts.actions or {} -- { label, hl_group }
+	local active_hl = opts.active_hl or "AtlasTabActive"
+	local inactive_hl = opts.inactive_hl or "AtlasTabInactive"
 
 	local margin = 2
 	local line = string.rep(" ", margin)
@@ -33,10 +18,8 @@ function M.render(opts)
 	local display_col = margin
 
 	for _, item in ipairs(items) do
-		local icon = item.icon or icons.fallback()
-		local label_text = title_case(item.label or "")
-		local label = string.format(" %s  %s ", icon, label_text)
-		local hl = item.active and "AtlasNavActive" or "AtlasNavInactive"
+		local label = string.format(" %s  %s ", item.icon or "•", item.label or "")
+		local hl = item.active and active_hl or inactive_hl
 
 		line = line .. label .. "  "
 		table.insert(highlights, {
@@ -46,8 +29,8 @@ function M.render(opts)
 			hl_group = hl,
 		})
 
-		byte_col = byte_col + #label + margin
-		display_col = display_col + text_width(label) + margin
+		byte_col = byte_col + #label + 2
+		display_col = display_col + text_width(label) + 2
 	end
 
 	local actions_width = 0
@@ -70,7 +53,7 @@ function M.render(opts)
 			line = 0,
 			start_col = byte_col,
 			end_col = byte_col + #action.label,
-			hl_group = action.hl,
+			hl_group = action.hl_group,
 		})
 
 		byte_col = byte_col + #action.label
@@ -80,10 +63,7 @@ function M.render(opts)
 		end
 	end
 
-	return {
-		lines = { line },
-		highlights = highlights,
-	}
+	return { lines = { line }, highlights = highlights }
 end
 
 return M

@@ -2,13 +2,13 @@ local M = {}
 
 local config = require("atlas.config")
 local icons = require("atlas.ui.icons")
-local state = require("atlas.bitbucket.state")
+local state = require("atlas.github.state")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local ui_utils = require("atlas.ui.utils")
 
 function M.render(width)
-	local views = (config.options.bitbucket and config.options.bitbucket.views) or {}
+	local views = (config.options.github and config.options.github.views) or {}
 	if state.active_view_key == nil and views[1] then
 		state.active_view_key = views[1].key or views[1].name
 	end
@@ -19,7 +19,7 @@ function M.render(width)
 		local label = v.key and string.format("%s (%s)", v.name, v.key) or v.name
 		table.insert(nav_items, {
 			label = label,
-			icon = icons.provider("bitbucket"),
+			icon = icons.provider("github"),
 			active = key == state.active_view_key,
 		})
 	end
@@ -31,34 +31,26 @@ function M.render(width)
 
 	local lines, spans = {}, {}
 
-	ui_utils.append_block(
-		lines,
-		spans,
-		header.render({
-			width = width,
-			icon = icons.provider("bitbucket"),
-			title = "Bitbucket",
-			hl_group = "AtlasTitleBitbucket",
-		})
-	)
+	ui_utils.append_block(lines, spans, header.render({
+		width = width,
+		icon = icons.provider("github"),
+		title = "Github",
+		hl_group = "AtlasTitleGithub",
+	}))
 
-	ui_utils.append_block(
-		lines,
-		spans,
-		navbar.render({
-			width = width,
-			items = nav_items,
-			actions = actions,
-			active_hl = "AtlasTitleBitbucket",
-		})
-	)
+	ui_utils.append_block(lines, spans, navbar.render({
+		width = width,
+		items = nav_items,
+		actions = actions,
+		active_hl = "AtlasTitleGithub",
+	}))
 
 	table.insert(lines, "")
-	table.insert(lines, "  Bitbucket board - phase 1")
+	table.insert(lines, "  Github board - phase 1")
 	table.insert(lines, "")
 	table.insert(lines, "  Table comes in phase 2.")
 
-	return lines, spans, {}
+	return lines, spans, state.line_map
 end
 
 return M

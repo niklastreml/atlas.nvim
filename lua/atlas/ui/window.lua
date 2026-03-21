@@ -20,8 +20,16 @@ function M.open()
 		state.buf_id = utils.create_buf("Atlas", "atlas")
 	end
 
-	local win_cfg = utils.panel_win_config()
-	state.win_id = vim.api.nvim_open_win(state.buf_id, true, win_cfg)
+	vim.cmd("tabnew")
+	state.tab_id = vim.api.nvim_get_current_tabpage()
+	state.win_id = vim.api.nvim_get_current_win()
+
+	local tab_buf = vim.api.nvim_get_current_buf()
+	vim.api.nvim_win_set_buf(state.win_id, state.buf_id)
+	if tab_buf ~= state.buf_id and vim.api.nvim_buf_is_valid(tab_buf) then
+		pcall(vim.api.nvim_buf_delete, tab_buf, { force = true })
+	end
+
 	utils.apply_win_config(state.win_id)
 
 	--- TODO: Refactor somewhere else
@@ -34,8 +42,18 @@ function M.close()
 		return
 	end
 
-	vim.api.nvim_win_close(state.win_id, true)
+	if state.tab_id ~= nil and vim.api.nvim_tabpage_is_valid(state.tab_id) then
+		local current_tab = vim.api.nvim_get_current_tabpage()
+		if current_tab ~= state.tab_id then
+			vim.api.nvim_set_current_tabpage(state.tab_id)
+		end
+		vim.cmd("tabclose")
+	else
+		vim.api.nvim_win_close(state.win_id, true)
+	end
+
 	state.win_id = nil
+	state.tab_id = nil
 	if state.prev_win ~= nil and vim.api.nvim_win_is_valid(state.prev_win) then
 		vim.api.nvim_set_current_win(state.prev_win)
 	end
@@ -43,12 +61,7 @@ function M.close()
 end
 
 function M.resize()
-	if not M.is_open() then
-		return
-	end
-
-	local cfg = utils.panel_win_config()
-	vim.api.nvim_win_set_config(state.win_id, cfg)
+	return
 end
 
 return M

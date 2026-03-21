@@ -1,5 +1,4 @@
 local M = {}
-local icons = require("atlas.ui.icons")
 
 local function center_text(text, width)
 	local content_width = vim.fn.strdisplaywidth(text)
@@ -12,21 +11,17 @@ end
 
 function M.render(opts)
 	local width = opts.width or vim.o.columns
-	local current_view = opts.current_view or "bitbucket"
-	local icon = icons.provider(current_view)
-	local title = string.format("  %s  Atlas (%s)  ", icon, current_view)
-	local inner = math.max(width - 2, 20)
-	local line, start_col = center_text(title, inner)
+	local icon = opts.icon or "•"
+	local title = opts.title or "Atlas"
+	local hl_group = opts.hl_group or "Title"
+
+	local text = string.format("  %s  %s  ", icon, title)
+	local line, start_col = center_text(text, math.max(width - 2, 20))
 
 	return {
 		lines = { line, "" },
 		highlights = {
-			{
-				line = 0,
-				start_col = start_col,
-				end_col = start_col + #title,
-				hl_group = "AtlasTitleBitbucket", --- TODO: Fix me
-			},
+			{ line = 0, start_col = start_col, end_col = start_col + #text, hl_group = hl_group },
 		},
 	}
 end

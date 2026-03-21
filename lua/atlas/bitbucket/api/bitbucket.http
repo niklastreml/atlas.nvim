@@ -41,3 +41,16 @@ GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbuck
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
+
+### Diff (copy from above repos)
+GET https://api.bitbucket.org/2.0/repositories/emrearmaganxx/atlas/diff/emrearmaganxx/atlas:9b6ec2c8e700%0De52b01460769?from_pullrequest_id=1&topic=true
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+
+### Diff stats (copy from above repos)
+GET https://api.bitbucket.org/2.0/repositories/emrearmaganxx/atlas/diffstat/emrearmaganxx/atlas:9b6ec2c8e700%0De52b01460769?from_pullrequest_id=1&topic=true
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
