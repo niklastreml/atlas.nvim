@@ -27,15 +27,17 @@ function M.render(view)
 	local line_map = {}
 
 	local width = vim.api.nvim_win_get_width(state.win_id)
+	local height = vim.api.nvim_win_get_height(state.win_id)
+
 	if view == "jira" then
 		state.current_view = "jira"
-		lines, spans, line_map = require("atlas.jira.ui.renderer").render(width)
+		lines, spans, line_map = require("atlas.jira.ui.renderer").render(width, height)
 	elseif view == "bitbucket" then
 		state.current_view = "bitbucket"
-		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render(width)
+		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render(width, height)
 	elseif view == "github" then
 		state.current_view = "github"
-		lines, spans, line_map = require("atlas.github.ui.renderer").render(width)
+		lines, spans, line_map = require("atlas.github.ui.renderer").render(width, height)
 	end
 
 	local buf = state.buf_id

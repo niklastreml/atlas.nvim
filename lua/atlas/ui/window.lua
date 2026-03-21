@@ -3,6 +3,12 @@ local state = require("atlas.ui.state")
 local utils = require("atlas.ui.utils")
 local highlights = require("atlas.ui.highlights")
 
+local function hide_chrome()
+	vim.o.laststatus = 0
+	vim.o.ruler = false
+	vim.o.showcmd = false
+end
+
 function M.is_open()
 	return state.win_id ~= nil and vim.api.nvim_win_is_valid(state.win_id)
 end
@@ -10,11 +16,15 @@ end
 function M.open()
 	if M.is_open() then
 		vim.api.nvim_set_current_win(state.win_id)
+		hide_chrome()
 		return state.buf_id, state.win_id
 	end
 
 	highlights.setup()
 	state.prev_win = vim.api.nvim_get_current_win()
+	state.prev_laststatus = vim.o.laststatus
+	state.prev_ruler = vim.o.ruler
+	state.prev_showcmd = vim.o.showcmd
 
 	if state.buf_id == nil or not vim.api.nvim_buf_is_valid(state.buf_id) then
 		state.buf_id = utils.create_buf("Atlas", "atlas")
@@ -31,6 +41,13 @@ function M.open()
 	end
 
 	utils.apply_win_config(state.win_id)
+	hide_chrome()
+
+	vim.schedule(function()
+		if M.is_open() then
+			hide_chrome()
+		end
+	end)
 
 	--- TODO: Refactor somewhere else
 	vim.keymap.set("n", "q", M.close, { buffer = state.buf_id, silent = true, nowait = true })
@@ -54,6 +71,18 @@ function M.close()
 
 	state.win_id = nil
 	state.tab_id = nil
+	if state.prev_laststatus ~= nil then
+		vim.o.laststatus = state.prev_laststatus
+	end
+	if state.prev_ruler ~= nil then
+		vim.o.ruler = state.prev_ruler
+	end
+	if state.prev_showcmd ~= nil then
+		vim.o.showcmd = state.prev_showcmd
+	end
+	state.prev_laststatus = nil
+	state.prev_ruler = nil
+	state.prev_showcmd = nil
 	if state.prev_win ~= nil and vim.api.nvim_win_is_valid(state.prev_win) then
 		vim.api.nvim_set_current_win(state.prev_win)
 	end

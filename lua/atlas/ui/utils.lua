@@ -39,6 +39,8 @@ function M.apply_win_config(win)
 	vim.api.nvim_set_option_value("signcolumn", "no", { win = win })
 	vim.api.nvim_set_option_value("wrap", false, { win = win })
 	vim.api.nvim_set_option_value("cursorline", true, { win = win })
+	vim.api.nvim_set_option_value("winbar", "", { win = win })
+	vim.api.nvim_set_option_value("statusline", "", { win = win })
 	vim.api.nvim_set_option_value(
 		"winhighlight",
 		"Normal:Normal,NormalFloat:Normal,FloatBorder:FloatBorder,CursorLine:CursorLine",
