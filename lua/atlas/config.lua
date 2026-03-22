@@ -15,9 +15,14 @@
 --- @field views JiraViewConfig[]|nil
 
 --- Bitbucket ---
+---@class BitbucketRepoConfig
+---@field workspace string
+---@field repo string
+
 ---@class BitbucketViewConfig
 ---@field name string
 ---@field key string|nil
+---@field repos BitbucketRepoConfig[]|nil
 ---@field filter fun(pr: table, ctx: table): boolean|nil
 
 --- @class BitbucketConfig
@@ -83,19 +88,6 @@ local function default_jira_views()
 	}
 end
 
----@return BitbucketViewConfig
-local function default_bitbucket_views()
-	return {
-		{
-			name = "All",
-			key = "A",
-			filter = function(_, _)
-				return true
-			end,
-		},
-	}
-end
-
 ---@return GithubViewConfig
 local function default_github_views()
 	return {
@@ -112,9 +104,6 @@ end
 local function normalize_views()
 	if not M.options.jira.views or #M.options.jira.views == 0 then
 		M.options.jira.views = default_jira_views()
-	end
-	if not M.options.bitbucket.views or #M.options.bitbucket.views == 0 then
-		M.options.bitbucket.views = default_bitbucket_views()
 	end
 	if not M.options.github.views or #M.options.github.views == 0 then
 		M.options.github.views = default_github_views()
