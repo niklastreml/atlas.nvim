@@ -10,39 +10,118 @@ local utils = require("atlas.utils")
 local spinner = require("atlas.ui.popups.spinner")
 local service = require("atlas.bitbucket.api.service")
 
-local function to_rows(repo_groups)
+---@param rows table[]
+---@param group BitbucketRepoPRGroup
+local function append_plain_pr_rows(rows, group)
+	for _, pr in ipairs(group.pullrequests or {}) do
+		table.insert(rows, {
+			kind = "pr",
+			repo_pr = string.format("#%s %s", tostring(pr.id), pr.title or ""),
+			comments = tostring(pr.comments),
+			tasks = tostring(pr.tasks),
+			author = pr.author.name,
+			repo = group.full_name,
+			updated = utils.relative_time(pr.updated_on),
+			_item = { kind = "pr", id = pr.id, repo = group.full_name },
+		})
+
+		table.insert(rows, {
+			kind = "meta",
+			repo_pr = string.format("%s → %s", pr.source_branch or "?", pr.target_branch or "?"),
+			comments = "",
+			tasks = "",
+			author = "",
+			repo = "",
+			updated = "",
+			separator = true,
+			_item = { kind = "pr_meta", id = pr.id, repo = group.full_name },
+		})
+	end
+end
+
+local function to_plain_rows(repo_groups)
 	local rows = {}
 
 	for _, group in ipairs(repo_groups or {}) do
-		for _, pr in ipairs(group.pullrequests or {}) do
-			table.insert(rows, {
-				kind = "pr",
-				id = "#" .. tostring(pr.id),
-				repo_pr = pr.title,
-				comments = tostring(pr.comments),
-				tasks = tostring(pr.tasks),
-				author = pr.author.name,
-				repo = group.full_name,
-				updated = utils.relative_time(pr.updated_on),
-				_item = { kind = "pr", id = pr.id, repo = group.full_name },
-			})
-
-			table.insert(rows, {
-				kind = "meta",
-				id = "",
-				repo_pr = string.format("%s → %s", pr.source_branch or "?", pr.target_branch or "?"),
-				comments = "",
-				tasks = "",
-				author = "",
-				repo = "",
-				updated = "",
-				separator = true,
-				_item = { kind = "pr_meta", id = pr.id, repo = group.full_name },
-			})
-		end
+		append_plain_pr_rows(rows, group)
 	end
 
 	return rows
+end
+
+local function table_columns()
+	return {
+		{ key = "repo_pr", name = "PR", min_width = 42, header_hl = "Normal" },
+		{ key = "comments", name = "󰅺", min_width = 2, can_grow = false, header_hl = "Normal" },
+		{ key = "tasks", name = "󰄱", min_width = 2, can_grow = false, header_hl = "Normal" },
+		{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "Normal" },
+		{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "Normal" },
+		{ key = "updated", name = "󰥔", min_width = 4, can_grow = false, header_hl = "Normal" },
+	}
+end
+
+---@param opts { width: number, height: number }
+---@param repos BitbucketRepoPRGroup[]
+---@return string[]
+---@return table[]
+---@return table<number, table>
+local function build_plain_content(opts, repos)
+	local rows = to_plain_rows(repos)
+	local tbl_lines, tbl_map, tbl_spans = table_view.render({
+		width = opts.width,
+		margin = 0,
+		columns = table_columns(),
+		rows = rows,
+	})
+
+	return tbl_lines, tbl_spans, tbl_map
+end
+
+---@param opts { width: number, height: number }
+---@param repos BitbucketRepoPRGroup[]
+---@return string[]
+---@return table[]
+---@return table<number, table>
+local function build_grouped_content(opts, repos)
+	local lines, spans = {}, {}
+	local line_map = {}
+
+	for i, group in ipairs(repos or {}) do
+		local repo_line = string.format(" %s  %s", icons.provider("bitbucket"), group.full_name)
+		table.insert(lines, repo_line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #repo_line,
+			hl_group = "AtlasTextPositive",
+		})
+
+		local rows = {}
+		append_plain_pr_rows(rows, group)
+		if #rows == 0 then
+			table.insert(lines, "  (no pull requests)")
+		else
+			local tbl_lines, tbl_map, tbl_spans = table_view.render({
+				width = opts.width,
+				margin = 0,
+				columns = table_columns(),
+				rows = rows,
+			})
+
+			local table_base = #lines
+			utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+			for lnum, node in pairs(tbl_map) do
+				line_map[table_base + lnum] = node
+			end
+		end
+
+		if i < #repos then
+			table.insert(lines, "")
+			table.insert(lines, "")
+		end
+	end
+
+	return lines, spans, line_map
 end
 
 ---@param lines string[]
@@ -135,26 +214,18 @@ function M.render(opts, rerender)
 		spinner.start()
 		table.insert(lines, "Loading...")
 	else
-		local rows = to_rows(state.repos or {})
-		local tbl_lines, tbl_map, tbl_spans = table_view.render({
-			width = opts.width,
-			margin = 0,
-			columns = {
-				{ key = "id", name = "ID", min_width = 8, can_grow = false, header_hl = "Normal" },
-				{ key = "repo_pr", name = "PR", min_width = 34, header_hl = "Normal" },
-				{ key = "comments", name = "󰅺", min_width = 2, can_grow = false, header_hl = "Normal" },
-				{ key = "tasks", name = "󰄱", min_width = 2, can_grow = false, header_hl = "Normal" },
-				{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "Normal" },
-				{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "Normal" },
-				{ key = "updated", name = "󰥔", min_width = 4, can_grow = false, header_hl = "Normal" },
-			},
-			rows = rows,
-		})
+		local grouped = state.active_view ~= nil and state.active_view.layout == "grouped"
+		local body_lines, body_spans, body_map
+		if grouped then
+			body_lines, body_spans, body_map = build_grouped_content(opts, state.repos or {})
+		else
+			body_lines, body_spans, body_map = build_plain_content(opts, state.repos or {})
+		end
 
-		local table_base = #lines
-		utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
-		for lnum, node in pairs(tbl_map) do
-			line_map[table_base + lnum] = node
+		local body_base = #lines
+		utils.append_block(lines, spans, { lines = body_lines, highlights = body_spans })
+		for lnum, node in pairs(body_map) do
+			line_map[body_base + lnum] = node
 		end
 	end
 
