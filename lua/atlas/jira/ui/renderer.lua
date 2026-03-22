@@ -61,7 +61,7 @@ function M.render(opts, rerender)
 	end
 
 	local actions = {
-		{ label = string.format(" %s Refresh (r) ", icons.action("refresh")), hl_group = "AtlasTitleJira" },
+		{ label = string.format(" %s Refresh (r) ", icons.action("refresh")), hl_group = "AtlasJiraTheme" },
 	}
 
 	local lines, spans = {}, {}
@@ -74,7 +74,7 @@ function M.render(opts, rerender)
 			width = opts.width,
 			icon = icons.provider("jira"),
 			title = "Jira",
-			hl_group = "AtlasTitleJira",
+			hl_group = "AtlasJiraTheme",
 		})
 	)
 
@@ -85,7 +85,7 @@ function M.render(opts, rerender)
 			width = opts.width,
 			items = nav_items,
 			actions = actions,
-			active_hl = "AtlasTitleJira",
+			active_hl = "AtlasJiraTheme",
 		})
 	)
 
@@ -117,7 +117,7 @@ function M.render(opts, rerender)
 			if row.kind == "issue" and col.key == "status" then
 				return "AtlasTextWarning"
 			end
-			return "AtlasText"
+			return "AtlasTextMuted"
 		end,
 	})
 

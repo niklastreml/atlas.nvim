@@ -3,6 +3,7 @@
     {
       "id": 101,
       "title": "refactor auth middleware",
+      "description": "Refactor auth middleware to simplify token validation.\n\n* Remove duplicated auth guards\n* Normalize token parsing\n\n**Notes:** keeps backward compatibility.",
       "state": "OPEN",
       "draft": false,
       "comment_count": 6,
@@ -21,6 +22,7 @@
     {
       "id": 102,
       "title": "fix cache invalidation race",
+      "description": "Fix race condition in cache invalidation.\n\nWhen two workers update the same key, stale values could survive.\n\n* Added compare-and-swap\n* Added retry for transient lock failures",
       "state": "OPEN",
       "draft": true,
       "comment_count": 1,
@@ -39,6 +41,7 @@
     {
       "id": 103,
       "title": "update readme and onboarding docs",
+      "description": "Update README and onboarding docs.\n\n**Includes**\n* local setup\n* test commands\n* troubleshooting\n\nSee section: Getting Started.",
       "state": "OPEN",
       "draft": false,
       "comment_count": 3,
@@ -57,6 +60,7 @@
     {
       "id": 104,
       "title": "optimize build pipeline caching",
+      "description": "Optimize CI cache keys and restore strategy.\n\nExpected impact:\n* faster warm builds\n* fewer cache misses\n* lower runner time",
       "state": "OPEN",
       "draft": false,
       "comment_count": 0,
@@ -75,6 +79,7 @@
     {
       "id": 105,
       "title": "add localization keys for claims flow",
+      "description": "Add missing localization keys for claims flow.\n\n* de-DE\n* en-GB\n\nFallback behavior now defaults to stable key paths.",
       "state": "OPEN",
       "draft": false,
       "comment_count": 2,
@@ -93,6 +98,7 @@
     {
       "id": 106,
       "title": "replace deprecated analytics sdk",
+      "description": "Replace deprecated analytics SDK.\n\nMigration notes:\n* old events mapped to new schema\n* adapter layer now owns enrichment\n* legacy hooks removed",
       "state": "OPEN",
       "draft": true,
       "comment_count": 5,

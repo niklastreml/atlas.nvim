@@ -8,7 +8,7 @@ function M.render(opts)
 	local width = opts.width or vim.o.columns
 	local items = opts.items or {} -- { label, icon, active }
 	local actions = opts.actions or {} -- { label, hl_group }
-	local active_hl = opts.active_hl or "AtlasTabActive"
+	local active_hl = opts.active_hl
 	local inactive_hl = opts.inactive_hl or "AtlasTabInactive"
 
 	local margin = 2

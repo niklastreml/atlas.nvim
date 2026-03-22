@@ -5,10 +5,10 @@ local table_view = require("atlas.ui.components.table")
 local ns = vim.api.nvim_create_namespace("atlas.logs")
 
 local level_hl = {
-	DEBUG = "AtlasTextSubtle",
-	INFO = "AtlasTextPositive",
-	WARN = "AtlasTextWarning",
-	ERROR = "AtlasTextDanger",
+	DEBUG = "AtlasTextMuted",
+	INFO = "AtlasLogInfo",
+	WARN = "AtlasLogWarn",
+	ERROR = "AtlasLogError",
 }
 
 local LOGS_BUFFER_NAME = "atlas://logs"

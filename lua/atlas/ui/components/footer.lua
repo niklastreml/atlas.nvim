@@ -94,8 +94,8 @@ end
 --   footer_hl: string (optional, default AtlasFooterBackground)
 --   segments: {
 --     { text = "PRs", hl_group = "AtlasFooterText" },
---     { text = " | ", hl_group = "AtlasFooterMuted" },
---     { text = "@emrearmagan", hl_group = "AtlasFooterMuted" },
+--     { text = " | ", hl_group = "AtlasFooterText" },
+--     { text = "@emrearmagan", hl_group = "AtlasFooterText" },
 --   }
 --
 ---@ opts { width?: number, footer_hl?: string, segments?: table[] }

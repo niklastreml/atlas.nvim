@@ -58,39 +58,39 @@ function M.relative_time(iso)
 	end
 
 	if delta < 5 then
-		return "just now"
+		return "now"
 	end
 	if delta < 60 then
-		return string.format("%ds ago", delta)
+		return string.format("%ds", delta)
 	end
 
 	local minutes = math.floor(delta / 60)
 	if minutes < 60 then
-		return string.format("%dm ago", minutes)
+		return string.format("%dm", minutes)
 	end
 
 	local hours = math.floor(minutes / 60)
 	if hours < 24 then
-		return string.format("%dh ago", hours)
+		return string.format("%dh", hours)
 	end
 
 	local days = math.floor(hours / 24)
 	if days < 7 then
-		return string.format("%dd ago", days)
+		return string.format("%dd", days)
 	end
 
 	local weeks = math.floor(days / 7)
 	if weeks < 5 then
-		return string.format("%dw ago", weeks)
+		return string.format("%dw", weeks)
 	end
 
 	local months = math.floor(days / 30)
 	if months < 12 then
-		return string.format("%dmo ago", months)
+		return string.format("%dmo", months)
 	end
 
 	local years = math.floor(days / 365)
-	return string.format("%dy ago", years)
+	return string.format("%dy", years)
 end
 
 return M

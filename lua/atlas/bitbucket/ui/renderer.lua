@@ -7,8 +7,28 @@ local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
 local utils = require("atlas.utils")
+local highlights = require("atlas.ui.highlights")
 local spinner = require("atlas.ui.popups.spinner")
 local service = require("atlas.bitbucket.api.service")
+
+---@param row table
+---@param col TableColumn
+---@return string|nil
+local function bitbucket_cell_hl(row, col)
+	if row.kind == "meta" and (col.key == "repo_pr" or col.key == "created" or col.key == "updated") then
+		return "AtlasTextMuted"
+	end
+
+	if col.key == "author" then
+		return highlights.dynamic_for(row.author)
+	end
+
+	if col.key == "repo" then
+		return highlights.dynamic_for(row.repo)
+	end
+
+	return nil
+end
 
 ---@param rows table[]
 ---@param group BitbucketRepoPRGroup
@@ -21,6 +41,7 @@ local function append_plain_pr_rows(rows, group)
 			tasks = tostring(pr.tasks),
 			author = pr.author.name,
 			repo = group.full_name,
+			created = utils.relative_time(pr.created_on),
 			updated = utils.relative_time(pr.updated_on),
 			_item = { kind = "pr", id = pr.id, repo = group.full_name },
 		})
@@ -32,9 +53,16 @@ local function append_plain_pr_rows(rows, group)
 			tasks = "",
 			author = "",
 			repo = "",
+			created = "",
 			updated = "",
 			separator = true,
-			_item = { kind = "pr_meta", id = pr.id, repo = group.full_name },
+			_item = {
+				kind = "pr_meta",
+				id = pr.id,
+				repo = group.full_name,
+				source_branch = pr.source_branch or "?",
+				target_branch = pr.target_branch or "?",
+			},
 		})
 	end
 end
@@ -51,12 +79,13 @@ end
 
 local function table_columns()
 	return {
-		{ key = "repo_pr", name = "PR", min_width = 42, header_hl = "Normal" },
-		{ key = "comments", name = "󰅺", min_width = 2, can_grow = false, header_hl = "Normal" },
-		{ key = "tasks", name = "󰄱", min_width = 2, can_grow = false, header_hl = "Normal" },
-		{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "Normal" },
-		{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "Normal" },
-		{ key = "updated", name = "󰥔", min_width = 4, can_grow = false, header_hl = "Normal" },
+		{ key = "repo_pr", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
+		{ key = "comments", name = "󰅺", min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "tasks", name = "󰄱", min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "created", name = "󰃭", can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "updated", name = "󰥔", can_grow = false, header_hl = "AtlasColumnHeader" },
 	}
 end
 
@@ -69,9 +98,10 @@ local function build_plain_content(opts, repos)
 	local rows = to_plain_rows(repos)
 	local tbl_lines, tbl_map, tbl_spans = table_view.render({
 		width = opts.width,
-		margin = 0,
+		margin = 1,
 		columns = table_columns(),
 		rows = rows,
+		cell_hl = bitbucket_cell_hl,
 	})
 
 	return tbl_lines, tbl_spans, tbl_map
@@ -87,25 +117,28 @@ local function build_grouped_content(opts, repos)
 	local line_map = {}
 
 	for i, group in ipairs(repos or {}) do
-		local repo_line = string.format(" %s  %s", icons.provider("bitbucket"), group.full_name)
+		local repo_line = string.format(" %s %s", icons.entity("repo"), group.full_name)
+		local repo_hl = highlights.dynamic_for(group.full_name) or "AtlasTextMuted"
 		table.insert(lines, repo_line)
 		table.insert(spans, {
 			line = #lines - 1,
 			start_col = 0,
 			end_col = #repo_line,
-			hl_group = "AtlasTextPositive",
+			hl_group = repo_hl,
 		})
+		table.insert(lines, "")
 
 		local rows = {}
 		append_plain_pr_rows(rows, group)
 		if #rows == 0 then
-			table.insert(lines, "  (no pull requests)")
+			table.insert(lines, "(no pull requests)")
 		else
 			local tbl_lines, tbl_map, tbl_spans = table_view.render({
 				width = opts.width,
-				margin = 0,
+				margin = 1,
 				columns = table_columns(),
 				rows = rows,
+				cell_hl = bitbucket_cell_hl,
 			})
 
 			local table_base = #lines
@@ -136,7 +169,7 @@ local function render_header(lines, spans, width, views)
 			width = width,
 			icon = icons.provider("bitbucket"),
 			title = "Bitbucket",
-			hl_group = "AtlasTitleBitbucket",
+			hl_group = "AtlasBitbucketTheme",
 		})
 	)
 
@@ -151,7 +184,7 @@ local function render_header(lines, spans, width, views)
 	end
 
 	local actions = {
-		{ label = string.format(" %s Refresh (r) ", icons.action("refresh")), hl_group = "AtlasTitleBitbucket" },
+		{ label = string.format(" %s Refresh (r) ", icons.entity("refresh")), hl_group = "AtlasBitbucketTheme" },
 	}
 
 	utils.append_block(
@@ -161,7 +194,7 @@ local function render_header(lines, spans, width, views)
 			width = width,
 			items = nav_items,
 			actions = actions,
-			active_hl = "AtlasTitleBitbucket",
+			active_hl = "AtlasBitbucketTheme",
 		})
 	)
 end

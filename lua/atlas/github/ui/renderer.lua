@@ -61,7 +61,7 @@ function M.render(opts, rerender)
 	end
 
 	local actions = {
-		{ label = string.format(" %s Refresh (r) ", icons.action("refresh")), hl_group = "AtlasTitleGithub" },
+		{ label = string.format(" %s Refresh (r) ", icons.action("refresh")), hl_group = "AtlasGithubTheme" },
 	}
 
 	local lines, spans = {}, {}
@@ -74,7 +74,7 @@ function M.render(opts, rerender)
 			width = opts.width,
 			icon = icons.provider("github"),
 			title = "Github",
-			hl_group = "AtlasTitleGithub",
+			hl_group = "AtlasGithubTheme",
 		})
 	)
 
@@ -85,7 +85,7 @@ function M.render(opts, rerender)
 			width = width,
 			items = nav_items,
 			actions = actions,
-			active_hl = "AtlasTitleGithub",
+			active_hl = "AtlasGithubTheme",
 		})
 	)
 
@@ -123,7 +123,7 @@ function M.render(opts, rerender)
 				end
 				return "AtlasTextMuted"
 			end
-			return "AtlasText"
+			return "AtlasTextMuted"
 		end,
 	})
 

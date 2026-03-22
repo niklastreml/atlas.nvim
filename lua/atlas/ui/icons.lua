@@ -6,25 +6,25 @@ local ICONS = {
 		bitbucket = "",
 		github = "",
 	},
-	action = {
+	entity = {
 		refresh = "󰑐",
-		help = "",
+		repo = "",
 	},
 	fallback = "•",
 }
 
----@params name "jira" | "bitbucket" | "github"
+---@param name "jira" | "bitbucket" | "github"
 function M.provider(name)
 	return ICONS.provider[name] or ICONS.fallback
 end
 
----@params name "refresh" | "help"
-function M.action(name)
-	return ICONS.action[name] or ICONS.fallback
+---@param name "repo"|"refresh"
+function M.entity(name)
+	return ICONS.entity[name] or ICONS.fallback
 end
 
 function M.fallback()
-  return ICONS.fallback
+	return ICONS.fallback
 end
 
 return M

@@ -276,7 +276,7 @@ end
 ---@field fill? boolean If false, do not stretch columns to available width.
 ---@field rows[].separator? boolean If true, insert a separator after that row.
 ---@field rows[].separator_char? string Optional separator character for that row (default: "─").
----@field rows[].separator_hl? string Optional separator highlight for that row (default: AtlasTextSubtle).
+---@field rows[].separator_hl? string Optional separator highlight for that row (default: AtlasTextMuted).
 ---@field cell_hl? fun(row:table, col:TableColumn):string|nil Per-cell highlight resolver.
 ---@field tree? TableTreeOpts Tree options (optional).
 
@@ -437,7 +437,7 @@ function M.render(opts)
 
 			if row.separator == true then
 				local sep_char = row.separator_char or "─"
-				local sep_hl = row.separator_hl or "AtlasTextSubtle"
+				local sep_hl = row.separator_hl or "AtlasTextMuted"
 				local sep_line = string.rep(" ", margin) .. string.rep(sep_char, math.max(width - (margin * 2), 1))
 				table.insert(lines, sep_line)
 				table.insert(spans, {
