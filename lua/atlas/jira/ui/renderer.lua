@@ -6,7 +6,24 @@ local state = require("atlas.jira.state")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local footer = require("atlas.ui.components.footer")
+local table_view = require("atlas.ui.components.table")
 local ui_utils = require("atlas.ui.utils")
+
+local function fake_rows()
+	return {
+		{
+			kind = "project",
+			key = "ATLAS",
+			name = "ATLAS",
+			expanded = true,
+			children = {
+				{ kind = "issue", id = "ATLAS-221", name = "Add shared footer component", title = "Add shared footer component", assignee = "emrearmagan", status = "In Progress", updated = "1h", _item = { kind = "issue", key = "ATLAS-221" } },
+				{ kind = "issue", id = "ATLAS-214", name = "Improve table renderer docs", title = "Improve table renderer docs", assignee = "team-bot", status = "Review", updated = "5h", _item = { kind = "issue", key = "ATLAS-214" } },
+			},
+			_item = { kind = "project", key = "ATLAS" },
+		},
+	}
+end
 
 function M.render(width, height)
 	local views = (config.options.jira and config.options.jira.views) or {}
@@ -30,6 +47,7 @@ function M.render(width, height)
 	}
 
 	local lines, spans = {}, {}
+	local line_map = {}
 
 	ui_utils.append_block(lines, spans, header.render({
 		width = width,
@@ -46,9 +64,42 @@ function M.render(width, height)
 	}))
 
 	table.insert(lines, "")
-	table.insert(lines, "  Jira board - phase 1")
-	table.insert(lines, "")
-	table.insert(lines, "  Table comes in phase 2.")
+
+	local tbl_lines, tbl_map, tbl_spans = table_view.render({
+		width = width,
+		margin = 0,
+		columns = {
+			{ key = "name", name = "Project / Issue", min_width = 30 },
+			{ key = "id", name = "Key", min_width = 12 },
+			{ key = "assignee", name = "Assignee", min_width = 16 },
+			{ key = "status", name = "Status", min_width = 14 },
+			{ key = "updated", name = "Updated", min_width = 8 },
+		},
+		rows = fake_rows(),
+		tree = {
+			children_key = "children",
+			expanded_field = "expanded",
+			default_expanded = true,
+			indent = "  ",
+			show_indicator = true,
+			leaf_prefix = "└─ ",
+		},
+		cell_hl = function(row, col)
+			if row.kind == "project" and col.key == "name" then
+				return "AtlasTextPositive"
+			end
+			if row.kind == "issue" and col.key == "status" then
+				return "AtlasTextWarning"
+			end
+			return "AtlasText"
+		end,
+	})
+
+	local table_base = #lines
+	ui_utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+	for lnum, node in pairs(tbl_map) do
+		line_map[table_base + lnum] = node
+	end
 
 	local footer_block = footer.render({
 		width = width,
@@ -73,7 +124,7 @@ function M.render(width, height)
 
 	ui_utils.append_block(lines, spans, footer_block)
 
-	return lines, spans, state.line_map
+	return lines, spans, line_map
 end
 
 return M

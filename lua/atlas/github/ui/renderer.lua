@@ -6,7 +6,24 @@ local state = require("atlas.github.state")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local footer = require("atlas.ui.components.footer")
+local table_view = require("atlas.ui.components.table")
 local ui_utils = require("atlas.ui.utils")
+
+local function fake_rows()
+	return {
+		{
+			kind = "repo",
+			key = "emrearmagan/atlas.nvim",
+			name = "emrearmagan/atlas.nvim",
+			expanded = true,
+			children = {
+				{ kind = "pr", id = "#90", name = "Add provider payload renderer", title = "Add provider payload renderer", author = "emrearmagan", checks = "passing", updated = "48m", _item = { kind = "pr", id = 90 } },
+				{ kind = "pr", id = "#87", name = "Refine footer alignment", title = "Refine footer alignment", author = "team-bot", checks = "pending", updated = "3h", _item = { kind = "pr", id = 87 } },
+			},
+			_item = { kind = "repo", key = "emrearmagan/atlas.nvim" },
+		},
+	}
+end
 
 function M.render(width, height)
 	local views = (config.options.github and config.options.github.views) or {}
@@ -30,6 +47,7 @@ function M.render(width, height)
 	}
 
 	local lines, spans = {}, {}
+	local line_map = {}
 
 	ui_utils.append_block(lines, spans, header.render({
 		width = width,
@@ -46,9 +64,48 @@ function M.render(width, height)
 	}))
 
 	table.insert(lines, "")
-	table.insert(lines, "  Github board - phase 1")
-	table.insert(lines, "")
-	table.insert(lines, "  Table comes in phase 2.")
+
+	local tbl_lines, tbl_map, tbl_spans = table_view.render({
+		width = width,
+		margin = 0,
+		columns = {
+			{ key = "name", name = "Repo / PR", min_width = 30 },
+			{ key = "id", name = "ID", min_width = 10 },
+			{ key = "author", name = "Author", min_width = 14 },
+			{ key = "checks", name = "Checks", min_width = 12 },
+			{ key = "updated", name = "Updated", min_width = 8 },
+		},
+		rows = fake_rows(),
+		tree = {
+			children_key = "children",
+			expanded_field = "expanded",
+			default_expanded = true,
+			indent = "  ",
+			show_indicator = true,
+			leaf_prefix = "└─ ",
+		},
+		cell_hl = function(row, col)
+			if row.kind == "repo" and col.key == "name" then
+				return "AtlasTextPositive"
+			end
+			if row.kind == "pr" and col.key == "checks" then
+				if row.checks == "passing" then
+					return "AtlasTextPositive"
+				end
+				if row.checks == "pending" then
+					return "AtlasTextWarning"
+				end
+				return "AtlasTextMuted"
+			end
+			return "AtlasText"
+		end,
+	})
+
+	local table_base = #lines
+	ui_utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+	for lnum, node in pairs(tbl_map) do
+		line_map[table_base + lnum] = node
+	end
 
 	local footer_block = footer.render({
 		width = width,
@@ -73,7 +130,7 @@ function M.render(width, height)
 
 	ui_utils.append_block(lines, spans, footer_block)
 
-	return lines, spans, state.line_map
+	return lines, spans, line_map
 end
 
 return M
