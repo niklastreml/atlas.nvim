@@ -15,7 +15,7 @@ local service = require("atlas.bitbucket.api.service")
 ---@param col TableColumn
 ---@return string|nil
 local function bitbucket_cell_hl(row, col)
-	if row.kind == "meta" and (col.key == "repo_pr" or col.key == "created" or col.key == "updated") then
+	if col.key == "created" or col.key == "updated" or (row.kind == "meta" and col.key == "repo_pr") then
 		return "AtlasTextMuted"
 	end
 
@@ -89,6 +89,26 @@ local function table_columns()
 	}
 end
 
+---@param table_lines string[]
+---@param table_map table<number, table>
+---@param table_spans table[]
+local function add_pr_id_spans(table_lines, table_map, table_spans)
+	for lnum, item in pairs(table_map or {}) do
+		if type(item) == "table" and item.kind == "pr" then
+			local line = table_lines[lnum] or ""
+			local s, e = string.find(line, "#%d+")
+			if s and e then
+				table.insert(table_spans, {
+					line = lnum - 1,
+					start_col = s - 1,
+					end_col = e,
+					hl_group = "AtlasLogInfo",
+				})
+			end
+		end
+	end
+end
+
 ---@param opts { width: number, height: number }
 ---@param repos BitbucketRepoPRGroup[]
 ---@return string[]
@@ -103,6 +123,7 @@ local function build_plain_content(opts, repos)
 		rows = rows,
 		cell_hl = bitbucket_cell_hl,
 	})
+	add_pr_id_spans(tbl_lines, tbl_map, tbl_spans)
 
 	return tbl_lines, tbl_spans, tbl_map
 end
@@ -140,6 +161,7 @@ local function build_grouped_content(opts, repos)
 				rows = rows,
 				cell_hl = bitbucket_cell_hl,
 			})
+			add_pr_id_spans(tbl_lines, tbl_map, tbl_spans)
 
 			local table_base = #lines
 			utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
