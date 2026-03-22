@@ -1,6 +1,7 @@
 local M = {}
 local config = require("atlas.config")
 local normalizer = require("atlas.bitbucket.api.normalizer")
+local logger = require("atlas.logger")
 
 local API_BASE = "https://api.bitbucket.org/2.0"
 
@@ -49,8 +50,19 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 	local headers = build_headers(opts.user, opts.token)
 	local pullrequests = load_mock_json()
 
+	logger.loginfo("Fetching pull requests", {
+		workspace = workspace,
+		repo = repo,
+	})
+
 	--- TODO: Add real http request here, for now just load from file
 	vim.defer_fn(function()
+		logger.loginfo("Fetch success", {
+			workspace = workspace,
+			repo = repo,
+			pr_count = (pullrequests and #pullrequests or 0),
+		})
+
 		on_done({
 			{
 				workspace = workspace,
@@ -70,8 +82,14 @@ function M.fetch_pullrequests(view_repos, on_done)
 		return
 	end
 
+	logger.loginfo("Bitbucket batch fetch start", {
+		repo_count = #view_repos,
+	})
+
 	local user, token, auth_err = get_auth_from_config()
 	if auth_err then
+		logger.logerror("Bitbucket auth missing", { error = auth_err })
+		vim.notify("Atlas Bitbucket: " .. auth_err, vim.log.levels.ERROR)
 		on_done({}, auth_err)
 		return
 	end
@@ -97,6 +115,11 @@ function M.fetch_pullrequests(view_repos, on_done)
 		pending = pending - 1
 		if pending == 0 then
 			done = true
+			logger.loginfo("Bitbucket batch fetch completed", {
+				repo_count = #view_repos,
+				group_count = #all_groups,
+				error_count = #errors,
+			})
 			if #errors > 0 then
 				on_done(all_groups, table.concat(errors, " | "))
 			else

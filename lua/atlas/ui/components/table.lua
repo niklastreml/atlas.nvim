@@ -1,4 +1,5 @@
 -- See: https://github.com/emrearmagan/dockyard.nvim/blob/main/lua/dockyard/ui/components/table.lua
+-- Tbh ai generated stuff but it works and i couldnt be bother to rewrite it, so here we are
 local M = {}
 
 local function display_width(text)

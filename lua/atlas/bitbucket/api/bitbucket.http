@@ -2,7 +2,7 @@
 @bitbucket_repo = atlas
 
 ### Get me
-GET GET https://api.bitbucket.org/2.0/user
+GET https://api.bitbucket.org/2.0/user
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json

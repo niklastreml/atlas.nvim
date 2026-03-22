@@ -1,9 +1,11 @@
 local M = {}
+local logger = require("atlas.logger")
 
 local bootstrapped = false
 
 M.setup = function(opts)
 	require("atlas.config").setup(opts)
+	require("atlas.logger").clear()
 end
 
 local function bootstrap()
@@ -26,6 +28,8 @@ local function bootstrap()
 end
 
 function M.open(view)
+	logger.loginfo("Atlas open requested", { view = view })
+
 	local window = require("atlas.ui.window")
 	if not window.is_open() then
 		window.open()

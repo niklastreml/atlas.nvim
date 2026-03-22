@@ -114,6 +114,7 @@ local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasJira", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasGithub", nil)
+	pcall(vim.api.nvim_del_user_command, "AtlasLogs", nil)
 
 	vim.api.nvim_create_user_command("AtlasJira", function()
 		require("atlas").open("jira")
@@ -125,6 +126,10 @@ local function register_commands()
 
 	vim.api.nvim_create_user_command("AtlasGithub", function()
 		require("atlas").open("github")
+	end, { desc = "Open Github picker" })
+
+	vim.api.nvim_create_user_command("AtlasLogs", function()
+		require("atlas.ui.panels.logs").toggle()
 	end, { desc = "Open Github picker" })
 end
 
