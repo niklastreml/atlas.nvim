@@ -8,117 +8,79 @@ local navbar = require("atlas.ui.components.navbar")
 local footer = require("atlas.ui.components.footer")
 local table_view = require("atlas.ui.components.table")
 local ui_utils = require("atlas.ui.utils")
+local service = require("atlas.bitbucket.api.service")
 
-local function fake_rows()
-	return {
-		{
-			kind = "pr",
-			id = "#142",
-			repo_pr = "Refactor auth middleware",
-			comments = "6",
-			tasks = "2",
-			author = "emrearmagan",
-			repo = "ws/atlas.nvim",
-			updated = "2h",
-			_item = { kind = "pr", id = 142, repo = "ws/atlas.nvim" },
-		},
-		{
-			kind = "meta",
-			id = "",
-			repo_pr = "linux → main",
-			comments = "",
-			tasks = "",
-			author = "",
-			repo = "",
-			updated = "",
-			separator = true,
-			_item = { kind = "pr_meta", id = 142, repo = "ws/atlas.nvim" },
-		},
-		{
-			kind = "pr",
-			id = "#138",
-			repo_pr = "Fix cache invalidation",
-			comments = "1",
-			tasks = "0",
-			author = "team-bot",
-			repo = "ws/atlas.nvim",
-			updated = "1d",
-			_item = { kind = "pr", id = 138, repo = "ws/atlas.nvim" },
-		},
-		{
-			kind = "meta",
-			id = "",
-			repo_pr = "feature/cache-fix → main",
-			comments = "",
-			tasks = "",
-			author = "",
-			repo = "",
-			updated = "",
-			separator = true,
-			_item = { kind = "pr_meta", id = 138, repo = "ws/atlas.nvim" },
-		},
-		{
-			kind = "pr",
-			id = "#77",
-			repo_pr = "Improve table docs",
-			comments = "3",
-			tasks = "1",
-			author = "emrearmagan",
-			repo = "ws/dockyard.nvim",
-			updated = "4h",
-			_item = { kind = "pr", id = 77, repo = "ws/dockyard.nvim" },
-		},
-		{
-			kind = "meta",
-			id = "",
-			repo_pr = "docs/table-example → main",
-			comments = "",
-			tasks = "",
-			author = "",
-			repo = "",
-			updated = "",
-			separator = true,
-			_item = { kind = "pr_meta", id = 77, repo = "ws/dockyard.nvim" },
-		},
-		{
-			kind = "pr",
-			id = "#75",
-			repo_pr = "Polish footer alignment",
-			comments = "5",
-			tasks = "2",
-			author = "team-bot",
-			repo = "ws/dockyard.nvim",
-			updated = "7h",
-			_item = { kind = "pr", id = 75, repo = "ws/dockyard.nvim" },
-		},
-		{
-			kind = "meta",
-			id = "",
-			repo_pr = "ui/footer-polish → main",
-			comments = "",
-			tasks = "",
-			author = "",
-			repo = "",
-			updated = "",
-			_item = { kind = "pr_meta", id = 75, repo = "ws/dockyard.nvim" },
-		},
-	}
+local function to_rows(repo_groups)
+	local rows = {}
+
+	for _, group in ipairs(repo_groups or {}) do
+		for _, pr in ipairs(group.pullrequests or {}) do
+			table.insert(rows, {
+				kind = "pr",
+				id = "#" .. tostring(pr.id),
+				repo_pr = pr.title,
+				comments = tostring(pr.comments),
+				tasks = tostring(pr.tasks),
+				author = pr.author.name,
+				repo = group.full_name,
+				updated = ui_utils.relative_time(pr.updated_on),
+				_item = { kind = "pr", id = pr.id, repo = group.full_name },
+			})
+
+			table.insert(rows, {
+				kind = "meta",
+				id = "",
+				repo_pr = string.format("%s → %s", pr.source_branch or "?", pr.target_branch or "?"),
+				comments = "",
+				tasks = "",
+				author = "",
+				repo = "",
+				updated = "",
+				separator = true,
+				_item = { kind = "pr_meta", id = pr.id, repo = group.full_name },
+			})
+		end
+	end
+
+	return rows
+end
+
+local function ensure_loaded(view)
+	if state.is_loading or state.repos ~= nil then
+		return
+	end
+
+	state.is_loading = true
+	state.error = nil
+
+	service.fetch_pullrequests((view and view.repos) or {}, function(groups, err)
+		state.is_loading = false
+		if err then
+			state.error = tostring(err)
+			state.repos = {}
+		else
+			state.repos = groups or {}
+		end
+
+		--- TODO: Dont call renderer directly. Use callback in the render function to trigger re-render when data is loaded
+		require("atlas.ui.renderer").render("bitbucket")
+	end)
 end
 
 function M.render(width, height)
 	local views = (config.options.bitbucket and config.options.bitbucket.views) or {}
-	if state.active_view_key == nil and views[1] then
-		state.active_view_key = views[1].key or views[1].name
+	if state.active_view == nil and views[1] then
+		state.active_view = views[1]
 	end
 
+	--- NavBar ---
 	local nav_items = {}
 	for _, v in ipairs(views) do
 		local key = v.key or v.name
 		local label = v.key and string.format("%s (%s)", v.name, v.key) or v.name
 		table.insert(nav_items, {
 			label = label,
-			icon = icons.provider("bitbucket"),
-			active = key == state.active_view_key,
+			active = key == state.active_view.key,
 		})
 	end
 
@@ -150,34 +112,35 @@ function M.render(width, height)
 			active_hl = "AtlasTitleBitbucket",
 		})
 	)
-
 	table.insert(lines, "")
 
-	local tbl_lines, tbl_map, tbl_spans = table_view.render({
-		width = width,
-		margin = 0,
-		columns = {
-			{ key = "id", name = "ID", min_width = 8, can_grow = false },
-			{ key = "repo_pr", name = "PR", min_width = 34 },
-			{ key = "comments", name = "󰅺", min_width = 2, can_grow = false },
-			{ key = "tasks", name = "☐", min_width = 2, can_grow = false },
-			{ key = "author", name = "Author", min_width = 3, can_grow = false },
-			{ key = "repo", name = "Repo", min_width = 5, can_grow = false },
-			{ key = "updated", name = "󰥔", min_width = 4, can_grow = false },
-		},
-		rows = fake_rows(),
-		cell_hl = function(row, col)
-			if row.kind == "meta" and col.key == "repo_pr" then
-				return "AtlasTextSubtle"
-			end
-			return nil
-		end,
-	})
+	ensure_loaded(state.active_view)
+	if state.error then
+		table.insert(lines, "Error loading pull requests: " .. state.error)
+	elseif state.is_loading and state.repos == nil then
+		table.insert(lines, "Loading...")
+	else
+		local rows = to_rows(state.repos or {})
+		local tbl_lines, tbl_map, tbl_spans = table_view.render({
+			width = width,
+			margin = 0,
+			columns = {
+				{ key = "id", name = "ID", min_width = 8, can_grow = false, header_hl = "Normal" },
+				{ key = "repo_pr", name = "PR", min_width = 34, header_hl = "Normal" },
+				{ key = "comments", name = "󰅺", min_width = 2, can_grow = false, header_hl = "Normal" },
+				{ key = "tasks", name = "☐", min_width = 2, can_grow = false, header_hl = "Normal" },
+				{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "Normal" },
+				{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "Normal" },
+				{ key = "updated", name = "󰥔", min_width = 4, can_grow = false, header_hl = "Normal" },
+			},
+			rows = rows,
+		})
 
-	local table_base = #lines
-	ui_utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
-	for lnum, node in pairs(tbl_map) do
-		line_map[table_base + lnum] = node
+		local table_base = #lines
+		ui_utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+		for lnum, node in pairs(tbl_map) do
+			line_map[table_base + lnum] = node
+		end
 	end
 
 	local footer_block = footer.render({

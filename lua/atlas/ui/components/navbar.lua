@@ -18,7 +18,12 @@ function M.render(opts)
 	local display_col = margin
 
 	for _, item in ipairs(items) do
-		local label = string.format(" %s  %s ", item.icon or "•", item.label or "")
+		local label = nil
+		if item.icon and item.icon ~= "" then
+			label = string.format(" %s  %s ", item.icon, item.label or "")
+		else
+			label = string.format(" %s ", item.label or "")
+		end
 		local hl = item.active and active_hl or inactive_hl
 
 		line = line .. label .. "  "

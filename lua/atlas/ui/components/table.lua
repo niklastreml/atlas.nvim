@@ -393,7 +393,7 @@ function M.render(opts)
 			line = 0,
 			start_col = col_start,
 			end_col = col_start + #padded,
-			hl_group = c.header_hl or "DockyardColumnHeader",
+			hl_group = c.header_hl or "AtlasColumnHeader",
 		})
 
 		col_start = col_start + #padded + gap_after(i)

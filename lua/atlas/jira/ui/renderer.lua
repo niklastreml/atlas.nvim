@@ -37,7 +37,6 @@ function M.render(width, height)
 		local label = v.key and string.format("%s (%s)", v.name, v.key) or v.name
 		table.insert(nav_items, {
 			label = label,
-			icon = icons.provider("jira"),
 			active = key == state.active_view_key,
 		})
 	end
