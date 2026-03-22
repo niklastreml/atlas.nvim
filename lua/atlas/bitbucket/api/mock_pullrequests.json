@@ -1,0 +1,277 @@
+{
+  "values": [
+    {
+      "id": 101,
+      "title": "refactor auth middleware",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 6,
+      "task_count": 2,
+      "author": {
+        "display_name": "Emre Armagan",
+        "account_id": "acc_emre"
+      },
+      "created_on": "2026-03-10T09:12:00+00:00",
+      "updated_on": "2026-03-22T09:45:00+00:00",
+      "source": { "branch": { "name": "feature/auth-refactor" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-api/pull-requests/101" } },
+      "repository": { "full_name": "check24/zzv-api" }
+    },
+    {
+      "id": 102,
+      "title": "fix cache invalidation race",
+      "state": "OPEN",
+      "draft": true,
+      "comment_count": 1,
+      "task_count": 0,
+      "author": {
+        "display_name": "Team Bot",
+        "account_id": "acc_bot"
+      },
+      "created_on": "2026-03-11T12:00:00+00:00",
+      "updated_on": "2026-03-21T18:05:00+00:00",
+      "source": { "branch": { "name": "feature/cache-fix" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-core/pull-requests/102" } },
+      "repository": { "full_name": "check24/zzv-core" }
+    },
+    {
+      "id": 103,
+      "title": "update readme and onboarding docs",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 3,
+      "task_count": 1,
+      "author": {
+        "display_name": "Emre Armagan",
+        "account_id": "acc_emre"
+      },
+      "created_on": "2026-03-12T08:33:00+00:00",
+      "updated_on": "2026-03-20T15:40:00+00:00",
+      "source": { "branch": { "name": "docs/readme-refresh" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-frontend/pull-requests/103" } },
+      "repository": { "full_name": "check24/zzv-frontend" }
+    },
+    {
+      "id": 104,
+      "title": "optimize build pipeline caching",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 0,
+      "task_count": 0,
+      "author": {
+        "display_name": "CI Engineer",
+        "account_id": "acc_ci"
+      },
+      "created_on": "2026-03-13T11:19:00+00:00",
+      "updated_on": "2026-03-22T07:10:00+00:00",
+      "source": { "branch": { "name": "ci/cache-optimization" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-cypress/pull-requests/104" } },
+      "repository": { "full_name": "check24/zzv-cypress" }
+    },
+    {
+      "id": 105,
+      "title": "add localization keys for claims flow",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 2,
+      "task_count": 2,
+      "author": {
+        "display_name": "Lisa Weber",
+        "account_id": "acc_lisa"
+      },
+      "created_on": "2026-03-13T14:22:00+00:00",
+      "updated_on": "2026-03-22T08:12:00+00:00",
+      "source": { "branch": { "name": "feature/i18n-claims" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/vv-ham-app-ios-zzv/pull-requests/105" } },
+      "repository": { "full_name": "check24/vv-ham-app-ios-zzv" }
+    },
+    {
+      "id": 106,
+      "title": "replace deprecated analytics sdk",
+      "state": "OPEN",
+      "draft": true,
+      "comment_count": 5,
+      "task_count": 4,
+      "author": {
+        "display_name": "Max Mustermann",
+        "account_id": "acc_max"
+      },
+      "created_on": "2026-03-14T10:05:00+00:00",
+      "updated_on": "2026-03-21T11:05:00+00:00",
+      "source": { "branch": { "name": "feature/new-analytics-sdk" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/vv-ham-app-ios-hh-shared/pull-requests/106" } },
+      "repository": { "full_name": "check24/vv-ham-app-ios-hh-shared" }
+    },
+    {
+      "id": 107,
+      "title": "improve api timeout handling",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 1,
+      "task_count": 0,
+      "author": {
+        "display_name": "Nina Schulz",
+        "account_id": "acc_nina"
+      },
+      "created_on": "2026-03-15T09:01:00+00:00",
+      "updated_on": "2026-03-22T10:00:00+00:00",
+      "source": { "branch": { "name": "bugfix/api-timeout" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-api/pull-requests/107" } },
+      "repository": { "full_name": "check24/zzv-api" }
+    },
+    {
+      "id": 108,
+      "title": "add snapshots for payment screens",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 7,
+      "task_count": 1,
+      "author": {
+        "display_name": "QA Team",
+        "account_id": "acc_qa"
+      },
+      "created_on": "2026-03-15T15:27:00+00:00",
+      "updated_on": "2026-03-19T16:42:00+00:00",
+      "source": { "branch": { "name": "test/snapshots-payment" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/vv-ham-app-ios-gkv/pull-requests/108" } },
+      "repository": { "full_name": "check24/vv-ham-app-ios-gkv" }
+    },
+    {
+      "id": 109,
+      "title": "clean up stale feature flags",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 2,
+      "task_count": 2,
+      "author": {
+        "display_name": "Emre Armagan",
+        "account_id": "acc_emre"
+      },
+      "created_on": "2026-03-16T07:50:00+00:00",
+      "updated_on": "2026-03-20T09:02:00+00:00",
+      "source": { "branch": { "name": "chore/feature-flags-cleanup" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-frontend/pull-requests/109" } },
+      "repository": { "full_name": "check24/zzv-frontend" }
+    },
+    {
+      "id": 110,
+      "title": "fix crash on cold app start",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 4,
+      "task_count": 0,
+      "author": {
+        "display_name": "Mert Kaya",
+        "account_id": "acc_mert"
+      },
+      "created_on": "2026-03-16T13:11:00+00:00",
+      "updated_on": "2026-03-22T11:02:00+00:00",
+      "source": { "branch": { "name": "hotfix/cold-start-crash" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/vv-ham-app-ios-rv/pull-requests/110" } },
+      "repository": { "full_name": "check24/vv-ham-app-ios-rv" }
+    },
+    {
+      "id": 111,
+      "title": "introduce domain events for policy updates",
+      "state": "OPEN",
+      "draft": true,
+      "comment_count": 0,
+      "task_count": 0,
+      "author": {
+        "display_name": "Architecture Guild",
+        "account_id": "acc_arch"
+      },
+      "created_on": "2026-03-17T10:10:00+00:00",
+      "updated_on": "2026-03-22T08:58:00+00:00",
+      "source": { "branch": { "name": "feature/domain-events" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-core/pull-requests/111" } },
+      "repository": { "full_name": "check24/zzv-core" }
+    },
+    {
+      "id": 112,
+      "title": "add telemetry for quote funnel",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 3,
+      "task_count": 1,
+      "author": {
+        "display_name": "Data Team",
+        "account_id": "acc_data"
+      },
+      "created_on": "2026-03-18T09:00:00+00:00",
+      "updated_on": "2026-03-20T12:33:00+00:00",
+      "source": { "branch": { "name": "feature/quote-telemetry" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/vv-ham-app-ios-hhw/pull-requests/112" } },
+      "repository": { "full_name": "check24/vv-ham-app-ios-hhw" }
+    },
+    {
+      "id": 113,
+      "title": "remove legacy coupon endpoint",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 1,
+      "task_count": 3,
+      "author": {
+        "display_name": "Backend Team",
+        "account_id": "acc_backend"
+      },
+      "created_on": "2026-03-18T16:16:00+00:00",
+      "updated_on": "2026-03-21T13:14:00+00:00",
+      "source": { "branch": { "name": "chore/remove-coupon-endpoint" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-api/pull-requests/113" } },
+      "repository": { "full_name": "check24/zzv-api" }
+    },
+    {
+      "id": 114,
+      "title": "stabilize flaky cypress health checks",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 8,
+      "task_count": 5,
+      "author": {
+        "display_name": "QA Bot",
+        "account_id": "acc_qabot"
+      },
+      "created_on": "2026-03-19T07:44:00+00:00",
+      "updated_on": "2026-03-22T06:31:00+00:00",
+      "source": { "branch": { "name": "test/flaky-health-checks" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/zzv-cypress/pull-requests/114" } },
+      "repository": { "full_name": "check24/zzv-cypress" }
+    },
+    {
+      "id": 115,
+      "title": "add deeplink support for claim status",
+      "state": "OPEN",
+      "draft": false,
+      "comment_count": 2,
+      "task_count": 1,
+      "author": {
+        "display_name": "Mobile Team",
+        "account_id": "acc_mobile"
+      },
+      "created_on": "2026-03-20T10:20:00+00:00",
+      "updated_on": "2026-03-22T11:11:00+00:00",
+      "source": { "branch": { "name": "feature/deeplink-claim-status" } },
+      "destination": { "branch": { "name": "main" } },
+      "links": { "html": { "href": "https://bitbucket.org/check24/vv-ham-app-ios-zzv/pull-requests/115" } },
+      "repository": { "full_name": "check24/vv-ham-app-ios-zzv" }
+    }
+  ],
+  "pagelen": 50,
+  "size": 15,
+  "page": 1
+}

@@ -1,6 +1,5 @@
 local M = {}
 local state = require("atlas.ui.state")
-local utils = require("atlas.ui.utils")
 local highlights = require("atlas.ui.highlights")
 
 local function hide_chrome()
@@ -8,6 +7,36 @@ local function hide_chrome()
 	vim.o.laststatus = 0
 	vim.o.ruler = false
 	vim.o.showcmd = false
+end
+
+local function create_buf(name, filetype)
+	local buf = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_buf_set_name(buf, name)
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+	vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
+	vim.api.nvim_set_option_value("bufhidden", "hide", { buf = buf })
+	vim.api.nvim_set_option_value("filetype", filetype, { buf = buf })
+	vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
+	pcall(vim.treesitter.stop, buf)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+	return buf
+end
+
+local function apply_win_config(win)
+	vim.api.nvim_set_option_value("number", false, { win = win })
+	vim.api.nvim_set_option_value("relativenumber", false, { win = win })
+	vim.api.nvim_set_option_value("signcolumn", "no", { win = win })
+	vim.api.nvim_set_option_value("statuscolumn", "", { win = win })
+	vim.api.nvim_set_option_value("foldcolumn", "0", { win = win })
+	vim.api.nvim_set_option_value("wrap", false, { win = win })
+	vim.api.nvim_set_option_value("cursorline", true, { win = win })
+	vim.api.nvim_set_option_value("winbar", "", { win = win })
+	vim.api.nvim_set_option_value("statusline", "", { win = win })
+	vim.api.nvim_set_option_value(
+		"winhighlight",
+		"Normal:Normal,NormalFloat:Normal,FloatBorder:FloatBorder,CursorLine:CursorLine",
+		{ win = win }
+	)
 end
 
 function M.is_open()
@@ -28,7 +57,7 @@ function M.open()
 	state.prev_showcmd = vim.o.showcmd
 
 	if state.buf_id == nil or not vim.api.nvim_buf_is_valid(state.buf_id) then
-		state.buf_id = utils.create_buf("Atlas", "atlas")
+		state.buf_id = create_buf("Atlas", "atlas")
 	end
 
 	vim.cmd("tabnew")
@@ -41,7 +70,7 @@ function M.open()
 		pcall(vim.api.nvim_buf_delete, tab_buf, { force = true })
 	end
 
-	utils.apply_win_config(state.win_id)
+	apply_win_config(state.win_id)
 	hide_chrome()
 
 	vim.schedule(function()

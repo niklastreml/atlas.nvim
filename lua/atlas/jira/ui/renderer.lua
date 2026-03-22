@@ -7,7 +7,7 @@ local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local footer = require("atlas.ui.components.footer")
 local table_view = require("atlas.ui.components.table")
-local ui_utils = require("atlas.ui.utils")
+local utils = require("atlas.utils")
 
 local function fake_rows()
 	return {
@@ -17,8 +17,26 @@ local function fake_rows()
 			name = "ATLAS",
 			expanded = true,
 			children = {
-				{ kind = "issue", id = "ATLAS-221", name = "Add shared footer component", title = "Add shared footer component", assignee = "emrearmagan", status = "In Progress", updated = "1h", _item = { kind = "issue", key = "ATLAS-221" } },
-				{ kind = "issue", id = "ATLAS-214", name = "Improve table renderer docs", title = "Improve table renderer docs", assignee = "team-bot", status = "Review", updated = "5h", _item = { kind = "issue", key = "ATLAS-214" } },
+				{
+					kind = "issue",
+					id = "ATLAS-221",
+					name = "Add shared footer component",
+					title = "Add shared footer component",
+					assignee = "emrearmagan",
+					status = "In Progress",
+					updated = "1h",
+					_item = { kind = "issue", key = "ATLAS-221" },
+				},
+				{
+					kind = "issue",
+					id = "ATLAS-214",
+					name = "Improve table renderer docs",
+					title = "Improve table renderer docs",
+					assignee = "team-bot",
+					status = "Review",
+					updated = "5h",
+					_item = { kind = "issue", key = "ATLAS-214" },
+				},
 			},
 			_item = { kind = "project", key = "ATLAS" },
 		},
@@ -48,19 +66,27 @@ function M.render(width, height)
 	local lines, spans = {}, {}
 	local line_map = {}
 
-	ui_utils.append_block(lines, spans, header.render({
-		width = width,
-		icon = icons.provider("jira"),
-		title = "Jira",
-		hl_group = "AtlasTitleJira",
-	}))
+	utils.append_block(
+		lines,
+		spans,
+		header.render({
+			width = width,
+			icon = icons.provider("jira"),
+			title = "Jira",
+			hl_group = "AtlasTitleJira",
+		})
+	)
 
-	ui_utils.append_block(lines, spans, navbar.render({
-		width = width,
-		items = nav_items,
-		actions = actions,
-		active_hl = "AtlasTitleJira",
-	}))
+	utils.append_block(
+		lines,
+		spans,
+		navbar.render({
+			width = width,
+			items = nav_items,
+			actions = actions,
+			active_hl = "AtlasTitleJira",
+		})
+	)
 
 	table.insert(lines, "")
 
@@ -95,7 +121,7 @@ function M.render(width, height)
 	})
 
 	local table_base = #lines
-	ui_utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+	utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
 	for lnum, node in pairs(tbl_map) do
 		line_map[table_base + lnum] = node
 	end
@@ -121,7 +147,7 @@ function M.render(width, height)
 		end
 	end
 
-	ui_utils.append_block(lines, spans, footer_block)
+	utils.append_block(lines, spans, footer_block)
 
 	return lines, spans, line_map
 end

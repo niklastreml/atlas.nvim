@@ -7,7 +7,7 @@ local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local footer = require("atlas.ui.components.footer")
 local table_view = require("atlas.ui.components.table")
-local ui_utils = require("atlas.ui.utils")
+local utils = require("atlas.utils")
 local service = require("atlas.bitbucket.api.service")
 
 local function to_rows(repo_groups)
@@ -23,7 +23,7 @@ local function to_rows(repo_groups)
 				tasks = tostring(pr.tasks),
 				author = pr.author.name,
 				repo = group.full_name,
-				updated = ui_utils.relative_time(pr.updated_on),
+				updated = utils.relative_time(pr.updated_on),
 				_item = { kind = "pr", id = pr.id, repo = group.full_name },
 			})
 
@@ -91,7 +91,7 @@ function M.render(width, height)
 	local lines, spans = {}, {}
 	local line_map = {}
 
-	ui_utils.append_block(
+	utils.append_block(
 		lines,
 		spans,
 		header.render({
@@ -102,7 +102,7 @@ function M.render(width, height)
 		})
 	)
 
-	ui_utils.append_block(
+	utils.append_block(
 		lines,
 		spans,
 		navbar.render({
@@ -137,7 +137,7 @@ function M.render(width, height)
 		})
 
 		local table_base = #lines
-		ui_utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+		utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
 		for lnum, node in pairs(tbl_map) do
 			line_map[table_base + lnum] = node
 		end
@@ -164,7 +164,7 @@ function M.render(width, height)
 		end
 	end
 
-	ui_utils.append_block(lines, spans, footer_block)
+	utils.append_block(lines, spans, footer_block)
 	return lines, spans, line_map
 end
 

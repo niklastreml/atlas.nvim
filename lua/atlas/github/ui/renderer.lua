@@ -7,7 +7,7 @@ local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local footer = require("atlas.ui.components.footer")
 local table_view = require("atlas.ui.components.table")
-local ui_utils = require("atlas.ui.utils")
+local utils = require("atlas.utils")
 
 local function fake_rows()
 	return {
@@ -17,8 +17,26 @@ local function fake_rows()
 			name = "emrearmagan/atlas.nvim",
 			expanded = true,
 			children = {
-				{ kind = "pr", id = "#90", name = "Add provider payload renderer", title = "Add provider payload renderer", author = "emrearmagan", checks = "passing", updated = "48m", _item = { kind = "pr", id = 90 } },
-				{ kind = "pr", id = "#87", name = "Refine footer alignment", title = "Refine footer alignment", author = "team-bot", checks = "pending", updated = "3h", _item = { kind = "pr", id = 87 } },
+				{
+					kind = "pr",
+					id = "#90",
+					name = "Add provider payload renderer",
+					title = "Add provider payload renderer",
+					author = "emrearmagan",
+					checks = "passing",
+					updated = "48m",
+					_item = { kind = "pr", id = 90 },
+				},
+				{
+					kind = "pr",
+					id = "#87",
+					name = "Refine footer alignment",
+					title = "Refine footer alignment",
+					author = "team-bot",
+					checks = "pending",
+					updated = "3h",
+					_item = { kind = "pr", id = 87 },
+				},
 			},
 			_item = { kind = "repo", key = "emrearmagan/atlas.nvim" },
 		},
@@ -48,19 +66,27 @@ function M.render(width, height)
 	local lines, spans = {}, {}
 	local line_map = {}
 
-	ui_utils.append_block(lines, spans, header.render({
-		width = width,
-		icon = icons.provider("github"),
-		title = "Github",
-		hl_group = "AtlasTitleGithub",
-	}))
+	utils.append_block(
+		lines,
+		spans,
+		header.render({
+			width = width,
+			icon = icons.provider("github"),
+			title = "Github",
+			hl_group = "AtlasTitleGithub",
+		})
+	)
 
-	ui_utils.append_block(lines, spans, navbar.render({
-		width = width,
-		items = nav_items,
-		actions = actions,
-		active_hl = "AtlasTitleGithub",
-	}))
+	utils.append_block(
+		lines,
+		spans,
+		navbar.render({
+			width = width,
+			items = nav_items,
+			actions = actions,
+			active_hl = "AtlasTitleGithub",
+		})
+	)
 
 	table.insert(lines, "")
 
@@ -101,7 +127,7 @@ function M.render(width, height)
 	})
 
 	local table_base = #lines
-	ui_utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+	utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
 	for lnum, node in pairs(tbl_map) do
 		line_map[table_base + lnum] = node
 	end
@@ -127,7 +153,7 @@ function M.render(width, height)
 		end
 	end
 
-	ui_utils.append_block(lines, spans, footer_block)
+	utils.append_block(lines, spans, footer_block)
 
 	return lines, spans, line_map
 end
