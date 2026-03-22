@@ -26,16 +26,17 @@ function M.render(view)
 	local spans = {}
 	local line_map = {}
 
+	local target_view = view or state.current_view or "jira"
 	local width = vim.api.nvim_win_get_width(state.win_id)
 	local height = vim.api.nvim_win_get_height(state.win_id)
 
-	if view == "jira" then
+	if target_view == "jira" then
 		state.current_view = "jira"
 		lines, spans, line_map = require("atlas.jira.ui.renderer").render(width, height)
-	elseif view == "bitbucket" then
+	elseif target_view == "bitbucket" then
 		state.current_view = "bitbucket"
 		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render(width, height)
-	elseif view == "github" then
+	elseif target_view == "github" then
 		state.current_view = "github"
 		lines, spans, line_map = require("atlas.github.ui.renderer").render(width, height)
 	end
@@ -48,5 +49,16 @@ function M.render(view)
 	apply_spans(buf, spans)
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
+
+local resize_group = vim.api.nvim_create_augroup("AtlasUIResize", { clear = true })
+vim.api.nvim_create_autocmd("VimResized", {
+	group = resize_group,
+	callback = function()
+		local window = require("atlas.ui.window")
+		if window.is_open() then
+			M.render(state.current_view)
+		end
+	end,
+})
 
 return M

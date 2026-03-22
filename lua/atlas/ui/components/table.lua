@@ -17,7 +17,7 @@ local function truncate(text, width)
 	text = tostring(text or "")
 
 	if width <= 1 then
-		return text:sub(1, width)
+		return vim.fn.strcharpart(text, 0, width)
 	end
 
 	if display_width(text) <= width then
@@ -25,7 +25,9 @@ local function truncate(text, width)
 	end
 
 	local out = ""
-	for ch in text:gmatch(".") do
+	local char_count = vim.fn.strchars(text)
+	for i = 0, char_count - 1 do
+		local ch = vim.fn.strcharpart(text, i, 1)
 		if display_width(out .. ch .. "…") > width then
 			break
 		end
@@ -139,6 +141,10 @@ local function natural_width(column, rows, col_index, tree)
 	local w = display_width(column.name or column.key or "")
 	for _, row in ipairs(rows) do
 		w = math.max(w, display_width(cell_text(row, column, col_index, tree)))
+	end
+
+	if column.min_width ~= nil then
+		w = math.max(w, column.min_width)
 	end
 
 	return w
@@ -267,6 +273,9 @@ end
 ---@field margin? integer Left/right margin spaces (default: 2).
 ---@field column_gap? integer Default gap between columns (default: 2).
 ---@field fill? boolean If false, do not stretch columns to available width.
+---@field rows[].separator? boolean If true, insert a separator after that row.
+---@field rows[].separator_char? string Optional separator character for that row (default: "─").
+---@field rows[].separator_hl? string Optional separator highlight for that row (default: AtlasTextSubtle).
 ---@field cell_hl? fun(row:table, col:TableColumn):string|nil Per-cell highlight resolver.
 ---@field tree? TableTreeOpts Tree options (optional).
 
@@ -300,6 +309,7 @@ end
 ---local lines, line_map, spans = table_view.render({
 ---  width = width,
 ---  margin = 1,
+---  row_separator = "─",
 ---  columns = {
 ---    { key = "name", name = "Image / Container", min_width = 28 },
 ---    { key = "tag", name = "Tag", min_width = 16 },
@@ -392,7 +402,7 @@ function M.render(opts)
 	table.insert(lines, "")
 
 	-- body
-	for _, row in ipairs(rows) do
+	for idx, row in ipairs(rows) do
 		if row._tree_separator then
 			local sep = tostring(row._tree_separator_char or "─")
 			table.insert(lines, string.rep(" ", margin) .. string.rep(sep, math.max(width - (margin * 2), 1)))
@@ -423,6 +433,19 @@ function M.render(opts)
 			end
 			table.insert(lines, string.rep(" ", margin) .. join_parts(line_parts))
 			line_map[#lines] = row._item or row
+
+			if row.separator == true then
+				local sep_char = row.separator_char or "─"
+				local sep_hl = row.separator_hl or "AtlasTextSubtle"
+				local sep_line = string.rep(" ", margin) .. string.rep(sep_char, math.max(width - (margin * 2), 1))
+				table.insert(lines, sep_line)
+				table.insert(spans, {
+					line = #lines - 1,
+					start_col = margin,
+					end_col = margin + #sep_line - margin,
+					hl_group = sep_hl,
+				})
+			end
 		end
 	end
 

@@ -3,7 +3,6 @@ local M = {}
 local config = require("atlas.config")
 local icons = require("atlas.ui.icons")
 local state = require("atlas.bitbucket.state")
-local bb_highlights = require("atlas.bitbucket.ui.highlights")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local footer = require("atlas.ui.components.footer")
@@ -13,79 +12,100 @@ local ui_utils = require("atlas.ui.utils")
 local function fake_rows()
 	return {
 		{
-			kind = "repo",
-			key = "ws/atlas.nvim",
-			repo_pr = "ws/atlas.nvim",
-			name = "ws/atlas.nvim",
-			id = "",
-			title = "",
-			state = "",
-			comments = "",
-			tasks = "",
-			last_updated = "",
-			expanded = true,
-			children = {
-				{
-					kind = "pr",
-					repo_pr = "#142  Refactor auth middleware",
-					id = "#142",
-					name = "Refactor auth middleware",
-					title = "Refactor auth middleware",
-					state = "OPEN",
-					comments = " 6 ",
-					tasks = " 2 ",
-					last_updated = " 2h ",
-					_item = { kind = "pr", id = 142 },
-				},
-				{
-					kind = "pr",
-					repo_pr = "#138  Fix cache invalidation",
-					id = "#138",
-					name = "Fix cache invalidation",
-					title = "Fix cache invalidation",
-					state = "DRAFT",
-					comments = " 1 ",
-					tasks = " 0 ",
-					last_updated = " 1d ",
-					_item = { kind = "pr", id = 138 },
-				},
-			},
-			_item = { kind = "repo", key = "ws/atlas.nvim" },
+			kind = "pr",
+			id = "#142",
+			repo_pr = "Refactor auth middleware",
+			comments = "6",
+			tasks = "2",
+			author = "emrearmagan",
+			repo = "ws/atlas.nvim",
+			updated = "2h",
+			_item = { kind = "pr", id = 142, repo = "ws/atlas.nvim" },
 		},
 		{
-			kind = "repo",
-			key = "ws/dockyard.nvim",
-			repo_pr = "ws/dockyard.nvim",
-			name = "ws/dockyard.nvim",
+			kind = "meta",
 			id = "",
-			title = "",
-			state = "",
+			repo_pr = "linux → main",
 			comments = "",
 			tasks = "",
-			last_updated = "",
-			expanded = true,
-			children = {
-				{
-					kind = "pr",
-					repo_pr = "#77  Improve table docs",
-					id = "#77",
-					name = "Improve table docs",
-					title = "Improve table docs",
-					state = "MERGED",
-					comments = " 3 ",
-					tasks = " 1 ",
-					last_updated = " 4h ",
-					_item = { kind = "pr", id = 77 },
-				},
-			},
-			_item = { kind = "repo", key = "ws/dockyard.nvim" },
+			author = "",
+			repo = "",
+			updated = "",
+			separator = true,
+			_item = { kind = "pr_meta", id = 142, repo = "ws/atlas.nvim" },
+		},
+		{
+			kind = "pr",
+			id = "#138",
+			repo_pr = "Fix cache invalidation",
+			comments = "1",
+			tasks = "0",
+			author = "team-bot",
+			repo = "ws/atlas.nvim",
+			updated = "1d",
+			_item = { kind = "pr", id = 138, repo = "ws/atlas.nvim" },
+		},
+		{
+			kind = "meta",
+			id = "",
+			repo_pr = "feature/cache-fix → main",
+			comments = "",
+			tasks = "",
+			author = "",
+			repo = "",
+			updated = "",
+			separator = true,
+			_item = { kind = "pr_meta", id = 138, repo = "ws/atlas.nvim" },
+		},
+		{
+			kind = "pr",
+			id = "#77",
+			repo_pr = "Improve table docs",
+			comments = "3",
+			tasks = "1",
+			author = "emrearmagan",
+			repo = "ws/dockyard.nvim",
+			updated = "4h",
+			_item = { kind = "pr", id = 77, repo = "ws/dockyard.nvim" },
+		},
+		{
+			kind = "meta",
+			id = "",
+			repo_pr = "docs/table-example → main",
+			comments = "",
+			tasks = "",
+			author = "",
+			repo = "",
+			updated = "",
+			separator = true,
+			_item = { kind = "pr_meta", id = 77, repo = "ws/dockyard.nvim" },
+		},
+		{
+			kind = "pr",
+			id = "#75",
+			repo_pr = "Polish footer alignment",
+			comments = "5",
+			tasks = "2",
+			author = "team-bot",
+			repo = "ws/dockyard.nvim",
+			updated = "7h",
+			_item = { kind = "pr", id = 75, repo = "ws/dockyard.nvim" },
+		},
+		{
+			kind = "meta",
+			id = "",
+			repo_pr = "ui/footer-polish → main",
+			comments = "",
+			tasks = "",
+			author = "",
+			repo = "",
+			updated = "",
+			_item = { kind = "pr_meta", id = 75, repo = "ws/dockyard.nvim" },
 		},
 	}
 end
 
 function M.render(width, height)
-	bb_highlights.setup()
-
 	local views = (config.options.bitbucket and config.options.bitbucket.views) or {}
 	if state.active_view_key == nil and views[1] then
 		state.active_view_key = views[1].key or views[1].name
@@ -137,44 +157,20 @@ function M.render(width, height)
 		width = width,
 		margin = 0,
 		columns = {
-			{ key = "repo_pr", name = "Repo / PR", min_width = 56 },
-			{ key = "state", name = "", min_width = 8, can_grow = false },
-			{ key = "comments", name = "󰅺", min_width = 8, can_grow = false },
-			{ key = "tasks", name = "󱓞", min_width = 8, can_grow = false },
-			{ key = "last_updated", name = "󰥔", min_width = 8, can_grow = false },
+			{ key = "id", name = "ID", min_width = 8, can_grow = false },
+			{ key = "repo_pr", name = "PR", min_width = 34 },
+			{ key = "comments", name = "󰅺", min_width = 2, can_grow = false },
+			{ key = "tasks", name = "☐", min_width = 2, can_grow = false },
+			{ key = "author", name = "Author", min_width = 3, can_grow = false },
+			{ key = "repo", name = "Repo", min_width = 5, can_grow = false },
+			{ key = "updated", name = "󰥔", min_width = 4, can_grow = false },
 		},
 		rows = fake_rows(),
-		tree = {
-			children_key = "children",
-			expanded_field = "expanded",
-			default_expanded = true,
-			indent = "  ",
-			show_indicator = true,
-			leaf_prefix = "└─ ",
-			separator = "─",
-		},
 		cell_hl = function(row, col)
-			if row.kind == "repo" and col.key == "repo_pr" then
-				return "AtlasTextPositive"
+			if row.kind == "meta" and col.key == "repo_pr" then
+				return "AtlasTextSubtle"
 			end
-			if row.kind == "repo" and col.key ~= "repo_pr" then
-				return "AtlasTextMuted"
-			end
-			if row.kind == "pr" and col.key == "state" then
-				if row.state == "OPEN" then
-					return "AtlasBitbucketStateOpen"
-				end
-				if row.state == "DRAFT" then
-					return "AtlasBitbucketStateDraft"
-				end
-				if row.state == "MERGED" then
-					return "AtlasBitbucketStateMerged"
-				end
-			end
-			if row.kind == "pr" and (col.key == "comments" or col.key == "tasks") then
-				return "AtlasTextMuted"
-			end
-			return "AtlasText"
+			return nil
 		end,
 	})
 
@@ -191,7 +187,7 @@ function M.render(width, height)
 			{ text = "|", hl_group = "AtlasFooterMuted" },
 			{ text = "@emrearmagan", hl_group = "AtlasFooterAccent" },
 			{ text = "|", hl_group = "AtlasFooterMuted" },
-			{ text = "r: refresh", hl_group = "AtlasFooterText", align = "right" },
+			{ text = "? help", hl_group = "AtlasTextMuted", align = "right" },
 		},
 	})
 

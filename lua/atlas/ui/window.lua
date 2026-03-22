@@ -4,6 +4,7 @@ local utils = require("atlas.ui.utils")
 local highlights = require("atlas.ui.highlights")
 
 local function hide_chrome()
+	-- TODO: This is a bit hacky, we should probably find a better way to handle this
 	vim.o.laststatus = 0
 	vim.o.ruler = false
 	vim.o.showcmd = false
@@ -87,10 +88,6 @@ function M.close()
 		vim.api.nvim_set_current_win(state.prev_win)
 	end
 	state.prev_win = nil
-end
-
-function M.resize()
-	return
 end
 
 return M

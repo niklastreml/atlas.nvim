@@ -7,35 +7,49 @@ local palette = {
 	tab_inactive_bg = "#494d64",
 	tab_inactive_fg = "#a5adcb",
 	column_header = "#939ab7",
+
+	bg_dark = "#1e1e2e",
+	text = "#cdd6f4",
+	text_muted = "#7f849c",
+	text_subtle = "#6c7086",
+	text_inverse = "#e2e8f0",
+	text_inverse_soft = "#e5e7eb",
+
+	warn = "#f9e2af",
+	danger = "#f38ba8",
+	info = "#89b4fa",
+
+	footer_bg = "#202635",
+	footer_accent_bg = "#334155",
+
+	title_jira_bg = "#0f4c81",
+	title_bitbucket_bg = "#1e3a8a",
+	title_github_bg = "#111827",
 }
 
 ---@type table<string, table>
 local groups = {
-	AtlasTabActive = { bg = palette.blue, fg = "#1e1e2e", bold = true },
+	AtlasTabActive = { bg = palette.blue, fg = palette.bg_dark, bold = true },
 	AtlasTabInactive = { bg = palette.tab_inactive_bg, fg = palette.tab_inactive_fg },
-	AtlasActionRefresh = { bg = palette.green, fg = "#1e1e2e", bold = true },
-	AtlasActionHelp = { bg = palette.orange, fg = "#1e1e2e", bold = true },
+	AtlasActionRefresh = { bg = palette.green, fg = palette.bg_dark, bold = true },
+	AtlasActionHelp = { bg = palette.orange, fg = palette.bg_dark, bold = true },
 	AtlasColumnHeader = { fg = palette.column_header, bold = true },
 
-	AtlasText = { fg = "#cdd6f4" },
-	AtlasTextMuted = { fg = "#7f849c" },
-	AtlasTextSubtle = { fg = "#6c7086" },
-	AtlasTextPositive = { fg = "#a6da95", bold = true },
-	AtlasTextWarning = { fg = "#f9e2af", bold = true },
-	AtlasTextDanger = { fg = "#f38ba8", bold = true },
+	AtlasText = { fg = palette.text },
+	AtlasTextMuted = { fg = palette.text_muted },
+	AtlasTextSubtle = { fg = palette.text_subtle },
+	AtlasTextPositive = { fg = palette.green, bold = true },
+	AtlasTextWarning = { fg = palette.warn, bold = true },
+	AtlasTextDanger = { fg = palette.danger, bold = true },
 
-	AtlasFooterBackground = { fg = "#cdd6f4", bg = "#202635" },
-	AtlasFooterText = { fg = "#cdd6f4" },
-	AtlasFooterMuted = { fg = "#7f849c" },
-	AtlasFooterAccent = { fg = "#e2e8f0", bg = "#334155", bold = true },
-	AtlasFooterInfo = { fg = "#89b4fa" },
-	AtlasFooterSuccess = { fg = "#a6da95", bold = true },
-	AtlasFooterWarning = { fg = "#f9e2af", bold = true },
+	AtlasFooterBackground = { fg = palette.text, bg = palette.footer_bg },
 
-	AtlasTitleJira = { fg = "#e2e8f0", bg = "#0f4c81", bold = true },
-	AtlasTitleBitbucket = { fg = "#e2e8f0", bg = "#1e3a8a", bold = true },
-	AtlasTitleGithub = { fg = "#e5e7eb", bg = "#111827", bold = true },
+	AtlasTitleJira = { fg = palette.text_inverse, bg = palette.title_jira_bg, bold = true },
+	AtlasTitleBitbucket = { fg = palette.text_inverse, bg = palette.title_bitbucket_bg, bold = true },
+	AtlasTitleGithub = { fg = palette.text_inverse_soft, bg = palette.title_github_bg, bold = true },
 }
+
+M.palette = palette
 
 function M.setup()
 	for name, opts in pairs(groups) do
