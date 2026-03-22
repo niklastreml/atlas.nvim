@@ -79,7 +79,6 @@ function M.open()
 		end
 	end)
 
-	--- TODO: Refactor somewhere else
 	vim.keymap.set("n", "q", M.close, { buffer = state.buf_id, silent = true, nowait = true })
 	return state.buf_id, state.win_id
 end
@@ -88,6 +87,10 @@ function M.close()
 	if not M.is_open() then
 		return
 	end
+
+	pcall(function()
+		require("atlas.ui.components.spinner").stop()
+	end)
 
 	if state.tab_id ~= nil and vim.api.nvim_tabpage_is_valid(state.tab_id) then
 		local current_tab = vim.api.nvim_get_current_tabpage()

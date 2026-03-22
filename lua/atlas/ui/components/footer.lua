@@ -1,9 +1,33 @@
 local M = {}
 
+local utils = require("atlas.utils")
+
+local registry = {
+	bitbucket = {},
+	jira = {},
+	github = {},
+}
+
+---@param text string|nil
+---@return number
 local function text_width(text)
 	return vim.fn.strdisplaywidth(text or "")
 end
 
+---@param list table[]|nil
+---@return table[]
+local function clone_segments(list)
+	local out = {}
+	for _, seg in ipairs(list or {}) do
+		table.insert(out, vim.deepcopy(seg))
+	end
+	return out
+end
+
+---@param segments table[]|nil
+---@param line_index integer
+---@return string
+---@return table[]
 local function build_segments_line(segments, line_index)
 	local line = ""
 	local highlights = {}
@@ -29,6 +53,42 @@ local function build_segments_line(segments, line_index)
 	return line, highlights
 end
 
+---@param view "bitbucket"|"jira"|"github"
+function M.clear_items(view)
+	if view ~= nil then
+		registry[view] = {}
+		return
+	end
+
+	for key, _ in pairs(registry) do
+		registry[key] = {}
+	end
+end
+
+---@param view "bitbucket"|"jira"|"github"
+---@param seg table
+function M.register_item(view, seg)
+	registry[view] = registry[view] or {}
+	table.insert(registry[view], seg)
+end
+
+---@param view "bitbucket"|"jira"|"github"
+---@return table[]
+function M.segments_for(view)
+	local left = clone_segments(registry[view] or {})
+
+	local right = {
+		{ text = string.format("atlas (%s)", utils.get_version()), hl_group = "AtlasTextMuted", align = "right" },
+		{ text = "? help", hl_group = "AtlasTextMuted", align = "right" },
+	}
+
+	for _, seg in ipairs(right) do
+		table.insert(left, seg)
+	end
+
+	return left
+end
+
 -- opts:
 --   width: number
 --   footer_hl: string (optional, default AtlasFooterBackground)
@@ -37,7 +97,9 @@ end
 --     { text = " | ", hl_group = "AtlasFooterMuted" },
 --     { text = "@emrearmagan", hl_group = "AtlasFooterMuted" },
 --   }
---   TODO: Its slighty off, fix it
+--
+---@ opts { width?: number, footer_hl?: string, segments?: table[] }
+---@return { lines: string[], highlights: table[] }
 function M.render(opts)
 	local width = opts.width or vim.o.columns
 	local footer_hl = opts.footer_hl or "AtlasFooterBackground"
@@ -88,6 +150,19 @@ function M.render(opts)
 			},
 		}, highlights),
 	}
+end
+
+function M.setup()
+	local help = require("atlas.ui.popups.help")
+	help.register_keys("General", {
+		{
+			key = "?",
+			desc = "Toggle this help popup",
+			callback = function()
+				help.toggle()
+			end,
+		},
+	}, { index = 100 })
 end
 
 return M

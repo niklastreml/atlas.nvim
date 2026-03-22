@@ -1,5 +1,7 @@
 local M = {}
 
+local _cached_version = nil
+
 function M.append_block(lines, spans, block)
 	local base = #lines
 	for _, line in ipairs(block.lines or {}) do
@@ -13,6 +15,26 @@ function M.append_block(lines, spans, block)
 			hl_group = span.hl_group,
 		})
 	end
+end
+
+function M.get_version()
+	if _cached_version then
+		return _cached_version
+	end
+
+	local ok, version = pcall(function()
+		return vim.fn.system(
+			"git -C " .. vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":h:h") .. " describe --tags --abrev=0"
+		)
+	end)
+
+	if ok then
+		version = version:gsub("%s+", "")
+		_cached_version = version
+	end
+
+	_cached_version = "dev"
+	return _cached_version
 end
 
 function M.relative_time(iso)

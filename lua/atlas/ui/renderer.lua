@@ -1,6 +1,8 @@
 local M = {}
 
 local state = require("atlas.ui.state")
+local utils = require("atlas.utils")
+local footer = require("atlas.ui.components.footer")
 
 local ns = vim.api.nvim_create_namespace("atlas.ui")
 
@@ -17,11 +19,6 @@ end
 
 ---@param view "bitbucket"|"github"|"jira"
 function M.render(view)
-	local window = require("atlas.ui.window")
-	if not window.is_open() then
-		window.open()
-	end
-
 	local lines = {}
 	local spans = {}
 	local line_map = {}
@@ -30,19 +27,44 @@ function M.render(view)
 	local width = vim.api.nvim_win_get_width(state.win_id)
 	local height = vim.api.nvim_win_get_height(state.win_id)
 
+	---@type fun(view: "bitbucket"|"github"|"jira")
+	local rerender = function(target)
+		vim.schedule(function()
+			M.render(target)
+		end)
+	end
+
 	if target_view == "jira" then
 		state.current_view = "jira"
-		lines, spans, line_map = require("atlas.jira.ui.renderer").render(width, height)
+		lines, spans, line_map = require("atlas.jira.ui.renderer").render({ width = width, height = height }, rerender)
 	elseif target_view == "bitbucket" then
 		state.current_view = "bitbucket"
-		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render(width, height)
+		lines, spans, line_map =
+			require("atlas.bitbucket.ui.renderer").render({ width = width, height = height }, rerender)
 	elseif target_view == "github" then
 		state.current_view = "github"
-		lines, spans, line_map = require("atlas.github.ui.renderer").render(width, height)
+		require("atlas.github.ui.renderer").render({ width = width, height = height }, rerender)
 	end
 
 	local buf = state.buf_id
 	state.line_map = line_map or {}
+
+	local footer_block = footer.render({
+		width = width,
+		segments = footer.segments_for(target_view),
+	})
+
+	local footer_rows = #footer_block.lines
+	local max_content_rows = math.max(height - footer_rows, 0)
+	local fill = max_content_rows - #lines
+
+	if fill > 0 then
+		for _ = 1, fill do
+			table.insert(lines, "")
+		end
+	end
+
+	utils.append_block(lines, spans, footer_block)
 
 	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines or {})

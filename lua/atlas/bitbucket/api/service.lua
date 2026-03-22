@@ -59,7 +59,7 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 				pullrequests = normalizer.normalize_prs(pullrequests),
 			},
 		}, nil)
-	end, 2000)
+	end, 1000)
 end
 
 ---@param view_repos BitbucketRepoConfig[]
