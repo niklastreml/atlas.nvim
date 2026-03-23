@@ -1,5 +1,5 @@
-@bitbucket_workspace = emrearmaganxx
-@bitbucket_repo = atlas
+@workspace = emrearmaganxx
+@repo_slug = atlas
 
 ### Get me
 GET https://api.bitbucket.org/2.0/user
@@ -7,9 +7,14 @@ Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
+### Get repository details
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
 
 ### Get open pull requests
-GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests?state=OPEN&pagelen=50
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests?state=OPEN&pagelen=50
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -32,19 +37,19 @@ Accept: application/json
 
 
 ### Get pull request details
-GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests/{{bitbucket_pr_id}}
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/{{bitbucket_pr_id}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
 ### Get pull request comments
-GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests/{{bitbucket_pr_id}}/comments
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/{{bitbucket_pr_id}}/comments
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
 ### Get build statuses for commit
-GET https://api.bitbucket.org/2.0/repositories/{{bitbucket_workspace}}/{{bitbucket_repo}}/pullrequests/{{bitbucket_pr_id}}/statuses
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/{{bitbucket_pr_id}}/statuses
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
