@@ -5,6 +5,23 @@ local ui_state = require("atlas.ui.state")
 local renderer = require("atlas.ui.renderer")
 local state = require("atlas.bitbucket.state")
 local help = require("atlas.ui.popups.help")
+local panel = require("atlas.bitbucket.ui.panel")
+
+---@return table|nil
+local function selected_pr_from_cursor()
+	local win = ui_state.win_id
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return nil
+	end
+
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local node = (ui_state.line_map or {})[line]
+	if node and node.pr then
+		return node.pr
+	end
+
+	return nil
+end
 
 ---@param direction "up"|"down"
 local function navigate_to_next_pr(direction)
@@ -27,6 +44,7 @@ local function navigate_to_next_pr(direction)
 		local node = line_map[line]
 		if node and node.kind == "pr" then
 			vim.api.nvim_win_set_cursor(win, { line, 0 })
+			panel.update(node.pr)
 			return
 		end
 	end
@@ -51,10 +69,18 @@ local function register_dynamic_keys(buf, views)
 			end,
 		},
 		{
+			key = "p",
+			desc = "Toggle PR details panel",
+			callback = function()
+				panel.toggle(selected_pr_from_cursor())
+			end,
+		},
+		{
 			key = "r",
 			desc = "Refresh current Bitbucket view",
 			callback = function()
 				renderer.render("bitbucket", { force_refresh = true })
+				panel.update(selected_pr_from_cursor())
 			end,
 		},
 	}
@@ -68,6 +94,7 @@ local function register_dynamic_keys(buf, views)
 				callback = function()
 					state.active_view = v
 					renderer.render("bitbucket")
+					panel.update(selected_pr_from_cursor())
 				end,
 			})
 		end

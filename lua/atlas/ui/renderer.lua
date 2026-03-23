@@ -83,7 +83,7 @@ function M.render(view, opts)
 end
 
 local resize_group = vim.api.nvim_create_augroup("AtlasUIResize", { clear = true })
-vim.api.nvim_create_autocmd("VimResized", {
+vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
 	group = resize_group,
 	callback = function()
 		local window = require("atlas.ui.window")

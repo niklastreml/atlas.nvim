@@ -43,7 +43,7 @@ local function append_plain_pr_rows(rows, group)
 			repo = group.full_name,
 			created = utils.relative_time(pr.created_on),
 			updated = utils.relative_time(pr.updated_on),
-			_item = { kind = "pr", id = pr.id, repo = group.full_name },
+			_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr },
 		})
 
 		table.insert(rows, {
@@ -60,8 +60,7 @@ local function append_plain_pr_rows(rows, group)
 				kind = "pr_meta",
 				id = pr.id,
 				repo = group.full_name,
-				source_branch = pr.source_branch or "?",
-				target_branch = pr.target_branch or "?",
+				pr = pr,
 			},
 		})
 	end
