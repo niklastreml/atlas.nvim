@@ -73,8 +73,8 @@ end
 ---@param opts { user: string, token: string, cache_ttl: number, force: boolean }
 ---@param on_done fun(groups: BitbucketRepoPRGroup[], err: string|nil)
 local function fetch_pullrequests(workspace, repo, opts, on_done)
+	local key = cache_key(workspace, repo)
 	if not opts.force then
-		local key = cache_key(workspace, repo)
 		local cached = cache.get(key)
 		if cached and cached.value then
 			logger.loginfo("Bitbucket cache hit", { workspace = workspace, repo = repo })
@@ -206,7 +206,12 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 	end
 
 	for _, repo in ipairs(view_repos) do
-		fetch_pullrequests(repo.workspace, repo.repo, { user = user, token = token, cache_ttl = ttl, force = opts.force_load }, finish)
+		fetch_pullrequests(
+			repo.workspace,
+			repo.repo,
+			{ user = user, token = token, cache_ttl = ttl, force = opts.force_load },
+			finish
+		)
 	end
 end
 
