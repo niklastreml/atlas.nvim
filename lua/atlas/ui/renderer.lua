@@ -18,7 +18,9 @@ local function apply_spans(buf, spans)
 end
 
 ---@param view "bitbucket"|"github"|"jira"
-function M.render(view)
+---@param opts { force_refresh: boolean }|nil
+function M.render(view, opts)
+	local force_refresh = opts and opts.force_refresh or false
 	local lines = {}
 	local spans = {}
 	local line_map = {}
@@ -36,14 +38,22 @@ function M.render(view)
 
 	if target_view == "jira" then
 		state.current_view = "jira"
-		lines, spans, line_map = require("atlas.jira.ui.renderer").render({ width = width, height = height }, rerender)
+		lines, spans, line_map = require("atlas.jira.ui.renderer").render(
+			{ width = width, height = height, force_refresh = force_refresh },
+			rerender
+		)
 	elseif target_view == "bitbucket" then
 		state.current_view = "bitbucket"
-		lines, spans, line_map =
-			require("atlas.bitbucket.ui.renderer").render({ width = width, height = height }, rerender)
+		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render(
+			{ width = width, height = height, force_refresh = force_refresh },
+			rerender
+		)
 	elseif target_view == "github" then
 		state.current_view = "github"
-		require("atlas.github.ui.renderer").render({ width = width, height = height }, rerender)
+		require("atlas.github.ui.renderer").render(
+			{ width = width, height = height, force_refresh = force_refresh },
+			rerender
+		)
 	end
 
 	local buf = state.buf_id

@@ -1,6 +1,7 @@
 local M = {}
 local state = require("atlas.ui.state")
 local highlights = require("atlas.ui.highlights")
+local help = require("atlas.ui.popups.help")
 
 local function hide_chrome()
 	-- TODO: This is a bit hacky, we should probably find a better way to handle this
@@ -79,6 +80,9 @@ function M.open()
 		end
 	end)
 
+	help.register_keys("General", {
+		{ key = "q", desc = "Close Atlas window" },
+	})
 	vim.keymap.set("n", "q", M.close, { buffer = state.buf_id, silent = true, nowait = true })
 	return state.buf_id, state.win_id
 end

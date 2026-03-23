@@ -7,16 +7,16 @@ local M = {}
 ---@param callback fun(result?: table, err?: string)
 function M.curl_request(method, url, headers, data, callback)
 	local header_args = {}
-	for key, value in pairs(headers) do
+	for key, value in pairs(headers or {}) do
 		table.insert(header_args, string.format('-H "%s: %s"', key, value))
 	end
 	local header_str = table.concat(header_args, " ")
 
 	local cmd
 	if data then
-		cmd = string.format("curl -s -X %s %s -d '%s' \"%s\"", method, header_str, data, url)
+		cmd = string.format("curl -sS -X %s %s -d '%s' \"%s\"", method, header_str, data, url)
 	else
-		cmd = string.format('curl -s -X %s %s "%s"', method, header_str, url)
+		cmd = string.format('curl -sS -X %s %s "%s"', method, header_str, url)
 	end
 
 	local out = {}
@@ -35,29 +35,31 @@ function M.curl_request(method, url, headers, data, callback)
 		end,
 		on_exit = function(_, code)
 			vim.schedule(function()
-				if #out == 0 then
-					callback(nil, "Empty response from server")
-					return
-				end
+				local raw = table.concat(out, "\n")
+				local stderr_text = table.concat(err_out, "\n")
 
 				if code ~= 0 then
-					local err = "curl exited with code " .. code
-					if #err > 0 then
-						err = err .. ": " .. table.concat(err, "\n")
+					local err = "curl exited with code " .. tostring(code)
+					if stderr_text ~= "" then
+						err = err .. ": " .. stderr_text
 					end
 					callback(nil, err)
 					return
 				end
+
+				if raw == "" then
+					callback(nil, "Empty response from server")
+					return
+				end
+
+				local ok, result = pcall(vim.json.decode, raw)
+				if not ok then
+					callback(nil, "Failed to parse JSON: " .. tostring(result) .. "\nRaw: " .. raw:sub(1, 200))
+					return
+				end
+
+				callback(result, nil)
 			end)
-
-			local raw = table.concat(out, "\n")
-			local ok, result = pcall(vim.json.decode, raw)
-			if not ok then
-				callback(nil, "Failed to parse JSON: " .. tostring(result) .. "\nRaw: " .. raw:sub(1, 200))
-				return
-			end
-
-			callback(result, nil)
 		end,
 	})
 end

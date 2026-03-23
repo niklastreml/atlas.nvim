@@ -221,17 +221,36 @@ local function render_header(lines, spans, width, views)
 	)
 end
 
+---@param a BitbucketViewConfig|nil
+---@param b BitbucketViewConfig|nil
+---@return boolean
+local function same_view(a, b)
+	if a == nil and b == nil then
+		return true
+	end
+
+	if a == nil or b == nil then
+		return false
+	end
+
+	local a_id = a.key or a.name or ""
+	local b_id = b.key or b.name or ""
+	return a_id == b_id
+end
+
 ---@param view BitbucketViewConfig|nil
+---@param opts { force_refresh: boolean }
 ---@param on_done fun()
-local function ensure_loaded(view, on_done)
-	if state.is_loading or state.repos ~= nil then
+local function ensure_loaded(view, opts, on_done)
+	local is_current_view = same_view(view, state.current_view)
+	if state.is_loading or state.repos ~= nil and is_current_view then
 		return
 	end
 
 	state.is_loading = true
 	state.error = nil
 
-	service.fetch_pullrequests((view and view.repos) or {}, function(groups, err)
+	service.fetch_pullrequests((view and view.repos) or {}, { force_load = opts.force_refresh }, function(groups, err)
 		state.is_loading = false
 		if err then
 			state.error = tostring(err)
@@ -244,9 +263,13 @@ local function ensure_loaded(view, on_done)
 	end)
 end
 
----@param opts { width: number, height: number }
+---@param opts { width: number, height: number, force_refresh: boolean }
 ---@param rerender fun(view: "bitbucket"|"github"|"jira")
 function M.render(opts, rerender)
+	if opts.force_refresh then
+		state.current_view = nil
+	end
+
 	local views = (config.options.bitbucket and config.options.bitbucket.views) or {}
 	if state.active_view == nil and views[1] then
 		state.active_view = views[1]
@@ -258,14 +281,15 @@ function M.render(opts, rerender)
 	render_header(lines, spans, opts.width, views)
 	table.insert(lines, "")
 
-	ensure_loaded(state.active_view, function()
+	ensure_loaded(state.active_view, { force_refresh = opts.force_refresh }, function()
 		spinner.stop()
+		state.current_view = state.active_view
 		rerender("bitbucket")
 	end)
 
 	if state.error then
 		table.insert(lines, "Error loading pull requests: " .. state.error)
-	elseif state.is_loading and state.repos == nil then
+	elseif state.is_loading then
 		spinner.start()
 		table.insert(lines, "Loading...")
 	else
