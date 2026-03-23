@@ -124,12 +124,30 @@ local function refresh_buffer()
 	end
 end
 
+local function move_cursor_to_last_line()
+	if logs_win == nil or not vim.api.nvim_win_is_valid(logs_win) then
+		return
+	end
+
+	if logs_buf == nil or not vim.api.nvim_buf_is_valid(logs_buf) then
+		return
+	end
+
+	local line_count = vim.api.nvim_buf_line_count(logs_buf)
+	if line_count < 1 then
+		line_count = 1
+	end
+
+	vim.api.nvim_win_set_cursor(logs_win, { line_count, 0 })
+end
+
 function M.open()
 	local buf = ensure_buf()
 
 	if logs_win ~= nil and vim.api.nvim_win_is_valid(logs_win) then
 		vim.api.nvim_set_current_win(logs_win)
 		refresh_buffer()
+		move_cursor_to_last_line()
 		return
 	end
 
@@ -156,6 +174,8 @@ function M.open()
 	end, opts)
 
 	refresh_buffer()
+	move_cursor_to_last_line()
+	vim.api.nvim_set_current_win(logs_win)
 end
 
 function M.close()
