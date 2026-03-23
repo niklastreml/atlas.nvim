@@ -6,10 +6,50 @@ local renderer = require("atlas.ui.renderer")
 local state = require("atlas.bitbucket.state")
 local help = require("atlas.ui.popups.help")
 
+---@param direction "up"|"down"
+local function navigate_to_next_pr(direction)
+	local win = ui_state.win_id
+	local buf = ui_state.buf_id
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	local line_map = ui_state.line_map or {}
+	local current_line = vim.api.nvim_win_get_cursor(win)[1]
+	local last_line = vim.api.nvim_buf_line_count(buf)
+	local step = direction == "up" and -1 or 1
+	local stop = direction == "up" and 1 or last_line
+
+	for line = current_line + step, stop, step do
+		local node = line_map[line]
+		if node and node.kind == "pr" then
+			vim.api.nvim_win_set_cursor(win, { line, 0 })
+			return
+		end
+	end
+end
+
 ---@param buf integer
 ---@param views BitbucketViewConfig[]
 local function register_dynamic_keys(buf, views)
 	local items = {
+		{
+			key = "j",
+			desc = "Jump to next PR",
+			callback = function()
+				navigate_to_next_pr("down")
+			end,
+		},
+		{
+			key = "k",
+			desc = "Jump to previous PR",
+			callback = function()
+				navigate_to_next_pr("up")
+			end,
+		},
 		{
 			key = "r",
 			desc = "Refresh current Bitbucket view",
