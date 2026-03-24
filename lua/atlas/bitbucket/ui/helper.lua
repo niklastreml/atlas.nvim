@@ -43,7 +43,7 @@ function M.build_footer_items(repos)
 		local name = group.repo
 		if name ~= nil and name ~= "" and not seen[name] then
 			seen[name] = true
-			table.insert(repo_names, "@" .. name)
+			table.insert(repo_names, name)
 		end
 	end
 
@@ -55,7 +55,7 @@ function M.build_footer_items(repos)
 	}
 
 	for _, name in ipairs(repo_names) do
-		table.insert(items, { text = name, hl_group = "AtlasFooterText" })
+		table.insert(items, { text = string.format("%s %s", icons.entity("repo"), name), hl_group = "AtlasFooterText" })
 	end
 
 	return items

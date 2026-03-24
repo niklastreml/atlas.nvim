@@ -2,11 +2,33 @@ local M = {}
 
 local utils = require("atlas.utils")
 
+local notice = {
+	text = "",
+	hl_group = "AtlasTextMuted",
+	token = 0,
+}
+
 local registry = {
 	bitbucket = {},
 	jira = {},
 	github = {},
 }
+
+local function notice_hl(level)
+	if level == "success" then
+		return "AtlasTextPositive"
+	end
+	if level == "warn" then
+		return "AtlasLogWarn"
+	end
+	if level == "error" then
+		return "AtlasLogError"
+	end
+	if level == "info" then
+		return "AtlasLogInfo"
+	end
+	return "AtlasTextMuted"
+end
 
 ---@param text string|nil
 ---@return number
@@ -84,6 +106,11 @@ function M.segments_for(view)
 	local left = clone_segments(registry[view] or {})
 
 	local right = {
+		{
+			text = notice.text ~= "" and notice.text or "status",
+			hl_group = notice.text ~= "" and notice.hl_group or "AtlasTextMuted",
+			align = "right",
+		},
 		{ text = string.format("atlas (%s)", utils.get_version()), hl_group = "AtlasTextMuted", align = "right" },
 		{ text = "? help", hl_group = "AtlasTextMuted", align = "right" },
 	}
@@ -93,6 +120,26 @@ function M.segments_for(view)
 	end
 
 	return left
+end
+
+---FIX: Currently requires rerender. Will split later in its own buffer
+---@param level "success"|"warn"|"error"|"info"
+---@param text string
+---@param duration_ms number|nil
+function M.notify(level, text, duration_ms)
+	notice.token = notice.token + 1
+	local token = notice.token
+
+	notice.text = tostring(text or "")
+	notice.hl_group = notice_hl(level)
+
+	vim.defer_fn(function()
+		if notice.token ~= token then
+			return
+		end
+		notice.text = ""
+		notice.hl_group = "AtlasTextMuted"
+	end, duration_ms or 2500)
 end
 
 -- opts:
