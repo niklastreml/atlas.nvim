@@ -73,6 +73,12 @@ function M.register_item(view, seg)
 end
 
 ---@param view "bitbucket"|"jira"|"github"
+---@param items table[]
+function M.set_items(view, items)
+	registry[view] = clone_segments(items or {})
+end
+
+---@param view "bitbucket"|"jira"|"github"
 ---@return table[]
 function M.segments_for(view)
 	local left = clone_segments(registry[view] or {})

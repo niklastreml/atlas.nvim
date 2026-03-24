@@ -3,6 +3,8 @@ local M = {}
 local config = require("atlas.config")
 local icons = require("atlas.ui.icons")
 local state = require("atlas.bitbucket.state")
+local footer = require("atlas.ui.components.footer")
+local helper = require("atlas.bitbucket.ui.helper")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
@@ -11,83 +13,6 @@ local highlights = require("atlas.ui.highlights")
 local ui_state = require("atlas.ui.state")
 local spinner = require("atlas.ui.popups.spinner")
 local service = require("atlas.bitbucket.api.service")
-
----@param row table
----@param col TableColumn
----@return string|nil
-local function bitbucket_cell_hl(row, col)
-	if col.key == "created" or col.key == "updated" or (row.kind == "meta" and col.key == "repo_pr") then
-		return "AtlasTextMuted"
-	end
-
-	if col.key == "author" then
-		return highlights.dynamic_for(row.author)
-	end
-
-	if col.key == "repo" then
-		return highlights.dynamic_for(row.repo)
-	end
-
-	return nil
-end
-
----@param rows table[]
----@param group BitbucketRepoPRGroup
-local function append_plain_pr_rows(rows, group)
-	for _, pr in ipairs(group.pullrequests or {}) do
-		table.insert(rows, {
-			kind = "pr",
-			repo_pr = string.format("#%s %s", tostring(pr.id), pr.title or ""),
-			comments = tostring(pr.comments),
-			tasks = tostring(pr.tasks),
-			author = pr.author.name,
-			repo = group.full_name,
-			created = utils.relative_time(pr.created_on),
-			updated = utils.relative_time(pr.updated_on),
-			_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr },
-		})
-
-		table.insert(rows, {
-			kind = "meta",
-			repo_pr = string.format("%s → %s", pr.source_branch or "?", pr.target_branch or "?"),
-			comments = "",
-			tasks = "",
-			author = "",
-			repo = "",
-			created = "",
-			updated = "",
-			separator = true,
-			_item = {
-				kind = "pr_meta",
-				id = pr.id,
-				repo = group.full_name,
-				pr = pr,
-			},
-		})
-	end
-end
-
-local function to_plain_rows(repo_groups)
-	local rows = {}
-
-	for _, group in ipairs(repo_groups or {}) do
-		append_plain_pr_rows(rows, group)
-	end
-
-	return rows
-end
-
-local function table_columns()
-	return {
-		{ key = "repo_pr", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
-		{ key = "comments", name = "󰅺", min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "tasks", name = "󰄱", min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "created", name = "󰃭", can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "updated", name = "󰥔", can_grow = false, header_hl = "AtlasColumnHeader" },
-	}
-end
 
 ---@param table_lines string[]
 ---@param table_map table<number, table>
@@ -102,32 +27,61 @@ local function add_pr_id_spans(table_lines, table_map, table_spans)
 					line = lnum - 1,
 					start_col = s - 1,
 					end_col = e,
-					hl_group = "AtlasLogInfo",
+					hl_group = "AtlasTextMuted",
 				})
 			end
 		end
 	end
 end
 
+-- Layout: compact
+--   [pr] #123 Title                        c t author repo created updated
+--       source/branch -> target/branch     (meta row + separator line)
 ---@param opts { width: number, height: number }
 ---@param repos BitbucketRepoPRGroup[]
 ---@return string[]
 ---@return table[]
 ---@return table<number, table>
 local function build_plain_content(opts, repos)
-	local rows = to_plain_rows(repos)
+	local table_data = helper.build_compact_table(repos)
 	local tbl_lines, tbl_map, tbl_spans = table_view.render({
 		width = opts.width,
 		margin = 1,
-		columns = table_columns(),
-		rows = rows,
-		cell_hl = bitbucket_cell_hl,
+		columns = table_data.columns,
+		rows = table_data.rows,
+		cell_hl = helper.cell_hl,
 	})
 	add_pr_id_spans(tbl_lines, tbl_map, tbl_spans)
 
 	return tbl_lines, tbl_spans, tbl_map
 end
 
+-- Layout: plain
+--   [pr] #123 Title                        c t author repo source->target created updated
+--   (single row per PR, no meta row)
+---@param opts { width: number, height: number }
+---@param repos BitbucketRepoPRGroup[]
+---@return string[]
+---@return table[]
+---@return table<number, table>
+local function build_plain_singleline_content(opts, repos)
+	local table_data = helper.build_plain_table(repos)
+	local tbl_lines, tbl_map, tbl_spans = table_view.render({
+		width = opts.width,
+		margin = 1,
+		columns = table_data.columns,
+		rows = table_data.rows,
+		cell_hl = helper.cell_hl,
+	})
+	add_pr_id_spans(tbl_lines, tbl_map, tbl_spans)
+
+	return tbl_lines, tbl_spans, tbl_map
+end
+
+-- Layout: grouped
+--   [repo heading]
+--   [pr] #123 Title                        c t author repo created updated
+--       source/branch -> target/branch     (uses compact rows under each repo heading)
 ---@param opts { width: number, height: number }
 ---@param repos BitbucketRepoPRGroup[]
 ---@return string[]
@@ -149,17 +103,16 @@ local function build_grouped_content(opts, repos)
 		})
 		table.insert(lines, "")
 
-		local rows = {}
-		append_plain_pr_rows(rows, group)
-		if #rows == 0 then
+		local table_data = helper.build_grouped_table(group)
+		if #table_data.rows == 0 then
 			table.insert(lines, "(no pull requests)")
 		else
 			local tbl_lines, tbl_map, tbl_spans = table_view.render({
 				width = opts.width,
 				margin = 1,
-				columns = table_columns(),
-				rows = rows,
-				cell_hl = bitbucket_cell_hl,
+				columns = table_data.columns,
+				rows = table_data.rows,
+				cell_hl = helper.cell_hl,
 			})
 			add_pr_id_spans(tbl_lines, tbl_map, tbl_spans)
 
@@ -261,6 +214,7 @@ local function ensure_loaded(view, opts, on_done)
 			state.repos = {}
 		else
 			state.repos = groups or {}
+			footer.set_items("bitbucket", helper.build_footer_items(state.repos))
 		end
 
 		on_done()
@@ -297,10 +251,12 @@ function M.render(opts, rerender)
 		spinner.start()
 		table.insert(lines, "Loading...")
 	else
-		local grouped = state.active_view ~= nil and state.active_view.layout == "grouped"
+		local layout = state.active_view and state.active_view.layout or "compact"
 		local body_lines, body_spans, body_map
-		if grouped then
+		if layout == "grouped" then
 			body_lines, body_spans, body_map = build_grouped_content(opts, state.repos or {})
+		elseif layout == "plain" then
+			body_lines, body_spans, body_map = build_plain_singleline_content(opts, state.repos or {})
 		else
 			body_lines, body_spans, body_map = build_plain_content(opts, state.repos or {})
 		end

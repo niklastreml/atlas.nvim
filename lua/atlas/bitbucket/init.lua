@@ -112,13 +112,6 @@ local function register_dynamic_keys(buf, views)
 end
 
 function M.setup() end
-local footer = require("atlas.ui.components.footer")
-
-footer.clear_items("bitbucket")
----TODO: add better options. This is just for testing.
-footer.register_item("bitbucket", { text = "PRs", hl_group = "AtlasFooterText" })
-footer.register_item("bitbucket", { text = "|", hl_group = "AtlasFooterText" })
-footer.register_item("bitbucket", { text = "r refresh", hl_group = "AtlasFooterText" })
 
 local target_buf = ui_state.buf_id
 if target_buf == nil or not vim.api.nvim_buf_is_valid(target_buf) then
