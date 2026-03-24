@@ -1,6 +1,6 @@
 local M = {}
 
-local logger = require("atlas.logger")
+local logger = require("atlas.core.logger")
 local table_view = require("atlas.ui.components.table")
 local ns = vim.api.nvim_create_namespace("atlas.logs")
 

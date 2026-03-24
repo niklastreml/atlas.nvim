@@ -5,6 +5,7 @@ local M = {}
 ---@param headers table<string, string> HTTP headers
 ---@param data? string JSON data for POST/PUT
 ---@param callback fun(result?: table, err?: string)
+---@return { job_id: integer, cancel: fun() }
 function M.curl_request(method, url, headers, data, callback)
 	local header_args = {}
 	for key, value in pairs(headers or {}) do
@@ -22,7 +23,7 @@ function M.curl_request(method, url, headers, data, callback)
 	local out = {}
 	local err_out = {}
 
-	vim.fn.jobstart(cmd, {
+	local job_id = vim.fn.jobstart(cmd, {
 		on_stdout = function(_, response)
 			if response then
 				vim.list_extend(out, response)
@@ -62,6 +63,15 @@ function M.curl_request(method, url, headers, data, callback)
 			end)
 		end,
 	})
+
+	return {
+		job_id = job_id,
+		cancel = function()
+			if job_id and job_id > 0 then
+				pcall(vim.fn.jobstop, job_id)
+			end
+		end,
+	}
 end
 
 return M

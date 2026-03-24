@@ -1,11 +1,11 @@
 local M = {}
-local logger = require("atlas.logger")
+local logger = require("atlas.core.logger")
 
 local bootstrapped = false
 
 M.setup = function(opts)
 	require("atlas.config").setup(opts)
-	require("atlas.logger").clear()
+	require("atlas.core.logger").clear()
 end
 
 local function bootstrap()

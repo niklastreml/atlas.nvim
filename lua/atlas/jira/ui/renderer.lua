@@ -42,7 +42,7 @@ local function fake_rows()
 	}
 end
 
----@param opts { width: number, height: number }
+---@param opts { width: number, height: number, force_refresh: boolean }
 ---@param rerender fun(view: "bitbucket"|"github"|"jira")
 function M.render(opts, rerender)
 	local views = (config.options.jira and config.options.jira.views) or {}

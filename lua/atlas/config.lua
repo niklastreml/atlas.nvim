@@ -23,7 +23,7 @@
 ---@field name string
 ---@field key string|nil
 ---@field repos BitbucketRepoConfig[]|nil
----@field layout "plain"|"grouped"|nil
+---@field layout "compact"|"grouped"|"plainb"|nil
 ---@field filter fun(pr: table, ctx: table): boolean|nil
 
 --- @class BitbucketConfig

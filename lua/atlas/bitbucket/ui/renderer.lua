@@ -8,6 +8,7 @@ local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
 local utils = require("atlas.utils")
 local highlights = require("atlas.ui.highlights")
+local ui_state = require("atlas.ui.state")
 local spinner = require("atlas.ui.popups.spinner")
 local service = require("atlas.bitbucket.api.service")
 
@@ -249,7 +250,11 @@ local function ensure_loaded(view, opts, on_done)
 	state.is_loading = true
 	state.error = nil
 
-	service.fetch_pullrequests((view and view.repos) or {}, { force_load = opts.force_refresh }, function(groups, err)
+	local request_scope = string.format("bitbucket:%s", tostring(ui_state.buf_id or "default"))
+	service.fetch_pullrequests((view and view.repos) or {}, {
+		force_load = opts.force_refresh,
+		request_scope = request_scope,
+	}, function(groups, err)
 		state.is_loading = false
 		if err then
 			state.error = tostring(err)
