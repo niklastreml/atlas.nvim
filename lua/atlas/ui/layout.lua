@@ -1,7 +1,7 @@
 local M = {}
 
 local footer = require("atlas.ui.components.footer")
-local ui_state = require("atlas.ui.state")
+local ui_state = require("atlas.ui.main.state")
 
 local state = {
 	main_win = nil,
@@ -214,6 +214,22 @@ function M.footer_buf_id()
 	return nil
 end
 
+---@return integer|nil
+function M.detail_win_id()
+	if valid_win(state.detail_win) then
+		return state.detail_win
+	end
+	return nil
+end
+
+---@return integer|nil
+function M.detail_buf_id()
+	if valid_buf(state.detail_buf) then
+		return state.detail_buf
+	end
+	return nil
+end
+
 function M.toggle_detail()
 	if not valid_win(state.main_win) then
 		return
@@ -244,7 +260,7 @@ end
 
 function M.open(view)
 	M.ensure_open()
-	require("atlas.ui.renderer").render(view, { autofocus = true })
+	require("atlas.ui.main.renderer").render(view, { autofocus = true })
 	footer.refresh()
 end
 
@@ -300,7 +316,7 @@ vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
 			return
 		end
 		M.reflow()
-		require("atlas.ui.renderer").render(ui_state.current_view)
+		require("atlas.ui.main.renderer").render(ui_state.current_view)
 	end,
 })
 

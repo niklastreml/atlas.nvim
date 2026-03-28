@@ -1,7 +1,7 @@
 local M = {}
 
 local help = require("atlas.ui.popups.help")
-local ui_state = require("atlas.ui.state")
+local ui_state = require("atlas.ui.main.state")
 
 ---@param view string|nil
 ---@param node table|nil
@@ -24,6 +24,16 @@ local function is_selectable(view, node)
 	end
 
 	return node.kind ~= nil
+end
+
+local function update_panel_selection(win)
+	local panel = require("atlas.ui.panel")
+	if not panel.is_open() then
+		return
+	end
+
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	panel.on_select(ui_state.current_view, (ui_state.line_map or {})[line])
 end
 
 ---@param direction "up"|"down"
@@ -49,6 +59,7 @@ function M.move_cursor(direction)
 	for lnum = line + step, (direction == "up" and 1 or max_line), step do
 		if is_selectable(view, line_map[lnum]) then
 			vim.api.nvim_win_set_cursor(win, { lnum, col })
+			update_panel_selection(win)
 			return
 		end
 	end
@@ -59,6 +70,7 @@ function M.move_cursor(direction)
 
 	local fallback = math.max(1, math.min(max_line, line + step))
 	vim.api.nvim_win_set_cursor(win, { fallback, col })
+	update_panel_selection(win)
 end
 
 function M.focus_first_item()
@@ -79,6 +91,7 @@ function M.focus_first_item()
 	for lnum = 1, max_line do
 		if is_selectable(view, line_map[lnum]) then
 			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			update_panel_selection(win)
 			return
 		end
 	end
@@ -111,7 +124,7 @@ function M.register_keys(buf)
 			key = "p",
 			desc = "Toggle detail pane",
 			callback = function()
-				require("atlas.ui.layout").toggle_detail()
+				require("atlas.ui.panel").toggle()
 			end,
 		},
 	}
