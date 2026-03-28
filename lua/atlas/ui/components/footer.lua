@@ -196,8 +196,8 @@ end
 
 function M.refresh()
 	local layout = require("atlas.ui.layout")
-	local win = layout.footer_win_id()
-	local buf = layout.footer_buf_id()
+	local win = layout.win_id("footer")
+	local buf = layout.buf_id("footer")
 
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
 		return

@@ -130,7 +130,7 @@ local function register_commands()
 	end, { desc = "Open Github picker" })
 
 	vim.api.nvim_create_user_command("AtlasLogs", function()
-		require("atlas.ui.panels.logs").toggle()
+		require("atlas.ui.logs").toggle()
 	end, { desc = "Open Github picker" })
 end
 

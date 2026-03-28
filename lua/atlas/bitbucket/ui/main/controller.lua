@@ -62,7 +62,7 @@ local function load_active_view(opts, on_done)
 		require("atlas.ui.main.renderer").render("bitbucket")
 	end
 
-	local request_scope = string.format("bitbucket:%s", tostring(layout.main_buf_id() or "default"))
+	local request_scope = string.format("bitbucket:%s", tostring(layout.buf_id("main") or "default"))
 	service.fetch_pullrequests((target_view and target_view.repos) or {}, {
 		force_load = opts.force_load == true,
 		request_scope = request_scope,

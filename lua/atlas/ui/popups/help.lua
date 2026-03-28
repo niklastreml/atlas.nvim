@@ -22,7 +22,7 @@ end
 ---@return integer
 local function current_target_buf()
 	local layout = require("atlas.ui.layout")
-	local buf = layout.main_buf_id()
+	local buf = layout.buf_id("main")
 	if valid_buf(buf) then
 		return buf
 	end

@@ -34,6 +34,12 @@ function M.open(view)
 	layout.ensure_open()
 	bootstrap()
 	layout.open(view)
+
+	--FIX: This removes the statusline but is there a better way to do this? Could also effect other plugins that rely on the statusline
+	vim.o.laststatus = 0
+	vim.schedule(function()
+		vim.o.laststatus = 0
+	end)
 end
 
 return M

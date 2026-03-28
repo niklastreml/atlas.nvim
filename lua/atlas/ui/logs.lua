@@ -160,9 +160,9 @@ function M.open()
 	end
 
 	local layout = require("atlas.ui.layout")
-	local anchor = layout.footer_win_id() or vim.api.nvim_get_current_win()
+	local anchor = layout.win_id("footer") or vim.api.nvim_get_current_win()
 	vim.api.nvim_win_call(anchor, function()
-		vim.cmd("belowright 6split")
+		vim.cmd("belowright 12split")
 		logs_win = vim.api.nvim_get_current_win()
 	end)
 
@@ -173,7 +173,7 @@ function M.open()
 	vim.api.nvim_set_option_value("wrap", false, { win = logs_win })
 	vim.api.nvim_set_option_value("cursorline", true, { win = logs_win })
 	vim.api.nvim_set_option_value("winfixheight", true, { win = logs_win })
-	pcall(vim.api.nvim_win_set_height, logs_win, 6)
+	pcall(vim.api.nvim_win_set_height, logs_win, 12)
 
 	local opts = { buffer = buf, silent = true, nowait = true }
 	vim.keymap.set("n", "q", function()

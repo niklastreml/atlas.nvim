@@ -1,7 +1,7 @@
 local M = {}
 
 local config = require("atlas.config")
-local actions = require("atlas.bitbucket.actions")
+local actions = require("atlas.bitbucket.ui.main.controller")
 local help = require("atlas.ui.popups.help")
 local navigation = require("atlas.ui.navigation")
 local layout = require("atlas.ui.layout")
@@ -51,7 +51,7 @@ end
 function M.setup()
 	footer.clear_items()
 
-	local target_buf = layout.main_buf_id()
+	local target_buf = layout.buf_id("main")
 	if target_buf == nil or not vim.api.nvim_buf_is_valid(target_buf) then
 		return
 	end

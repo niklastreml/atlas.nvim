@@ -39,8 +39,8 @@ end
 ---@param direction "up"|"down"
 function M.move_cursor(direction)
 	local layout = require("atlas.ui.layout")
-	local win = layout.main_win_id()
-	local buf = layout.main_buf_id()
+	local win = layout.win_id("main")
+	local buf = layout.buf_id("main")
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
 		return
 	end
@@ -75,8 +75,8 @@ end
 
 function M.focus_first_item()
 	local layout = require("atlas.ui.layout")
-	local win = layout.main_win_id()
-	local buf = layout.main_buf_id()
+	local win = layout.win_id("main")
+	local buf = layout.buf_id("main")
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
 		return
 	end
@@ -100,7 +100,7 @@ end
 ---@param buf integer|nil
 function M.register_keys(buf)
 	local layout = require("atlas.ui.layout")
-	local target_buf = buf or layout.main_buf_id()
+	local target_buf = buf or layout.buf_id("main")
 	if target_buf == nil or not vim.api.nvim_buf_is_valid(target_buf) then
 		return
 	end

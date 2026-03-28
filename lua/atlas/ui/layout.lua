@@ -162,7 +162,7 @@ local function ensure_footer()
 	end
 
 	pcall(vim.api.nvim_win_set_height, state.footer_win, 1)
-	local logs_win = require("atlas.ui.panels.logs").win_id()
+	local logs_win = require("atlas.ui.logs").win_id()
 	if logs_win == nil then
 		pcall(function()
 			vim.api.nvim_win_call(state.footer_win, function()
@@ -182,50 +182,22 @@ function M.is_open()
 	return valid_win(state.main_win)
 end
 
+---@param pane "main"|"footer"|"detail"
 ---@return integer|nil
-function M.main_win_id()
-	if valid_win(state.main_win) then
-		return state.main_win
+function M.win_id(pane)
+	local key = pane .. "_win"
+	if valid_win(state[key]) then
+		return state[key]
 	end
 	return nil
 end
 
+---@param pane "main"|"footer"|"detail"
 ---@return integer|nil
-function M.main_buf_id()
-	if valid_buf(state.main_buf) then
-		return state.main_buf
-	end
-	return nil
-end
-
----@return integer|nil
-function M.footer_win_id()
-	if valid_win(state.footer_win) then
-		return state.footer_win
-	end
-	return nil
-end
-
----@return integer|nil
-function M.footer_buf_id()
-	if valid_buf(state.footer_buf) then
-		return state.footer_buf
-	end
-	return nil
-end
-
----@return integer|nil
-function M.detail_win_id()
-	if valid_win(state.detail_win) then
-		return state.detail_win
-	end
-	return nil
-end
-
----@return integer|nil
-function M.detail_buf_id()
-	if valid_buf(state.detail_buf) then
-		return state.detail_buf
+function M.buf_id(pane)
+	local key = pane .. "_buf"
+	if valid_buf(state[key]) then
+		return state[key]
 	end
 	return nil
 end

@@ -29,7 +29,7 @@ local function lines_for_pr(pr)
 end
 
 function M.render()
-	local buf = layout.detail_buf_id()
+	local buf = layout.buf_id("detail")
 	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
 		return
 	end

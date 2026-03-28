@@ -8,7 +8,7 @@ function M.render(provider)
 	end
 
 	local layout = require("atlas.ui.layout")
-	local buf = layout.detail_buf_id()
+	local buf = layout.buf_id("detail")
 	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
 		return
 	end
