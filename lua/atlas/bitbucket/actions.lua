@@ -2,7 +2,7 @@ local M = {}
 
 local config = require("atlas.config")
 local footer = require("atlas.ui.components.footer")
-local helper = require("atlas.bitbucket.ui.helper")
+local helper = require("atlas.bitbucket.ui.main.helper")
 local service = require("atlas.bitbucket.api.service")
 local spinner = require("atlas.ui.popups.spinner")
 local state = require("atlas.bitbucket.state")
@@ -59,7 +59,7 @@ local function load_active_view(opts, on_done)
 	state.error = nil
 
 	if layout.is_open() then
-		require("atlas.ui.renderer").render("bitbucket")
+		require("atlas.ui.main.renderer").render("bitbucket")
 	end
 
 	local request_scope = string.format("bitbucket:%s", tostring(layout.main_buf_id() or "default"))
@@ -91,7 +91,7 @@ local function load_active_view(opts, on_done)
 		spinner.stop()
 
 		if layout.is_open() then
-			require("atlas.ui.renderer").render("bitbucket")
+			require("atlas.ui.main.renderer").render("bitbucket")
 		end
 
 		on_done()

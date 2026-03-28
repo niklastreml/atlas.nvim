@@ -1,6 +1,6 @@
 local M = {}
 
-local state = require("atlas.ui.state")
+local state = require("atlas.ui.main.state")
 local ns = vim.api.nvim_create_namespace("atlas.ui")
 
 local function apply_spans(buf, spans)
@@ -52,7 +52,7 @@ function M.render(view, opts)
 			end)
 		end
 
-		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render({ width = width, height = height })
+		lines, spans, line_map = require("atlas.bitbucket.ui.main.renderer").render({ width = width, height = height })
 	elseif target_view == "github" then
 		state.current_view = "github"
 		lines, spans, line_map = require("atlas.github.ui.renderer").render({ width = width, height = height })
