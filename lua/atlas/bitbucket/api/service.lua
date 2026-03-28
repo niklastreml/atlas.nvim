@@ -5,23 +5,14 @@ local logger = require("atlas.core.logger")
 local cache = require("atlas.core.cache")
 local http = require("atlas.core.http")
 local request_manager = require("atlas.core.request_manager")
+local footer = require("atlas.ui.components.footer")
+local icons = require("atlas.ui.icons")
 
 local API_BASE = "https://api.bitbucket.org/2.0"
 
 local ENDPOINTS = {
 	pullrequests_open = "/repositories/%s/%s/pullrequests?state=OPEN&pagelen=50",
 }
-
---- TODO: Just for testing
-local function load_mock_json()
-	local this_file = debug.getinfo(1, "S").source:sub(2)
-	local this_dir = vim.fn.fnamemodify(this_file, ":p:h")
-	local path = this_dir .. "/mock_pullrequests.json"
-	local lines = vim.fn.readfile(path)
-	local text = table.concat(lines, "\n")
-	local decoded = vim.json.decode(text)
-	return (decoded and decoded.values) or {}
-end
 
 local function build_pullrequests_open_url(workspace, repo)
 	return API_BASE .. string.format(ENDPOINTS.pullrequests_open, workspace, repo)
@@ -89,24 +80,6 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 		workspace = workspace,
 		repo = repo,
 	})
-
-	-- local pullrequests = load_mock_json()
-	-- vim.defer_fn(function()
-	-- 	logger.loginfo("Fetch success", {
-	-- 		workspace = workspace,
-	-- 		repo = repo,
-	-- 		pr_count = (pullrequests and #pullrequests or 0),
-	-- 	})
-	--
-	-- 	on_done({
-	-- 		{
-	-- 			workspace = workspace,
-	-- 			repo = repo,
-	-- 			full_name = string.format("%s/%s", workspace, repo),
-	-- 			pullrequests = normalizer.normalize_prs(pullrequests),
-	-- 		},
-	-- 	}, nil)
-	-- end, 1000)
 
 	local url = build_pullrequests_open_url(workspace, repo)
 	local headers = build_headers(opts.user, opts.token)
@@ -222,6 +195,15 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 			if #errors > 0 then
 				on_done(all_groups, table.concat(errors, " | "))
 			else
+				local pr_count = 0
+				for _, group in ipairs(all_groups) do
+					pr_count = pr_count + #(group.pullrequests or {})
+				end
+				footer.notify(
+					"success",
+					string.format("%s Successful fetch %d pull request(s)", icons.entity("success"), pr_count),
+					2800
+				)
 				on_done(all_groups, nil)
 			end
 

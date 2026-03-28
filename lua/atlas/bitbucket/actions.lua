@@ -6,8 +6,7 @@ local helper = require("atlas.bitbucket.ui.helper")
 local service = require("atlas.bitbucket.api.service")
 local spinner = require("atlas.ui.popups.spinner")
 local state = require("atlas.bitbucket.state")
-local ui_state = require("atlas.ui.state")
-local window = require("atlas.ui.window")
+local layout = require("atlas.ui.layout")
 
 ---@param view BitbucketViewConfig|nil
 ---@return string
@@ -59,11 +58,11 @@ local function load_active_view(opts, on_done)
 	state.is_loading = true
 	state.error = nil
 
-	if window.is_open() then
+	if layout.is_open() then
 		require("atlas.ui.renderer").render("bitbucket")
 	end
 
-	local request_scope = string.format("bitbucket:%s", tostring(ui_state.buf_id or "default"))
+	local request_scope = string.format("bitbucket:%s", tostring(layout.main_buf_id() or "default"))
 	service.fetch_pullrequests((target_view and target_view.repos) or {}, {
 		force_load = opts.force_load == true,
 		request_scope = request_scope,
@@ -87,11 +86,11 @@ local function load_active_view(opts, on_done)
 			state.repos = groups or {}
 		end
 
-		footer.set_items("bitbucket", helper.build_footer_items(state.repos))
+		footer.set_items(helper.build_footer_items(state.repos))
 
 		spinner.stop()
 
-		if window.is_open() then
+		if layout.is_open() then
 			require("atlas.ui.renderer").render("bitbucket")
 		end
 

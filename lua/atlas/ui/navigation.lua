@@ -28,8 +28,9 @@ end
 
 ---@param direction "up"|"down"
 function M.move_cursor(direction)
-	local win = ui_state.win_id
-	local buf = ui_state.buf_id
+	local layout = require("atlas.ui.layout")
+	local win = layout.main_win_id()
+	local buf = layout.main_buf_id()
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
 		return
 	end
@@ -61,8 +62,9 @@ function M.move_cursor(direction)
 end
 
 function M.focus_first_item()
-	local win = ui_state.win_id
-	local buf = ui_state.buf_id
+	local layout = require("atlas.ui.layout")
+	local win = layout.main_win_id()
+	local buf = layout.main_buf_id()
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
 		return
 	end
@@ -84,7 +86,8 @@ end
 
 ---@param buf integer|nil
 function M.register_keys(buf)
-	local target_buf = buf or ui_state.buf_id
+	local layout = require("atlas.ui.layout")
+	local target_buf = buf or layout.main_buf_id()
 	if target_buf == nil or not vim.api.nvim_buf_is_valid(target_buf) then
 		return
 	end
@@ -102,6 +105,13 @@ function M.register_keys(buf)
 			desc = "Previous item",
 			callback = function()
 				M.move_cursor("up")
+			end,
+		},
+		{
+			key = "p",
+			desc = "Toggle detail pane",
+			callback = function()
+				require("atlas.ui.layout").toggle_detail()
 			end,
 		},
 	}

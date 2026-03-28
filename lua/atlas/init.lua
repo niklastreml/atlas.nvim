@@ -13,6 +13,7 @@ local function bootstrap()
 		return
 	end
 
+	require("atlas.ui.highlights").setup()
 	require("atlas.ui.components.footer").setup()
 	require("atlas.jira").setup()
 	require("atlas.bitbucket").setup()
@@ -29,15 +30,10 @@ end
 
 function M.open(view)
 	logger.loginfo("Atlas open requested", { view = view })
-
-	local window = require("atlas.ui.window")
-	if not window.is_open() then
-		window.open()
-	end
-
+	local layout = require("atlas.ui.layout")
+	layout.ensure_open()
 	bootstrap()
-	require("atlas.ui.navigation").register_keys()
-	require("atlas.ui.renderer").render(view, { autofocus = true })
+	layout.open(view)
 end
 
 return M

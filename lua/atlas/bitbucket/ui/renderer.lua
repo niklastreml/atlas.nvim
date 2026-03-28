@@ -9,6 +9,7 @@ local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
 local utils = require("atlas.utils")
 local highlights = require("atlas.ui.highlights")
+local footer = require("atlas.ui.components.footer")
 
 ---@param table_lines string[]
 ---@param table_map table<number, table>
@@ -200,6 +201,8 @@ function M.render(opts)
 		for lnum, node in pairs(body_map) do
 			line_map[body_base + lnum] = node
 		end
+
+		footer.set_items(helper.build_footer_items(state.repos))
 	end
 
 	return lines, spans, line_map

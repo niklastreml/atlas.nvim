@@ -10,6 +10,7 @@ local ICONS = {
 		refresh = "󰑐",
 		repo = "",
 		pr = "",
+		success = "",
 	},
 	fallback = "•",
 }
@@ -19,7 +20,7 @@ function M.provider(name)
 	return ICONS.provider[name] or ICONS.fallback
 end
 
----@param name "repo"|"refresh"|"pr"
+---@param name "repo"|"refresh"|"pr"|"success"
 function M.entity(name)
 	return ICONS.entity[name] or ICONS.fallback
 end

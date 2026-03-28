@@ -21,9 +21,10 @@ end
 
 ---@return integer
 local function current_target_buf()
-	local ui_state = require("atlas.ui.state")
-	if valid_buf(ui_state.buf_id) then
-		return ui_state.buf_id
+	local layout = require("atlas.ui.layout")
+	local buf = layout.main_buf_id()
+	if valid_buf(buf) then
+		return buf
 	end
 	return vim.api.nvim_get_current_buf()
 end

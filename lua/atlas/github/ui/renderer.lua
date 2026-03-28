@@ -7,6 +7,7 @@ local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
 local utils = require("atlas.utils")
+local footer = require("atlas.ui.components.footer")
 
 local function fake_rows()
 	return {
@@ -44,6 +45,12 @@ end
 
 ---@param opts { width: number, height: number }
 function M.render(opts)
+	footer.set_items({
+		{ text = "PRs", hl_group = "AtlasFooterText" },
+		{ text = "|", hl_group = "AtlasFooterText" },
+		{ text = "r refresh", hl_group = "AtlasFooterText" },
+	})
+
 	local views = (config.options.github and config.options.github.views) or {}
 	if state.active_view_key == nil and views[1] then
 		state.active_view_key = views[1].key or views[1].name

@@ -1,6 +1,7 @@
 local M = {}
 
 local utils = require("atlas.utils")
+local ns = vim.api.nvim_create_namespace("atlas.footer")
 
 local notice = {
 	text = "",
@@ -8,11 +9,7 @@ local notice = {
 	token = 0,
 }
 
-local registry = {
-	bitbucket = {},
-	jira = {},
-	github = {},
-}
+local items = {}
 
 local function notice_hl(level)
 	if level == "success" then
@@ -75,39 +72,30 @@ local function build_segments_line(segments, line_index)
 	return line, highlights
 end
 
----@param view "bitbucket"|"jira"|"github"
-function M.clear_items(view)
-	if view ~= nil then
-		registry[view] = {}
-		return
-	end
-
-	for key, _ in pairs(registry) do
-		registry[key] = {}
-	end
+function M.clear_items()
+	items = {}
+	M.refresh()
 end
 
----@param view "bitbucket"|"jira"|"github"
 ---@param seg table
-function M.register_item(view, seg)
-	registry[view] = registry[view] or {}
-	table.insert(registry[view], seg)
+function M.register_item(seg)
+	table.insert(items, vim.deepcopy(seg))
+	M.refresh()
 end
 
----@param view "bitbucket"|"jira"|"github"
----@param items table[]
-function M.set_items(view, items)
-	registry[view] = clone_segments(items or {})
+---@param new_items table[]
+function M.set_items(new_items)
+	items = clone_segments(new_items or {})
+	M.refresh()
 end
 
----@param view "bitbucket"|"jira"|"github"
 ---@return table[]
-function M.segments_for(view)
-	local left = clone_segments(registry[view] or {})
+function M.segments_for()
+	local left = clone_segments(items)
 
 	local right = {
 		{
-			text = notice.text ~= "" and notice.text or "status",
+			text = notice.text ~= "" and notice.text or "",
 			hl_group = notice.text ~= "" and notice.hl_group or "AtlasTextMuted",
 			align = "right",
 		},
@@ -122,7 +110,6 @@ function M.segments_for(view)
 	return left
 end
 
----FIX: Currently requires rerender. Will split later in its own buffer
 ---@param level "success"|"warn"|"error"|"info"
 ---@param text string
 ---@param duration_ms number|nil
@@ -132,6 +119,7 @@ function M.notify(level, text, duration_ms)
 
 	notice.text = tostring(text or "")
 	notice.hl_group = notice_hl(level)
+	M.refresh()
 
 	vim.defer_fn(function()
 		if notice.token ~= token then
@@ -139,6 +127,7 @@ function M.notify(level, text, duration_ms)
 		end
 		notice.text = ""
 		notice.hl_group = "AtlasTextMuted"
+		M.refresh()
 	end, duration_ms or 2500)
 end
 
@@ -203,6 +192,38 @@ function M.render(opts)
 			},
 		}, highlights),
 	}
+end
+
+function M.refresh()
+	local layout = require("atlas.ui.layout")
+	local win = layout.footer_win_id()
+	local buf = layout.footer_buf_id()
+
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	local width = vim.api.nvim_win_get_width(win)
+	local block = M.render({
+		width = width,
+		segments = M.segments_for(),
+	})
+
+	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, block.lines)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+
+	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+	for _, span in ipairs(block.highlights or {}) do
+		vim.api.nvim_buf_set_extmark(buf, ns, span.line, span.start_col, {
+			end_row = span.line,
+			end_col = span.end_col,
+			hl_group = span.hl_group,
+		})
+	end
 end
 
 function M.setup()
