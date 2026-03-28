@@ -42,9 +42,8 @@ local function fake_rows()
 	}
 end
 
----@param opts { width: number, height: number, force_refresh: boolean }
----@param rerender fun(view: "bitbucket"|"github"|"jira")
-function M.render(opts, rerender)
+---@param opts { width: number, height: number }
+function M.render(opts)
 	local views = (config.options.jira and config.options.jira.views) or {}
 	if state.active_view_key == nil and views[1] then
 		state.active_view_key = views[1].key or views[1].name
@@ -61,7 +60,7 @@ function M.render(opts, rerender)
 	end
 
 	local actions = {
-		{ label = string.format(" %s Refresh (r) ", icons.action("refresh")), hl_group = "AtlasJiraTheme" },
+		{ label = string.format(" %s Refresh (r) ", icons.entity("refresh")), hl_group = "AtlasJiraTheme" },
 	}
 
 	local lines, spans = {}, {}

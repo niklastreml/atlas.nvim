@@ -3,16 +3,12 @@ local M = {}
 local config = require("atlas.config")
 local icons = require("atlas.ui.icons")
 local state = require("atlas.bitbucket.state")
-local footer = require("atlas.ui.components.footer")
 local helper = require("atlas.bitbucket.ui.helper")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
 local utils = require("atlas.utils")
 local highlights = require("atlas.ui.highlights")
-local ui_state = require("atlas.ui.state")
-local spinner = require("atlas.ui.popups.spinner")
-local service = require("atlas.bitbucket.api.service")
 
 ---@param table_lines string[]
 ---@param table_map table<number, table>
@@ -159,7 +155,7 @@ local function render_header(lines, spans, width, views)
 	end
 
 	local actions = {
-		{ label = string.format(" %s Refresh (r) ", icons.entity("refresh")), hl_group = "AtlasBitbucketTheme" },
+		{ label = string.format(" Refresh (r) "), hl_group = "AtlasBitbucketTheme" },
 	}
 
 	utils.append_block(
@@ -174,64 +170,9 @@ local function render_header(lines, spans, width, views)
 	)
 end
 
----@param a BitbucketViewConfig|nil
----@param b BitbucketViewConfig|nil
----@return boolean
-local function same_view(a, b)
-	if a == nil and b == nil then
-		return true
-	end
-
-	if a == nil or b == nil then
-		return false
-	end
-
-	local a_id = a.key or a.name or ""
-	local b_id = b.key or b.name or ""
-	return a_id == b_id
-end
-
----@param view BitbucketViewConfig|nil
----@param opts { force_refresh: boolean }
----@param on_done fun()
-local function ensure_loaded(view, opts, on_done)
-	local is_current_view = same_view(view, state.current_view)
-	if state.is_loading or state.repos ~= nil and is_current_view then
-		return
-	end
-
-	state.is_loading = true
-	state.error = nil
-
-	local request_scope = string.format("bitbucket:%s", tostring(ui_state.buf_id or "default"))
-	service.fetch_pullrequests((view and view.repos) or {}, {
-		force_load = opts.force_refresh,
-		request_scope = request_scope,
-	}, function(groups, err)
-		state.is_loading = false
-		if err then
-			state.error = tostring(err)
-			state.repos = {}
-		else
-			state.repos = groups or {}
-			footer.set_items("bitbucket", helper.build_footer_items(state.repos))
-		end
-
-		on_done()
-	end)
-end
-
----@param opts { width: number, height: number, force_refresh: boolean }
----@param rerender fun(view: "bitbucket"|"github"|"jira")
-function M.render(opts, rerender)
-	if opts.force_refresh then
-		state.current_view = nil
-	end
-
+---@param opts { width: number, height: number }
+function M.render(opts)
 	local views = (config.options.bitbucket and config.options.bitbucket.views) or {}
-	if state.active_view == nil and views[1] then
-		state.active_view = views[1]
-	end
 
 	local lines, spans = {}, {}
 	local line_map = {}
@@ -239,16 +180,9 @@ function M.render(opts, rerender)
 	render_header(lines, spans, opts.width, views)
 	table.insert(lines, "")
 
-	ensure_loaded(state.active_view, { force_refresh = opts.force_refresh }, function()
-		spinner.stop()
-		state.current_view = state.active_view
-		rerender("bitbucket")
-	end)
-
 	if state.error then
 		table.insert(lines, "Error loading pull requests: " .. state.error)
 	elseif state.is_loading then
-		spinner.start()
 		table.insert(lines, "Loading...")
 	else
 		local layout = state.active_view and state.active_view.layout or "compact"

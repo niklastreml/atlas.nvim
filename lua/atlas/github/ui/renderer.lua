@@ -43,8 +43,7 @@ local function fake_rows()
 end
 
 ---@param opts { width: number, height: number }
----@param rerender fun(view: "bitbucket"|"github"|"jira")
-function M.render(opts, rerender)
+function M.render(opts)
 	local views = (config.options.github and config.options.github.views) or {}
 	if state.active_view_key == nil and views[1] then
 		state.active_view_key = views[1].key or views[1].name
@@ -61,7 +60,7 @@ function M.render(opts, rerender)
 	end
 
 	local actions = {
-		{ label = string.format(" %s Refresh (r) ", icons.action("refresh")), hl_group = "AtlasGithubTheme" },
+		{ label = string.format(" %s Refresh (r) ", icons.entity("refresh")), hl_group = "AtlasGithubTheme" },
 	}
 
 	local lines, spans = {}, {}
@@ -82,7 +81,7 @@ function M.render(opts, rerender)
 		lines,
 		spans,
 		navbar.render({
-			width = width,
+			width = opts.width,
 			items = nav_items,
 			actions = actions,
 			active_hl = "AtlasGithubTheme",
@@ -92,7 +91,7 @@ function M.render(opts, rerender)
 	table.insert(lines, "")
 
 	local tbl_lines, tbl_map, tbl_spans = table_view.render({
-		width = width,
+		width = opts.width,
 		margin = 0,
 		columns = {
 			{ key = "name", name = "Repo / PR", min_width = 30 },

@@ -36,6 +36,7 @@ function M.open(view)
 	end
 
 	bootstrap()
+	require("atlas.ui.navigation").register_keys()
 	require("atlas.ui.renderer").render(view)
 end
 

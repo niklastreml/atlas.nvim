@@ -1,8 +1,5 @@
 local M = {}
 
----@type table<string, true>
-local dynamic_groups = {}
-
 local dynamic_palette = {
 	"#91d7e3",
 	"#7dc4e4",
@@ -48,19 +45,11 @@ function M.setup()
 	for name, opts in pairs(groups) do
 		vim.api.nvim_set_hl(0, name, opts)
 	end
-end
 
----@param name string
----@param opts table
----@return string
-function M.ensure_dynamic(name, opts)
-	if dynamic_groups[name] then
-		return name
+	for idx, color in ipairs(dynamic_palette) do
+		local name = string.format("AtlasDynColor%02d", idx)
+		vim.api.nvim_set_hl(0, name, { fg = color })
 	end
-
-	vim.api.nvim_set_hl(0, name, opts or {})
-	dynamic_groups[name] = true
-	return name
 end
 
 ---Returns a stable dynamic highlight group for an identifier.
@@ -74,8 +63,7 @@ function M.dynamic_for(identifier)
 	end
 
 	local idx = (hash_string(identifier) % #dynamic_palette) + 1
-	local group = string.format("AtlasDynColor%02d", idx)
-	return M.ensure_dynamic(group, { fg = dynamic_palette[idx] })
+	return string.format("AtlasDynColor%02d", idx)
 end
 
 return M

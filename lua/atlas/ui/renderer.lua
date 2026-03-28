@@ -18,9 +18,7 @@ local function apply_spans(buf, spans)
 end
 
 ---@param view "bitbucket"|"github"|"jira"
----@param opts { force_refresh: boolean }|nil
 function M.render(view, opts)
-	local force_refresh = opts and opts.force_refresh or false
 	local lines = {}
 	local spans = {}
 	local line_map = {}
@@ -29,31 +27,22 @@ function M.render(view, opts)
 	local width = vim.api.nvim_win_get_width(state.win_id)
 	local height = vim.api.nvim_win_get_height(state.win_id)
 
-	---@type fun(view: "bitbucket"|"github"|"jira")
-	local rerender = function(target)
-		vim.schedule(function()
-			M.render(target)
-		end)
-	end
-
 	if target_view == "jira" then
 		state.current_view = "jira"
-		lines, spans, line_map = require("atlas.jira.ui.renderer").render(
-			{ width = width, height = height, force_refresh = force_refresh },
-			rerender
-		)
+		lines, spans, line_map = require("atlas.jira.ui.renderer").render({ width = width, height = height })
 	elseif target_view == "bitbucket" then
 		state.current_view = "bitbucket"
-		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render(
-			{ width = width, height = height, force_refresh = force_refresh },
-			rerender
-		)
+		local bitbucket_state = require("atlas.bitbucket.state")
+		if opts and opts.force_refresh then
+			require("atlas.bitbucket.actions").refresh_current_view()
+		elseif not bitbucket_state.is_loading and bitbucket_state.repos == nil and bitbucket_state.error == nil then
+			require("atlas.bitbucket.actions").refresh_current_view()
+		end
+
+		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render({ width = width, height = height })
 	elseif target_view == "github" then
 		state.current_view = "github"
-		require("atlas.github.ui.renderer").render(
-			{ width = width, height = height, force_refresh = force_refresh },
-			rerender
-		)
+		lines, spans, line_map = require("atlas.github.ui.renderer").render({ width = width, height = height })
 	end
 
 	local buf = state.buf_id
