@@ -4,12 +4,22 @@ local layout = require("atlas.ui.layout")
 local state = require("atlas.ui.panel.state")
 local ui_state = require("atlas.ui.main.state")
 
+local function register_panel_keys()
+	local buf = layout.buf_id("detail")
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	vim.keymap.set("n", "q", function()
+		M.close()
+	end, { buffer = buf, silent = true, nowait = true })
+end
+
 local function current_item()
 	local win = layout.win_id("main")
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
 		return nil
 	end
-
 
 	local line = vim.api.nvim_win_get_cursor(win)[1]
 	return (ui_state.line_map or {})[line]
@@ -22,7 +32,9 @@ function M.open()
 
 	layout.toggle_detail()
 	state.open = M.is_open()
+
 	if state.open then
+		register_panel_keys()
 		M.on_select(ui_state.current_view, current_item())
 	end
 end
