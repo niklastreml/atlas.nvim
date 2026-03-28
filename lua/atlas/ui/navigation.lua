@@ -60,6 +60,28 @@ function M.move_cursor(direction)
 	vim.api.nvim_win_set_cursor(win, { fallback, col })
 end
 
+function M.focus_first_item()
+	local win = ui_state.win_id
+	local buf = ui_state.buf_id
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	local view = ui_state.current_view
+	local line_map = ui_state.line_map or {}
+	local max_line = vim.api.nvim_buf_line_count(buf)
+
+	for lnum = 1, max_line do
+		if is_selectable(view, line_map[lnum]) then
+			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			return
+		end
+	end
+end
+
 ---@param buf integer|nil
 function M.register_keys(buf)
 	local target_buf = buf or ui_state.buf_id

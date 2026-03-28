@@ -4,6 +4,7 @@ local config = require("atlas.config")
 local ui_state = require("atlas.ui.state")
 local actions = require("atlas.bitbucket.actions")
 local help = require("atlas.ui.popups.help")
+local navigation = require("atlas.ui.navigation")
 
 ---@param buf integer
 ---@param views BitbucketViewConfig[]
@@ -13,7 +14,9 @@ local function register_dynamic_keys(buf, views)
 			key = "r",
 			desc = "Refresh current Bitbucket view",
 			callback = function()
-				actions.refresh_current_view()
+				actions.refresh_current_view(function()
+					navigation.focus_first_item()
+				end)
 			end,
 		},
 	}
@@ -25,7 +28,9 @@ local function register_dynamic_keys(buf, views)
 				key = v.key,
 				desc = string.format("Switch to %s", v.name),
 				callback = function()
-					actions.switch_view(v)
+					actions.switch_view(v, function()
+						navigation.focus_first_item()
+					end)
 				end,
 			})
 		end

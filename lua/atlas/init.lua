@@ -37,7 +37,7 @@ function M.open(view)
 
 	bootstrap()
 	require("atlas.ui.navigation").register_keys()
-	require("atlas.ui.renderer").render(view)
+	require("atlas.ui.renderer").render(view, { autofocus = true })
 end
 
 return M

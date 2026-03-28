@@ -18,6 +18,7 @@ local function apply_spans(buf, spans)
 end
 
 ---@param view "bitbucket"|"github"|"jira"
+---@param opts { force_refresh?: boolean, autofocus?: boolean }|nil
 function M.render(view, opts)
 	local lines = {}
 	local spans = {}
@@ -34,9 +35,17 @@ function M.render(view, opts)
 		state.current_view = "bitbucket"
 		local bitbucket_state = require("atlas.bitbucket.state")
 		if opts and opts.force_refresh then
-			require("atlas.bitbucket.actions").refresh_current_view()
+			require("atlas.bitbucket.actions").refresh_current_view(function()
+				if opts and opts.autofocus then
+					require("atlas.ui.navigation").focus_first_item()
+				end
+			end)
 		elseif not bitbucket_state.is_loading and bitbucket_state.repos == nil and bitbucket_state.error == nil then
-			require("atlas.bitbucket.actions").refresh_current_view()
+			require("atlas.bitbucket.actions").refresh_current_view(function()
+				if opts and opts.autofocus then
+					require("atlas.ui.navigation").focus_first_item()
+				end
+			end)
 		end
 
 		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render({ width = width, height = height })
@@ -69,6 +78,10 @@ function M.render(view, opts)
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines or {})
 	apply_spans(buf, spans)
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+
+	if opts and opts.autofocus then
+		require("atlas.ui.navigation").focus_first_item()
+	end
 end
 
 local resize_group = vim.api.nvim_create_augroup("AtlasUIResize", { clear = true })
