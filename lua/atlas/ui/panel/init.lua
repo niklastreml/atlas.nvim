@@ -10,8 +10,18 @@ local function register_panel_keys()
 		return
 	end
 
+	---TODO: Need to consider the other providers
+	local bb_panel = require("atlas.bitbucket.ui.panel.controller")
 	vim.keymap.set("n", "q", function()
 		M.close()
+	end, { buffer = buf, silent = true, nowait = true })
+
+	vim.keymap.set("n", "[", function()
+		bb_panel.prev_tab()
+	end, { buffer = buf, silent = true, nowait = true })
+
+	vim.keymap.set("n", "]", function()
+		bb_panel.next_tab()
 	end, { buffer = buf, silent = true, nowait = true })
 end
 

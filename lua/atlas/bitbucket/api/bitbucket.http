@@ -35,34 +35,59 @@ Accept: application/json
   }
 %}
 
-
-### Get pull request details
-GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/{{bitbucket_pr_id}}
-Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
-Content-Type: application/json
-Accept: application/json
-
 ### Get pull request comments
 GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/{{bitbucket_pr_id}}/comments
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
-### Get build statuses for commit
-GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/{{bitbucket_pr_id}}/statuses
+
+### Get commits
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/commits
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
-### Diff (copy from above repos)
-GET https://api.bitbucket.org/2.0/repositories/emrearmaganxx/atlas/diff/emrearmaganxx/atlas:9b6ec2c8e700%0De52b01460769?from_pullrequest_id=1&topic=true
+### Get pull request details
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/2
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
+> {%
+ const pr = response.body;
 
-### Diff stats (copy from above repos)
-GET https://api.bitbucket.org/2.0/repositories/emrearmaganxx/atlas/diffstat/emrearmaganxx/atlas:9b6ec2c8e700%0De52b01460769?from_pullrequest_id=1&topic=true
+  const diffstatUrl = pr?.links?.diffstat?.href;
+  const diffUrl = pr?.links?.diff?.href;
+
+  if (!diffstatUrl) throw new Error("diffstat URL missing");
+  if (!diffUrl) throw new Error("diff URL missing");
+
+  client.global.set("bitbucket_diffstat_url", diffstatUrl);
+  client.global.set("bitbucket_diff_url", diffUrl);
+%}
+
+### Diff stats (dynamic from PR)
+GET {{bitbucket_diffstat_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
+
+### Diff (dynamic from PR)
+GET {{bitbucket_diff_url}}
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+### List activity
+GET https://api.bitbucket.org/2.0/repositories/{{ workspace }}/{{ repo_slug }}/pullrequests/{{ bitbucket_pr_id }}/activity
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+### List activity
+GET https://api.bitbucket.org/2.0/repositories/emrearmaganxx/atlas/pullrequests/2/activity?ctx=EbsXsLFAHEUX
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+

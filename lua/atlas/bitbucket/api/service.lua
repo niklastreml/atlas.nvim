@@ -4,7 +4,6 @@ local normalizer = require("atlas.bitbucket.api.normalizer")
 local logger = require("atlas.core.logger")
 local cache = require("atlas.core.cache")
 local http = require("atlas.core.http")
-local request_manager = require("atlas.core.request_manager")
 local footer = require("atlas.ui.components.footer")
 local icons = require("atlas.ui.icons")
 local state = require("atlas.bitbucket.state")
@@ -22,6 +21,124 @@ end
 
 local function build_pullrequest_detail_url(workspace, repo, pr_id)
 	return API_BASE .. string.format(ENDPOINTS.pullrequest_detail, workspace, repo, tostring(pr_id))
+end
+
+---@param result table
+---@return BitbucketPRDiffstat
+local function normalize_diffstat(result)
+	local entries = {}
+	for _, item in ipairs((result and result.values) or {}) do
+		local old_file = type(item.old) == "table" and item.old or nil
+		local new_file = type(item.new) == "table" and item.new or nil
+		table.insert(entries, {
+			status = tostring(item.status or ""),
+			lines_added = tonumber(item.lines_added) or 0,
+			lines_removed = tonumber(item.lines_removed) or 0,
+			old_file = old_file and {
+				path = tostring(old_file.path or ""),
+				type = tostring(old_file.type or ""),
+			} or nil,
+			new_file = new_file and {
+				path = tostring(new_file.path or ""),
+				type = tostring(new_file.type or ""),
+			} or nil,
+		})
+	end
+
+	return {
+		entries = entries,
+		size = tonumber(result and result.size) or #entries,
+	}
+end
+
+---@param result table
+---@return BitbucketPRCommits
+local function normalize_commits(result)
+	local entries = {}
+	for _, item in ipairs((result and result.values) or {}) do
+		local hash = tostring(item.hash or "")
+		local message = tostring(item.message or (item.summary or {}).raw or "")
+		message = message:gsub("\r\n", "\n"):gsub("\n+$", "")
+
+		table.insert(entries, {
+			hash = hash,
+			short_hash = (hash ~= "" and hash:sub(1, 12)) or "",
+			date = tostring(item.date or ""),
+			message = message,
+			author_name = tostring(((item.author or {}).user or {}).display_name or "Unknown"),
+			author_nickname = tostring(((item.author or {}).user or {}).nickname or ""),
+			html_url = tostring(((item.links or {}).html or {}).href or ""),
+		})
+	end
+
+	return {
+		entries = entries,
+		size = tonumber(result and result.size) or #entries,
+	}
+end
+
+---@param url string
+---@param headers table<string, string>
+---@param callback fun(text: string|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+local function curl_text_request(url, headers, callback)
+	local header_args = {}
+	for key, value in pairs(headers or {}) do
+		table.insert(header_args, string.format('-H "%s: %s"', key, value))
+	end
+	local cmd = string.format('curl -sS -X GET %s "%s"', table.concat(header_args, " "), url)
+
+	local out = {}
+	local err_out = {}
+
+	local job_id = vim.fn.jobstart(cmd, {
+		on_stdout = function(_, response)
+			if response then
+				vim.list_extend(out, response)
+			end
+		end,
+		on_stderr = function(_, response)
+			if response then
+				vim.list_extend(err_out, response)
+			end
+		end,
+		on_exit = function(_, code)
+			vim.schedule(function()
+				local raw = table.concat(out, "\n")
+				local stderr_text = table.concat(err_out, "\n")
+
+				if code ~= 0 then
+					local err = "curl exited with code " .. tostring(code)
+					if stderr_text ~= "" then
+						err = err .. ": " .. stderr_text
+					end
+					callback(nil, err)
+					return
+				end
+
+				if raw == "" then
+					callback(nil, "Empty response from server")
+					return
+				end
+
+				callback(raw, nil)
+			end)
+		end,
+	})
+
+	if type(job_id) ~= "number" or job_id <= 0 then
+		callback(nil, "Failed to start curl job")
+		return nil
+	end
+
+	return {
+		job_id = job_id,
+		cancel = function()
+			if job_id and job_id > 0 then
+				pcall(vim.fn.jobstop, job_id)
+			end
+		end,
+	}
 end
 
 local function build_headers(user, token)
@@ -130,31 +247,26 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 end
 
 ---@param view_repos BitbucketRepoConfig[]
----@param opts { force_load: boolean, request_scope: string }
+---@param opts { force_load: boolean }
 ---@param on_done fun(values: table[], err: string|nil)
+---@return { cancel: fun() }|nil
 function M.fetch_pullrequests(view_repos, opts, on_done)
 	if view_repos == nil or #view_repos == 0 then
 		on_done({}, nil)
-		return
+		return nil
 	end
 
 	logger.loginfo("Bitbucket batch fetch start", {
 		repo_count = #view_repos,
 	})
 
-	local request_scope = opts.request_scope
-	local request_id = request_manager.begin(request_scope)
-
 	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
 	local user, token, auth_err = get_auth_from_config()
 	if auth_err then
-		if request_manager.is_latest(request_scope, request_id) then
-			logger.logerror("Bitbucket auth missing", { error = auth_err })
-			vim.notify("Atlas Bitbucket: " .. auth_err, vim.log.levels.ERROR)
-			on_done({}, auth_err)
-		end
-		request_manager.finish(request_scope, request_id)
-		return
+		logger.logerror("Bitbucket auth missing", { error = auth_err })
+		vim.notify("Atlas Bitbucket: " .. auth_err, vim.log.levels.ERROR)
+		on_done({}, auth_err)
+		return nil
 	end
 
 	---TODO: Any nicer way to make to make multiple async calls and wait for all of them to finish? Maybe use plenary's async features?
@@ -164,20 +276,17 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 	local errors = {}
 	local handles = {}
 
-	request_manager.attach_cancel(request_scope, request_id, function()
+	local function cancel_all()
+		done = true
 		for _, handle in ipairs(handles) do
 			if handle and handle.cancel then
 				pcall(handle.cancel)
 			end
 		end
-	end)
+	end
 
 	local function finish(groups, err)
 		if done then
-			return
-		end
-
-		if not request_manager.is_latest(request_scope, request_id) then
 			return
 		end
 
@@ -212,8 +321,6 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 				)
 				on_done(all_groups, nil)
 			end
-
-			request_manager.finish(request_scope, request_id)
 		end
 	end
 
@@ -228,6 +335,10 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 			table.insert(handles, handle)
 		end
 	end
+
+	return {
+		cancel = cancel_all,
+	}
 end
 
 ---@param workspace string
@@ -235,29 +346,20 @@ end
 ---@param pr_id string|number
 ---@param opts { force_load?: boolean }
 ---@param on_done fun(detail: BitbucketPRDetail|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
 	opts = opts or {}
-
-	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
-	local key = string.format("bitbucket:pr-detail:%s/%s#%s", workspace, repo, tostring(pr_id))
-	if opts.force_load ~= true then
-		local cached = cache.get(key)
-		if cached and cached.value then
-			on_done(cached.value, nil)
-			return
-		end
-	end
 
 	local user, token, auth_err = get_auth_from_config()
 	if auth_err then
 		on_done(nil, auth_err)
-		return
+		return nil
 	end
 
 	local url = build_pullrequest_detail_url(workspace, repo, pr_id)
 	local headers = build_headers(user, token)
 
-	http.curl_request("GET", url, headers, nil, function(result, err)
+	return http.curl_request("GET", url, headers, nil, function(result, err)
 		if err then
 			on_done(nil, err)
 			return
@@ -280,7 +382,6 @@ function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
 		end
 
 		local detail = normalizer.normalize_pr_detail(result)
-		cache.set(key, detail, ttl)
 		footer.notify(
 			"success",
 			string.format("%s Successful fetched %d details", icons.entity("success"), pr_id),
@@ -288,6 +389,128 @@ function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
 		)
 
 		on_done(detail, nil)
+	end)
+end
+
+---@param diffstat_url string
+---@param opts { force_load?: boolean }
+---@param on_done fun(diffstat: BitbucketPRDiffstat|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_pullrequest_diffstat(diffstat_url, opts, on_done)
+	opts = opts or {}
+	if type(diffstat_url) ~= "string" or diffstat_url == "" then
+		on_done(nil, "Missing Bitbucket diffstat URL")
+		return nil
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local headers = build_headers(user, token)
+
+	return http.curl_request("GET", diffstat_url, headers, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		if result.error then
+			local message = "Bitbucket API error"
+			if type(result.error) == "table" and result.error.message then
+				message = tostring(result.error.message)
+			elseif type(result.error) == "string" then
+				message = result.error
+			end
+			on_done(nil, message)
+			return
+		end
+
+		local diffstat = normalize_diffstat(result)
+		on_done(diffstat, nil)
+	end)
+end
+
+---@param commits_url string
+---@param opts { force_load?: boolean }
+---@param on_done fun(commits: BitbucketPRCommits|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_pullrequest_commits(commits_url, opts, on_done)
+	opts = opts or {}
+	if type(commits_url) ~= "string" or commits_url == "" then
+		on_done(nil, "Missing Bitbucket commits URL")
+		return nil
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local headers = build_headers(user, token)
+
+	return http.curl_request("GET", commits_url, headers, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		if result.error then
+			local message = "Bitbucket API error"
+			if type(result.error) == "table" and result.error.message then
+				message = tostring(result.error.message)
+			elseif type(result.error) == "string" then
+				message = result.error
+			end
+			on_done(nil, message)
+			return
+		end
+
+		local commits = normalize_commits(result)
+		on_done(commits, nil)
+	end)
+end
+
+---@param diff_url string
+---@param opts { force_load?: boolean }
+---@param on_done fun(diff: BitbucketPRDiff|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_pullrequest_diff(diff_url, opts, on_done)
+	opts = opts or {}
+	if type(diff_url) ~= "string" or diff_url == "" then
+		on_done(nil, "Missing Bitbucket diff URL")
+		return nil
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local headers = build_headers(user, token)
+
+	return curl_text_request(diff_url, headers, function(text, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		local diff = { text = text or "" }
+		on_done(diff, nil)
 	end)
 end
 

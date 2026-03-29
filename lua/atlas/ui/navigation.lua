@@ -127,6 +127,34 @@ function M.register_keys(buf)
 				require("atlas.ui.panel").toggle()
 			end,
 		},
+		{
+			key = "[",
+			desc = "Previous panel tab",
+			callback = function()
+				if ui_state.current_view ~= "bitbucket" then
+					return
+				end
+				local panel = require("atlas.ui.panel")
+				if not panel.is_open() then
+					return
+				end
+				require("atlas.bitbucket.ui.panel.controller").prev_tab()
+			end,
+		},
+		{
+			key = "]",
+			desc = "Next panel tab",
+			callback = function()
+				if ui_state.current_view ~= "bitbucket" then
+					return
+				end
+				local panel = require("atlas.ui.panel")
+				if not panel.is_open() then
+					return
+				end
+				require("atlas.bitbucket.ui.panel.controller").next_tab()
+			end,
+		},
 	}
 
 	for _, item in ipairs(items) do

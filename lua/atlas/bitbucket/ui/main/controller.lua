@@ -8,6 +8,15 @@ local spinner = require("atlas.ui.popups.spinner")
 local state = require("atlas.bitbucket.state")
 local layout = require("atlas.ui.layout")
 
+local active_pullrequests_handle = nil
+
+local function cancel_active_pullrequests()
+	if active_pullrequests_handle ~= nil and active_pullrequests_handle.cancel then
+		pcall(active_pullrequests_handle.cancel)
+	end
+	active_pullrequests_handle = nil
+end
+
 ---@param view BitbucketViewConfig|nil
 ---@return string
 local function view_id(view)
@@ -54,6 +63,7 @@ local function load_active_view(opts, on_done)
 	local target_view_id = view_id(target_view)
 	local token = next_request_token()
 	state.latest_request_tokens[target_view_id] = token
+	cancel_active_pullrequests()
 
 	state.is_loading = true
 	state.error = nil
@@ -63,11 +73,13 @@ local function load_active_view(opts, on_done)
 		require("atlas.ui.main.renderer").render("bitbucket")
 	end
 
-	local request_scope = string.format("bitbucket:%s", tostring(layout.buf_id("main") or "default"))
-	service.fetch_pullrequests((target_view and target_view.repos) or {}, {
+	active_pullrequests_handle = service.fetch_pullrequests((target_view and target_view.repos) or {}, {
 		force_load = opts.force_load == true,
-		request_scope = request_scope,
 	}, function(groups, err)
+		if active_pullrequests_handle ~= nil then
+			active_pullrequests_handle = nil
+		end
+
 		if not same_view(state.active_view, target_view) then
 			return
 		end

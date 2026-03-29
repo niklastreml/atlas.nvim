@@ -4,6 +4,7 @@ local utils = require("atlas.utils")
 local icons = require("atlas.ui.icons")
 local table_view = require("atlas.ui.components.table")
 local spinner = require("atlas.ui.components.spinner")
+local highlights = require("atlas.ui.highlights")
 
 ---@param decision string
 ---@return string
@@ -30,7 +31,7 @@ local function decision_hl(decision)
 end
 
 ---@param pr table|nil
----@param detail BitbucketPRDetail|{ loading: true }|nil
+---@param detail BitbucketPRDetail|"loading"|nil
 ---@param width integer|nil
 ---@return string[]
 ---@return table[]
@@ -56,7 +57,7 @@ local function overview_lines(pr, detail, width)
 	table.insert(lines, "")
 
 	--- Reviewers
-	local is_loading = type(detail) == "table" and detail.loading == true
+	local is_loading = detail == "loading"
 	local decisions = (not is_loading and detail and detail.decisions) or {}
 	local approvals = (not is_loading and detail and detail.approvals_count) or 0
 	local reviewers_line = is_loading and "Reviewers (...)" or string.format("Reviewers (%d/%d)", approvals, #decisions)
@@ -89,7 +90,7 @@ local function overview_lines(pr, detail, width)
 	end
 
 	if #decisions == 0 then
-		table.insert(lines, "- no reviewer data yet")
+		table.insert(lines, "no reviewers yet")
 		return lines, spans
 	end
 
@@ -141,28 +142,231 @@ local function overview_lines(pr, detail, width)
 	return lines, spans
 end
 
+---@param commits BitbucketPRCommits|"loading"|nil
+---@param width integer|nil
+---@return string[]
+---@return table[]
+local function commits_lines(commits, width)
+	local lines = {}
+	local spans = {}
+
+	if commits == "loading" then
+		local loading_line = spinner.with_text("Loading commits...")
+		table.insert(lines, loading_line)
+		table.insert(spans, {
+			line = 0,
+			start_col = 0,
+			end_col = #loading_line,
+			hl_group = "AtlasTextMuted",
+		})
+		return lines, spans
+	end
+
+	local entries = (type(commits) == "table" and commits.entries) or {}
+	if type(entries) ~= "table" or #entries == 0 then
+		return { "No commits yet." }, spans
+	end
+
+	local rows = {}
+	for _, c in ipairs(entries) do
+		local msg = tostring(c.message or ""):gsub("\r\n", "\n")
+		msg = msg:match("([^\n]+)") or msg
+		local author = (c.author_nickname ~= "" and c.author_nickname) or c.author_name or "Unknown"
+		table.insert(rows, {
+			icon = icons.entity("commit"),
+			hash = c.short_hash or "",
+			message = msg,
+			author = author,
+			date = utils.relative_time(c.date),
+		})
+	end
+
+	local table_lines, _, table_spans = table_view.render({
+		width = width or 60,
+		margin = 0,
+		column_gap = 1,
+		show_header = false,
+		fill = false,
+		columns = {
+			{ key = "icon", name = "", width = 2, can_grow = false },
+			{ key = "hash", name = "", width = 12, can_grow = false },
+			{ key = "message", name = "", min_width = 24, can_grow = false },
+			{ key = "author", name = "", width = 14, can_grow = false },
+			{ key = "date", name = "", width = 6, can_grow = false },
+		},
+		rows = rows,
+		cell_hl = function(row, col)
+			if col.key == "icon" then
+				return "AtlasTextPositive"
+			end
+			if col.key == "hash" or col.key == "date" then
+				return "AtlasTextMuted"
+			end
+			if col.key == "author" then
+				return highlights.dynamic_for(row.author)
+			end
+			return nil
+		end,
+	})
+
+	for _, line in ipairs(table_lines) do
+		table.insert(lines, line)
+	end
+	for _, span in ipairs(table_spans or {}) do
+		table.insert(spans, span)
+	end
+
+	return lines, spans
+end
+
+---@param diffstat BitbucketPRDiffstat|"loading"|nil
+---@param diff BitbucketPRDiff|"loading"|nil
+---@param width integer|nil
+---@return string[]
+---@return table[]
+local function files_lines(diffstat, diff, width)
+	local lines = {}
+	local spans = {}
+
+	local diffstat_loading = diffstat == "loading"
+	local diff_loading = diff == "loading"
+
+	if diffstat_loading or diff_loading then
+		local loading_line = spinner.with_text("Loading file changes...")
+		table.insert(lines, loading_line)
+		table.insert(spans, {
+			line = 0,
+			start_col = 0,
+			end_col = #loading_line,
+			hl_group = "AtlasTextMuted",
+		})
+		return lines, spans
+	end
+
+	local entries = (type(diffstat) == "table" and diffstat.entries) or {}
+	local file_header = "Files"
+	table.insert(lines, file_header)
+	table.insert(spans, {
+		line = #lines - 1,
+		start_col = 0,
+		end_col = #file_header,
+		hl_group = "AtlasSectionHeader",
+	})
+
+	if #entries == 0 then
+		table.insert(lines, "No files changed.")
+		table.insert(lines, "")
+	else
+		---FIX: Horrible and probably wont always work...
+		for _, entry in ipairs(entries) do
+			local status = tostring(entry.status or ""):lower()
+			local old_path = (type(entry.old_file) == "table" and tostring(entry.old_file.path or "")) or ""
+			local new_path = (type(entry.new_file) == "table" and tostring(entry.new_file.path or "")) or ""
+
+			local marker = "~"
+			local hl_group = "AtlasTextMuted"
+			local path = (new_path ~= "" and new_path) or old_path
+
+			if status == "added" then
+				marker = "+"
+				hl_group = "AtlasTextPositive"
+				path = (new_path ~= "" and new_path) or old_path
+			elseif status == "removed" or status == "deleted" then
+				marker = "-"
+				hl_group = "AtlasTextWarning"
+				path = (old_path ~= "" and old_path) or new_path
+			elseif status == "renamed" then
+				marker = "R"
+				hl_group = "AtlasTextMuted"
+				if old_path ~= "" and new_path ~= "" then
+					path = string.format("%s -> %s", old_path, new_path)
+				end
+			end
+
+			if path == "" then
+				path = "(unknown file)"
+			end
+
+			local file_line = string.format("%s %s", marker, path)
+			table.insert(lines, file_line)
+			table.insert(spans, {
+				line = #lines - 1,
+				start_col = 0,
+				end_col = 1,
+				hl_group = hl_group,
+			})
+		end
+		table.insert(lines, "")
+	end
+
+	local added = 0
+	local removed = 0
+	for _, e in ipairs(entries) do
+		added = added + (tonumber(e.lines_added) or 0)
+		removed = removed + (tonumber(e.lines_removed) or 0)
+	end
+
+	local added_text = string.format("+%d added", added)
+	local removed_text = string.format("-%d removed", removed)
+	local stats_line = string.format("%s  %s", added_text, removed_text)
+	local stats_line_index = #lines
+	table.insert(lines, stats_line)
+	table.insert(spans, {
+		line = stats_line_index,
+		start_col = 0,
+		end_col = #added_text,
+		hl_group = "AtlasTextPositive",
+	})
+	table.insert(spans, {
+		line = stats_line_index,
+		start_col = #added_text + 2,
+		end_col = #stats_line,
+		hl_group = "AtlasTextWarning",
+	})
+	table.insert(lines, "")
+
+	local diff_text = (type(diff) == "table" and type(diff.text) == "string") and diff.text or ""
+	if diff_text == "" then
+		table.insert(lines, "No diff available.")
+		return lines, spans
+	end
+
+	local diff_lines = utils.sanitize_markdown_lines(diff_text)
+	for _, line in ipairs(diff_lines) do
+		table.insert(lines, line)
+		local idx = #lines - 1
+		if line:match("^%+") and not line:match("^%+%+%+") then
+			table.insert(spans, { line = idx, start_col = 0, end_col = #line, hl_group = "AtlasTextPositive" })
+		elseif line:match("^%-") and not line:match("^%-%-%-") then
+			table.insert(spans, { line = idx, start_col = 0, end_col = #line, hl_group = "AtlasTextWarning" })
+		elseif line:match("^@@") then
+			table.insert(spans, { line = idx, start_col = 0, end_col = #line, hl_group = "AtlasTextMuted" })
+		end
+	end
+
+	return lines, spans
+end
+
 ---@param tab "overview"|"commits"|"files"
 ---@param pr table|nil
----@param detail BitbucketPRDetail|{ loading: true }|nil
+---@param detail BitbucketPRDetail|"loading"|nil
+---@param commits BitbucketPRCommits|"loading"|nil
+---@param diffstat BitbucketPRDiffstat|"loading"|nil
+---@param diff BitbucketPRDiff|"loading"|nil
 ---@param width integer|nil
 ---@return string[] lines
 ---@return table[] spans
-function M.render(tab, pr, detail, width)
-	local spans = {}
+function M.render(tab, pr, detail, commits, diffstat, diff, width)
 	if tab == "overview" then
 		return overview_lines(pr, detail, width)
 	end
 	if tab == "commits" then
-		return {
-			"Commits content placeholder.",
-			"",
-			"Later: fetch commits and render list.",
-		}, spans
+		return commits_lines(commits, width)
 	end
-	return {
-		"File changes content placeholder.",
-		"",
-		"Later: fetch diffstat/files and render list.",
-	}, spans
+	if tab == "files" then
+		return files_lines(diffstat, diff, width)
+	end
+
+	return { "You shouldn’t be here..." }, {}
 end
 return M

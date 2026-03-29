@@ -79,3 +79,46 @@
 ---@field decisions BitbucketPRReviewerDecision[]
 ---@field approvals_count number
 ---@field changes_requested_count number
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/diffstat/{workspace}/{repo_slug}
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRDiffstatFile
+---@field path string
+---@field type string
+
+---@class BitbucketPRDiffstatEntry
+---@field status string
+---@field lines_added number
+---@field lines_removed number
+---@field old_file BitbucketPRDiffstatFile|nil
+---@field new_file BitbucketPRDiffstatFile|nil
+
+---@class BitbucketPRDiffstat
+---@field entries BitbucketPRDiffstatEntry[]
+---@field size number
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}/commits
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRCommit
+---@field hash string
+---@field short_hash string
+---@field date string
+---@field message string
+---@field author_name string
+---@field author_nickname string
+---@field html_url string
+
+---@class BitbucketPRCommits
+---@field entries BitbucketPRCommit[]
+---@field size number
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/diff/{workspace}/{repo_slug}:{src}%0D{dst}?from_pullrequest_id={id}&topic=true
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRDiff
+---@field text string

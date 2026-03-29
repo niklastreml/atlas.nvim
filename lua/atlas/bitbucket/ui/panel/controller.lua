@@ -5,27 +5,53 @@ local panel_state = require("atlas.bitbucket.ui.panel.state")
 local renderer = require("atlas.bitbucket.ui.panel.renderer")
 local spinner = require("atlas.ui.components.spinner")
 
-local reviewers_spinner = spinner.create({
+local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		local detail = panel_state.current_pr_detail
-		if type(detail) ~= "table" or detail.loading ~= true then
-			reviewers_spinner:stop()
+		local detail_loading = panel_state.current_pr_detail == "loading"
+		local commits_loading = panel_state.current_pr_commits == "loading"
+		local diffstat_loading = panel_state.current_pr_diffstat == "loading"
+		local diff_loading = panel_state.current_pr_diff == "loading"
+		if not detail_loading and not commits_loading and not diffstat_loading and not diff_loading then
+			panel_spinner:stop()
 			return
 		end
 		renderer.render()
 	end,
 })
 
+local active_handles = {
+	reviewers = nil,
+	commits = nil,
+	diffstat = nil,
+	diff = nil,
+}
+
+---@param key "reviewers"|"commits"|"diffstat"|"diff"
+local function cancel_handle(key)
+	local handle = active_handles[key]
+	if handle ~= nil and handle.cancel then
+		pcall(handle.cancel)
+	end
+	active_handles[key] = nil
+end
+
+local function cancel_all_handles()
+	cancel_handle("reviewers")
+	cancel_handle("commits")
+	cancel_handle("diffstat")
+	cancel_handle("diff")
+end
+
 local function stop_spinner()
-	reviewers_spinner:stop()
+	panel_spinner:stop()
 end
 
 local function start_spinner()
-	if reviewers_spinner:is_running() then
+	if panel_spinner:is_running() then
 		return
 	end
-	reviewers_spinner:start()
+	panel_spinner:start()
 end
 
 local TAB_ORDER = {
@@ -36,6 +62,7 @@ local TAB_ORDER = {
 
 ---@param item table
 function M.on_select(item)
+	cancel_all_handles()
 	local pr = nil
 	if type(item) == "table" then
 		if type(item.pr) == "table" then
@@ -46,6 +73,7 @@ function M.on_select(item)
 	end
 
 	panel_state.set_current(pr)
+	panel_state.set_current_tab("overview")
 	renderer.render()
 
 	if pr ~= nil then
@@ -60,9 +88,14 @@ function M.select_tab(tab)
 	panel_state.set_current_tab(tab)
 	renderer.render()
 
-	-- TODO: Later API hooks:
-	-- if tab == panel_state.tabs.COMMITS then fetch commits end
-	-- if tab == panel_state.tabs.FILES then fetch file changes end
+	if tab == "commits" and panel_state.current_pr ~= nil then
+		M.fetch_commits(tostring((panel_state.current_pr or {}).id or ""), 0)
+	end
+
+	if tab == "files" and panel_state.current_pr ~= nil then
+		M.fetch_diffstat(tostring((panel_state.current_pr or {}).id or ""), 0)
+		M.fetch_diff(tostring((panel_state.current_pr or {}).id or ""), 0)
+	end
 end
 
 function M.next_tab()
@@ -105,7 +138,165 @@ function M.fetch_activity(pr_key, request_id) end
 
 ---@param pr_key string
 ---@param request_id number
-function M.fetch_builds(pr_key, request_id) end
+function M.fetch_commits(pr_key, request_id)
+	local _ = request_id
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return
+	end
+
+	if tostring(pr.id or "") ~= tostring(pr_key or "") then
+		return
+	end
+
+	local commits_url = ((pr.links or {}).commits or "")
+	if commits_url == "" then
+		return
+	end
+
+	local existing = panel_state.current_pr_commits
+	if existing ~= "loading" and type(existing) == "table" and type(existing.entries) == "table" then
+		return
+	end
+
+	panel_state.set_current_commits_loading()
+	renderer.render()
+	start_spinner()
+
+	cancel_handle("commits")
+	local handle
+	handle = service.fetch_pullrequest_commits(commits_url, { force_load = false }, function(commits, err)
+		if active_handles.commits == handle then
+			active_handles.commits = nil
+		end
+		if err ~= nil then
+			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
+				panel_state.set_current_commits(nil)
+				renderer.render()
+			end
+			stop_spinner()
+			return
+		end
+
+		if tostring((panel_state.current_pr or {}).id or "") ~= tostring(pr_key or "") then
+			stop_spinner()
+			return
+		end
+
+		panel_state.set_current_commits(commits)
+		stop_spinner()
+		renderer.render()
+	end)
+	active_handles.commits = handle
+end
+
+---@param pr_key string
+---@param request_id number
+function M.fetch_diffstat(pr_key, request_id)
+	local _ = request_id
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return
+	end
+
+	if tostring(pr.id or "") ~= tostring(pr_key or "") then
+		return
+	end
+
+	local diffstat_url = ((pr.links or {}).diffstat or "")
+	if diffstat_url == "" then
+		return
+	end
+
+	local existing = panel_state.current_pr_diffstat
+	if existing ~= "loading" and type(existing) == "table" and type(existing.entries) == "table" then
+		return
+	end
+
+	panel_state.set_current_diffstat_loading()
+	renderer.render()
+	start_spinner()
+
+	cancel_handle("diffstat")
+	local handle
+	handle = service.fetch_pullrequest_diffstat(diffstat_url, { force_load = false }, function(diffstat, err)
+		if active_handles.diffstat == handle then
+			active_handles.diffstat = nil
+		end
+		if err ~= nil then
+			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
+				panel_state.set_current_diffstat(nil)
+				renderer.render()
+			end
+			stop_spinner()
+			return
+		end
+
+		if tostring((panel_state.current_pr or {}).id or "") ~= tostring(pr_key or "") then
+			stop_spinner()
+			return
+		end
+
+		panel_state.set_current_diffstat(diffstat)
+		stop_spinner()
+		renderer.render()
+	end)
+	active_handles.diffstat = handle
+end
+
+---@param pr_key string
+---@param request_id number
+function M.fetch_diff(pr_key, request_id)
+	local _ = request_id
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return
+	end
+
+	if tostring(pr.id or "") ~= tostring(pr_key or "") then
+		return
+	end
+
+	local diff_url = ((pr.links or {}).diff or "")
+	if diff_url == "" then
+		return
+	end
+
+	local existing = panel_state.current_pr_diff
+	if existing ~= "loading" and type(existing) == "table" and type(existing.text) == "string" and existing.text ~= "" then
+		return
+	end
+
+	panel_state.set_current_diff_loading()
+	renderer.render()
+	start_spinner()
+
+	cancel_handle("diff")
+	local handle
+	handle = service.fetch_pullrequest_diff(diff_url, { force_load = false }, function(diff, err)
+		if active_handles.diff == handle then
+			active_handles.diff = nil
+		end
+		if err ~= nil then
+			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
+				panel_state.set_current_diff(nil)
+				renderer.render()
+			end
+			stop_spinner()
+			return
+		end
+
+		if tostring((panel_state.current_pr or {}).id or "") ~= tostring(pr_key or "") then
+			stop_spinner()
+			return
+		end
+
+		panel_state.set_current_diff(diff)
+		stop_spinner()
+		renderer.render()
+	end)
+	active_handles.diff = handle
+end
 
 ---@param pr_key string
 ---@param request_id number
@@ -120,7 +311,7 @@ function M.fetch_reviewers(pr_key, request_id)
 		return
 	end
 
-	local full_name = ((pr.repo or {}).name) or ""
+	local full_name = (pr.repo or {}).name or ""
 	local workspace, repo = full_name:match("^([^/]+)/(.+)$")
 	if workspace == nil or repo == nil then
 		return
@@ -130,9 +321,14 @@ function M.fetch_reviewers(pr_key, request_id)
 	renderer.render()
 	start_spinner()
 
-	service.fetch_pullrequest_detail(workspace, repo, pr.id, { force_load = false }, function(detail, err)
+	cancel_handle("reviewers")
+	local handle
+	handle = service.fetch_pullrequest_detail(workspace, repo, pr.id, { force_load = false }, function(detail, err)
+		if active_handles.reviewers == handle then
+			active_handles.reviewers = nil
+		end
 		if err ~= nil then
-			if tostring(((panel_state.current_pr or {}).id) or "") == tostring(pr_key or "") then
+			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
 				panel_state.set_current_detail(nil)
 				renderer.render()
 			end
@@ -140,7 +336,7 @@ function M.fetch_reviewers(pr_key, request_id)
 			return
 		end
 
-		if tostring(((panel_state.current_pr or {}).id) or "") ~= tostring(pr_key or "") then
+		if tostring((panel_state.current_pr or {}).id or "") ~= tostring(pr_key or "") then
 			stop_spinner()
 			return
 		end
@@ -149,6 +345,7 @@ function M.fetch_reviewers(pr_key, request_id)
 		stop_spinner()
 		renderer.render()
 	end)
+	active_handles.reviewers = handle
 end
 
 function M.refresh()

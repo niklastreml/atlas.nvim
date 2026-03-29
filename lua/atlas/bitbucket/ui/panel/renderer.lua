@@ -22,7 +22,7 @@ local function lines_for_pr(pr, width)
 		return {
 			lines = {
 				pad_line(""),
-				pad_line("No PR selected."),
+				pad_line("Nothing selected..."),
 			},
 			spans = {},
 		}
@@ -87,8 +87,15 @@ local function lines_for_pr(pr, width)
 	table.insert(lines, string.rep("─", rule_width))
 
 	--- Content
-	local body_lines, body_spans =
-		tab_content.render(state.current_tab, pr, state.current_pr_detail, (width or 1) - (PADDING_X * 2))
+	local body_lines, body_spans = tab_content.render(
+		state.current_tab,
+		pr,
+		state.current_pr_detail,
+		state.current_pr_commits,
+		state.current_pr_diffstat,
+		state.current_pr_diff,
+		(width or 1) - (PADDING_X * 2)
+	)
 	local body_base = #lines
 	for _, line in ipairs(body_lines) do
 		table.insert(lines, pad_line(line))
