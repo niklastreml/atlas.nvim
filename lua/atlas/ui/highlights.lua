@@ -24,6 +24,7 @@ end
 local groups = {
 	AtlasTabInactive = { bg = "#494d64", fg = "#a5adcb" },
 	AtlasColumnHeader = { fg = "#7f849c", bold = true },
+	AtlasSectionHeader = { fg = "#7f849c", bold = true, underline = true },
 
 	AtlasTextMuted = { fg = "#7f849c" },
 	AtlasTextPositive = { fg = "#a6da95", bold = true },

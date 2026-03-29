@@ -40,6 +40,8 @@
 ---@field summary BitbucketPRSummary
 ---@field source_branch string
 ---@field target_branch string
+---@field source_commit_hash string
+---@field close_source_branch boolean
 ---@field created_on string
 ---@field updated_on string
 ---@field _raw table

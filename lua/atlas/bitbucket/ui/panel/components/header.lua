@@ -9,7 +9,7 @@ local highlights = require("atlas.ui.highlights")
 ---@return table[] spans
 function M.render(pr)
 	local author = (pr.author and pr.author.nickname) or (pr.author and pr.author.name) or "unknown"
-	local timestamp = (pr.updated_on and pr.updated_on ~= "") and pr.updated_on or pr.created_on
+	local timestamp = (pr.created_on and pr.created_on ~= "") and pr.created_on
 	local repo = (pr.repo or {}).name or "-"
 	local pr_icon = icons.entity("pr")
 	local repo_icon = icons.entity("repo")

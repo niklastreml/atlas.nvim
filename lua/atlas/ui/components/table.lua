@@ -272,6 +272,7 @@ end
 ---@field rows table[] Row data.
 ---@field width? integer Total render width (default: vim.o.columns).
 ---@field margin? integer Left/right margin spaces (default: 2).
+---@field show_header? boolean Render header row and spacer (default: true).
 ---@field column_gap? integer Default gap between columns (default: 2).
 ---@field fill? boolean If false, do not stretch columns to available width.
 ---@field rows[].separator? boolean If true, insert a separator after that row.
@@ -348,6 +349,7 @@ function M.render(opts)
 	local rows = flatten_rows(opts.rows or {}, tree)
 	local width = opts.width or vim.o.columns
 	local margin = opts.margin or 2
+	local show_header = opts.show_header ~= false
 	local cell_hl = opts.cell_hl
 	local default_gap = opts.column_gap or 2
 	local fill = opts.fill
@@ -382,25 +384,26 @@ function M.render(opts)
 	local line_map = {}
 	local spans = {}
 
-	-- header
-	local header_parts = {}
 	local col_start = margin
-	for i, c in ipairs(columns) do
-		local label = truncate(c.name or "", c._computed)
-		local padded = pad_right(label, c._computed)
-		table.insert(header_parts, padded)
+	if show_header then
+		local header_parts = {}
+		for i, c in ipairs(columns) do
+			local label = truncate(c.name or "", c._computed)
+			local padded = pad_right(label, c._computed)
+			table.insert(header_parts, padded)
 
-		table.insert(spans, {
-			line = 0,
-			start_col = col_start,
-			end_col = col_start + #padded,
-			hl_group = c.header_hl or "AtlasColumnHeader",
-		})
+			table.insert(spans, {
+				line = 0,
+				start_col = col_start,
+				end_col = col_start + #padded,
+				hl_group = c.header_hl or "AtlasColumnHeader",
+			})
 
-		col_start = col_start + #padded + gap_after(i)
+			col_start = col_start + #padded + gap_after(i)
+		end
+		table.insert(lines, string.rep(" ", margin) .. join_parts(header_parts))
+		table.insert(lines, "")
 	end
-	table.insert(lines, string.rep(" ", margin) .. join_parts(header_parts))
-	table.insert(lines, "")
 
 	-- body
 	for idx, row in ipairs(rows) do

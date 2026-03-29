@@ -83,11 +83,12 @@ local function lines_for_pr(pr, width)
 			hl_group = span.hl_group,
 		})
 	end
-	local rule_width = math.max(1, (width or 1) - (PADDING_X * 2))
-	table.insert(lines, pad_line(string.rep("─", rule_width)))
+	local rule_width = math.max(1, width)
+	table.insert(lines, string.rep("─", rule_width))
 
 	--- Content
-	local body_lines, body_spans = tab_content.render(state.current_tab, pr, state.current_pr_detail)
+	local body_lines, body_spans =
+		tab_content.render(state.current_tab, pr, state.current_pr_detail, (width or 1) - (PADDING_X * 2))
 	local body_base = #lines
 	for _, line in ipairs(body_lines) do
 		table.insert(lines, pad_line(line))

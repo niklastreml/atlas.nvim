@@ -62,6 +62,8 @@ local function normalize_pr(pr)
 		},
 		source_branch = (pr.source and pr.source.branch and pr.source.branch.name) or "?",
 		target_branch = (pr.destination and pr.destination.branch and pr.destination.branch.name) or "?",
+		source_commit_hash = (pr.source and pr.source.commit and pr.source.commit.hash) or "",
+		close_source_branch = pr.close_source_branch == true,
 		created_on = pr.created_on or "",
 		updated_on = pr.updated_on or "",
 		_raw = pr,
