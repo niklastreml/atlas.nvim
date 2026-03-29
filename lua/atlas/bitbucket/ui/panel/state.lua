@@ -1,10 +1,8 @@
 ---@class BitbucketPanelState
----@field current_pr_key string|nil
 ---@field current_pr table|nil
 ---@field current_pr_detail BitbucketPRDetail|nil
 ---@field current_tab "overview"|"commits"|"files"
 local M = {
-	current_pr_key = nil,
 	current_pr = nil,
 	current_pr_detail = nil,
 	current_tab = "overview",
@@ -13,11 +11,6 @@ local M = {
 ---@param pr table|nil
 function M.set_current(pr)
 	M.current_pr = pr
-	if type(pr) == "table" and pr.id ~= nil then
-		M.current_pr_key = tostring(pr.id)
-	else
-		M.current_pr_key = nil
-	end
 	M.current_pr_detail = nil
 end
 
@@ -34,7 +27,6 @@ function M.set_current_tab(tab)
 end
 
 function M.reset_current()
-	M.current_pr_key = nil
 	M.current_pr = nil
 	M.current_pr_detail = nil
 	M.current_tab = "overview"

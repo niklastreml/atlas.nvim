@@ -32,7 +32,7 @@ local function lines_for_pr(pr, width)
 	local spans = {}
 
 	--- Header
-	local header_lines, header_spans = header.render(pr)
+	local header_lines, header_spans = header.render(pr, (width or 1) - (PADDING_X * 2))
 	local header_base = #lines
 	for _, line in ipairs(header_lines) do
 		table.insert(lines, pad_line(line))

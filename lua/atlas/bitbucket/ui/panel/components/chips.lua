@@ -20,8 +20,14 @@ end
 ---@return string line
 ---@return table[] spans
 function M.render(pr)
+	local commit_hash = tostring(pr.source_commit_hash or "")
+	if commit_hash == "" then
+		commit_hash = "-"
+	end
+
 	local chips = {
 		{ label = tostring(pr.state or "UNKNOWN"), hl = state_hl(pr.state) },
+		{ label = commit_hash, hl = "AtlasTabInactive" },
 		pr.is_draft and { label = "DRAFT", hl = "AtlasBitbucketPRDraft" } or nil,
 	}
 
