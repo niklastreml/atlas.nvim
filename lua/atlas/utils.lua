@@ -93,4 +93,55 @@ function M.relative_time(iso)
 	return string.format("%dy", years)
 end
 
+---@param iso string|nil
+---@return string
+function M.relative_time_text(iso)
+	local rel = M.relative_time(iso)
+	if rel == "-" then
+		return "-"
+	end
+	if rel == "now" then
+		return "just now"
+	end
+
+	local n, unit = rel:match("^(%d+)(%a+)$")
+	if n == nil or unit == nil then
+		return rel
+	end
+
+	n = tonumber(n) or 0
+	local labels = {
+		s = "second",
+		m = "minute",
+		h = "hour",
+		d = "day",
+		w = "week",
+		mo = "month",
+		y = "year",
+	}
+	local base = labels[unit] or unit
+	local suffix = n == 1 and "" or "s"
+	return string.format("%d %s%s ago", n, base, suffix)
+end
+
+---@param text string|nil
+---@return string[]
+function M.sanitize_markdown_lines(text)
+	if type(text) ~= "string" or text == "" then
+		return { "-" }
+	end
+
+	local out = {}
+	text = text:gsub("\r\n", "\n")
+	for line in (text .. "\n"):gmatch("(.-)\n") do
+		table.insert(out, line)
+	end
+
+	if #out == 0 then
+		return { "-" }
+	end
+
+	return out
+end
+
 return M

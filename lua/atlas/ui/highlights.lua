@@ -39,6 +39,11 @@ local groups = {
 	AtlasJiraTheme = { bg = "#0f4c81", bold = true },
 	AtlasBitbucketTheme = { bg = "#1e3a8a", bold = true },
 	AtlasGithubTheme = { bg = "#111827", bold = true },
+
+	AtlasBitbucketPROpen = { fg = "#0b1320", bg = "#93c5fd", bold = true },
+	AtlasBitbucketPRMerged = { fg = "#0b1320", bg = "#86efac", bold = true },
+	AtlasBitbucketPRDeclined = { fg = "#0b1320", bg = "#fca5a5", bold = true },
+	AtlasBitbucketPRDraft = { fg = "#111827", bg = "#fcd34d", bold = true },
 }
 
 function M.setup()

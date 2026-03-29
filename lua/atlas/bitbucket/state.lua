@@ -1,6 +1,7 @@
 ---@class BitbucketState
 ---@field active_view BitbucketViewConfig|nil
 ---@field current_view BitbucketViewConfig|nil
+---@field pr_state string -- "OPEN", "MERGED", "DECLINED"
 ---@field is_loading boolean
 ---@field error string|nil
 ---@field repos BitbucketRepoPRGroup[]|nil
@@ -11,6 +12,7 @@
 local M = {
 	active_view = nil,
 	current_view = nil,
+	pr_state = "OPEN", --TODO: make configurable
 	is_loading = false,
 	error = nil,
 	repos = nil,
