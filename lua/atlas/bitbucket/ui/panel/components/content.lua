@@ -3,6 +3,7 @@ local M = {}
 local utils = require("atlas.utils")
 local icons = require("atlas.ui.icons")
 local table_view = require("atlas.ui.components.table")
+local spinner = require("atlas.ui.components.spinner")
 
 ---@param decision string
 ---@return string
@@ -29,7 +30,7 @@ local function decision_hl(decision)
 end
 
 ---@param pr table|nil
----@param detail BitbucketPRDetail|nil
+---@param detail BitbucketPRDetail|{ loading: true }|nil
 ---@param width integer|nil
 ---@return string[]
 ---@return table[]
@@ -55,9 +56,10 @@ local function overview_lines(pr, detail, width)
 	table.insert(lines, "")
 
 	--- Reviewers
-	local decisions = (detail and detail.decisions) or {}
-	local approvals = (detail and detail.approvals_count) or 0
-	local reviewers_line = string.format("Reviewers (%d/%d)", approvals, #decisions)
+	local is_loading = type(detail) == "table" and detail.loading == true
+	local decisions = (not is_loading and detail and detail.decisions) or {}
+	local approvals = (not is_loading and detail and detail.approvals_count) or 0
+	local reviewers_line = is_loading and "Reviewers (...)" or string.format("Reviewers (%d/%d)", approvals, #decisions)
 	table.insert(lines, reviewers_line)
 	table.insert(spans, {
 		line = #lines - 1,
@@ -65,7 +67,7 @@ local function overview_lines(pr, detail, width)
 		end_col = #reviewers_line,
 		hl_group = "AtlasSectionHeader",
 	})
-	local count_text = string.format("(%d/%d)", approvals, #decisions)
+	local count_text = is_loading and "(...)" or string.format("(%d/%d)", approvals, #decisions)
 	local count_start = #reviewers_line - #count_text
 	table.insert(spans, {
 		line = #lines - 1,
@@ -73,6 +75,18 @@ local function overview_lines(pr, detail, width)
 		end_col = #reviewers_line,
 		hl_group = "AtlasTextMuted",
 	})
+
+	if is_loading then
+		local loading_line = spinner.with_text("Loading reviewers...")
+		table.insert(lines, loading_line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #loading_line,
+			hl_group = "AtlasTextMuted",
+		})
+		return lines, spans
+	end
 
 	if #decisions == 0 then
 		table.insert(lines, "- no reviewer data yet")
@@ -129,7 +143,7 @@ end
 
 ---@param tab "overview"|"commits"|"files"
 ---@param pr table|nil
----@param detail BitbucketPRDetail|nil
+---@param detail BitbucketPRDetail|{ loading: true }|nil
 ---@param width integer|nil
 ---@return string[] lines
 ---@return table[] spans

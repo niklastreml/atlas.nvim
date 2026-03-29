@@ -3,6 +3,30 @@ local M = {}
 local service = require("atlas.bitbucket.api.service")
 local panel_state = require("atlas.bitbucket.ui.panel.state")
 local renderer = require("atlas.bitbucket.ui.panel.renderer")
+local spinner = require("atlas.ui.components.spinner")
+
+local reviewers_spinner = spinner.create({
+	interval_ms = 120,
+	on_tick = function()
+		local detail = panel_state.current_pr_detail
+		if type(detail) ~= "table" or detail.loading ~= true then
+			reviewers_spinner:stop()
+			return
+		end
+		renderer.render()
+	end,
+})
+
+local function stop_spinner()
+	reviewers_spinner:stop()
+end
+
+local function start_spinner()
+	if reviewers_spinner:is_running() then
+		return
+	end
+	reviewers_spinner:start()
+end
 
 local TAB_ORDER = {
 	"overview",
@@ -26,6 +50,8 @@ function M.on_select(item)
 
 	if pr ~= nil then
 		M.fetch_reviewers(tostring(pr.id or ""), 0)
+	else
+		stop_spinner()
 	end
 end
 
@@ -100,16 +126,27 @@ function M.fetch_reviewers(pr_key, request_id)
 		return
 	end
 
+	panel_state.set_current_detail_loading()
+	renderer.render()
+	start_spinner()
+
 	service.fetch_pullrequest_detail(workspace, repo, pr.id, { force_load = false }, function(detail, err)
 		if err ~= nil then
+			if tostring(((panel_state.current_pr or {}).id) or "") == tostring(pr_key or "") then
+				panel_state.set_current_detail(nil)
+				renderer.render()
+			end
+			stop_spinner()
 			return
 		end
 
 		if tostring(((panel_state.current_pr or {}).id) or "") ~= tostring(pr_key or "") then
+			stop_spinner()
 			return
 		end
 
 		panel_state.set_current_detail(detail)
+		stop_spinner()
 		renderer.render()
 	end)
 end

@@ -1,6 +1,6 @@
 ---@class BitbucketPanelState
 ---@field current_pr table|nil
----@field current_pr_detail BitbucketPRDetail|nil
+---@field current_pr_detail BitbucketPRDetail|{ loading: true }|nil
 ---@field current_tab "overview"|"commits"|"files"
 local M = {
 	current_pr = nil,
@@ -17,6 +17,10 @@ end
 ---@param detail BitbucketPRDetail|nil
 function M.set_current_detail(detail)
 	M.current_pr_detail = detail
+end
+
+function M.set_current_detail_loading()
+	M.current_pr_detail = { loading = true }
 end
 
 ---@param tab "overview"|"commits"|"files"

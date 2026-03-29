@@ -156,7 +156,7 @@ local function render_header(lines, spans, width, views)
 	end
 
 	local actions = {
-		{ label = string.format(" Refresh (r) "), hl_group = "AtlasBitbucketTheme" },
+		{ label = string.format(" Refresh (R) "), hl_group = "AtlasBitbucketTheme" },
 	}
 
 	utils.append_block(

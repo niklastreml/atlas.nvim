@@ -57,6 +57,7 @@ local function load_active_view(opts, on_done)
 
 	state.is_loading = true
 	state.error = nil
+	spinner.start("Loading pull requests...")
 
 	if layout.is_open() then
 		require("atlas.ui.main.renderer").render("bitbucket")

@@ -1,15 +1,11 @@
-local uv = vim.uv or vim.loop
-
 local M = {}
+local spinner_component = require("atlas.ui.components.spinner")
 
-local FRAMES = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
-local TICK_MS = 90
-
-local timer = nil
 local win = nil
 local buf = nil
-local idx = 1
 local current_msg = "Loading..."
+
+local spinner_instance = nil
 
 local function close_win()
 	if win ~= nil and vim.api.nvim_win_is_valid(win) then
@@ -23,14 +19,6 @@ local function delete_buf()
 		vim.api.nvim_buf_delete(buf, { force = true })
 	end
 	buf = nil
-end
-
-local function stop_timer()
-	if timer ~= nil then
-		timer:stop()
-		timer:close()
-		timer = nil
-	end
 end
 
 local function popup_config(text)
@@ -74,7 +62,7 @@ local function render_frame()
 		return
 	end
 
-	local text = string.format(" %s %s", FRAMES[idx], current_msg)
+	local text = " " .. spinner_instance:text(current_msg)
 
 	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, { text })
@@ -83,16 +71,28 @@ local function render_frame()
 	if win ~= nil and vim.api.nvim_win_is_valid(win) then
 		vim.api.nvim_win_set_config(win, popup_config(text))
 	end
+end
 
-	idx = (idx % #FRAMES) + 1
+local function ensure_spinner()
+	if spinner_instance ~= nil then
+		return
+	end
+
+	spinner_instance = spinner_component.create({
+		interval_ms = 90,
+		on_tick = function()
+			render_frame()
+		end,
+	})
 end
 
 ---@param msg string|nil
 function M.start(msg)
 	current_msg = (type(msg) == "string" and msg ~= "") and msg or "Loading..."
+	ensure_spinner()
 
 	local b = ensure_buf()
-	local initial_text = string.format(" %s %s", FRAMES[idx], current_msg)
+	local initial_text = " " .. spinner_instance:text(current_msg)
 	local cfg = popup_config(initial_text)
 
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
@@ -108,20 +108,15 @@ function M.start(msg)
 		{ win = win }
 	)
 
-	stop_timer()
-	timer = uv.new_timer()
-	if not timer then
-		return
-	end
-
-	timer:start(0, TICK_MS, vim.schedule_wrap(render_frame))
+	spinner_instance:start()
 end
 
 function M.stop()
-	stop_timer()
+	if spinner_instance ~= nil then
+		spinner_instance:stop()
+	end
 	close_win()
 	delete_buf()
-	idx = 1
 end
 
 --- FIX: Too many VimResized commands in the project. Make it universal for all ?

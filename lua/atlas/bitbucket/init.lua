@@ -12,7 +12,7 @@ local footer = require("atlas.ui.components.footer")
 local function register_dynamic_keys(buf, views)
 	local items = {
 		{
-			key = "r",
+			key = "R",
 			desc = "Refresh current Bitbucket view",
 			callback = function()
 				actions.refresh_current_view(function()
