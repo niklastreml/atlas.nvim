@@ -1,3 +1,7 @@
+--------------------------------------------------------------------------------
+-- Endpoint: GET /repositories/{{workspace}}/{{repo_slug}}/pullrequests?state=%s&pagelen=50
+--------------------------------------------------------------------------------
+
 ---@class BitbucketPRAuthor
 ---@field name string
 ---@field account_id string
@@ -9,6 +13,7 @@
 
 ---@class BitbucketPRLinks
 ---@field self string
+---@field commits string
 ---@field approve string
 ---@field request_changes string
 ---@field diff string
@@ -44,3 +49,31 @@
 ---@field repo string
 ---@field full_name string
 ---@field pullrequests BitbucketPR[]
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRParticipant
+---@field account_id string
+---@field name string
+---@field nickname string
+---@field role string
+---@field approved boolean
+---@field state string|nil
+---@field participated_on string|nil
+
+---@class BitbucketPRReviewerDecision
+---@field account_id string
+---@field name string
+---@field nickname string
+---@field decision "approved"|"changes_requested"|"pending"
+---@field approved boolean
+---@field participated_on string|nil
+
+---@class BitbucketPRDetail: BitbucketPR
+---@field reviewers BitbucketPRAuthor[]
+---@field participants BitbucketPRParticipant[]
+---@field decisions BitbucketPRReviewerDecision[]
+---@field approvals_count number
+---@field changes_requested_count number

@@ -1,10 +1,12 @@
 ---@class BitbucketPanelState
 ---@field current_pr_key string|nil
 ---@field current_pr table|nil
+---@field current_pr_detail BitbucketPRDetail|nil
 ---@field current_tab "overview"|"commits"|"files"
 local M = {
 	current_pr_key = nil,
 	current_pr = nil,
+	current_pr_detail = nil,
 	current_tab = "overview",
 }
 
@@ -16,6 +18,12 @@ function M.set_current(pr)
 	else
 		M.current_pr_key = nil
 	end
+	M.current_pr_detail = nil
+end
+
+---@param detail BitbucketPRDetail|nil
+function M.set_current_detail(detail)
+	M.current_pr_detail = detail
 end
 
 ---@param tab "overview"|"commits"|"files"
@@ -28,6 +36,7 @@ end
 function M.reset_current()
 	M.current_pr_key = nil
 	M.current_pr = nil
+	M.current_pr_detail = nil
 	M.current_tab = "overview"
 end
 

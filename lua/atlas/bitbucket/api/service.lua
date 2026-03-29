@@ -7,15 +7,21 @@ local http = require("atlas.core.http")
 local request_manager = require("atlas.core.request_manager")
 local footer = require("atlas.ui.components.footer")
 local icons = require("atlas.ui.icons")
+local state = require("atlas.bitbucket.state")
 
 local API_BASE = "https://api.bitbucket.org/2.0"
 
 local ENDPOINTS = {
-	pullrequests_open = "/repositories/%s/%s/pullrequests?state=OPEN&pagelen=50",
+	pullrequests_open = "/repositories/%s/%s/pullrequests?state=%s&pagelen=50",
+	pullrequest_detail = "/repositories/%s/%s/pullrequests/%s",
 }
 
 local function build_pullrequests_open_url(workspace, repo)
-	return API_BASE .. string.format(ENDPOINTS.pullrequests_open, workspace, repo)
+	return API_BASE .. string.format(ENDPOINTS.pullrequests_open, workspace, repo, state.pr_state)
+end
+
+local function build_pullrequest_detail_url(workspace, repo, pr_id)
+	return API_BASE .. string.format(ENDPOINTS.pullrequest_detail, workspace, repo, tostring(pr_id))
 end
 
 local function build_headers(user, token)
@@ -201,7 +207,7 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 				end
 				footer.notify(
 					"success",
-					string.format("%s Successful fetch %d pull request(s)", icons.entity("success"), pr_count),
+					string.format("%s Successfully fetched %d pull request(s)", icons.entity("success"), pr_count),
 					2800
 				)
 				on_done(all_groups, nil)
@@ -222,6 +228,67 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 			table.insert(handles, handle)
 		end
 	end
+end
+
+---@param workspace string
+---@param repo string
+---@param pr_id string|number
+---@param opts { force_load?: boolean }
+---@param on_done fun(detail: BitbucketPRDetail|nil, err: string|nil)
+function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
+	opts = opts or {}
+
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
+	local key = string.format("bitbucket:pr-detail:%s/%s#%s", workspace, repo, tostring(pr_id))
+	if opts.force_load ~= true then
+		local cached = cache.get(key)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return
+		end
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return
+	end
+
+	local url = build_pullrequest_detail_url(workspace, repo, pr_id)
+	local headers = build_headers(user, token)
+
+	http.curl_request("GET", url, headers, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		if result.error then
+			local message = "Bitbucket API error"
+			if type(result.error) == "table" and result.error.message then
+				message = tostring(result.error.message)
+			elseif type(result.error) == "string" then
+				message = result.error
+			end
+			on_done(nil, message)
+			return
+		end
+
+		local detail = normalizer.normalize_pr_detail(result)
+		cache.set(key, detail, ttl)
+		footer.notify(
+			"success",
+			string.format("%s Successful fetched %d details", icons.entity("success"), pr_id),
+			2800
+		)
+
+		on_done(detail, nil)
+	end)
 end
 
 return M

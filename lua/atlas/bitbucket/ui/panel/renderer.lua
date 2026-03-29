@@ -87,9 +87,18 @@ local function lines_for_pr(pr, width)
 	table.insert(lines, pad_line(string.rep("─", rule_width)))
 
 	--- Content
-	local body_lines = tab_content.render(state.current_tab, pr)
+	local body_lines, body_spans = tab_content.render(state.current_tab, pr, state.current_pr_detail)
+	local body_base = #lines
 	for _, line in ipairs(body_lines) do
 		table.insert(lines, pad_line(line))
+	end
+	for _, span in ipairs(body_spans or {}) do
+		table.insert(spans, {
+			line = body_base + span.line,
+			start_col = span.start_col + PADDING_X,
+			end_col = span.end_col + PADDING_X,
+			hl_group = span.hl_group,
+		})
 	end
 
 	return { lines = lines, spans = spans }
