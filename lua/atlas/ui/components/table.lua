@@ -113,7 +113,10 @@ local function tree_prefix(row, col_index, tree)
 	local level = row._tree_level or 0
 	local indent = string.rep(tree.indent, level)
 	if not tree.show_indicator then
-		return indent
+		if level == 0 then
+			return ""
+		end
+		return indent .. tree.leaf_prefix
 	end
 
 	if row._tree_has_children then
@@ -409,8 +412,10 @@ function M.render(opts)
 	for idx, row in ipairs(rows) do
 		if row._tree_separator then
 			local sep = tostring(row._tree_separator_char or "─")
+			table.insert(lines, "")
 			table.insert(lines, string.rep(" ", margin) .. string.rep(sep, math.max(width - (margin * 2), 1)))
 			line_map[#lines] = row
+			table.insert(lines, "")
 		else
 			local line_parts = {}
 			col_start = margin

@@ -8,6 +8,10 @@ local highlights = require("atlas.ui.highlights")
 ---@param col TableColumn
 ---@return string|nil
 function M.cell_hl(row, col)
+	if col.key == "name" and row.kind == "repo" then
+		return highlights.dynamic_for(row.repo_name)
+	end
+
 	if col.key == "pr_icon" then
 		return "AtlasTextPositive"
 	end
@@ -78,6 +82,17 @@ local function coloumns()
 		{ key = "tasks", name = icons.entity("tasks"), min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "created", name = icons.entity("created"), can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "updated", name = icons.entity("updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
+	}
+end
+
+local function plain_tree_coloumns()
+	return {
+		{ key = "name", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
+		{ key = "comments", name = icons.entity("comments"), min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "tasks", name = icons.entity("tasks"), min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "created", name = icons.entity("created"), can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "updated", name = icons.entity("updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
 	}
@@ -160,6 +175,47 @@ function M.build_plain_table(repo_groups)
 	return {
 		rows = rows,
 		columns = coloumns(),
+	}
+end
+
+---@param repo_groups BitbucketRepoPRGroup[]
+---@return { rows: table[], columns: table[] }
+function M.build_plain_tree_table(repo_groups)
+	local rows = {}
+	for _, group in ipairs(repo_groups or {}) do
+		local repo_row = {
+			kind = "repo",
+			repo_name = group.full_name,
+			name = string.format("%s %s", icons.entity("repo"), group.full_name),
+			comments = "",
+			tasks = "",
+			author = "",
+			created = "",
+			updated = "",
+			expanded = true,
+			children = {},
+			_item = { kind = "repo", repo = group.full_name },
+		}
+
+		for _, pr in ipairs(group.pullrequests or {}) do
+			table.insert(repo_row.children, {
+				kind = "pr",
+				name = string.format("%s #%s %s", icons.entity("pr"), tostring(pr.id), pr.title or ""),
+				comments = tostring(pr.comments),
+				tasks = tostring(pr.tasks),
+				author = pr.author.name,
+				created = utils.relative_time(pr.created_on),
+				updated = utils.relative_time(pr.updated_on),
+				_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr },
+			})
+		end
+
+		table.insert(rows, repo_row)
+	end
+
+	return {
+		rows = rows,
+		columns = plain_tree_coloumns(),
 	}
 end
 

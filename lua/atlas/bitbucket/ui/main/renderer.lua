@@ -8,7 +8,6 @@ local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
 local utils = require("atlas.utils")
-local highlights = require("atlas.ui.highlights")
 local footer = require("atlas.ui.components.footer")
 
 ---@param table_lines string[]
@@ -54,21 +53,30 @@ local function build_plain_content(opts, repos)
 end
 
 -- Layout: plain
---   [pr] #123 Title                        c t author repo source->target created updated
---   (single row per PR, no meta row)
+--   [repo]
+--   [children PR rows using tree renderer]
 ---@param opts { width: number, height: number }
 ---@param repos BitbucketRepoPRGroup[]
 ---@return string[]
 ---@return table[]
 ---@return table<number, table>
 local function build_plain_singleline_content(opts, repos)
-	local table_data = helper.build_plain_table(repos)
+	local table_data = helper.build_plain_tree_table(repos)
+
 	local tbl_lines, tbl_map, tbl_spans = table_view.render({
 		width = opts.width,
 		margin = 1,
 		columns = table_data.columns,
 		rows = table_data.rows,
 		cell_hl = helper.cell_hl,
+		tree = {
+			children_key = "children",
+			expanded_field = "expanded",
+			default_expanded = true,
+			indent = "",
+			show_indicator = false,
+			separator = "─",
+		},
 	})
 	add_pr_id_spans(tbl_lines, tbl_map, tbl_spans)
 
