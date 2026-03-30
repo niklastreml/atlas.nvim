@@ -35,19 +35,6 @@ Accept: application/json
   }
 %}
 
-### Get pull request comments
-GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/{{bitbucket_pr_id}}/comments
-Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
-Content-Type: application/json
-Accept: application/json
-
-
-### Get commits
-GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/commits
-Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
-Content-Type: application/json
-Accept: application/json
-
 ### Get pull request details
 GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/2
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
@@ -67,6 +54,21 @@ Accept: application/json
   client.global.set("bitbucket_diff_url", diffUrl);
 %}
 
+
+### Get pull request comments
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests/{{bitbucket_pr_id}}/comments
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+
+### Get commits
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/commits
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+
 ### Diff stats (dynamic from PR)
 GET {{bitbucket_diffstat_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
@@ -84,10 +86,3 @@ GET https://api.bitbucket.org/2.0/repositories/{{ workspace }}/{{ repo_slug }}/p
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
-
-### List activity
-GET https://api.bitbucket.org/2.0/repositories/emrearmaganxx/atlas/pullrequests/2/activity?ctx=EbsXsLFAHEUX
-Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
-Content-Type: application/json
-Accept: application/json
-

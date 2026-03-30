@@ -1,12 +1,15 @@
 local M = {}
+local icons = require("atlas.ui.icons")
 
 local TABS = {
-	{ key = "overview", label = "Overview" },
-	{ key = "commits", label = "Commits" },
-	{ key = "files", label = "File changes" },
+	{ key = "overview", label = "Overview", icon = icons.entity("overview") },
+	{ key = "activity", label = "Activity", icon = icons.entity("activity") },
+	{ key = "comments", label = "Comments", icon = icons.entity("comment") },
+	{ key = "commits", label = "Commits", icon = icons.entity("commit") },
+	{ key = "files", label = "File changes", icon = icons.entity("files") },
 }
 
----@param active_tab "overview"|"commits"|"files"
+---@param active_tab "overview"|"activity"|"comments"|"commits"|"files"
 ---@return string line
 ---@return table[] spans
 function M.render(active_tab)
@@ -15,7 +18,7 @@ function M.render(active_tab)
 	local col = 0
 
 	for i, tab in ipairs(TABS) do
-		local part = string.format(" %s ", tab.label)
+		local part = string.format(" %s %s ", tab.icon, tab.label)
 
 		line = line .. part
 		if tab.key ~= active_tab then

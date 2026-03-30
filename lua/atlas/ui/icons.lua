@@ -11,6 +11,10 @@ local ICONS = {
 		repo = "",
 		pr = "",
 		commit = "󰜘",
+		overview = "󰈙",
+		files = "󰈔",
+		activity = "󱐋",
+		comment = "󰍩",
 		success = "",
 		warning = "",
 		pending = "",
@@ -25,7 +29,7 @@ function M.provider(name)
 	return ICONS.provider[name] or ICONS.fallback
 end
 
----@param name "repo"|"refresh"|"pr"|"commit"|"success"|"warning"|"pending"|"branch"|"author"
+---@param name "repo"|"refresh"|"pr"|"commit"|"overview"|"files"|"activity"|"comment"|"success"|"warning"|"pending"|"branch"|"author"
 function M.entity(name)
 	return ICONS.entity[name] or ICONS.fallback
 end

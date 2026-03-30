@@ -514,4 +514,96 @@ function M.fetch_pullrequest_diff(diff_url, opts, on_done)
 	end)
 end
 
+---@param activity_url string
+---@param opts { force_load?: boolean }
+---@param on_done fun(activity: BitbucketPRActivity|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_pullrequest_activity(activity_url, opts, on_done)
+	opts = opts or {}
+	if type(activity_url) ~= "string" or activity_url == "" then
+		on_done(nil, "Missing Bitbucket activity URL")
+		return nil
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local headers = build_headers(user, token)
+
+	return http.curl_request("GET", activity_url, headers, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		if result.error then
+			local message = "Bitbucket API error"
+			if type(result.error) == "table" and result.error.message then
+				message = tostring(result.error.message)
+			elseif type(result.error) == "string" then
+				message = result.error
+			end
+			on_done(nil, message)
+			return
+		end
+
+		local activity = normalizer.normalize_pr_activity(result)
+		on_done(activity, nil)
+	end)
+end
+
+---@param comments_url string
+---@param opts { force_load?: boolean }
+---@param on_done fun(comments: BitbucketPRComments|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_pullrequest_comments(comments_url, opts, on_done)
+	opts = opts or {}
+	if type(comments_url) ~= "string" or comments_url == "" then
+		on_done(nil, "Missing Bitbucket comments URL")
+		return nil
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local headers = build_headers(user, token)
+
+	return http.curl_request("GET", comments_url, headers, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		if result.error then
+			local message = "Bitbucket API error"
+			if type(result.error) == "table" and result.error.message then
+				message = tostring(result.error.message)
+			elseif type(result.error) == "string" then
+				message = result.error
+			end
+			on_done(nil, message)
+			return
+		end
+
+		local comments = normalizer.normalize_pr_comments(result)
+		on_done(comments, nil)
+	end)
+end
+
 return M

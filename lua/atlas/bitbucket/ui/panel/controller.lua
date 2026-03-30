@@ -9,10 +9,12 @@ local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
 		local detail_loading = panel_state.current_pr_detail == "loading"
+		local activity_loading = panel_state.current_pr_activity == "loading"
+		local comments_loading = panel_state.current_pr_comments == "loading"
 		local commits_loading = panel_state.current_pr_commits == "loading"
 		local diffstat_loading = panel_state.current_pr_diffstat == "loading"
 		local diff_loading = panel_state.current_pr_diff == "loading"
-		if not detail_loading and not commits_loading and not diffstat_loading and not diff_loading then
+		if not detail_loading and not activity_loading and not comments_loading and not commits_loading and not diffstat_loading and not diff_loading then
 			panel_spinner:stop()
 			return
 		end
@@ -22,12 +24,14 @@ local panel_spinner = spinner.create({
 
 local active_handles = {
 	reviewers = nil,
+	activity = nil,
+	comments = nil,
 	commits = nil,
 	diffstat = nil,
 	diff = nil,
 }
 
----@param key "reviewers"|"commits"|"diffstat"|"diff"
+---@param key "reviewers"|"activity"|"comments"|"commits"|"diffstat"|"diff"
 local function cancel_handle(key)
 	local handle = active_handles[key]
 	if handle ~= nil and handle.cancel then
@@ -38,6 +42,8 @@ end
 
 local function cancel_all_handles()
 	cancel_handle("reviewers")
+	cancel_handle("activity")
+	cancel_handle("comments")
 	cancel_handle("commits")
 	cancel_handle("diffstat")
 	cancel_handle("diff")
@@ -56,6 +62,8 @@ end
 
 local TAB_ORDER = {
 	"overview",
+	"activity",
+	"comments",
 	"commits",
 	"files",
 }
@@ -90,6 +98,14 @@ function M.select_tab(tab)
 
 	if tab == "commits" and panel_state.current_pr ~= nil then
 		M.fetch_commits(tostring((panel_state.current_pr or {}).id or ""), 0)
+	end
+
+	if tab == "activity" and panel_state.current_pr ~= nil then
+		M.fetch_activity(tostring((panel_state.current_pr or {}).id or ""), 0)
+	end
+
+	if tab == "comments" and panel_state.current_pr ~= nil then
+		M.fetch_comments(tostring((panel_state.current_pr or {}).id or ""), 0)
 	end
 
 	if tab == "files" and panel_state.current_pr ~= nil then
@@ -134,7 +150,111 @@ end
 
 ---@param pr_key string
 ---@param request_id number
-function M.fetch_activity(pr_key, request_id) end
+function M.fetch_activity(pr_key, request_id)
+	local _ = request_id
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return
+	end
+
+	if tostring(pr.id or "") ~= tostring(pr_key or "") then
+		return
+	end
+
+	local activity_url = ((pr.links or {}).activity or "")
+	if activity_url == "" then
+		return
+	end
+
+	local existing = panel_state.current_pr_activity
+	if existing ~= "loading" and type(existing) == "table" and type(existing.entries) == "table" then
+		return
+	end
+
+	panel_state.set_current_activity_loading()
+	renderer.render()
+	start_spinner()
+
+	cancel_handle("activity")
+	local handle
+	handle = service.fetch_pullrequest_activity(activity_url, { force_load = false }, function(activity, err)
+		if active_handles.activity == handle then
+			active_handles.activity = nil
+		end
+		if err ~= nil then
+			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
+				panel_state.set_current_activity(nil)
+				renderer.render()
+			end
+			stop_spinner()
+			return
+		end
+
+		if tostring((panel_state.current_pr or {}).id or "") ~= tostring(pr_key or "") then
+			stop_spinner()
+			return
+		end
+
+		panel_state.set_current_activity(activity)
+		stop_spinner()
+		renderer.render()
+	end)
+	active_handles.activity = handle
+end
+
+---@param pr_key string
+---@param request_id number
+function M.fetch_comments(pr_key, request_id)
+	local _ = request_id
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return
+	end
+
+	if tostring(pr.id or "") ~= tostring(pr_key or "") then
+		return
+	end
+
+	local comments_url = ((pr.links or {}).comments or "")
+	if comments_url == "" then
+		return
+	end
+
+	local existing = panel_state.current_pr_comments
+	if existing ~= "loading" and type(existing) == "table" and type(existing.entries) == "table" then
+		return
+	end
+
+	panel_state.set_current_comments_loading()
+	renderer.render()
+	start_spinner()
+
+	cancel_handle("comments")
+	local handle
+	handle = service.fetch_pullrequest_comments(comments_url, { force_load = false }, function(comments, err)
+		if active_handles.comments == handle then
+			active_handles.comments = nil
+		end
+		if err ~= nil then
+			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
+				panel_state.set_current_comments(nil)
+				renderer.render()
+			end
+			stop_spinner()
+			return
+		end
+
+		if tostring((panel_state.current_pr or {}).id or "") ~= tostring(pr_key or "") then
+			stop_spinner()
+			return
+		end
+
+		panel_state.set_current_comments(comments)
+		stop_spinner()
+		renderer.render()
+	end)
+	active_handles.comments = handle
+end
 
 ---@param pr_key string
 ---@param request_id number

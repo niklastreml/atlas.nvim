@@ -122,3 +122,96 @@
 
 ---@class BitbucketPRDiff
 ---@field text string
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}/activity
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRActivityActor
+---@field name string
+---@field account_id string
+---@field nickname string
+
+---@class BitbucketPRActivityUpdateEntry
+---@field kind "update"
+---@field date string
+---@field actor BitbucketPRActivityActor
+---@field state string
+---@field draft boolean
+---@field title string
+---@field description string
+---@field reason string
+---@field details string
+---@field source_branch string
+---@field target_branch string
+---@field source_commit_hash string
+---@field target_commit_hash string
+---@field changes table
+
+---@class BitbucketPRActivityApprovalEntry
+---@field kind "approval"
+---@field date string
+---@field actor BitbucketPRActivityActor
+
+---@class BitbucketPRActivityCommentEntry
+---@field kind "comment"
+---@field date string
+---@field updated_on string
+---@field actor BitbucketPRActivityActor
+---@field id number
+---@field content_raw string
+---@field deleted boolean
+---@field pending boolean
+
+---@alias BitbucketPRActivityEntry BitbucketPRActivityUpdateEntry|BitbucketPRActivityApprovalEntry|BitbucketPRActivityCommentEntry
+
+---@class BitbucketPRActivity
+---@field entries BitbucketPRActivityEntry[]
+---@field size number
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}/comments
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRCommentAuthor
+---@field name string
+---@field account_id string
+---@field nickname string
+
+---@class BitbucketPRCommentContent
+---@field type string
+---@field raw string
+---@field markup string
+---@field html string
+
+---@class BitbucketPRCommentInline
+---@field from number|nil
+---@field to number|nil
+---@field path string
+---@field start_from number|nil
+---@field start_to number|nil
+
+---@class BitbucketPRCommentLinks
+---@field self string
+---@field html string
+---@field code string
+
+---@class BitbucketPRCommentEntry
+---@field id number
+---@field parent_id number|nil
+---@field created_on string
+---@field updated_on string
+---@field content BitbucketPRCommentContent
+---@field author BitbucketPRCommentAuthor
+---@field deleted boolean
+---@field pending boolean
+---@field comment_type string
+---@field links BitbucketPRCommentLinks
+---@field inline BitbucketPRCommentInline|nil
+---@field children BitbucketPRCommentEntry[]
+
+---@class BitbucketPRComments
+---@field entries BitbucketPRCommentEntry[]
+---@field size number
+---@field page number
+---@field pagelen number

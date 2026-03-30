@@ -91,6 +91,8 @@ local function lines_for_pr(pr, width)
 		state.current_tab,
 		pr,
 		state.current_pr_detail,
+		state.current_pr_activity,
+		state.current_pr_comments,
 		state.current_pr_commits,
 		state.current_pr_diffstat,
 		state.current_pr_diff,
