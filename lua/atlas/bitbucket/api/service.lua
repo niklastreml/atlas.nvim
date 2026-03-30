@@ -12,6 +12,7 @@ local API_BASE = "https://api.bitbucket.org/2.0"
 local ENDPOINTS = {
 	pullrequests_open = "/repositories/%s/%s/pullrequests?state=%s&pagelen=50",
 	pullrequest_detail = "/repositories/%s/%s/pullrequests/%s",
+	repository_detail = "/repositories/%s/%s",
 	user_profile = "/user",
 	user_workspaces = "/user/workspaces",
 	repositories = "/repositories/%s?%ssort=-updated_on&pagelen=50",
@@ -251,7 +252,8 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 		if cached and cached.value then
 			logger.loginfo("Bitbucket cache hit", { workspace = workspace, repo = repo })
 			if cached.value.readme == nil or cached.value.readme == "" then
-				cached.value.readme = (type(opts.readme) == "string" and opts.readme ~= "") and opts.readme or "README.md"
+				cached.value.readme = (type(opts.readme) == "string" and opts.readme ~= "") and opts.readme
+					or "README.md"
 			end
 			on_done({ cached.value }, nil)
 			return nil
@@ -1058,6 +1060,65 @@ function M.fetch_workspace_repositories(workspace, search, on_done)
 		})
 
 		on_done(repositories, nil)
+	end)
+end
+
+---@param workspace string
+---@param repo_slug string
+---@param opts { force_load?: boolean }
+---@param on_done fun(detail: BitbucketRepositoryDetail|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_repository_detail(workspace, repo_slug, opts, on_done)
+	opts = opts or {}
+	if type(workspace) ~= "string" or workspace == "" then
+		on_done(nil, "Missing workspace slug")
+		return nil
+	end
+	if type(repo_slug) ~= "string" or repo_slug == "" then
+		on_done(nil, "Missing repository slug")
+		return nil
+	end
+
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
+	local cachekey = string.format("bitbucket:mem:repo_detail:%s/%s", workspace, repo_slug)
+	if not opts.force_load then
+		local cached = memory_cache.get(cachekey)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return nil
+		end
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local url = API_BASE .. string.format(ENDPOINTS.repository_detail, workspace, repo_slug)
+	local headers = build_headers(user, token)
+
+	return http.curl_request("GET", url, headers, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		local api_err = api_error_message(result)
+		if api_err ~= nil then
+			on_done(nil, api_err)
+			return
+		end
+
+		local detail = normalizer.normalize_repository_detail(result)
+
+		memory_cache.set(cachekey, detail, ttl)
+		on_done(detail, nil)
 	end)
 end
 

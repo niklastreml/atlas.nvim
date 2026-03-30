@@ -1,4 +1,5 @@
 local M = {}
+local utils = require("atlas.utils")
 
 ---@param state string|nil
 ---@return string|nil
@@ -46,6 +47,40 @@ function M.render(pr)
 					hl_group = chip.hl,
 				})
 			end
+			col = col + #label + 1
+		end
+	end
+
+	return line, spans
+end
+
+---@param repo table
+---@return string line
+---@return table[] spans
+function M.render_repo(repo)
+	if type(repo) ~= "table" then
+		return "", {}
+	end
+
+	local chips = {
+		{ label = string.format("size %s", utils.human_size(repo.size)), hl = "AtlasTabInactive" },
+		repo.is_private == true and { label = "private", hl = "AtlasBitbucketPRDraft" } or nil,
+		{ label = tostring((repo.mainbranch or {}).name or "-"), hl = "AtlasBitbucketPRMerged" },
+	}
+
+	local line = ""
+	local spans = {}
+	local col = 0
+
+	for _, chip in ipairs(chips) do
+		if chip ~= nil then
+			local label = string.format(" %s ", chip.label)
+			line = line .. label .. " "
+			table.insert(spans, {
+				start_col = col,
+				end_col = col + #label,
+				hl_group = chip.hl,
+			})
 			col = col + #label + 1
 		end
 	end

@@ -343,4 +343,81 @@ function M.normalize_pr_comments(result)
 	}
 end
 
+---@param result table
+---@return BitbucketRepositoryDetail
+function M.normalize_repository_detail(result)
+	local links = result.links or {}
+	local function href(key)
+		return tostring(((links[key] or {}).href) or "")
+	end
+
+	local clone_links = {}
+	for _, c in ipairs((links.clone or {})) do
+		table.insert(clone_links, {
+			name = tostring(c.name or ""),
+			href = tostring(c.href or ""),
+		})
+	end
+
+	return {
+		type = tostring(result.type or ""),
+		full_name = tostring(result.full_name or ""),
+		name = tostring(result.name or ""),
+		slug = tostring(result.slug or ""),
+		description = tostring(result.description or ""),
+		scm = tostring(result.scm or ""),
+		website = result.website,
+		language = tostring(result.language or ""),
+		uuid = tostring(result.uuid or ""),
+		is_private = result.is_private == true,
+		size = tonumber(result.size) or 0,
+		fork_policy = tostring(result.fork_policy or ""),
+		created_on = tostring(result.created_on or ""),
+		updated_on = tostring(result.updated_on or ""),
+		links = {
+			self = { href = href("self") },
+			html = { href = href("html") },
+			avatar = { href = href("avatar") },
+			pullrequests = { href = href("pullrequests") },
+			commits = { href = href("commits") },
+			branches = { href = href("branches") },
+			tags = { href = href("tags") },
+			downloads = { href = href("downloads") },
+			source = { href = href("source") },
+			forks = href("forks") ~= "" and { href = href("forks") } or nil,
+			watchers = href("watchers") ~= "" and { href = href("watchers") } or nil,
+			hooks = href("hooks") ~= "" and { href = href("hooks") } or nil,
+			clone = clone_links,
+		},
+		owner = {
+			type = tostring((result.owner or {}).type or ""),
+			display_name = tostring((result.owner or {}).display_name or ""),
+			uuid = tostring((result.owner or {}).uuid or ""),
+			username = tostring((result.owner or {}).username or ""),
+		},
+		workspace = {
+			type = tostring((result.workspace or {}).type or ""),
+			uuid = tostring((result.workspace or {}).uuid or ""),
+			name = tostring((result.workspace or {}).name or ""),
+			slug = tostring((result.workspace or {}).slug or ""),
+		},
+		project = result.project ~= nil and {
+			type = tostring((result.project or {}).type or ""),
+			key = tostring((result.project or {}).key or ""),
+			uuid = tostring((result.project or {}).uuid or ""),
+			name = tostring((result.project or {}).name or ""),
+		} or nil,
+		mainbranch = result.mainbranch ~= nil and {
+			name = tostring((result.mainbranch or {}).name or ""),
+			type = tostring((result.mainbranch or {}).type or ""),
+		} or nil,
+		override_settings = result.override_settings ~= nil and {
+			default_merge_strategy = (result.override_settings or {}).default_merge_strategy,
+			branching_model = (result.override_settings or {}).branching_model,
+		} or nil,
+		parent = result.parent,
+		enforced_signed_commits = result.enforced_signed_commits,
+	}
+end
+
 return M

@@ -124,6 +124,28 @@ function M.relative_time_text(iso)
 	return string.format("%d %s%s ago", n, base, suffix)
 end
 
+---@param bytes number|string|nil
+---@return string
+function M.human_size(bytes)
+	local n = tonumber(bytes) or 0
+	if n < 0 then
+		n = 0
+	end
+
+	local units = { "B", "KB", "MB", "GB", "TB" }
+	local i = 1
+	while n >= 1024 and i < #units do
+		n = n / 1024
+		i = i + 1
+	end
+
+	if i == 1 then
+		return string.format("%d %s", math.floor(n), units[i])
+	end
+
+	return string.format("%.1f %s", n, units[i])
+end
+
 ---@param text string|nil
 ---@return string[]
 function M.sanitize_markdown_lines(text)
