@@ -226,20 +226,22 @@ end
 
 ---@param workspace string
 ---@param repo string
+---@param readme string|nil
 ---@param pullrequests BitbucketPR[]
 ---@return BitbucketRepoPRGroup
-local function build_group(workspace, repo, pullrequests)
+local function build_group(workspace, repo, readme, pullrequests)
 	return {
 		workspace = workspace,
 		repo = repo,
 		full_name = string.format("%s/%s", workspace, repo),
+		readme = (type(readme) == "string" and readme ~= "") and readme or "README.md",
 		pullrequests = pullrequests,
 	}
 end
 
 ---@param workspace string
 ---@param repo string
----@param opts { user: string, token: string, cache_ttl: number, force: boolean }
+---@param opts { user: string, token: string, cache_ttl: number, force: boolean, readme?: string|nil }
 ---@param on_done fun(groups: BitbucketRepoPRGroup[], err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 local function fetch_pullrequests(workspace, repo, opts, on_done)
@@ -248,6 +250,9 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 		local cached = cache.get(key)
 		if cached and cached.value then
 			logger.loginfo("Bitbucket cache hit", { workspace = workspace, repo = repo })
+			if cached.value.readme == nil or cached.value.readme == "" then
+				cached.value.readme = (type(opts.readme) == "string" and opts.readme ~= "") and opts.readme or "README.md"
+			end
 			on_done({ cached.value }, nil)
 			return nil
 		end
@@ -299,7 +304,7 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 
 		local raw_values = result.values or {}
 		local normalized = normalizer.normalize_prs(raw_values, workspace, repo)
-		local group = build_group(workspace, repo, normalized)
+		local group = build_group(workspace, repo, opts.readme, normalized)
 
 		cache.set(key, group, opts.cache_ttl)
 
@@ -387,7 +392,7 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 		local handle = fetch_pullrequests(
 			repo.workspace,
 			repo.repo,
-			{ user = user, token = token, cache_ttl = ttl, force = opts.force_load },
+			{ user = user, token = token, cache_ttl = ttl, force = opts.force_load, readme = repo.readme },
 			finish
 		)
 		if handle ~= nil then

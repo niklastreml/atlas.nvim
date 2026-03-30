@@ -1,8 +1,8 @@
 local M = {}
 
 local service = require("atlas.bitbucket.api.service")
-local panel_state = require("atlas.bitbucket.ui.panel.state")
-local renderer = require("atlas.bitbucket.ui.panel.renderer")
+local panel_state = require("atlas.bitbucket.ui.panel.prs.state")
+local renderer = require("atlas.bitbucket.ui.panel.prs.renderer")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 local layout = require("atlas.ui.layout")

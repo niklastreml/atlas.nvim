@@ -12,7 +12,7 @@ local function is_selectable(view, node)
 	end
 
 	if view == "bitbucket" then
-		return node.kind == "pr"
+		return node.kind == "pr" or node.kind == "repo"
 	end
 
 	if view == "jira" then
@@ -157,10 +157,30 @@ function M.register_keys(buf)
 			end,
 		},
 		{
+			key = "gg",
+			desc = "Go to first PR",
+			callback = function()
+				M.focus_first_item()
+			end,
+		},
+		{
+			key = "G",
+			desc = "Go to last PR",
+			callback = function()
+				M.focus_last_item()
+			end,
+		},
+
+		{
 			key = "p",
 			desc = "Toggle detail pane",
 			callback = function()
-				require("atlas.ui.panel").toggle()
+				local panel = require("atlas.ui.panel")
+				if panel.is_open() then
+					panel.close()
+					return
+				end
+				panel.show(ui_state.current_view, M.current_item())
 			end,
 		},
 		{
@@ -174,7 +194,7 @@ function M.register_keys(buf)
 				if not panel.is_open() then
 					return
 				end
-				require("atlas.bitbucket.ui.panel.controller").prev_tab()
+				require("atlas.bitbucket.ui.panel.prs.controller").prev_tab()
 			end,
 		},
 		{
@@ -188,7 +208,7 @@ function M.register_keys(buf)
 				if not panel.is_open() then
 					return
 				end
-				require("atlas.bitbucket.ui.panel.controller").next_tab()
+				require("atlas.bitbucket.ui.panel.prs.controller").next_tab()
 			end,
 		},
 	}

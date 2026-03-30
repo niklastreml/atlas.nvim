@@ -129,7 +129,7 @@ function M.refresh_selected_pr_cache(pr)
 
 	local panel = require("atlas.ui.panel")
 	if panel.is_open() then
-		require("atlas.bitbucket.ui.panel.controller").refresh_selected_pr()
+		require("atlas.bitbucket.ui.panel.prs.controller").refresh_selected_pr()
 		footer.notify("info", string.format("Refetching PR #%s", tostring(pr.id or "")))
 		return
 	end

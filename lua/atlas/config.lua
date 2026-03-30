@@ -18,6 +18,7 @@
 ---@class BitbucketRepoConfig
 ---@field workspace string
 ---@field repo string
+---@field readme string|nil
 
 ---@class BitbucketViewConfig
 ---@field name string
@@ -103,6 +104,16 @@ local function default_github_views()
 end
 
 local function normalize_views()
+	if M.options.bitbucket.views and #M.options.bitbucket.views > 0 then
+		for _, view in ipairs(M.options.bitbucket.views) do
+			for _, repo in ipairs(view.repos or {}) do
+				if repo.readme == nil or repo.readme == "" then
+					repo.readme = "README.md"
+				end
+			end
+		end
+	end
+
 	if not M.options.jira.views or #M.options.jira.views == 0 then
 		M.options.jira.views = default_jira_views()
 	end

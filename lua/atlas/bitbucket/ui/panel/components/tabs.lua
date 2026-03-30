@@ -1,7 +1,7 @@
 local M = {}
 local icons = require("atlas.ui.icons")
 
-local TABS = {
+local PR_TABS = {
 	{ key = "overview", label = "Overview", icon = icons.entity("overview") },
 	{ key = "activity", label = "Activity", icon = icons.entity("activity") },
 	{ key = "comments", label = "Comments", icon = icons.entity("comment") },
@@ -9,15 +9,23 @@ local TABS = {
 	{ key = "files", label = "File changes", icon = icons.entity("files") },
 }
 
----@param active_tab "overview"|"activity"|"comments"|"commits"|"files"
----@return string line
----@return table[] spans
-function M.render(active_tab)
+local REPO_TABS = {
+	{ key = "overview", label = "Overview", icon = icons.entity("overview") },
+	{ key = "branches", label = "Branches", icon = icons.entity("branch") },
+	{ key = "tags", label = "Tags", icon = icons.fallback() },
+	{ key = "commits", label = "Commits", icon = icons.entity("commit") },
+}
+
+---@param tabs table[]
+---@param active_tab string
+---@return string
+---@return table[]
+local function render_tabs(tabs, active_tab)
 	local line = ""
 	local spans = {}
 	local col = 0
 
-	for i, tab in ipairs(TABS) do
+	for i, tab in ipairs(tabs) do
 		local part = string.format("%s %s ", tab.icon, tab.label)
 
 		line = line .. part
@@ -30,13 +38,27 @@ function M.render(active_tab)
 		end
 		col = col + #part
 
-		if i < #TABS then
+		if i < #tabs then
 			line = line .. " "
 			col = col + 1
 		end
 	end
 
 	return line, spans
+end
+
+---@param active_tab "overview"|"activity"|"comments"|"commits"|"files"
+---@return string line
+---@return table[] spans
+function M.render_pr(active_tab)
+	return render_tabs(PR_TABS, active_tab)
+end
+
+---@param active_tab "overview"|"branches"|"tags"|"commits"
+---@return string line
+---@return table[] spans
+function M.render_repo(active_tab)
+	return render_tabs(REPO_TABS, active_tab)
 end
 
 return M

@@ -13,6 +13,19 @@ Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
+> {%
+  const mainBranch = response.body?.mainbranch?.name;
+  if (mainBranch) {
+    client.global.set("bitbucket_main_branch", String(mainBranch));
+  }
+%}
+
+### README candidate: README.md (main branch)
+GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/src/{{bitbucket_main_branch}}/README.md
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: text/plain
+
 ### Get open pull requests
 GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/pullrequests?state=OPEN&pagelen=50
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
@@ -86,3 +99,4 @@ GET https://api.bitbucket.org/2.0/repositories/{{ workspace }}/{{ repo_slug }}/p
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
+

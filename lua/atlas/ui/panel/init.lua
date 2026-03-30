@@ -11,7 +11,7 @@ local function register_panel_keys()
 	end
 
 	---TODO: Need to consider the other providers
-	local bb_panel = require("atlas.bitbucket.ui.panel.controller")
+	local bb_panel = require("atlas.bitbucket.ui.panel.prs.controller")
 	vim.keymap.set("n", "q", function()
 		M.close()
 	end, { buffer = buf, silent = true, nowait = true })
@@ -29,16 +29,6 @@ local function register_panel_keys()
 	end, { buffer = buf, silent = true, nowait = true })
 end
 
-local function current_item()
-	local win = layout.win_id("main")
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return nil
-	end
-
-	local line = vim.api.nvim_win_get_cursor(win)[1]
-	return (ui_state.line_map or {})[line]
-end
-
 function M.open()
 	if M.is_open() then
 		return
@@ -49,8 +39,16 @@ function M.open()
 
 	if state.open then
 		register_panel_keys()
-		M.on_select(ui_state.current_view, current_item())
 	end
+end
+
+---@param provider "bitbucket"|"jira"|"github"
+---@param item table|nil
+function M.show(provider, item)
+	if not M.is_open() then
+		M.open()
+	end
+	M.on_select(provider, item)
 end
 
 function M.close()
@@ -83,7 +81,11 @@ function M.on_select(provider, item)
 	end
 
 	if provider == "bitbucket" then
-		require("atlas.bitbucket.ui.panel.controller").on_select(item)
+		if type(item) == "table" and item.kind == "repo" then
+			require("atlas.bitbucket.ui.panel.repository.controller").on_select(item)
+		else
+			require("atlas.bitbucket.ui.panel.prs.controller").on_select(item)
+		end
 		return
 	end
 

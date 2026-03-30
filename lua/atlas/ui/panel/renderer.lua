@@ -1,9 +1,15 @@
 local M = {}
+local state = require("atlas.ui.panel.state")
 
 ---@param provider "bitbucket"|"jira"
 function M.render(provider)
 	if provider == "bitbucket" then
-		require("atlas.bitbucket.ui.panel.controller").refresh()
+		local item = state.selected_item
+		if type(item) == "table" and item.kind == "repo" then
+			require("atlas.bitbucket.ui.panel.repository.controller").refresh()
+		else
+			require("atlas.bitbucket.ui.panel.prs.controller").refresh()
+		end
 		return
 	end
 

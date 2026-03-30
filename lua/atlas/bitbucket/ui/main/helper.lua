@@ -99,6 +99,14 @@ local function plain_tree_coloumns()
 end
 
 local function append_compact_group_rows(rows, group)
+	local repo_ctx = {
+		kind = "repo",
+		workspace = group.workspace,
+		repo_slug = group.repo,
+		full_name = group.full_name,
+		readme = group.readme,
+	}
+
 	for _, pr in ipairs(group.pullrequests or {}) do
 		table.insert(rows, {
 			kind = "pr",
@@ -110,7 +118,7 @@ local function append_compact_group_rows(rows, group)
 			repo = group.full_name,
 			created = utils.relative_time(pr.created_on),
 			updated = utils.relative_time(pr.updated_on),
-			_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr },
+			_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr, _repo = repo_ctx },
 		})
 
 		table.insert(rows, {
@@ -129,12 +137,21 @@ local function append_compact_group_rows(rows, group)
 				id = pr.id,
 				repo = group.full_name,
 				pr = pr,
+				_repo = repo_ctx,
 			},
 		})
 	end
 end
 
 local function append_plain_group_rows(rows, group)
+	local repo_ctx = {
+		kind = "repo",
+		workspace = group.workspace,
+		repo_slug = group.repo,
+		full_name = group.full_name,
+		readme = group.readme,
+	}
+
 	for _, pr in ipairs(group.pullrequests or {}) do
 		table.insert(rows, {
 			kind = "pr",
@@ -147,7 +164,7 @@ local function append_plain_group_rows(rows, group)
 			branch = string.format("%s -> %s", pr.source_branch or "?", pr.target_branch or "?"),
 			created = utils.relative_time(pr.created_on),
 			updated = utils.relative_time(pr.updated_on),
-			_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr },
+			_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr, _repo = repo_ctx },
 		})
 	end
 end
@@ -194,7 +211,14 @@ function M.build_plain_tree_table(repo_groups)
 			updated = "",
 			expanded = true,
 			children = {},
-			_item = { kind = "repo", repo = group.full_name },
+			_item = {
+				kind = "repo",
+				repo = group.full_name,
+				workspace = group.workspace,
+				repo_slug = group.repo,
+				full_name = group.full_name,
+				readme = group.readme,
+			},
 		}
 
 		for _, pr in ipairs(group.pullrequests or {}) do
@@ -206,7 +230,19 @@ function M.build_plain_tree_table(repo_groups)
 				author = pr.author.name,
 				created = utils.relative_time(pr.created_on),
 				updated = utils.relative_time(pr.updated_on),
-				_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr },
+				_item = {
+					kind = "pr",
+					id = pr.id,
+					repo = group.full_name,
+					pr = pr,
+					_repo = {
+						kind = "repo",
+						workspace = group.workspace,
+						repo_slug = group.repo,
+						full_name = group.full_name,
+						readme = group.readme,
+					},
+				},
 			})
 		end
 

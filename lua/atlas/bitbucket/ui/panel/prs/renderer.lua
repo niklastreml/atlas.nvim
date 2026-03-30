@@ -1,7 +1,7 @@
 local M = {}
 
 local layout = require("atlas.ui.layout")
-local state = require("atlas.bitbucket.ui.panel.state")
+local state = require("atlas.bitbucket.ui.panel.prs.state")
 local header = require("atlas.bitbucket.ui.panel.components.header")
 local chips = require("atlas.bitbucket.ui.panel.components.chips")
 local overview_tab = require("atlas.bitbucket.ui.panel.components.tabs.overview")
@@ -107,7 +107,7 @@ local function lines_for_pr(pr, width)
 	table.insert(lines, pad_line(""))
 
 	--- Tabs
-	local tabs_line, tabs_spans = tabs.render(state.current_tab)
+	local tabs_line, tabs_spans = tabs.render_pr(state.current_tab)
 	local tabs_line_index = #lines
 	table.insert(lines, pad_line(tabs_line))
 	for _, span in ipairs(tabs_spans) do

@@ -23,6 +23,41 @@ local function selected_pr()
 	return nil
 end
 
+---@return table|nil
+local function selected_repo()
+	local node = navigation.current_item()
+	if type(node) ~= "table" then
+		return nil
+	end
+
+	if node.kind == "repo" then
+		return node
+	end
+
+	if type(node._repo) == "table" then
+		return node._repo
+	end
+
+	if node.kind == "pr" and type(node.pr) == "table" then
+		local r = node.pr.repo or {}
+		local workspace = tostring(r.workspace or "")
+		local repo_slug = tostring(r.repo or "")
+		local full_name = tostring(r.name or "")
+		if full_name == "" and workspace ~= "" and repo_slug ~= "" then
+			full_name = string.format("%s/%s", workspace, repo_slug)
+		end
+		return {
+			kind = "repo",
+			workspace = workspace,
+			repo_slug = repo_slug,
+			full_name = full_name,
+			readme = "README.md",
+		}
+	end
+
+	return nil
+end
+
 ---@param buf integer
 ---@param views BitbucketViewConfig[]
 local function register_dynamic_keys(buf, views)
@@ -56,20 +91,6 @@ local function register_dynamic_keys(buf, views)
 			end,
 		},
 		{
-			key = "gg",
-			desc = "Go to first PR",
-			callback = function()
-				navigation.focus_first_item()
-			end,
-		},
-		{
-			key = "G",
-			desc = "Go to last PR",
-			callback = function()
-				navigation.focus_last_item()
-			end,
-		},
-		{
 			key = "R",
 			desc = "Refresh current Bitbucket view",
 			callback = function()
@@ -83,6 +104,24 @@ local function register_dynamic_keys(buf, views)
 			desc = "Refetch selected PR",
 			callback = function()
 				main_actions.refresh_selected_pr_cache(selected_pr())
+			end,
+		},
+		{
+			key = "o",
+			desc = "Open repository panel",
+			callback = function()
+				local repo = selected_repo()
+				if repo == nil then
+					footer.notify("warn", "No repository selected")
+					return
+				end
+
+				local panel = require("atlas.ui.panel")
+				if panel.is_open() then
+					panel.close()
+					return
+				end
+				panel.show("bitbucket", repo)
 			end,
 		},
 		{
