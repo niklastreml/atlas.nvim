@@ -6,6 +6,10 @@ local tabs = require("atlas.bitbucket.ui.panel.components.tabs")
 local chips = require("atlas.bitbucket.ui.panel.components.chips")
 local header = require("atlas.bitbucket.ui.panel.components.header")
 local spinner = require("atlas.ui.components.spinner")
+local overview_tab = require("atlas.bitbucket.ui.panel.repository.tabs.overview")
+local branches_tab = require("atlas.bitbucket.ui.panel.repository.tabs.branches")
+local tags_tab = require("atlas.bitbucket.ui.panel.repository.tabs.tags")
+local commits_tab = require("atlas.bitbucket.ui.panel.repository.tabs.commits")
 
 local ns = vim.api.nvim_create_namespace("atlas.bitbucket.panel")
 local PADDING_X = 2
@@ -13,54 +17,6 @@ local PADDING_X = 2
 local function pad_line(line)
 	local pad = string.rep(" ", PADDING_X)
 	return pad .. (line or "") .. pad
-end
-
----@param repo table
----@param detail BitbucketRepositoryDetail|nil
----@param width integer|nil
----@return string[]
----@return table[]
-local function render_overview(repo, detail, width)
-	local _ = repo
-	local _ = detail
-	local _ = width
-	return {}, {}
-end
-
----@param repo table
----@param detail BitbucketRepositoryDetail|nil
----@param width integer|nil
----@return string[]
----@return table[]
-local function render_branches(repo, detail, width)
-	local _ = repo
-	local _ = detail
-	local _ = width
-	return {}, {}
-end
-
----@param repo table
----@param detail BitbucketRepositoryDetail|nil
----@param width integer|nil
----@return string[]
----@return table[]
-local function render_tags(repo, detail, width)
-	local _ = repo
-	local _ = detail
-	local _ = width
-	return {}, {}
-end
-
----@param repo table
----@param detail BitbucketRepositoryDetail|nil
----@param width integer|nil
----@return string[]
----@return table[]
-local function render_commits(repo, detail, width)
-	local _ = repo
-	local _ = detail
-	local _ = width
-	return {}, {}
 end
 
 ---@param tab "overview"|"branches"|"tags"|"commits"
@@ -71,15 +27,15 @@ end
 ---@return table[]
 local function render_tab_content(tab, repo, detail, width)
 	if tab == "overview" then
-		return render_overview(repo, detail, width)
+		return overview_tab.render(repo, detail, width)
 	end
 	if tab == "branches" then
-		return render_branches(repo, detail, width)
+		return branches_tab.render(repo, detail, width)
 	end
 	if tab == "tags" then
-		return render_tags(repo, detail, width)
+		return tags_tab.render(repo, detail, width)
 	end
-	return render_commits(repo, detail, width)
+	return commits_tab.render(repo, detail, width)
 end
 
 ---@param repo table
