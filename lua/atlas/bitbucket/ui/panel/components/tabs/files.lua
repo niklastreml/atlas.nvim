@@ -37,9 +37,34 @@ function M.render(diffstat, diff, width)
 		hl_group = "AtlasSectionHeader",
 	})
 
+	local added = 0
+	local removed = 0
+	for _, e in ipairs(entries) do
+		added = added + (tonumber(e.lines_added) or 0)
+		removed = removed + (tonumber(e.lines_removed) or 0)
+	end
+
+	local added_text = string.format("+%d added", added)
+	local removed_text = string.format("-%d removed", removed)
+	local stats_line = string.format("%s  %s", added_text, removed_text)
+	local stats_line_index = #lines
+	table.insert(lines, stats_line)
+	table.insert(spans, {
+		line = stats_line_index,
+		start_col = 0,
+		end_col = #added_text,
+		hl_group = "AtlasTextPositive",
+	})
+	table.insert(spans, {
+		line = stats_line_index,
+		start_col = #added_text + 2,
+		end_col = #stats_line,
+		hl_group = "AtlasTextWarning",
+	})
+	table.insert(lines, "")
+
 	if #entries == 0 then
 		table.insert(lines, "No files changed.")
-		table.insert(lines, "")
 	else
 		for _, entry in ipairs(entries) do
 			local status = tostring(entry.status or ""):lower()
@@ -79,33 +104,7 @@ function M.render(diffstat, diff, width)
 				hl_group = hl_group,
 			})
 		end
-		table.insert(lines, "")
 	end
-
-	local added = 0
-	local removed = 0
-	for _, e in ipairs(entries) do
-		added = added + (tonumber(e.lines_added) or 0)
-		removed = removed + (tonumber(e.lines_removed) or 0)
-	end
-
-	local added_text = string.format("+%d added", added)
-	local removed_text = string.format("-%d removed", removed)
-	local stats_line = string.format("%s  %s", added_text, removed_text)
-	local stats_line_index = #lines
-	table.insert(lines, stats_line)
-	table.insert(spans, {
-		line = stats_line_index,
-		start_col = 0,
-		end_col = #added_text,
-		hl_group = "AtlasTextPositive",
-	})
-	table.insert(spans, {
-		line = stats_line_index,
-		start_col = #added_text + 2,
-		end_col = #stats_line,
-		hl_group = "AtlasTextWarning",
-	})
 	table.insert(lines, "")
 
 	local diff_text = (type(diff) == "table" and type(diff.text) == "string") and diff.text or ""

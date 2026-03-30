@@ -5,6 +5,7 @@ local panel_state = require("atlas.bitbucket.ui.panel.state")
 local renderer = require("atlas.bitbucket.ui.panel.renderer")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
+local layout = require("atlas.ui.layout")
 
 local panel_spinner = spinner.create({
 	interval_ms = 120,
@@ -76,6 +77,20 @@ local TAB_ORDER = {
 	"files",
 }
 
+---@param tab string
+local function apply_tab_buffer_mode(tab)
+	local buf = layout.buf_id("detail")
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	if tab == "overview" then
+		vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
+	else
+		vim.api.nvim_set_option_value("filetype", "atlas-detail", { buf = buf })
+	end
+end
+
 ---@param item table
 function M.on_select(item)
 	cancel_all_handles()
@@ -101,6 +116,7 @@ end
 ---@param tab string
 function M.select_tab(tab)
 	panel_state.set_current_tab(tab)
+	apply_tab_buffer_mode(tab)
 	renderer.render()
 
 	if tab == "overview" and panel_state.current_pr ~= nil then

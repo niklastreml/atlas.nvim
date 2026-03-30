@@ -210,7 +210,9 @@ function M.build_plain_tree_table(repo_groups)
 			})
 		end
 
-		table.insert(rows, repo_row)
+		if #repo_row.children > 0 then
+			table.insert(rows, repo_row)
+		end
 	end
 
 	return {
