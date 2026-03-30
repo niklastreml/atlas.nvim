@@ -70,30 +70,16 @@ function M.build_footer_items(repos, current_user)
 	return items
 end
 
-local function compact_columns()
+local function coloumns()
 	return {
 		{ key = "pr_icon", name = "", min_width = 1, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "repo_pr", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
-		{ key = "comments", name = "󰅺", min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "tasks", name = "󰄱", min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "comments", name = icons.entity("comments"), min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "tasks", name = icons.entity("tasks"), min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "created", name = "󰃭", can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "updated", name = "󰥔", can_grow = false, header_hl = "AtlasColumnHeader" },
-	}
-end
-
-local function plain_columns()
-	return {
-		{ key = "pr_icon", name = "", min_width = 1, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "repo_pr", name = "PR", min_width = 40, header_hl = "AtlasColumnHeader" },
-		{ key = "comments", name = "󰅺", min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "tasks", name = "󰄱", min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "author", name = "Author", min_width = 3, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "repo", name = "Repo", min_width = 5, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "branch", name = "Branch", min_width = 18, can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "created", name = "󰃭", can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "updated", name = "󰥔", can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "created", name = icons.entity("created"), can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "updated", name = icons.entity("updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
 	}
 end
 
@@ -160,7 +146,7 @@ function M.build_compact_table(repo_groups)
 	end
 	return {
 		rows = rows,
-		columns = compact_columns(),
+		columns = coloumns(),
 	}
 end
 
@@ -173,18 +159,7 @@ function M.build_plain_table(repo_groups)
 	end
 	return {
 		rows = rows,
-		columns = plain_columns(),
-	}
-end
-
----@param group BitbucketRepoPRGroup
----@return { rows: table[], columns: table[] }
-function M.build_grouped_table(group)
-	local rows = {}
-	append_compact_group_rows(rows, group)
-	return {
-		rows = rows,
-		columns = compact_columns(),
+		columns = coloumns(),
 	}
 end
 

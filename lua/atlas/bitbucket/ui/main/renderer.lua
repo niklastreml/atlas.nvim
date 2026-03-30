@@ -75,60 +75,6 @@ local function build_plain_singleline_content(opts, repos)
 	return tbl_lines, tbl_spans, tbl_map
 end
 
--- Layout: grouped
---   [repo heading]
---   [pr] #123 Title                        c t author repo created updated
---       source/branch -> target/branch     (uses compact rows under each repo heading)
----@param opts { width: number, height: number }
----@param repos BitbucketRepoPRGroup[]
----@return string[]
----@return table[]
----@return table<number, table>
-local function build_grouped_content(opts, repos)
-	local lines, spans = {}, {}
-	local line_map = {}
-
-	for i, group in ipairs(repos or {}) do
-		local repo_line = string.format(" %s %s", icons.entity("repo"), group.full_name)
-		local repo_hl = highlights.dynamic_for(group.full_name) or "AtlasTextMuted"
-		table.insert(lines, repo_line)
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = 0,
-			end_col = #repo_line,
-			hl_group = repo_hl,
-		})
-		table.insert(lines, "")
-
-		local table_data = helper.build_grouped_table(group)
-		if #table_data.rows == 0 then
-			table.insert(lines, "(no pull requests)")
-		else
-			local tbl_lines, tbl_map, tbl_spans = table_view.render({
-				width = opts.width,
-				margin = 1,
-				columns = table_data.columns,
-				rows = table_data.rows,
-				cell_hl = helper.cell_hl,
-			})
-			add_pr_id_spans(tbl_lines, tbl_map, tbl_spans)
-
-			local table_base = #lines
-			utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
-			for lnum, node in pairs(tbl_map) do
-				line_map[table_base + lnum] = node
-			end
-		end
-
-		if i < #repos then
-			table.insert(lines, "")
-			table.insert(lines, "")
-		end
-	end
-
-	return lines, spans, line_map
-end
-
 ---@param lines string[]
 ---@param spans table[]
 ---@param width number
@@ -214,9 +160,7 @@ function M.render(opts)
 	else
 		local layout = state.active_view and state.active_view.layout or "compact"
 		local body_lines, body_spans, body_map
-		if layout == "grouped" then
-			body_lines, body_spans, body_map = build_grouped_content(opts, state.repos or {})
-		elseif layout == "plain" then
+		if layout == "plain" then
 			body_lines, body_spans, body_map = build_plain_singleline_content(opts, state.repos or {})
 		else
 			body_lines, body_spans, body_map = build_plain_content(opts, state.repos or {})
