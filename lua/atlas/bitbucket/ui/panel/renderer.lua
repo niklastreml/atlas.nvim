@@ -4,11 +4,46 @@ local layout = require("atlas.ui.layout")
 local state = require("atlas.bitbucket.ui.panel.state")
 local header = require("atlas.bitbucket.ui.panel.components.header")
 local chips = require("atlas.bitbucket.ui.panel.components.chips")
-local tab_content = require("atlas.bitbucket.ui.panel.components.content")
+local overview_tab = require("atlas.bitbucket.ui.panel.components.tabs.overview")
+local activity_tab = require("atlas.bitbucket.ui.panel.components.tabs.activity")
+local comments_tab = require("atlas.bitbucket.ui.panel.components.tabs.comments")
+local commits_tab = require("atlas.bitbucket.ui.panel.components.tabs.commits")
+local files_tab = require("atlas.bitbucket.ui.panel.components.tabs.files")
 local tabs = require("atlas.bitbucket.ui.panel.components.tabs")
 
 local ns = vim.api.nvim_create_namespace("atlas.bitbucket.panel")
 local PADDING_X = 2
+
+---@param tab "overview"|"activity"|"comments"|"commits"|"files"
+---@param pr table|nil
+---@param detail BitbucketPRDetail|"loading"|nil
+---@param activity BitbucketPRActivity|"loading"|nil
+---@param comments BitbucketPRComments|"loading"|nil
+---@param commits BitbucketPRCommits|"loading"|nil
+---@param diffstat BitbucketPRDiffstat|"loading"|nil
+---@param diff BitbucketPRDiff|"loading"|nil
+---@param width integer|nil
+---@return string[]
+---@return table[]
+local function render_tab_content(tab, pr, detail, activity, comments, commits, diffstat, diff, width)
+	if tab == "overview" then
+		return overview_tab.render(pr, detail, width)
+	end
+	if tab == "activity" then
+		return activity_tab.render(activity, width)
+	end
+	if tab == "comments" then
+		return comments_tab.render(comments, width)
+	end
+	if tab == "commits" then
+		return commits_tab.render(commits, width)
+	end
+	if tab == "files" then
+		return files_tab.render(diffstat, diff, width)
+	end
+
+	return { "You shouldn’t be here..." }, {}
+end
 
 local function pad_line(line)
 	local pad = string.rep(" ", PADDING_X)
@@ -87,7 +122,7 @@ local function lines_for_pr(pr, width)
 	table.insert(lines, string.rep("─", rule_width))
 
 	--- Content
-	local body_lines, body_spans = tab_content.render(
+	local body_lines, body_spans = render_tab_content(
 		state.current_tab,
 		pr,
 		state.current_pr_detail,
