@@ -113,6 +113,7 @@ end
 
 ---@param on_done fun()|nil
 function M.refresh_current_view(on_done)
+	service.clear_memory_cache()
 	load_active_view({ force_load = true }, on_done)
 end
 

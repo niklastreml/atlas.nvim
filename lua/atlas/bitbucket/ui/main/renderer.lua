@@ -134,6 +134,13 @@ end
 ---@param width number
 ---@param views BitbucketViewConfig[]
 local function render_header(lines, spans, width, views)
+	local function view_id(v)
+		if v == nil then
+			return ""
+		end
+		return tostring(v.key or v.name or "")
+	end
+
 	utils.append_block(
 		lines,
 		spans,
@@ -145,13 +152,31 @@ local function render_header(lines, spans, width, views)
 		})
 	)
 
+	local nav_source = {}
+	for _, v in ipairs(views or {}) do
+		table.insert(nav_source, v)
+	end
+
+	--- This just helps adding the active view to the navbar if it doesn't exist in the config views (e.g. from a search result view)
+	local active = state.active_view
+	local active_id = view_id(active)
+	local exists = false
+	for _, v in ipairs(nav_source) do
+		if view_id(v) == active_id then
+			exists = true
+			break
+		end
+	end
+	if active ~= nil and active_id ~= "" and not exists then
+		table.insert(nav_source, active)
+	end
+
 	local nav_items = {}
-	for _, v in ipairs(views) do
-		local key = v.key or v.name
+	for _, v in ipairs(nav_source) do
 		local label = v.key and string.format("%s (%s)", v.name, v.key) or v.name
 		table.insert(nav_items, {
 			label = label,
-			active = state.active_view ~= nil and key == state.active_view.key,
+			active = view_id(v) == active_id,
 		})
 	end
 

@@ -3,6 +3,7 @@ local config = require("atlas.config")
 local normalizer = require("atlas.bitbucket.api.normalizer")
 local logger = require("atlas.core.logger")
 local cache = require("atlas.core.cache")
+local memory_cache = require("atlas.core.memory_cache")
 local http = require("atlas.core.http")
 local footer = require("atlas.ui.components.footer")
 local icons = require("atlas.ui.icons")
@@ -16,6 +17,10 @@ local ENDPOINTS = {
 	user_workspaces = "/user/workspaces",
 	repositories = "/repositories/%s?%ssort=-updated_on&pagelen=50",
 }
+
+function M.clear_memory_cache()
+	memory_cache.clear_all()
+end
 
 local function build_pullrequests_open_url(workspace, repo)
 	return API_BASE .. string.format(ENDPOINTS.pullrequests_open, workspace, repo, state.pr_state)
@@ -366,6 +371,15 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
 	opts = opts or {}
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
+	local detail_cache_key = string.format("bitbucket:mem:pr_detail:%s/%s/%s", workspace, repo, tostring(pr_id))
+	if not opts.force_load then
+		local cached = memory_cache.get(detail_cache_key)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return nil
+		end
+	end
 
 	local user, token, auth_err = get_auth_from_config()
 	if auth_err then
@@ -399,6 +413,7 @@ function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
 		end
 
 		local detail = normalizer.normalize_pr_detail(result)
+		memory_cache.set(detail_cache_key, detail, ttl)
 		footer.notify("success", string.format("%s Successful fetched details", icons.entity("success")), 2800)
 
 		on_done(detail, nil)
@@ -411,9 +426,19 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_pullrequest_diffstat(diffstat_url, opts, on_done)
 	opts = opts or {}
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
 	if type(diffstat_url) ~= "string" or diffstat_url == "" then
 		on_done(nil, "Missing Bitbucket diffstat URL")
 		return nil
+	end
+
+	local diffstat_cache_key = string.format("bitbucket:mem:pr_diffstat:%s", diffstat_url)
+	if not opts.force_load then
+		local cached = memory_cache.get(diffstat_cache_key)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return nil
+		end
 	end
 
 	local user, token, auth_err = get_auth_from_config()
@@ -447,6 +472,7 @@ function M.fetch_pullrequest_diffstat(diffstat_url, opts, on_done)
 		end
 
 		local diffstat = normalize_diffstat(result)
+		memory_cache.set(diffstat_cache_key, diffstat, ttl)
 		on_done(diffstat, nil)
 	end)
 end
@@ -457,9 +483,19 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_pullrequest_commits(commits_url, opts, on_done)
 	opts = opts or {}
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
 	if type(commits_url) ~= "string" or commits_url == "" then
 		on_done(nil, "Missing Bitbucket commits URL")
 		return nil
+	end
+
+	local commits_cache_key = string.format("bitbucket:mem:pr_commits:%s", commits_url)
+	if not opts.force_load then
+		local cached = memory_cache.get(commits_cache_key)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return nil
+		end
 	end
 
 	local user, token, auth_err = get_auth_from_config()
@@ -493,6 +529,7 @@ function M.fetch_pullrequest_commits(commits_url, opts, on_done)
 		end
 
 		local commits = normalize_commits(result)
+		memory_cache.set(commits_cache_key, commits, ttl)
 		on_done(commits, nil)
 	end)
 end
@@ -503,9 +540,19 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_pullrequest_diff(diff_url, opts, on_done)
 	opts = opts or {}
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
 	if type(diff_url) ~= "string" or diff_url == "" then
 		on_done(nil, "Missing Bitbucket diff URL")
 		return nil
+	end
+
+	local diff_cache_key = string.format("bitbucket:mem:pr_diff:%s", diff_url)
+	if not opts.force_load then
+		local cached = memory_cache.get(diff_cache_key)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return nil
+		end
 	end
 
 	local user, token, auth_err = get_auth_from_config()
@@ -523,6 +570,7 @@ function M.fetch_pullrequest_diff(diff_url, opts, on_done)
 		end
 
 		local diff = { text = text or "" }
+		memory_cache.set(diff_cache_key, diff, ttl)
 		on_done(diff, nil)
 	end)
 end
@@ -533,9 +581,19 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_pullrequest_activity(activity_url, opts, on_done)
 	opts = opts or {}
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
 	if type(activity_url) ~= "string" or activity_url == "" then
 		on_done(nil, "Missing Bitbucket activity URL")
 		return nil
+	end
+
+	local activity_cache_key = string.format("bitbucket:mem:pr_activity:%s", activity_url)
+	if not opts.force_load then
+		local cached = memory_cache.get(activity_cache_key)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return nil
+		end
 	end
 
 	local user, token, auth_err = get_auth_from_config()
@@ -569,6 +627,7 @@ function M.fetch_pullrequest_activity(activity_url, opts, on_done)
 		end
 
 		local activity = normalizer.normalize_pr_activity(result)
+		memory_cache.set(activity_cache_key, activity, ttl)
 		on_done(activity, nil)
 	end)
 end
@@ -579,9 +638,19 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_pullrequest_comments(comments_url, opts, on_done)
 	opts = opts or {}
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
 	if type(comments_url) ~= "string" or comments_url == "" then
 		on_done(nil, "Missing Bitbucket comments URL")
 		return nil
+	end
+
+	local comments_cache_key = string.format("bitbucket:mem:pr_comments:%s", comments_url)
+	if not opts.force_load then
+		local cached = memory_cache.get(comments_cache_key)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return nil
+		end
 	end
 
 	local user, token, auth_err = get_auth_from_config()
@@ -615,6 +684,7 @@ function M.fetch_pullrequest_comments(comments_url, opts, on_done)
 		end
 
 		local comments = normalizer.normalize_pr_comments(result)
+		memory_cache.set(comments_cache_key, comments, ttl)
 		on_done(comments, nil)
 	end)
 end
@@ -714,6 +784,17 @@ end
 ---@param on_done fun(workspaces: BitbucketWorkspace[]|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_user_workspaces(on_done)
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
+	local workspace_cache_key = "bitbucket:mem:user_workspaces"
+	local workspace_cached = memory_cache.get(workspace_cache_key)
+	if workspace_cached and workspace_cached.value then
+		logger.loginfo("Bitbucket workspace memory cache hit", {
+			workspace_count = #(workspace_cached.value or {}),
+		})
+		on_done(workspace_cached.value, nil)
+		return nil
+	end
+
 	local user, token, auth_err = get_auth_from_config()
 	if auth_err then
 		on_done(nil, auth_err)
@@ -766,6 +847,7 @@ function M.fetch_user_workspaces(on_done)
 			url = url,
 			workspace_count = #workspaces,
 		})
+		memory_cache.set(workspace_cache_key, workspaces, ttl)
 
 		on_done(workspaces, nil)
 	end)
@@ -780,6 +862,7 @@ function M.fetch_workspace_repositories(workspace, search, on_done)
 		on_done(nil, "Missing workspace slug")
 		return nil
 	end
+	local term = tostring(search or "")
 
 	local user, token, auth_err = get_auth_from_config()
 	if auth_err then
@@ -791,7 +874,6 @@ function M.fetch_workspace_repositories(workspace, search, on_done)
 		return nil
 	end
 
-	local term = tostring(search or "")
 	local encoded_workspace = workspace
 	local query_prefix = ""
 	if term ~= "" then
