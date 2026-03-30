@@ -31,8 +31,9 @@ function M.cell_hl(row, col)
 	return nil
 end
 ---@param repos BitbucketRepoPRGroup[]|nil
+---@param current_user BitbucketCurrentUser|nil
 ---@return table[]
-function M.build_footer_items(repos)
+function M.build_footer_items(repos, current_user)
 	local groups = repos or {}
 	local pr_count = 0
 	local repo_names = {}
@@ -53,6 +54,14 @@ function M.build_footer_items(repos)
 			hl_group = "AtlasBitbucketTheme",
 		},
 	}
+
+	local user_name = tostring((current_user or {}).nickname or (current_user or {}).display_name or "")
+	if user_name ~= "" then
+		table.insert(items, {
+			text = string.format("%s @%s", icons.entity("author"), user_name),
+			hl_group = "AtlasFooterText",
+		})
+	end
 
 	for _, name in ipairs(repo_names) do
 		table.insert(items, { text = string.format("%s %s", icons.entity("repo"), name), hl_group = "AtlasFooterText" })

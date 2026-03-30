@@ -240,3 +240,15 @@
 ---@field workspace string
 ---@field is_private boolean
 ---@field updated_on string
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/user
+--------------------------------------------------------------------------------
+
+---@class BitbucketCurrentUser
+---@field type string
+---@field created_on string
+---@field display_name string
+---@field nickname string
+---@field username string
+---@field uuid string

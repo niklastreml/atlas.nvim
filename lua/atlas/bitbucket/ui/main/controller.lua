@@ -48,6 +48,24 @@ local function next_request_token()
 	return state.request_seq
 end
 
+---@param on_done fun(err: string|nil)
+local function get_current_user(on_done)
+	if state.current_user ~= nil then
+		on_done(nil)
+		return
+	end
+
+	service.fetch_current_user(function(user, err)
+		if err ~= nil then
+			on_done(tostring(err))
+			return
+		end
+
+		state.current_user = user
+		on_done(nil)
+	end)
+end
+
 ---@param opts { force_load: boolean }|nil
 ---@param on_done fun()|nil
 local function load_active_view(opts, on_done)
@@ -73,13 +91,7 @@ local function load_active_view(opts, on_done)
 		require("atlas.ui.main.renderer").render("bitbucket")
 	end
 
-	active_pullrequests_handle = service.fetch_pullrequests((target_view and target_view.repos) or {}, {
-		force_load = opts.force_load == true,
-	}, function(groups, err)
-		if active_pullrequests_handle ~= nil then
-			active_pullrequests_handle = nil
-		end
-
+	get_current_user(function(user_err)
 		if not same_view(state.active_view, target_view) then
 			return
 		end
@@ -88,26 +100,57 @@ local function load_active_view(opts, on_done)
 			return
 		end
 
-		state.is_loading = false
-		state.current_view = state.active_view
-
-		if err then
-			state.error = tostring(err)
+		if user_err then
+			state.is_loading = false
+			state.current_view = state.active_view
+			state.error = tostring(user_err)
 			state.repos = {}
-		else
-			state.error = nil
-			state.repos = groups or {}
+			footer.notify("error", string.format("Bitbucket: Failed to fetch current user: %s", tostring(user_err)))
+			spinner.stop()
+			if layout.is_open() then
+				require("atlas.ui.main.renderer").render("bitbucket")
+			end
+			on_done()
+			return
 		end
 
-		footer.set_items(helper.build_footer_items(state.repos))
+		active_pullrequests_handle = service.fetch_pullrequests((target_view and target_view.repos) or {}, {
+			force_load = opts.force_load == true,
+		}, function(groups, err)
+			if active_pullrequests_handle ~= nil then
+				active_pullrequests_handle = nil
+			end
 
-		spinner.stop()
+			if not same_view(state.active_view, target_view) then
+				return
+			end
 
-		if layout.is_open() then
-			require("atlas.ui.main.renderer").render("bitbucket")
-		end
+			if state.latest_request_tokens[target_view_id] ~= token then
+				return
+			end
 
-		on_done()
+			state.is_loading = false
+			state.current_view = state.active_view
+
+			if err then
+				state.error = tostring(err)
+				state.repos = {}
+				footer.notify("error", string.format("Bitbucket: Failed to fetch pull requests: %s", tostring(err)))
+			else
+				state.error = nil
+				state.repos = groups or {}
+			end
+
+			footer.set_items(helper.build_footer_items(state.repos, state.current_user))
+
+			spinner.stop()
+
+			if layout.is_open() then
+				require("atlas.ui.main.renderer").render("bitbucket")
+			end
+
+			on_done()
+		end)
 	end)
 end
 

@@ -38,13 +38,9 @@ function M.render(view, opts)
 	elseif target_view == "bitbucket" then
 		state.current_view = "bitbucket"
 		local bitbucket_state = require("atlas.bitbucket.state")
-		if opts and opts.force_refresh then
-			require("atlas.bitbucket.ui.main.controller").refresh_current_view(function()
-				if opts and opts.autofocus then
-					require("atlas.ui.navigation").focus_first_item()
-				end
-			end)
-		elseif not bitbucket_state.is_loading and bitbucket_state.repos == nil and bitbucket_state.error == nil then
+		local should_refresh = (opts and opts.force_refresh)
+			or (not bitbucket_state.is_loading and bitbucket_state.repos == nil and bitbucket_state.error == nil)
+		if should_refresh then
 			require("atlas.bitbucket.ui.main.controller").refresh_current_view(function()
 				if opts and opts.autofocus then
 					require("atlas.ui.navigation").focus_first_item()

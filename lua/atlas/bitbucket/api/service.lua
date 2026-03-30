@@ -14,6 +14,7 @@ local API_BASE = "https://api.bitbucket.org/2.0"
 local ENDPOINTS = {
 	pullrequests_open = "/repositories/%s/%s/pullrequests?state=%s&pagelen=50",
 	pullrequest_detail = "/repositories/%s/%s/pullrequests/%s",
+	user_profile = "/user",
 	user_workspaces = "/user/workspaces",
 	repositories = "/repositories/%s?%ssort=-updated_on&pagelen=50",
 }
@@ -883,6 +884,74 @@ function M.fetch_user_workspaces(on_done)
 		memory_cache.set(workspace_cache_key, workspaces, ttl)
 
 		on_done(workspaces, nil)
+	end)
+end
+
+---@param on_done fun(user: BitbucketCurrentUser|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_current_user(on_done)
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local cachekey = string.format("bitbucket:user_profile:%s", user)
+	local cached = cache.get(cachekey)
+	if cached and cached.value then
+		logger.loginfo("Bitbucket current user cache hit", { user = user })
+		on_done(cached.value, nil)
+		return nil
+	end
+
+	local url = API_BASE .. ENDPOINTS.user_profile
+	local headers = build_headers(user, token)
+
+	logger.loginfo("Bitbucket current user fetch start", { url = url })
+	return http.curl_request("GET", url, headers, nil, function(result, err)
+		if err then
+			logger.logerror("Bitbucket current user fetch failed", { url = url, error = err })
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			logger.logerror("Bitbucket current user invalid response", { url = url })
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		if result.error then
+			local message = "Bitbucket API error"
+			if type(result.error) == "table" and result.error.message then
+				message = tostring(result.error.message)
+			elseif type(result.error) == "string" then
+				message = result.error
+			end
+			logger.logerror("Bitbucket current user API error", {
+				url = url,
+				error = message,
+			})
+			on_done(nil, message)
+			return
+		end
+
+		local current_user = {
+			type = tostring(result.type or ""),
+			created_on = tostring(result.created_on or ""),
+			display_name = tostring(result.display_name or ""),
+			nickname = tostring(result.nickname or ""),
+			username = tostring(result.username or ""),
+			uuid = tostring(result.uuid or ""),
+		}
+
+		logger.loginfo("Bitbucket current user fetch success", {
+			url = url,
+			display_name = current_user.display_name,
+		})
+		cache.set(cachekey, current_user, 86400)
+
+		on_done(current_user, nil)
 	end)
 end
 

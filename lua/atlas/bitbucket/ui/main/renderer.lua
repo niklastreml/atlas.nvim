@@ -227,7 +227,7 @@ function M.render(opts)
 			line_map[body_base + lnum] = node
 		end
 
-		footer.set_items(helper.build_footer_items(state.repos))
+		footer.set_items(helper.build_footer_items(state.repos, state.current_user))
 	end
 
 	return lines, spans, line_map
