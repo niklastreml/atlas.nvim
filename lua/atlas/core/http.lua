@@ -16,20 +16,22 @@ function M.curl_request(method, url, headers, data, callback)
 	local cmd
 	if data then
 		cmd = string.format(
-			"curl -sS -X %s %s -d '%s' -w '\\n__ATLAS_HTTP_CODE:%%{http_code}' \"%s\"",
+			"curl -sS -X %s %s -d '%s' -w '__ATLAS_HTTP_CODE:%%{http_code}' \"%s\"",
 			method,
 			header_str,
 			data,
 			url
 		)
 	else
-		cmd = string.format('curl -sS -X %s %s -w "\\n__ATLAS_HTTP_CODE:%%{http_code}" "%s"', method, header_str, url)
+		cmd = string.format('curl -sS -X %s %s -w "__ATLAS_HTTP_CODE:%%{http_code}" "%s"', method, header_str, url)
 	end
 
 	local out = {}
 	local err_out = {}
 
 	local job_id = vim.fn.jobstart(cmd, {
+		stdout_buffered = true,
+		stderr_buffered = true,
 		on_stdout = function(_, response)
 			if response then
 				vim.list_extend(out, response)
@@ -42,8 +44,8 @@ function M.curl_request(method, url, headers, data, callback)
 		end,
 		on_exit = function(_, code)
 			vim.schedule(function()
-				local raw = table.concat(out, "\n")
-				local stderr_text = table.concat(err_out, "\n")
+				local raw = table.concat(out, "")
+				local stderr_text = table.concat(err_out, "")
 
 				if code ~= 0 then
 					local err = "curl exited with code " .. tostring(code)
@@ -61,7 +63,7 @@ function M.curl_request(method, url, headers, data, callback)
 
 				local body = raw
 				local http_status = nil
-				local marker_start, marker_end, status_str = raw:find("\n__ATLAS_HTTP_CODE:(%d+)%s*$")
+				local marker_start, marker_end, status_str = raw:find("__ATLAS_HTTP_CODE:(%d+)%s*$")
 				if marker_start ~= nil then
 					body = raw:sub(1, marker_start - 1)
 					http_status = tonumber(status_str)
