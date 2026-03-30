@@ -36,9 +36,11 @@ function M.render(commits, width)
 		local msg = tostring(c.message or ""):gsub("\r\n", "\n")
 		msg = msg:match("([^\n]+)") or msg
 		local author = (c.author_nickname ~= "" and c.author_nickname) or c.author_name or "Unknown"
+		local hash = tostring(c.short_hash or c.hash or "")
+		hash = hash:sub(1, 8)
 		table.insert(rows, {
 			icon = icons.entity("commit"),
-			hash = c.short_hash or "",
+			hash = hash,
 			message = msg,
 			author = author,
 			date = utils.relative_time(c.date),

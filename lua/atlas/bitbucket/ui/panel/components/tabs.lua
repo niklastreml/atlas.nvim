@@ -18,7 +18,7 @@ function M.render(active_tab)
 	local col = 0
 
 	for i, tab in ipairs(TABS) do
-		local part = string.format(" %s %s ", tab.icon, tab.label)
+		local part = string.format("%s %s ", tab.icon, tab.label)
 
 		line = line .. part
 		if tab.key ~= active_tab then
