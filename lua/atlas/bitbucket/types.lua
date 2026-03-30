@@ -216,3 +216,25 @@
 ---@field size number
 ---@field page number
 ---@field pagelen number
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/user/workspaces
+--------------------------------------------------------------------------------
+
+---@class BitbucketWorkspace
+---@field slug string
+---@field uuid string
+---@field administrator boolean
+
+--------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}
+--------------------------------------------------------------------------------
+
+---@class BitbucketRepository
+---@field uuid string
+---@field name string
+---@field full_name string
+---@field slug string
+---@field workspace string
+---@field is_private boolean
+---@field updated_on string

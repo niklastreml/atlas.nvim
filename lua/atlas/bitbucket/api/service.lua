@@ -13,6 +13,8 @@ local API_BASE = "https://api.bitbucket.org/2.0"
 local ENDPOINTS = {
 	pullrequests_open = "/repositories/%s/%s/pullrequests?state=%s&pagelen=50",
 	pullrequest_detail = "/repositories/%s/%s/pullrequests/%s",
+	user_workspaces = "/user/workspaces",
+	repositories = "/repositories/%s?%ssort=-updated_on&pagelen=50",
 }
 
 local function build_pullrequests_open_url(workspace, repo)
@@ -707,6 +709,164 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.request_changes_pullrequest(request_changes_url, on_done)
 	return post_to_url(request_changes_url, nil, on_done)
+end
+
+---@param on_done fun(workspaces: BitbucketWorkspace[]|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_user_workspaces(on_done)
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local url = API_BASE .. ENDPOINTS.user_workspaces
+	local headers = build_headers(user, token)
+
+	logger.loginfo("Bitbucket workspace fetch start", { url = url })
+	return http.curl_request("GET", url, headers, nil, function(result, err)
+		if err then
+			logger.logerror("Bitbucket workspace fetch failed", { url = url, error = err })
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			logger.logerror("Bitbucket workspace fetch invalid response", { url = url })
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		if result.error then
+			local message = "Bitbucket API error"
+			if type(result.error) == "table" and result.error.message then
+				message = tostring(result.error.message)
+			elseif type(result.error) == "string" then
+				message = result.error
+			end
+			logger.logerror("Bitbucket workspace fetch API error", {
+				url = url,
+				error = message,
+			})
+			on_done(nil, message)
+			return
+		end
+
+		local workspaces = {}
+		for _, item in ipairs((result.values or {})) do
+			local workspace = (type(item.workspace) == "table") and item.workspace or {}
+			table.insert(workspaces, {
+				slug = tostring(workspace.slug or ""),
+				uuid = tostring(workspace.uuid or ""),
+				administrator = item.administrator == true,
+			})
+		end
+
+		logger.loginfo("Bitbucket workspace fetch success", {
+			url = url,
+			workspace_count = #workspaces,
+		})
+
+		on_done(workspaces, nil)
+	end)
+end
+
+---@param workspace string
+---@param search string
+---@param on_done fun(repositories: BitbucketRepository[]|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_workspace_repositories(workspace, search, on_done)
+	if type(workspace) ~= "string" or workspace == "" then
+		on_done(nil, "Missing workspace slug")
+		return nil
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		logger.logerror("Bitbucket repo fetch auth missing", {
+			workspace = workspace,
+			error = auth_err,
+		})
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local term = tostring(search or "")
+	local encoded_workspace = workspace
+	local query_prefix = ""
+	if term ~= "" then
+		local escaped_term = term:gsub('"', '\\"')
+		local q_expression = string.format('name~"%s"', escaped_term)
+		local encoded_q = q_expression:gsub('"', "%%22"):gsub(" ", "%%20")
+		query_prefix = string.format("q=%s&", encoded_q)
+	end
+	local url = API_BASE .. string.format(ENDPOINTS.repositories, encoded_workspace, query_prefix)
+	logger.loginfo("Bitbucket repo fetch start", {
+		workspace = workspace,
+		search = term,
+		url = url,
+	})
+
+	local headers = build_headers(user, token)
+	return http.curl_request("GET", url, headers, nil, function(result, err)
+		if err then
+			logger.logerror("Bitbucket repo fetch failed", {
+				workspace = workspace,
+				search = term,
+				error = err,
+			})
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			logger.logerror("Bitbucket repo fetch invalid response", {
+				workspace = workspace,
+				search = term,
+			})
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		if result.error then
+			local message = "Bitbucket API error"
+			if type(result.error) == "table" and result.error.message then
+				message = tostring(result.error.message)
+			elseif type(result.error) == "string" then
+				message = result.error
+			end
+			logger.logerror("Bitbucket repo fetch API error", {
+				workspace = workspace,
+				search = term,
+				error = message,
+			})
+			on_done(nil, message)
+			return
+		end
+
+		local repositories = {}
+		for _, repo in ipairs((result.values or {})) do
+			local full_name = tostring(repo.full_name or "")
+			local repo_workspace, repo_slug = full_name:match("^([^/]+)/(.+)$")
+			table.insert(repositories, {
+				uuid = tostring(repo.uuid or ""),
+				name = tostring(repo.name or ""),
+				full_name = full_name,
+				slug = tostring(repo_slug or repo.slug or ""),
+				workspace = tostring(repo_workspace or workspace),
+				is_private = repo.is_private == true,
+				updated_on = tostring(repo.updated_on or ""),
+			})
+		end
+
+		logger.loginfo("Bitbucket repo fetch success", {
+			workspace = workspace,
+			search = term,
+			repo_count = #repositories,
+		})
+
+		on_done(repositories, nil)
+	end)
 end
 
 return M
