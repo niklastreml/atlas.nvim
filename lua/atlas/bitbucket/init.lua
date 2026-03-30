@@ -79,6 +79,13 @@ local function register_dynamic_keys(buf, views)
 			end,
 		},
 		{
+			key = "r",
+			desc = "Refetch selected PR",
+			callback = function()
+				main_actions.refresh_selected_pr_cache(selected_pr())
+			end,
+		},
+		{
 			key = "/",
 			desc = "Search repositories",
 			callback = function()

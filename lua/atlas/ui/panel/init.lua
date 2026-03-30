@@ -23,6 +23,10 @@ local function register_panel_keys()
 	vim.keymap.set("n", "]", function()
 		bb_panel.next_tab()
 	end, { buffer = buf, silent = true, nowait = true })
+
+	vim.keymap.set("n", "r", function()
+		bb_panel.refresh_selected_pr()
+	end, { buffer = buf, silent = true, nowait = true })
 end
 
 local function current_item()

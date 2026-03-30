@@ -14,7 +14,14 @@ local panel_spinner = spinner.create({
 		local commits_loading = panel_state.current_pr_commits == "loading"
 		local diffstat_loading = panel_state.current_pr_diffstat == "loading"
 		local diff_loading = panel_state.current_pr_diff == "loading"
-		if not detail_loading and not activity_loading and not comments_loading and not commits_loading and not diffstat_loading and not diff_loading then
+		if
+			not detail_loading
+			and not activity_loading
+			and not comments_loading
+			and not commits_loading
+			and not diffstat_loading
+			and not diff_loading
+		then
 			panel_spinner:stop()
 			return
 		end
@@ -81,12 +88,11 @@ function M.on_select(item)
 	end
 
 	panel_state.set_current(pr)
-	panel_state.set_current_tab("overview")
-	renderer.render()
-
 	if pr ~= nil then
-		M.fetch_reviewers(tostring(pr.id or ""), 0)
+		M.select_tab("overview")
 	else
+		panel_state.set_current_tab("overview")
+		renderer.render()
 		stop_spinner()
 	end
 end
@@ -95,6 +101,10 @@ end
 function M.select_tab(tab)
 	panel_state.set_current_tab(tab)
 	renderer.render()
+
+	if tab == "overview" and panel_state.current_pr ~= nil then
+		M.fetch_reviewers(tostring((panel_state.current_pr or {}).id or ""), 0)
+	end
 
 	if tab == "commits" and panel_state.current_pr ~= nil then
 		M.fetch_commits(tostring((panel_state.current_pr or {}).id or ""), 0)
@@ -383,7 +393,12 @@ function M.fetch_diff(pr_key, request_id)
 	end
 
 	local existing = panel_state.current_pr_diff
-	if existing ~= "loading" and type(existing) == "table" and type(existing.text) == "string" and existing.text ~= "" then
+	if
+		existing ~= "loading"
+		and type(existing) == "table"
+		and type(existing.text) == "string"
+		and existing.text ~= ""
+	then
 		return
 	end
 
@@ -470,6 +485,28 @@ end
 
 function M.refresh()
 	renderer.render()
+end
+
+function M.refresh_selected_pr()
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return
+	end
+
+	service.clear_pullrequest_memory_cache(pr)
+	cancel_all_handles()
+
+	panel_state.current_pr_detail = nil
+	panel_state.current_pr_activity = nil
+	panel_state.current_pr_comments = nil
+	panel_state.current_pr_commits = nil
+	panel_state.current_pr_diffstat = nil
+	panel_state.current_pr_diff = nil
+
+	renderer.render()
+
+	local current_tab = panel_state.current_tab
+	M.select_tab(current_tab)
 end
 
 return M

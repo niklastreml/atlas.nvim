@@ -22,6 +22,39 @@ function M.clear_memory_cache()
 	memory_cache.clear_all()
 end
 
+---@param pr BitbucketPR
+function M.clear_pullrequest_memory_cache(pr)
+	local workspace = tostring(pr.repo.workspace or "")
+	local repo = tostring(pr.repo.repo or "")
+	local pr_id = tostring(pr.id or "")
+	if workspace ~= "" and repo ~= "" and pr_id ~= "" then
+		memory_cache.delete(string.format("bitbucket:mem:pr_detail:%s/%s/%s", workspace, repo, pr_id))
+	end
+
+	local links = pr.links or {}
+	local commits_url = tostring(links.commits or "")
+	local diffstat_url = tostring(links.diffstat or "")
+	local diff_url = tostring(links.diff or "")
+	local comments_url = tostring(links.comments or "")
+	local activity_url = tostring(links.activity or "")
+
+	if commits_url ~= "" then
+		memory_cache.delete("bitbucket:mem:pr_commits:" .. commits_url)
+	end
+	if diffstat_url ~= "" then
+		memory_cache.delete("bitbucket:mem:pr_diffstat:" .. diffstat_url)
+	end
+	if diff_url ~= "" then
+		memory_cache.delete("bitbucket:mem:pr_diff:" .. diff_url)
+	end
+	if comments_url ~= "" then
+		memory_cache.delete("bitbucket:mem:pr_comments:" .. comments_url)
+	end
+	if activity_url ~= "" then
+		memory_cache.delete("bitbucket:mem:pr_activity:" .. activity_url)
+	end
+end
+
 local function build_pullrequests_open_url(workspace, repo)
 	return API_BASE .. string.format(ENDPOINTS.pullrequests_open, workspace, repo, state.pr_state)
 end
@@ -252,7 +285,7 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 		end
 
 		local raw_values = result.values or {}
-		local normalized = normalizer.normalize_prs(raw_values)
+		local normalized = normalizer.normalize_prs(raw_values, workspace, repo)
 		local group = build_group(workspace, repo, normalized)
 
 		cache.set(key, group, opts.cache_ttl)
@@ -412,7 +445,7 @@ function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
 			return
 		end
 
-		local detail = normalizer.normalize_pr_detail(result)
+		local detail = normalizer.normalize_pr_detail(result, workspace, repo)
 		memory_cache.set(detail_cache_key, detail, ttl)
 		footer.notify("success", string.format("%s Successful fetched details", icons.entity("success")), 2800)
 

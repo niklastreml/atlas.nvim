@@ -126,6 +126,21 @@ function M.copy_current_pr_url(pr)
 	copy_value(url, "PR URL")
 end
 
+---@param pr BitbucketPR|nil
+function M.refresh_selected_pr_cache(pr)
+	if pr == nil then
+		footer.notify("warn", "Bitbucket: No PR selected")
+		return
+	end
+
+	local panel = require("atlas.ui.panel")
+	if panel.is_open() then
+		require("atlas.bitbucket.ui.panel.controller").refresh_selected_pr()
+		footer.notify("info", string.format("Bitbucket: Refetching PR #%s", tostring(pr.id or "")))
+		return
+	end
+end
+
 function M.open_pr_search_popup()
 	footer.notify("info", "Bitbucket: Loading workspaces...")
 

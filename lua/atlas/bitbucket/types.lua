@@ -10,6 +10,8 @@
 ---@class BitbucketPRRepo
 ---@field name string
 ---@field link string
+---@field workspace string
+---@field repo string
 
 ---@class BitbucketPRLinks
 ---@field self string

@@ -13,8 +13,10 @@ local function first_non_empty(...)
 end
 
 ---@param pr table
+---@param workspace string|nil
+---@param repo string|nil
 ---@return BitbucketPR
-local function normalize_pr(pr)
+local function normalize_pr(pr, workspace, repo)
 	local repo_full = (pr.repository and pr.repository.full_name)
 		or (pr.destination and pr.destination.repository and pr.destination.repository.full_name)
 		or (pr.source and pr.source.repository and pr.source.repository.full_name)
@@ -35,6 +37,8 @@ local function normalize_pr(pr)
 		state = pr.state or "OPEN",
 		repo = {
 			name = repo_full,
+			workspace = tostring(workspace or ""),
+			repo = tostring(repo or ""),
 			link = (
 				pr.repository
 				and pr.repository.links
@@ -148,21 +152,25 @@ local function normalize_comment_inline(raw_inline)
 end
 
 ---@param raw_values table[]
+---@param workspace string|nil
+---@param repo string|nil
 ---@return BitbucketPR[]
-function M.normalize_prs(raw_values)
+function M.normalize_prs(raw_values, workspace, repo)
 	local out = {}
 
 	for _, pr in ipairs(raw_values or {}) do
-		table.insert(out, normalize_pr(pr))
+		table.insert(out, normalize_pr(pr, workspace, repo))
 	end
 
 	return out
 end
 
 ---@param raw_pr table
+---@param workspace string|nil
+---@param repo string|nil
 ---@return BitbucketPRDetail
-function M.normalize_pr_detail(raw_pr)
-	local base = normalize_pr(raw_pr)
+function M.normalize_pr_detail(raw_pr, workspace, repo)
+	local base = normalize_pr(raw_pr, workspace, repo)
 
 	local reviewers = {}
 	for _, reviewer in ipairs(raw_pr.reviewers or {}) do
