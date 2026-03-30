@@ -42,7 +42,7 @@ function M.open()
 	end
 end
 
----@param provider "bitbucket"|"jira"|"github"
+---@param provider "bitbucket"|"jira"
 ---@param item table|nil
 function M.show(provider, item)
 	if not M.is_open() then

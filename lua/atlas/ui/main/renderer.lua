@@ -14,7 +14,7 @@ local function apply_spans(buf, spans)
 	end
 end
 
----@param view "bitbucket"|"github"|"jira"
+---@param view "bitbucket"|"jira"
 ---@param opts { force_refresh?: boolean, autofocus?: boolean }|nil
 function M.render(view, opts)
 	local layout = require("atlas.ui.layout")
@@ -49,9 +49,6 @@ function M.render(view, opts)
 		end
 
 		lines, spans, line_map = require("atlas.bitbucket.ui.main.renderer").render({ width = width, height = height })
-	elseif target_view == "github" then
-		state.current_view = "github"
-		lines, spans, line_map = require("atlas.github.ui.renderer").render({ width = width, height = height })
 	end
 
 	state.line_map = line_map or {}

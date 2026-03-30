@@ -4,7 +4,7 @@ local M = {
 	selected_item = nil,
 }
 
----@param provider "bitbucket"|"jira"|"github"|nil
+---@param provider "bitbucket"|"jira"|nil
 ---@param item table|nil
 function M.set_selection(provider, item)
 	M.active_provider = provider

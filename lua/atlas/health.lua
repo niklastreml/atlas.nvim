@@ -31,7 +31,6 @@ function M.check()
 	vim.health.start("Provider Config")
 	check_credentials("bitbucket", "user", "token", "Bitbucket")
 	check_credentials("jira", "email", "token", "Jira")
-	vim.health.warn("Github credentials check TODO")
 end
 
 return M

@@ -1,5 +1,5 @@
 ---@class UIState
----@field current_view "jira"|"bitbucket"|"github"
+---@field current_view "jira"|"bitbucket"
 ---@field line_map table<number, table>
 
 ---@type UIState

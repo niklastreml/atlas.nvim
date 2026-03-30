@@ -4,7 +4,6 @@ local ICONS = {
 	provider = {
 		jira = "",
 		bitbucket = "",
-		github = "",
 	},
 	entity = {
 		refresh = "󰑐",
@@ -30,7 +29,7 @@ local ICONS = {
 	fallback = "•",
 }
 
----@param name "jira" | "bitbucket" | "github"
+---@param name "jira" | "bitbucket"
 function M.provider(name)
 	return ICONS.provider[name] or ICONS.fallback
 end

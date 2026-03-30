@@ -13,19 +13,13 @@ local function bootstrap_common()
 	require("atlas.ui.popups.help").register_keys("Commands", {
 		{ key = ":AtlasBitbucket", desc = "Open Bitbucket picker" },
 		{ key = ":AtlasJira", desc = "Open Jira picker" },
-		{ key = ":AtlasGithub", desc = "Open Github picker" },
 	}, { index = 999 })
 end
 
----@param view "jira"|"bitbucket"|"github"
+---@param view "jira"|"bitbucket"
 local function bootstrap_provider(view)
 	if view == "bitbucket" then
 		require("atlas.bitbucket").setup()
-		return
-	end
-
-	if view == "github" then
-		require("atlas.github").setup()
 		return
 	end
 

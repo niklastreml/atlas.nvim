@@ -19,10 +19,6 @@ local function is_selectable(view, node)
 		return node.kind == "issue"
 	end
 
-	if view == "github" then
-		return node.kind == "pr"
-	end
-
 	return node.kind ~= nil
 end
 

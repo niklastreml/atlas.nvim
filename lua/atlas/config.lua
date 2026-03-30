@@ -33,22 +33,9 @@
 --- @field cache_ttl number|nil
 --- @field views BitbucketViewConfig[]|nil
 
---- Github ---
----@class GithubViewConfig
----@field name string
----@field key string|nil
----@field filter fun(pr: table, ctx: table): boolean|nil
----
---- @class GithubConfig
---- @field token string
---- @field user string
---- @field cache_ttl number|nil
---- @field views GithubViewConfig[]|nil
-
 --- @class AtlasConfig
 --- @field jira JiraConfig
 --- @field bitbucket BitbucketConfig
---- @field github GithubConfig
 
 local M = {}
 
@@ -71,12 +58,6 @@ M.options = {
 		cache_ttl = 300,
 		views = nil,
 	},
-	github = {
-		token = vim.env.GITHUB_TOKEN or "",
-		user = vim.env.GITHUB_USER or "",
-		cache_ttl = 300,
-		views = nil,
-	},
 }
 
 ---@return JiraViewConfig
@@ -86,19 +67,6 @@ local function default_jira_views()
 			name = "Active Sprint",
 			key = "S",
 			jql = "project = '%s' AND (sprint in openSprints()) ORDER BY status ASC, assignee ASC, Rank ASC",
-		},
-	}
-end
-
----@return GithubViewConfig
-local function default_github_views()
-	return {
-		{
-			name = "All",
-			key = "A",
-			filter = function(_, _)
-				return true
-			end,
 		},
 	}
 end
@@ -117,15 +85,11 @@ local function normalize_views()
 	if not M.options.jira.views or #M.options.jira.views == 0 then
 		M.options.jira.views = default_jira_views()
 	end
-	if not M.options.github.views or #M.options.github.views == 0 then
-		M.options.github.views = default_github_views()
-	end
 end
 
 local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasJira", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket", nil)
-	pcall(vim.api.nvim_del_user_command, "AtlasGithub", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasLogs", nil)
 
 	vim.api.nvim_create_user_command("AtlasJira", function()
@@ -136,13 +100,9 @@ local function register_commands()
 		require("atlas").open("bitbucket")
 	end, { desc = "Open Bitbucket picker" })
 
-	vim.api.nvim_create_user_command("AtlasGithub", function()
-		require("atlas").open("github")
-	end, { desc = "Open Github picker" })
-
 	vim.api.nvim_create_user_command("AtlasLogs", function()
 		require("atlas.ui.logs").toggle()
-	end, { desc = "Open Github picker" })
+	end, { desc = "Open Atlas logs" })
 end
 
 ---@param opts AtlasConfig|nil
