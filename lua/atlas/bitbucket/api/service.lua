@@ -265,11 +265,20 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 
 	return http.curl_request("GET", url, headers, nil, function(result, err)
 		if err then
+			logger.logerror("Bitbucket PR fetch failed", {
+				workspace = workspace,
+				repo = repo,
+				error = err,
+			})
 			on_done({}, err)
 			return
 		end
 
 		if type(result) ~= "table" then
+			logger.logerror("Bitbucket PR fetch invalid response", {
+				workspace = workspace,
+				repo = repo,
+			})
 			on_done({}, "Bitbucket response is not a JSON object")
 			return
 		end
@@ -281,6 +290,11 @@ local function fetch_pullrequests(workspace, repo, opts, on_done)
 			elseif type(result.error) == "string" then
 				message = result.error
 			end
+			logger.logerror("Bitbucket PR fetch API error", {
+				workspace = workspace,
+				repo = repo,
+				error = message,
+			})
 			on_done({}, message)
 			return
 		end
@@ -304,7 +318,7 @@ end
 
 ---@param view_repos BitbucketRepoConfig[]
 ---@param opts { force_load: boolean }
----@param on_done fun(values: table[], err: string|nil)
+---@param on_done fun(values: table[], err: string[]|nil)
 ---@return { cancel: fun() }|nil
 function M.fetch_pullrequests(view_repos, opts, on_done)
 	if view_repos == nil or #view_repos == 0 then
@@ -364,7 +378,7 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 				error_count = #errors,
 			})
 			if #errors > 0 then
-				on_done(all_groups, table.concat(errors, " | "))
+				on_done(all_groups, errors)
 			else
 				local pr_count = 0
 				for _, group in ipairs(all_groups) do

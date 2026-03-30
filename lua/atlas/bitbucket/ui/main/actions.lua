@@ -9,25 +9,19 @@ local footer = require("atlas.ui.components.footer")
 ---@param label string
 local function copy_value(value, label)
 	if value == "" then
-		footer.notify("warn", "Bitbucket: Nothing to copy")
+		footer.notify("warn", "Nothing to copy")
 		return
 	end
 
 	vim.fn.setreg("+", value)
 	vim.fn.setreg('"', value)
-	footer.notify("info", string.format("Bitbucket: Copied %s", label))
-end
-
----@param text any
----@return string
-local function footer_text(text)
-	return tostring(text or ""):gsub("[\r\n]+", " | ")
+	footer.notify("info", string.format("Copied %s", label))
 end
 
 ---@param pr BitbucketPR|nil
 function M.open_pr_actions_popup(pr)
 	if pr == nil then
-		footer.notify("warn", "Bitbucket: No PR selected")
+		footer.notify("warn", "No PR selected")
 		return
 	end
 
@@ -46,14 +40,14 @@ function M.open_pr_actions_popup(pr)
 		if choice == nil then
 			return
 		end
-		footer.notify("info", string.format("Bitbucket: Starting %s for PR #%s", choice.label, tostring(pr.id or "")))
+		footer.notify("info", string.format("Starting %s for PR #%s", choice.label, tostring(pr.id or "")))
 
 		local function on_done(_, err)
 			if err ~= nil then
-				footer.notify("error", string.format("Bitbucket: %s failed: %s", choice.label, footer_text(err)))
+				footer.notify("error", string.format("%s failed: %s", choice.label, tostring(err)))
 				return
 			end
-			footer.notify("success", string.format("Bitbucket: %s succeeded", choice.label))
+			footer.notify("success", string.format("%s succeeded", choice.label))
 			actions.refresh_current_view(function()
 				navigation.focus_first_item()
 			end)
@@ -85,7 +79,7 @@ end
 ---@param pr BitbucketPR|nil
 function M.browse_current_pr(pr)
 	if pr == nil then
-		footer.notify("warn", "Bitbucket: No PR selected")
+		footer.notify("warn", "No PR selected")
 		return
 	end
 
@@ -97,7 +91,7 @@ function M.browse_current_pr(pr)
 
 	local url = tostring((pr.links or {}).self or "")
 	if url == "" then
-		footer.notify("warn", "Bitbucket: No PR selected")
+		footer.notify("warn", "No PR selected")
 		return
 	end
 
@@ -129,36 +123,36 @@ end
 ---@param pr BitbucketPR|nil
 function M.refresh_selected_pr_cache(pr)
 	if pr == nil then
-		footer.notify("warn", "Bitbucket: No PR selected")
+		footer.notify("warn", "No PR selected")
 		return
 	end
 
 	local panel = require("atlas.ui.panel")
 	if panel.is_open() then
 		require("atlas.bitbucket.ui.panel.controller").refresh_selected_pr()
-		footer.notify("info", string.format("Bitbucket: Refetching PR #%s", tostring(pr.id or "")))
+		footer.notify("info", string.format("Refetching PR #%s", tostring(pr.id or "")))
 		return
 	end
 end
 
 function M.open_pr_search_popup()
-	footer.notify("info", "Bitbucket: Loading workspaces...")
+	footer.notify("info", "Loading workspaces...")
 
 	service.fetch_user_workspaces(function(workspaces, err)
 		if err ~= nil then
-			footer.notify("error", string.format("Bitbucket: Failed loading workspaces: %s", footer_text(err)))
+			footer.notify("error", string.format("Failed loading workspaces: %s", tostring(err)))
 			return
 		end
 
 		local ws = workspaces or {}
 		if #ws == 0 then
-			footer.notify("warn", "Bitbucket: No workspaces found")
+			footer.notify("warn", "No workspaces found")
 			return
 		end
 
 		local function continue_with_workspace(selected_ws)
 			if type(selected_ws) ~= "table" or tostring(selected_ws.slug or "") == "" then
-				footer.notify("warn", "Bitbucket: Invalid workspace selection")
+				footer.notify("warn", "Invalid workspace selection")
 				return
 			end
 
@@ -167,19 +161,19 @@ function M.open_pr_search_popup()
 					return
 				end
 
-				footer.notify("info", "Bitbucket: Searching repositories...")
+				footer.notify("info", "Searching repositories...")
 				service.fetch_workspace_repositories(selected_ws.slug, input, function(repos, repo_err)
 					if repo_err ~= nil then
 						footer.notify(
 							"error",
-							string.format("Bitbucket: Repo search failed: %s", footer_text(repo_err))
+							string.format("Repo search failed: %s", tostring(repo_err))
 						)
 						return
 					end
 
 					local list = repos or {}
 					if #list == 0 then
-						footer.notify("warn", "Bitbucket: No repositories found")
+						footer.notify("warn", "No repositories found")
 						return
 					end
 
@@ -205,7 +199,7 @@ function M.open_pr_search_popup()
 							},
 						}
 
-						footer.notify("success", string.format("Bitbucket: Search view -> %s", repo.full_name))
+						footer.notify("success", string.format("Search view -> %s", repo.full_name))
 						actions.switch_view(search_view, function()
 							navigation.focus_first_item()
 						end)

@@ -9,8 +9,14 @@ local state = require("atlas.bitbucket.state")
 local layout = require("atlas.ui.layout")
 
 local active_pullrequests_handle = nil
+local active_user_handle = nil
 
-local function cancel_active_pullrequests()
+local function cancel_active_requests()
+	if active_user_handle ~= nil and active_user_handle.cancel then
+		pcall(active_user_handle.cancel)
+	end
+	active_user_handle = nil
+
 	if active_pullrequests_handle ~= nil and active_pullrequests_handle.cancel then
 		pcall(active_pullrequests_handle.cancel)
 	end
@@ -55,7 +61,10 @@ local function get_current_user(on_done)
 		return
 	end
 
-	service.fetch_current_user(function(user, err)
+	active_user_handle = service.fetch_current_user(function(user, err)
+		if active_user_handle ~= nil then
+			active_user_handle = nil
+		end
 		if err ~= nil then
 			on_done(tostring(err))
 			return
@@ -81,7 +90,7 @@ local function load_active_view(opts, on_done)
 	local target_view_id = view_id(target_view)
 	local token = next_request_token()
 	state.latest_request_tokens[target_view_id] = token
-	cancel_active_pullrequests()
+	cancel_active_requests()
 
 	state.is_loading = true
 	state.error = nil
@@ -105,7 +114,7 @@ local function load_active_view(opts, on_done)
 			state.current_view = state.active_view
 			state.error = tostring(user_err)
 			state.repos = {}
-			footer.notify("error", string.format("Bitbucket: Failed to fetch current user: %s", tostring(user_err)))
+			footer.notify("error", string.format("Failed to fetch current user: %s", tostring(user_err)))
 			spinner.stop()
 			if layout.is_open() then
 				require("atlas.ui.main.renderer").render("bitbucket")
@@ -131,11 +140,17 @@ local function load_active_view(opts, on_done)
 
 			state.is_loading = false
 			state.current_view = state.active_view
+			local first_err = nil
+			if type(err) == "table" then
+				first_err = err[1]
+			elseif err ~= nil then
+				first_err = err
+			end
 
-			if err then
-				state.error = tostring(err)
+			if first_err ~= nil then
+				state.error = tostring(first_err)
 				state.repos = {}
-				footer.notify("error", string.format("Bitbucket: Failed to fetch pull requests: %s", tostring(err)))
+				footer.notify("error", string.format("Failed to fetch pull requests: %s", tostring(first_err)))
 			else
 				state.error = nil
 				state.repos = groups or {}

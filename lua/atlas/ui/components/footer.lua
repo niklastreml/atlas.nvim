@@ -117,7 +117,11 @@ function M.notify(level, text, duration_ms)
 	notice.token = notice.token + 1
 	local token = notice.token
 
-	notice.text = tostring(text or "")
+	local msg = tostring(text or ""):gsub("[\r\n]+", " | ")
+	if #msg > 60 then
+		msg = msg:sub(1, 57) .. "..."
+	end
+	notice.text = msg
 	notice.hl_group = notice_hl(level)
 	M.refresh()
 
