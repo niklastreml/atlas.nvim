@@ -13,7 +13,7 @@ local function is_selectable(view, node)
 	end
 
 	if view == "bitbucket" then
-		return node.kind == "pr" or node.kind == "repo"
+		return node.kind == "pr"
 	end
 
 	if view == "jira" then

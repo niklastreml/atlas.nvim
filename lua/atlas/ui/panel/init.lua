@@ -81,10 +81,15 @@ function M.on_select(provider, item)
 	end
 
 	if provider == "bitbucket" then
+		local repo_controller = require("atlas.bitbucket.ui.panel.repository.controller")
+		local prs_controller = require("atlas.bitbucket.ui.panel.prs.controller")
+		repo_controller.on_select(nil)
+		prs_controller.on_select(nil)
+
 		if type(item) == "table" and item.kind == "repo" then
-			require("atlas.bitbucket.ui.panel.repository.controller").on_select(item)
+			repo_controller.on_select(item)
 		else
-			require("atlas.bitbucket.ui.panel.prs.controller").on_select(item)
+			prs_controller.on_select(item)
 		end
 		return
 	end

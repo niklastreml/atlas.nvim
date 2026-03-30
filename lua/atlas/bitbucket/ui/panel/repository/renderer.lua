@@ -120,6 +120,8 @@ local function repo_lines(repo, width)
 	table.insert(rows, "")
 	local tabs_line_idx = #rows
 	table.insert(rows, tabs_line)
+	local rule_line_idx = #rows
+	table.insert(rows, string.rep("─", math.max((width or 1), 1)))
 	table.insert(rows, "")
 
 	for _, span in ipairs(chips_spans or {}) do
@@ -138,6 +140,12 @@ local function repo_lines(repo, width)
 			hl_group = span.hl_group,
 		})
 	end
+	table.insert(out_spans, {
+		line = rule_line_idx,
+		start_col = 0,
+		end_col = math.max((width or 1), 1),
+		hl_group = "AtlasTextMuted",
+	})
 
 	local detail_table = type(detail) == "table" and detail or nil
 	local body_lines, body_spans = render_tab_content(tab, repo, detail_table, width)
