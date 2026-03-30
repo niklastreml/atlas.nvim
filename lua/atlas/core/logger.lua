@@ -123,7 +123,6 @@ end
 ---@param context table|nil
 function M.logerror(message, context)
 	write("ERROR", message, context)
-	vim.notify(to_text(message), vim.log.levels.ERROR)
 end
 
 ---@param level AtlasLogLevel|nil

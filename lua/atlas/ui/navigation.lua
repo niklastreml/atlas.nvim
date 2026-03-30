@@ -36,6 +36,18 @@ local function update_panel_selection(win)
 	panel.on_select(ui_state.current_view, (ui_state.line_map or {})[line])
 end
 
+---@return table|nil
+function M.current_item()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("main")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return nil
+	end
+
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	return (ui_state.line_map or {})[line]
+end
+
 ---@param direction "up"|"down"
 function M.move_cursor(direction)
 	local layout = require("atlas.ui.layout")
@@ -89,6 +101,30 @@ function M.focus_first_item()
 	local max_line = vim.api.nvim_buf_line_count(buf)
 
 	for lnum = 1, max_line do
+		if is_selectable(view, line_map[lnum]) then
+			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			update_panel_selection(win)
+			return
+		end
+	end
+end
+
+function M.focus_last_item()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("main")
+	local buf = layout.buf_id("main")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	local view = ui_state.current_view
+	local line_map = ui_state.line_map or {}
+	local max_line = vim.api.nvim_buf_line_count(buf)
+
+	for lnum = max_line, 1, -1 do
 		if is_selectable(view, line_map[lnum]) then
 			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
 			update_panel_selection(win)

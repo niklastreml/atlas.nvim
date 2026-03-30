@@ -47,6 +47,7 @@ local function normalize_pr(pr)
 		},
 		links = {
 			self = ((pr.links or {}).self or {}).href or "",
+			merge = ((pr.links or {}).merge or {}).href or "",
 			commits = ((pr.links or {}).commits or {}).href or "",
 			approve = ((pr.links or {}).approve or {}).href or "",
 			request_changes = ((pr.links or {})["request-changes"] or {}).href or "",

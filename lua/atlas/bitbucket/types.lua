@@ -13,6 +13,7 @@
 
 ---@class BitbucketPRLinks
 ---@field self string
+---@field merge string
 ---@field commits string
 ---@field approve string
 ---@field request_changes string

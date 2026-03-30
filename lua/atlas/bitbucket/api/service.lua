@@ -150,6 +150,21 @@ local function build_headers(user, token)
 	}
 end
 
+---@param result any
+---@return string|nil
+local function api_error_message(result)
+	if type(result) ~= "table" or result.error == nil then
+		return nil
+	end
+	if type(result.error) == "table" and result.error.message then
+		return tostring(result.error.message)
+	end
+	if type(result.error) == "string" then
+		return result.error
+	end
+	return "Bitbucket API error"
+end
+
 ---@return string, string, string|nil
 local function get_auth_from_config()
 	local bb = (config.options and config.options.bitbucket) or {}
@@ -382,11 +397,7 @@ function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
 		end
 
 		local detail = normalizer.normalize_pr_detail(result)
-		footer.notify(
-			"success",
-			string.format("%s Successful fetched %d details", icons.entity("success"), pr_id),
-			2800
-		)
+		footer.notify("success", string.format("%s Successful fetched details", icons.entity("success")), 2800)
 
 		on_done(detail, nil)
 	end)
@@ -604,6 +615,98 @@ function M.fetch_pullrequest_comments(comments_url, opts, on_done)
 		local comments = normalizer.normalize_pr_comments(result)
 		on_done(comments, nil)
 	end)
+end
+
+---@param url string
+---@param data table|nil
+---@param on_done fun(result: table|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+local function post_to_url(url, data, on_done)
+	logger.loginfo("Bitbucket POST start", {
+		url = url,
+		has_body = type(data) == "table",
+	})
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		logger.logerror("Bitbucket POST auth missing", { url = url, error = auth_err })
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local headers = build_headers(user, token)
+	local payload = nil
+	if type(data) == "table" then
+		payload = vim.json.encode(data)
+	end
+
+	return http.curl_request("POST", url, headers, payload, function(result, err)
+		if err then
+			local status = err:match("Status:%s*(%d+)")
+			local raw_body = err:match("Raw:%s*([%s%S]*)")
+			logger.logerror("Bitbucket POST failed", {
+				url = url,
+				status = status or "",
+				body = raw_body or "",
+				error = err,
+			})
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		local api_err = api_error_message(result)
+		if api_err ~= nil then
+			logger.logerror("Bitbucket POST API error", {
+				url = url,
+				status = tostring(result.__http_status or ""),
+				error = api_err,
+			})
+			on_done(nil, api_err)
+			return
+		end
+
+		logger.loginfo("Bitbucket POST success", {
+			url = url,
+			status = tostring(result.__http_status or ""),
+		})
+
+		on_done(result, nil)
+	end)
+end
+
+---@param merge_url string
+---@param opts { message?: string, close_source_branch?: boolean, merge_strategy?: string }|nil
+---@param on_done fun(result: table|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.merge_pullrequest(merge_url, opts, on_done)
+	opts = opts or {}
+	local payload = {
+		close_source_branch = opts.close_source_branch == true,
+		merge_strategy = tostring(opts.merge_strategy or "merge_commit"), --TODO: Refactor to config
+	}
+	if type(opts.message) == "string" and opts.message ~= "" then
+		payload.message = opts.message
+	end
+	return post_to_url(merge_url, payload, on_done)
+end
+
+---@param approve_url string
+---@param on_done fun(result: table|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.approve_pullrequest(approve_url, on_done)
+	return post_to_url(approve_url, nil, on_done)
+end
+
+---@param request_changes_url string
+---@param on_done fun(result: table|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.request_changes_pullrequest(request_changes_url, on_done)
+	return post_to_url(request_changes_url, nil, on_done)
 end
 
 return M

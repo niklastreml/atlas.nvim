@@ -15,9 +15,15 @@ function M.curl_request(method, url, headers, data, callback)
 
 	local cmd
 	if data then
-		cmd = string.format("curl -sS -X %s %s -d '%s' \"%s\"", method, header_str, data, url)
+		cmd = string.format(
+			"curl -sS -X %s %s -d '%s' -w '\\n__ATLAS_HTTP_CODE:%%{http_code}' \"%s\"",
+			method,
+			header_str,
+			data,
+			url
+		)
 	else
-		cmd = string.format('curl -sS -X %s %s "%s"', method, header_str, url)
+		cmd = string.format('curl -sS -X %s %s -w "\\n__ATLAS_HTTP_CODE:%%{http_code}" "%s"', method, header_str, url)
 	end
 
 	local out = {}
@@ -53,10 +59,39 @@ function M.curl_request(method, url, headers, data, callback)
 					return
 				end
 
-				local ok, result = pcall(vim.json.decode, raw)
-				if not ok then
-					callback(nil, "Failed to parse JSON: " .. tostring(result) .. "\nRaw: " .. raw:sub(1, 200))
+				local body = raw
+				local http_status = nil
+				local marker_start, marker_end, status_str = raw:find("\n__ATLAS_HTTP_CODE:(%d+)%s*$")
+				if marker_start ~= nil then
+					body = raw:sub(1, marker_start - 1)
+					http_status = tonumber(status_str)
+				end
+
+				if body == "" then
+					if http_status ~= nil and http_status >= 200 and http_status < 300 then
+						callback({ __http_status = http_status }, nil)
+						return
+					end
+					callback(nil, string.format("HTTP %s", tostring(http_status or "?")))
 					return
+				end
+
+				local ok, result = pcall(vim.json.decode, body)
+				if not ok then
+					callback(
+						nil,
+						"Failed to parse JSON: "
+							.. tostring(result)
+							.. "\nStatus: "
+							.. tostring(http_status or "?")
+							.. "\nRaw: "
+							.. body
+					)
+					return
+				end
+
+				if type(result) == "table" then
+					result.__http_status = http_status
 				end
 
 				callback(result, nil)
