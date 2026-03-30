@@ -15,16 +15,16 @@ local TAB_ORDER = {
 	"overview",
 	"branches",
 	"tags",
-	"commits",
 }
 
 detail_spinner = spinner.create({
 	interval_ms = 120,
-	on_tick = function()
+		on_tick = function()
 		local repo = state.current_repo
 		local is_detail_loading = state.current_detail == "loading"
 		local is_readme_loading = state.current_readme == "loading"
-		if repo == nil or (not is_detail_loading and not is_readme_loading) then
+		local is_branches_loading = state.current_branches == "loading"
+		if repo == nil or (not is_detail_loading and not is_readme_loading and not is_branches_loading) then
 			detail_spinner:stop()
 			return
 		end
@@ -185,7 +185,7 @@ function M.refresh()
 	end
 end
 
----@param tab "overview"|"branches"|"tags"|"commits"
+---@param tab "overview"|"branches"|"tags"
 function M.select_tab(tab)
 	state.set_current_tab(tab)
 	apply_tab_buffer_mode(tab)
@@ -224,6 +224,27 @@ function M.select_tab(tab)
 					return
 				end
 				footer.notify("success", "Readme loaded", 1200)
+			end)
+		end
+	elseif tab == "branches" then
+		local detail = state.current_detail
+		if state.current_branches == nil and type(detail) == "table" then
+			state.set_current_branches_loading()
+			M.refresh()
+			start_spinner()
+			footer.notify("loading", "Loading branches...")
+			local branches_url = tostring((((detail.links or {}).branches or {}).href) or "")
+			service.fetch_repository_branches(branches_url, { force_load = false }, function(branches, err)
+				stop_spinner()
+				if err ~= nil then
+					state.set_current_branches(nil)
+					M.refresh()
+					footer.notify("error", string.format("Failed loading branches: %s", tostring(err)))
+					return
+				end
+				state.set_current_branches(branches)
+				M.refresh()
+				footer.notify("success", "Branches loaded", 1200)
 			end)
 		end
 	end

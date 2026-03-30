@@ -64,8 +64,9 @@ function M.render_repo(repo)
 
 	local chips = {
 		{ label = string.format("%s", utils.human_size(repo.size)), hl = "AtlasTabInactive" },
-		repo.is_private == true and { label = "private", hl = "AtlasBitbucketPRDraft" } or nil,
 		{ label = tostring((repo.mainbranch or {}).name or "-"), hl = "AtlasBitbucketPRMerged" },
+		repo.is_private == true and { label = "private", hl = "AtlasBitbucketPRDraft" }
+			or { label = "public", hl = "AtlasTextPositive" },
 	}
 
 	local line = ""

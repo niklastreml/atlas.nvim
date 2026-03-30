@@ -420,4 +420,29 @@ function M.normalize_repository_detail(result)
 	}
 end
 
+---@param result table
+---@return BitbucketRepositoryBranches
+function M.normalize_repository_branches(result)
+	local entries = {}
+	for _, item in ipairs((result.values or {})) do
+		local target = item.target or {}
+		local author = (((target.author or {}).user or {}).nickname)
+			or (((target.author or {}).user or {}).display_name)
+			or ((target.author or {}).raw)
+			or ""
+		table.insert(entries, {
+			name = tostring(item.name or ""),
+			hash = tostring(target.hash or ""),
+			date = tostring(target.date or ""),
+			message = tostring(target.message or ""),
+			author = tostring(author),
+		})
+	end
+
+	return {
+		entries = entries,
+		size = tonumber(result.size) or #entries,
+	}
+end
+
 return M

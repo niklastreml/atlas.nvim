@@ -13,7 +13,6 @@ local REPO_TABS = {
 	{ key = "overview", label = "Overview", icon = icons.entity("overview") },
 	{ key = "branches", label = "Branches", icon = icons.entity("branch") },
 	{ key = "tags", label = "Tags", icon = icons.fallback() },
-	{ key = "commits", label = "Commits", icon = icons.entity("commit") },
 }
 
 ---@param tabs table[]
@@ -54,7 +53,7 @@ function M.render_pr(active_tab)
 	return render_tabs(PR_TABS, active_tab)
 end
 
----@param active_tab "overview"|"branches"|"tags"|"commits"
+---@param active_tab "overview"|"branches"|"tags"
 ---@return string line
 ---@return table[] spans
 function M.render_repo(active_tab)

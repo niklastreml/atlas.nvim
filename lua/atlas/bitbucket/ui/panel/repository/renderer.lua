@@ -9,7 +9,6 @@ local spinner = require("atlas.ui.components.spinner")
 local overview_tab = require("atlas.bitbucket.ui.panel.repository.tabs.overview")
 local branches_tab = require("atlas.bitbucket.ui.panel.repository.tabs.branches")
 local tags_tab = require("atlas.bitbucket.ui.panel.repository.tabs.tags")
-local commits_tab = require("atlas.bitbucket.ui.panel.repository.tabs.commits")
 
 local ns = vim.api.nvim_create_namespace("atlas.bitbucket.panel")
 local PADDING_X = 2
@@ -19,7 +18,7 @@ local function pad_line(line)
 	return pad .. (line or "") .. pad
 end
 
----@param tab "overview"|"branches"|"tags"|"commits"
+---@param tab "overview"|"branches"|"tags"
 ---@param repo table
 ---@param detail BitbucketRepositoryDetail|nil
 ---@param width integer|nil
@@ -32,10 +31,8 @@ local function render_tab_content(tab, repo, detail, width)
 	if tab == "branches" then
 		return branches_tab.render(repo, detail, width)
 	end
-	if tab == "tags" then
-		return tags_tab.render(repo, detail, width)
-	end
-	return commits_tab.render(repo, detail, width)
+
+	return tags_tab.render(repo, detail, width)
 end
 
 ---@param repo table

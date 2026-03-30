@@ -268,6 +268,21 @@
 ---@field mainbranch BitbucketRepositoryMainBranch|nil
 
 --------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/refs/branches
+--------------------------------------------------------------------------------
+
+---@class BitbucketRepositoryBranch
+---@field name string
+---@field hash string
+---@field date string
+---@field message string
+---@field author string
+
+---@class BitbucketRepositoryBranches
+---@field entries BitbucketRepositoryBranch[]
+---@field size number
+
+--------------------------------------------------------------------------------
 -- Endpoint: GET /2.0/user
 --------------------------------------------------------------------------------
 

@@ -2,11 +2,13 @@
 ---@field current_repo table|nil
 ---@field current_detail BitbucketRepositoryDetail|"loading"|nil
 ---@field current_readme string|"loading"|nil
----@field current_tab "overview"|"branches"|"tags"|"commits"
+---@field current_branches BitbucketRepositoryBranches|"loading"|nil
+---@field current_tab "overview"|"branches"|"tags"
 local M = {
 	current_repo = nil,
 	current_detail = nil,
 	current_readme = nil,
+	current_branches = nil,
 	current_tab = "overview",
 }
 
@@ -15,6 +17,7 @@ function M.set_current(repo)
 	M.current_repo = repo
 	M.current_detail = nil
 	M.current_readme = nil
+	M.current_branches = nil
 end
 
 ---@param detail BitbucketRepositoryDetail|nil
@@ -35,9 +38,18 @@ function M.set_current_readme_loading()
 	M.current_readme = "loading"
 end
 
----@param tab "overview"|"branches"|"tags"|"commits"
+---@param branches BitbucketRepositoryBranches|nil
+function M.set_current_branches(branches)
+	M.current_branches = branches
+end
+
+function M.set_current_branches_loading()
+	M.current_branches = "loading"
+end
+
+---@param tab "overview"|"branches"|"tags"
 function M.set_current_tab(tab)
-	if tab == "overview" or tab == "branches" or tab == "tags" or tab == "commits" then
+	if tab == "overview" or tab == "branches" or tab == "tags" then
 		M.current_tab = tab
 	end
 end
@@ -46,6 +58,7 @@ function M.reset()
 	M.current_repo = nil
 	M.current_detail = nil
 	M.current_readme = nil
+	M.current_branches = nil
 	M.current_tab = "overview"
 end
 
