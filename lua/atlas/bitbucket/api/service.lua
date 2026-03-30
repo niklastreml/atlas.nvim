@@ -1243,4 +1243,56 @@ function M.fetch_repository_branches(branches_url, opts, on_done)
 	end)
 end
 
+---@param tags_url string
+---@param opts { force_load?: boolean }
+---@param on_done fun(tags: BitbucketRepositoryTags|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_repository_tags(tags_url, opts, on_done)
+	opts = opts or {}
+	if type(tags_url) ~= "string" or tags_url == "" then
+		on_done(nil, "Missing tags URL")
+		return nil
+	end
+
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
+	local cachekey = string.format("bitbucket:mem:repo_tags:%s", tags_url)
+	if not opts.force_load then
+		local cached = memory_cache.get(cachekey)
+		if cached and cached.value then
+			on_done(cached.value, nil)
+			return nil
+		end
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		on_done(nil, auth_err)
+		return nil
+	end
+
+	local headers = build_headers(user, token)
+	return http.curl_request("GET", tags_url, headers, nil, function(result, err)
+		if err ~= nil then
+			on_done(nil, err)
+			return
+		end
+
+		if type(result) ~= "table" then
+			on_done(nil, "Bitbucket response is not a JSON object")
+			return
+		end
+
+		local api_err = api_error_message(result)
+		if api_err ~= nil then
+			on_done(nil, api_err)
+			return
+		end
+
+		local tags = normalizer.normalize_repository_tags(result)
+
+		memory_cache.set(cachekey, tags, ttl)
+		on_done(tags, nil)
+	end)
+end
+
 return M

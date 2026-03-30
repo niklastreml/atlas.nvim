@@ -24,7 +24,8 @@ detail_spinner = spinner.create({
 		local is_detail_loading = state.current_detail == "loading"
 		local is_readme_loading = state.current_readme == "loading"
 		local is_branches_loading = state.current_branches == "loading"
-		if repo == nil or (not is_detail_loading and not is_readme_loading and not is_branches_loading) then
+		local is_tags_loading = state.current_tags == "loading"
+		if repo == nil or (not is_detail_loading and not is_readme_loading and not is_branches_loading and not is_tags_loading) then
 			detail_spinner:stop()
 			return
 		end
@@ -245,6 +246,27 @@ function M.select_tab(tab)
 				state.set_current_branches(branches)
 				M.refresh()
 				footer.notify("success", "Branches loaded", 1200)
+			end)
+		end
+	elseif tab == "tags" then
+		local detail = state.current_detail
+		if state.current_tags == nil and type(detail) == "table" then
+			state.set_current_tags_loading()
+			M.refresh()
+			start_spinner()
+			footer.notify("loading", "Loading tags...")
+			local tags_url = tostring((((detail.links or {}).tags or {}).href) or "")
+			service.fetch_repository_tags(tags_url, { force_load = false }, function(tags, err)
+				stop_spinner()
+				if err ~= nil then
+					state.set_current_tags(nil)
+					M.refresh()
+					footer.notify("error", string.format("Failed loading tags: %s", tostring(err)))
+					return
+				end
+				state.set_current_tags(tags)
+				M.refresh()
+				footer.notify("success", "Tags loaded", 1200)
 			end)
 		end
 	end

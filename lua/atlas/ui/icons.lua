@@ -24,6 +24,7 @@ local ICONS = {
 		error = "",
 		pending = "",
 		branch = "",
+		tag = "󰓹",
 		author = "",
 	},
 	fallback = "•",
@@ -34,7 +35,7 @@ function M.provider(name)
 	return ICONS.provider[name] or ICONS.fallback
 end
 
----@param name "repo"|"refresh"|"pr"|"comments"|"tasks"|"created"|"updated"|"commit"|"overview"|"files"|"activity"|"comment"|"success"|"warning"|"info"|"error"|"pending"|"branch"|"author"
+---@param name "repo"|"refresh"|"pr"|"comments"|"tasks"|"created"|"updated"|"commit"|"overview"|"files"|"activity"|"comment"|"success"|"warning"|"info"|"error"|"pending"|"branch"|"tag"|"author"
 function M.entity(name)
 	return ICONS.entity[name] or ICONS.fallback
 end

@@ -12,7 +12,7 @@ local PR_TABS = {
 local REPO_TABS = {
 	{ key = "overview", label = "Overview", icon = icons.entity("overview") },
 	{ key = "branches", label = "Branches", icon = icons.entity("branch") },
-	{ key = "tags", label = "Tags", icon = icons.fallback() },
+	{ key = "tags", label = "Tags", icon = icons.entity("tag") },
 }
 
 ---@param tabs table[]

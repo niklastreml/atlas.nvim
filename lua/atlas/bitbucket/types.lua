@@ -283,6 +283,21 @@
 ---@field size number
 
 --------------------------------------------------------------------------------
+-- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/refs/tags
+--------------------------------------------------------------------------------
+
+---@class BitbucketRepositoryTag
+---@field name string
+---@field hash string
+---@field date string
+---@field message string
+---@field author string
+
+---@class BitbucketRepositoryTags
+---@field entries BitbucketRepositoryTag[]
+---@field size number
+
+--------------------------------------------------------------------------------
 -- Endpoint: GET /2.0/user
 --------------------------------------------------------------------------------
 
