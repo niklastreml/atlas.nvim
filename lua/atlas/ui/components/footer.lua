@@ -1,15 +1,89 @@
 local M = {}
 
 local utils = require("atlas.utils")
+local icons = require("atlas.ui.icons")
+local spinner = require("atlas.ui.components.spinner")
 local ns = vim.api.nvim_create_namespace("atlas.footer")
 
+---@class AtlasFooterNotice
+---@field text string
+---@field hl_group string
+---@field token integer
+
+---@type AtlasFooterNotice
 local notice = {
 	text = "",
 	hl_group = "AtlasTextMuted",
 	token = 0,
 }
 
+---@class AtlasFooterLoadingState
+---@field spinner SpinnerInstance|nil
+---@field text string
+
+---@type AtlasFooterLoadingState
+local loading = {
+	spinner = nil,
+	text = "",
+}
+
 local items = {}
+
+local function stop_loading()
+	if loading.spinner ~= nil then
+		loading.spinner:stop()
+		loading.spinner = nil
+	end
+end
+
+local function start_loading(token)
+	if loading.spinner ~= nil then
+		return
+	end
+
+	loading.spinner = spinner.create({
+		interval_ms = 120,
+		on_tick = function(frame)
+			if notice.token ~= token then
+				stop_loading()
+				return
+			end
+
+			notice.text = string.format("%s %s", frame, loading.text)
+			M.refresh()
+		end,
+	})
+
+	loading.spinner:start()
+end
+
+local function sanitize_notice_text(text)
+	local msg = tostring(text or ""):gsub("[\r\n]+", " | ")
+	if #msg > 60 then
+		msg = msg:sub(1, 57) .. "..."
+	end
+	return msg
+end
+
+local function notice_icon(level)
+	if level == "success" then
+		return icons.entity("success")
+	end
+	if level == "warn" then
+		return icons.entity("warning")
+	end
+	if level == "error" then
+		return icons.entity("error")
+	end
+	if level == "info" then
+		return icons.entity("info")
+	end
+	if level == "loading" then
+		return "" -- spinner will be used instead of a static icon for loading state
+	end
+
+	return ""
+end
 
 local function notice_hl(level)
 	if level == "success" then
@@ -72,25 +146,8 @@ local function build_segments_line(segments, line_index)
 	return line, highlights
 end
 
-function M.clear_items()
-	items = {}
-	M.refresh()
-end
-
----@param seg table
-function M.register_item(seg)
-	table.insert(items, vim.deepcopy(seg))
-	M.refresh()
-end
-
----@param new_items table[]
-function M.set_items(new_items)
-	items = clone_segments(new_items or {})
-	M.refresh()
-end
-
 ---@return table[]
-function M.segments_for()
+local function segments_for()
 	local left = clone_segments(items)
 
 	local right = {
@@ -110,19 +167,47 @@ function M.segments_for()
 	return left
 end
 
----@param level "success"|"warn"|"error"|"info"
+function M.clear_items()
+	items = {}
+	M.refresh()
+end
+
+---@param seg table
+function M.register_item(seg)
+	table.insert(items, vim.deepcopy(seg))
+	M.refresh()
+end
+
+---@param new_items table[]
+function M.set_items(new_items)
+	items = clone_segments(new_items or {})
+	M.refresh()
+end
+
+---@param level "success"|"warn"|"error"|"info"|"loading"
 ---@param text string
 ---@param duration_ms number|nil
 function M.notify(level, text, duration_ms)
+	local message = sanitize_notice_text(text)
 	notice.token = notice.token + 1
 	local token = notice.token
 
-	local msg = tostring(text or ""):gsub("[\r\n]+", " | ")
-	if #msg > 60 then
-		msg = msg:sub(1, 57) .. "..."
+	stop_loading()
+
+	if level == "loading" then
+		notice.hl_group = notice_hl("info")
+		loading.text = message
+
+		start_loading(token)
+		notice.text = loading.spinner ~= nil and loading.spinner:text(loading.text) or loading.text
+		M.refresh()
+		return
 	end
-	notice.text = msg
+
+	local icon = notice_icon(level)
+	notice.text = icon ~= "" and string.format("%s %s", icon, message) or message
 	notice.hl_group = notice_hl(level)
+
 	M.refresh()
 
 	vim.defer_fn(function()
@@ -213,7 +298,7 @@ function M.refresh()
 	local width = vim.api.nvim_win_get_width(win)
 	local block = M.render({
 		width = width,
-		segments = M.segments_for(),
+		segments = segments_for(),
 	})
 
 	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })

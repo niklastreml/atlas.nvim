@@ -5,8 +5,6 @@ local logger = require("atlas.core.logger")
 local cache = require("atlas.core.cache")
 local memory_cache = require("atlas.core.memory_cache")
 local http = require("atlas.core.http")
-local footer = require("atlas.ui.components.footer")
-local icons = require("atlas.ui.icons")
 local state = require("atlas.bitbucket.state")
 
 local API_BASE = "https://api.bitbucket.org/2.0"
@@ -380,15 +378,6 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 			if #errors > 0 then
 				on_done(all_groups, errors)
 			else
-				local pr_count = 0
-				for _, group in ipairs(all_groups) do
-					pr_count = pr_count + #(group.pullrequests or {})
-				end
-				footer.notify(
-					"success",
-					string.format("%s Successfully fetched %d pull request(s)", icons.entity("success"), pr_count),
-					2800
-				)
 				on_done(all_groups, nil)
 			end
 		end
@@ -462,7 +451,6 @@ function M.fetch_pullrequest_detail(workspace, repo, pr_id, opts, on_done)
 
 		local detail = normalizer.normalize_pr_detail(result, workspace, repo)
 		memory_cache.set(detail_cache_key, detail, ttl)
-		footer.notify("success", string.format("%s Successful fetched details", icons.entity("success")), 2800)
 
 		on_done(detail, nil)
 	end)

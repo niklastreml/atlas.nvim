@@ -4,6 +4,7 @@ local service = require("atlas.bitbucket.api.service")
 local panel_state = require("atlas.bitbucket.ui.panel.state")
 local renderer = require("atlas.bitbucket.ui.panel.renderer")
 local spinner = require("atlas.ui.components.spinner")
+local footer = require("atlas.ui.components.footer")
 
 local panel_spinner = spinner.create({
 	interval_ms = 120,
@@ -184,6 +185,7 @@ function M.fetch_activity(pr_key, request_id)
 	panel_state.set_current_activity_loading()
 	renderer.render()
 	start_spinner()
+	footer.notify("loading", "Loading activity...")
 
 	cancel_handle("activity")
 	local handle
@@ -195,6 +197,7 @@ function M.fetch_activity(pr_key, request_id)
 			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
 				panel_state.set_current_activity(nil)
 				renderer.render()
+				footer.notify("error", string.format("Failed loading activity: %s", tostring(err)))
 			end
 			stop_spinner()
 			return
@@ -208,6 +211,7 @@ function M.fetch_activity(pr_key, request_id)
 		panel_state.set_current_activity(activity)
 		stop_spinner()
 		renderer.render()
+		footer.notify("success", "Activity loaded", 1200)
 	end)
 	active_handles.activity = handle
 end
@@ -238,6 +242,7 @@ function M.fetch_comments(pr_key, request_id)
 	panel_state.set_current_comments_loading()
 	renderer.render()
 	start_spinner()
+	footer.notify("loading", "Loading comments...")
 
 	cancel_handle("comments")
 	local handle
@@ -249,6 +254,7 @@ function M.fetch_comments(pr_key, request_id)
 			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
 				panel_state.set_current_comments(nil)
 				renderer.render()
+				footer.notify("error", string.format("Failed loading comments: %s", tostring(err)))
 			end
 			stop_spinner()
 			return
@@ -262,6 +268,7 @@ function M.fetch_comments(pr_key, request_id)
 		panel_state.set_current_comments(comments)
 		stop_spinner()
 		renderer.render()
+		footer.notify("success", "Comments loaded", 1200)
 	end)
 	active_handles.comments = handle
 end
@@ -292,6 +299,7 @@ function M.fetch_commits(pr_key, request_id)
 	panel_state.set_current_commits_loading()
 	renderer.render()
 	start_spinner()
+	footer.notify("loading", "Loading commits...")
 
 	cancel_handle("commits")
 	local handle
@@ -303,6 +311,7 @@ function M.fetch_commits(pr_key, request_id)
 			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
 				panel_state.set_current_commits(nil)
 				renderer.render()
+				footer.notify("error", string.format("Failed loading commits: %s", tostring(err)))
 			end
 			stop_spinner()
 			return
@@ -316,6 +325,7 @@ function M.fetch_commits(pr_key, request_id)
 		panel_state.set_current_commits(commits)
 		stop_spinner()
 		renderer.render()
+		footer.notify("success", "Commits loaded", 1200)
 	end)
 	active_handles.commits = handle
 end
@@ -346,6 +356,7 @@ function M.fetch_diffstat(pr_key, request_id)
 	panel_state.set_current_diffstat_loading()
 	renderer.render()
 	start_spinner()
+	footer.notify("loading", "Loading file changes...")
 
 	cancel_handle("diffstat")
 	local handle
@@ -357,6 +368,7 @@ function M.fetch_diffstat(pr_key, request_id)
 			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
 				panel_state.set_current_diffstat(nil)
 				renderer.render()
+				footer.notify("error", string.format("Failed loading file changes: %s", tostring(err)))
 			end
 			stop_spinner()
 			return
@@ -370,6 +382,7 @@ function M.fetch_diffstat(pr_key, request_id)
 		panel_state.set_current_diffstat(diffstat)
 		stop_spinner()
 		renderer.render()
+		footer.notify("success", "File changes loaded", 1200)
 	end)
 	active_handles.diffstat = handle
 end
@@ -405,6 +418,7 @@ function M.fetch_diff(pr_key, request_id)
 	panel_state.set_current_diff_loading()
 	renderer.render()
 	start_spinner()
+	footer.notify("loading", "Loading diff...")
 
 	cancel_handle("diff")
 	local handle
@@ -416,6 +430,7 @@ function M.fetch_diff(pr_key, request_id)
 			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
 				panel_state.set_current_diff(nil)
 				renderer.render()
+				footer.notify("error", string.format("Failed loading diff: %s", tostring(err)))
 			end
 			stop_spinner()
 			return
@@ -429,6 +444,7 @@ function M.fetch_diff(pr_key, request_id)
 		panel_state.set_current_diff(diff)
 		stop_spinner()
 		renderer.render()
+		footer.notify("success", "Diff loaded", 1200)
 	end)
 	active_handles.diff = handle
 end
@@ -455,6 +471,7 @@ function M.fetch_reviewers(pr_key, request_id)
 	panel_state.set_current_detail_loading()
 	renderer.render()
 	start_spinner()
+	footer.notify("loading", "Loading details...")
 
 	cancel_handle("reviewers")
 	local handle
@@ -466,6 +483,7 @@ function M.fetch_reviewers(pr_key, request_id)
 			if tostring((panel_state.current_pr or {}).id or "") == tostring(pr_key or "") then
 				panel_state.set_current_detail(nil)
 				renderer.render()
+				footer.notify("error", string.format("Failed loading details: %s", tostring(err)))
 			end
 			stop_spinner()
 			return
@@ -479,6 +497,7 @@ function M.fetch_reviewers(pr_key, request_id)
 		panel_state.set_current_detail(detail)
 		stop_spinner()
 		renderer.render()
+		footer.notify("success", "Details loaded", 1200)
 	end)
 	active_handles.reviewers = handle
 end

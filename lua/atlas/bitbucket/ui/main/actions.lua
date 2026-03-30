@@ -40,7 +40,7 @@ function M.open_pr_actions_popup(pr)
 		if choice == nil then
 			return
 		end
-		footer.notify("info", string.format("Starting %s for PR #%s", choice.label, tostring(pr.id or "")))
+		footer.notify("loading", string.format("Starting %s for PR #%s", choice.label, tostring(pr.id or "")))
 
 		local function on_done(_, err)
 			if err ~= nil then
@@ -136,7 +136,7 @@ function M.refresh_selected_pr_cache(pr)
 end
 
 function M.open_pr_search_popup()
-	footer.notify("info", "Loading workspaces...")
+	footer.notify("loading", "Loading workspaces...")
 
 	service.fetch_user_workspaces(function(workspaces, err)
 		if err ~= nil then
@@ -150,6 +150,8 @@ function M.open_pr_search_popup()
 			return
 		end
 
+		footer.notify("info", string.format("Loaded %d workspaces", #ws), 1200)
+
 		local function continue_with_workspace(selected_ws)
 			if type(selected_ws) ~= "table" or tostring(selected_ws.slug or "") == "" then
 				footer.notify("warn", "Invalid workspace selection")
@@ -161,7 +163,7 @@ function M.open_pr_search_popup()
 					return
 				end
 
-				footer.notify("info", "Searching repositories...")
+				footer.notify("loading", "Searching repositories...")
 				service.fetch_workspace_repositories(selected_ws.slug, input, function(repos, repo_err)
 					if repo_err ~= nil then
 						footer.notify(
@@ -176,6 +178,8 @@ function M.open_pr_search_popup()
 						footer.notify("warn", "No repositories found")
 						return
 					end
+
+					footer.notify("info", string.format("Found %d repositories", #list), 1200)
 
 					vim.ui.select(list, {
 						prompt = "Select repository",

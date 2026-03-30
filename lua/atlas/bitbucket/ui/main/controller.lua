@@ -94,6 +94,7 @@ local function load_active_view(opts, on_done)
 
 	state.is_loading = true
 	state.error = nil
+	footer.notify("loading", "Loading pull requests...")
 	spinner.start("Loading pull requests...")
 
 	if layout.is_open() then
@@ -154,6 +155,7 @@ local function load_active_view(opts, on_done)
 			else
 				state.error = nil
 				state.repos = groups or {}
+				footer.notify("success", "Pull requests loaded", 1200)
 			end
 
 			footer.set_items(helper.build_footer_items(state.repos, state.current_user))
