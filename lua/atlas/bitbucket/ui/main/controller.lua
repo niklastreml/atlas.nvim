@@ -75,6 +75,43 @@ local function get_current_user(on_done)
 	end)
 end
 
+---@param groups BitbucketRepoPRGroup[]|nil
+---@param view BitbucketViewConfig|nil
+---@return BitbucketRepoPRGroup[]
+local function apply_filter(groups, view)
+	local source = groups or {}
+	local view_filter = (view and view.filter) or nil
+	if view_filter == nil then
+		return source
+	end
+
+	local ctx = {
+		user = state.current_user or {},
+	}
+
+	local filtered_groups = {}
+	for _, group in ipairs(source) do
+		local prs = {}
+		for _, pr in ipairs(group.pullrequests or {}) do
+			local ok, keep = pcall(view_filter, pr, ctx)
+			if ok and keep == true then
+				table.insert(prs, pr)
+			end
+		end
+
+		if #prs > 0 then
+			table.insert(filtered_groups, {
+				workspace = group.workspace,
+				repo = group.repo,
+				full_name = group.full_name,
+				pullrequests = prs,
+			})
+		end
+	end
+
+	return filtered_groups
+end
+
 ---@param opts { force_load: boolean }|nil
 ---@param on_done fun()|nil
 local function load_active_view(opts, on_done)
@@ -148,13 +185,22 @@ local function load_active_view(opts, on_done)
 				first_err = err
 			end
 
+			local filtered_groups = apply_filter(groups, target_view)
+			local has_groups = #filtered_groups > 0
+
 			if first_err ~= nil then
-				state.error = tostring(first_err)
-				state.repos = {}
-				footer.notify("error", string.format("Failed to fetch pull requests: %s", tostring(first_err)))
+				if has_groups then
+					state.error = nil
+					state.repos = filtered_groups
+					footer.notify("warn", string.format("Some repositories failed: %s", tostring(first_err)))
+				else
+					state.error = tostring(first_err)
+					state.repos = {}
+					footer.notify("error", string.format("Failed to fetch pull requests: %s", tostring(first_err)))
+				end
 			else
 				state.error = nil
-				state.repos = groups or {}
+				state.repos = filtered_groups
 				footer.notify("success", "Pull requests loaded", 1200)
 			end
 

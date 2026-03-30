@@ -316,7 +316,7 @@ end
 
 ---@param view_repos BitbucketRepoConfig[]
 ---@param opts { force_load: boolean }
----@param on_done fun(values: table[], err: string[]|nil)
+---@param on_done fun(values: BitbucketRepoPRGroup[], err: string[]|nil)
 ---@return { cancel: fun() }|nil
 function M.fetch_pullrequests(view_repos, opts, on_done)
 	if view_repos == nil or #view_repos == 0 then
@@ -333,7 +333,7 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 	if auth_err then
 		logger.logerror("Bitbucket auth missing", { error = auth_err })
 		vim.notify("Atlas Bitbucket: " .. auth_err, vim.log.levels.ERROR)
-		on_done({}, auth_err)
+		on_done({}, { tostring(auth_err) })
 		return nil
 	end
 
@@ -945,6 +945,7 @@ function M.fetch_current_user(on_done)
 			nickname = tostring(result.nickname or ""),
 			username = tostring(result.username or ""),
 			uuid = tostring(result.uuid or ""),
+			account_id = tostring(result.account_id or ""),
 		}
 
 		logger.loginfo("Bitbucket current user fetch success", {

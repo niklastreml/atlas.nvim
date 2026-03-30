@@ -468,6 +468,11 @@ function M.fetch_reviewers(pr_key, request_id)
 		return
 	end
 
+	local existing = panel_state.current_pr_detail
+	if existing ~= "loading" and type(existing) == "table" then
+		return
+	end
+
 	panel_state.set_current_detail_loading()
 	renderer.render()
 	start_spinner()

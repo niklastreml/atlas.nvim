@@ -29,6 +29,18 @@ local function decision_hl(decision)
 	return "AtlasTextMuted"
 end
 
+---@param decision string
+---@return integer
+local function decision_rank(decision)
+	if decision == "approved" then
+		return 1
+	end
+	if decision == "changes_requested" then
+		return 2
+	end
+	return 3
+end
+
 ---@param pr table|nil
 ---@param detail BitbucketPRDetail|"loading"|nil
 ---@param width integer|nil
@@ -91,8 +103,24 @@ function M.render(pr, detail, width)
 		return lines, spans
 	end
 
-	local rows = {}
+	local sorted_decisions = {}
 	for _, d in ipairs(decisions) do
+		table.insert(sorted_decisions, d)
+	end
+	table.sort(sorted_decisions, function(a, b)
+		local ar = decision_rank(tostring(a.decision or ""))
+		local br = decision_rank(tostring(b.decision or ""))
+		if ar ~= br then
+			return ar < br
+		end
+
+		local an = tostring(a.name or a.nickname or "")
+		local bn = tostring(b.name or b.nickname or "")
+		return an < bn
+	end)
+
+	local rows = {}
+	for _, d in ipairs(sorted_decisions) do
 		local name = d.name
 		if name == nil or name == "" then
 			name = (d.nickname and d.nickname ~= "") and d.nickname or "Unknown"

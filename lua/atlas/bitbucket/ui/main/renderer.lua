@@ -207,7 +207,8 @@ function M.render(opts)
 	table.insert(lines, "")
 
 	if state.error then
-		table.insert(lines, "Error loading pull requests: " .. state.error)
+		local error_text = tostring(state.error or ""):gsub("[\r\n]+", " | ")
+		table.insert(lines, "Error loading pull requests: " .. error_text)
 	elseif state.is_loading then
 		table.insert(lines, "Loading...")
 	else

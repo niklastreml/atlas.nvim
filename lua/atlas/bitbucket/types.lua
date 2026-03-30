@@ -252,3 +252,4 @@
 ---@field nickname string
 ---@field username string
 ---@field uuid string
+---@field account_id string

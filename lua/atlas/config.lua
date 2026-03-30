@@ -24,7 +24,7 @@
 ---@field key string|nil
 ---@field repos BitbucketRepoConfig[]|nil
 ---@field layout "compact"|"grouped"|"plain"|nil
----@field filter fun(pr: table, ctx: table): boolean|nil
+---@field filter? fun(pr: BitbucketPR, ctx: table): boolean
 
 --- @class BitbucketConfig
 --- @field user string
