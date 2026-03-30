@@ -2,6 +2,7 @@ local M = {}
 
 local help = require("atlas.ui.popups.help")
 local ui_state = require("atlas.ui.main.state")
+local panel_state = require("atlas.ui.panel.state")
 
 ---@param view string|nil
 ---@param node table|nil
@@ -183,28 +184,40 @@ function M.register_keys(buf)
 			key = "[",
 			desc = "Previous panel tab",
 			callback = function()
-				if ui_state.current_view ~= "bitbucket" then
-					return
+				if ui_state.current_view == "bitbucket" then
+					local function current_bb_tab_controller()
+						local item = panel_state.selected_item
+						if type(item) == "table" and item.kind == "repo" then
+							return require("atlas.bitbucket.ui.panel.repository.controller")
+						end
+						return require("atlas.bitbucket.ui.panel.prs.controller")
+					end
+					local panel = require("atlas.ui.panel")
+					if not panel.is_open() then
+						return
+					end
+					current_bb_tab_controller().prev_tab()
 				end
-				local panel = require("atlas.ui.panel")
-				if not panel.is_open() then
-					return
-				end
-				require("atlas.bitbucket.ui.panel.prs.controller").prev_tab()
 			end,
 		},
 		{
 			key = "]",
 			desc = "Next panel tab",
 			callback = function()
-				if ui_state.current_view ~= "bitbucket" then
-					return
+				if ui_state.current_view == "bitbucket" then
+					local function current_bb_tab_controller()
+						local item = panel_state.selected_item
+						if type(item) == "table" and item.kind == "repo" then
+							return require("atlas.bitbucket.ui.panel.repository.controller")
+						end
+						return require("atlas.bitbucket.ui.panel.prs.controller")
+					end
+					local panel = require("atlas.ui.panel")
+					if not panel.is_open() then
+						return
+					end
+					current_bb_tab_controller().next_tab()
 				end
-				local panel = require("atlas.ui.panel")
-				if not panel.is_open() then
-					return
-				end
-				require("atlas.bitbucket.ui.panel.prs.controller").next_tab()
 			end,
 		},
 	}

@@ -27,7 +27,7 @@ end
 ---@return table[]
 local function render_tab_content(tab, repo, detail, width)
 	if tab == "overview" then
-		return overview_tab.render(repo, detail, width)
+		return overview_tab.render()
 	end
 	if tab == "branches" then
 		return branches_tab.render(repo, detail, width)

@@ -5,15 +5,26 @@ local state = require("atlas.bitbucket.ui.panel.repository.state")
 local renderer = require("atlas.bitbucket.ui.panel.repository.renderer")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
+local layout = require("atlas.ui.layout")
 
 local active_handle = nil
+local active_readme_handle = nil
 local detail_spinner
+
+local TAB_ORDER = {
+	"overview",
+	"branches",
+	"tags",
+	"commits",
+}
 
 detail_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
 		local repo = state.current_repo
-		if type(repo) ~= "table" or state.current_detail ~= "loading" then
+		local is_detail_loading = state.current_detail == "loading"
+		local is_readme_loading = state.current_readme == "loading"
+		if repo == nil or (not is_detail_loading and not is_readme_loading) then
 			detail_spinner:stop()
 			return
 		end
@@ -28,6 +39,13 @@ local function cancel_handle()
 	active_handle = nil
 end
 
+local function cancel_readme_handle()
+	if active_readme_handle ~= nil and active_readme_handle.cancel then
+		pcall(active_readme_handle.cancel)
+	end
+	active_readme_handle = nil
+end
+
 local function start_spinner()
 	if detail_spinner:is_running() then
 		return
@@ -39,9 +57,76 @@ local function stop_spinner()
 	detail_spinner:stop()
 end
 
+---@param tab string
+local function apply_tab_buffer_mode(tab)
+	local buf = layout.buf_id("detail")
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	if tab == "overview" then
+		vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
+	else
+		vim.api.nvim_set_option_value("filetype", "atlas-detail", { buf = buf })
+	end
+end
+
+---@param repo table
+---@param detail BitbucketRepositoryDetail
+---@param on_done fun(err: string|nil)|nil
+local function fetch_readme(repo, detail, on_done)
+	local workspace = tostring(repo.workspace or "")
+	local repo_slug = tostring(repo.repo_slug or "")
+	local ref = tostring((detail.mainbranch or {}).name or "")
+	if workspace == "" or repo_slug == "" or ref == "" then
+		if type(on_done) == "function" then
+			on_done("Missing repository readme parameters")
+		end
+		return
+	end
+
+	state.set_current_readme_loading()
+	renderer.render(repo)
+	cancel_readme_handle()
+	active_readme_handle = service.fetch_repository_readme(
+		workspace,
+		repo_slug,
+		ref,
+		repo.readme,
+		{ force_load = false },
+		function(text, err)
+			active_readme_handle = nil
+
+			local current = state.current_repo
+			if current == nil then
+				return
+			end
+			if tostring(current.workspace or "") ~= workspace or tostring(current.repo_slug or "") ~= repo_slug then
+				return
+			end
+
+			if err ~= nil then
+				state.set_current_readme(nil)
+				renderer.render(current)
+				if type(on_done) == "function" then
+					on_done(tostring(err))
+				end
+				return
+			end
+
+			state.set_current_readme(tostring(text or ""))
+			renderer.render(current)
+			if type(on_done) == "function" then
+				on_done(nil)
+			end
+		end
+	)
+end
+
 ---@param repo table|nil
-local function fetch_detail(repo)
-	if type(repo) ~= "table" then
+---@param on_done fun(err: string|nil)|nil
+local function fetch_detail(repo, on_done)
+	if repo == nil then
 		return
 	end
 
@@ -52,16 +137,13 @@ local function fetch_detail(repo)
 	end
 
 	state.set_current_detail_loading()
-	renderer.render(repo)
-	start_spinner()
-	footer.notify("loading", "Loading repository details...")
 
 	cancel_handle()
 	active_handle = service.fetch_repository_detail(workspace, repo_slug, { force_load = false }, function(detail, err)
 		active_handle = nil
 
 		local current = state.current_repo
-		if type(current) ~= "table" then
+		if current == nil then
 			return
 		end
 		if tostring(current.workspace or "") ~= workspace or tostring(current.repo_slug or "") ~= repo_slug then
@@ -69,44 +151,116 @@ local function fetch_detail(repo)
 		end
 
 		if err ~= nil then
-			stop_spinner()
 			state.set_current_detail(nil)
-			renderer.render(current)
-			footer.notify("error", string.format("Failed loading repository details: %s", tostring(err)))
+			if type(on_done) == "function" then
+				on_done(tostring(err))
+			end
 			return
 		end
 
-		stop_spinner()
 		state.set_current_detail(detail)
-		renderer.render(current)
-		footer.notify("success", "Repository details loaded", 1200)
+		if type(on_done) == "function" then
+			on_done(nil)
+		end
 	end)
 end
 
 ---@param repo table|nil
 function M.on_select(repo)
 	cancel_handle()
+	cancel_readme_handle()
 	stop_spinner()
 	state.set_current(repo)
-	state.set_current_tab("overview")
-	renderer.render(repo or {})
-	fetch_detail(repo)
+	if repo ~= nil then
+		M.select_tab("overview")
+	else
+		renderer.render({})
+	end
 end
 
 function M.refresh()
 	local repo = state.current_repo
-	if type(repo) == "table" then
+	if repo ~= nil then
 		renderer.render(repo)
-		if state.current_detail == nil then
-			fetch_detail(repo)
-		end
 	end
 end
 
 ---@param tab "overview"|"branches"|"tags"|"commits"
 function M.select_tab(tab)
 	state.set_current_tab(tab)
+	apply_tab_buffer_mode(tab)
 	M.refresh()
+
+	local repo = state.current_repo
+	if repo == nil then
+		return
+	end
+
+	if state.current_detail == nil then
+		start_spinner()
+		footer.notify("loading", "Loading repository details...")
+		fetch_detail(repo, function(err)
+			stop_spinner()
+			if err ~= nil then
+				footer.notify("error", string.format("Failed loading repository details: %s", tostring(err)))
+				M.refresh()
+				return
+			end
+			footer.notify("success", "Repository details loaded", 1200)
+			M.select_tab(state.current_tab)
+		end)
+		return
+	end
+
+	if tab == "overview" then
+		local detail = state.current_detail
+		if state.current_readme == nil and type(detail) == "table" then
+			start_spinner()
+			footer.notify("loading", "Loading readme...")
+			fetch_readme(repo, detail, function(err)
+				stop_spinner()
+				if err ~= nil then
+					footer.notify("error", string.format("Failed loading readme: %s", tostring(err)))
+					return
+				end
+				footer.notify("success", "Readme loaded", 1200)
+			end)
+		end
+	end
+end
+
+function M.next_tab()
+	local idx = 1
+	for i, key in ipairs(TAB_ORDER) do
+		if key == state.current_tab then
+			idx = i
+			break
+		end
+	end
+
+	local next_idx = idx + 1
+	if next_idx > #TAB_ORDER then
+		next_idx = 1
+	end
+
+	M.select_tab(TAB_ORDER[next_idx])
+end
+
+function M.prev_tab()
+	local idx = 1
+	for i, key in ipairs(TAB_ORDER) do
+		if key == state.current_tab then
+			idx = i
+			break
+		end
+	end
+
+	local prev_idx = idx - 1
+	if prev_idx < 1 then
+		prev_idx = #TAB_ORDER
+	end
+
+	M.select_tab(TAB_ORDER[prev_idx])
 end
 
 return M

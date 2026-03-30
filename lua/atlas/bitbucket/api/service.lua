@@ -13,6 +13,7 @@ local ENDPOINTS = {
 	pullrequests_open = "/repositories/%s/%s/pullrequests?state=%s&pagelen=50",
 	pullrequest_detail = "/repositories/%s/%s/pullrequests/%s",
 	repository_detail = "/repositories/%s/%s",
+	repository_source_file = "/repositories/%s/%s/src/%s/%s",
 	user_profile = "/user",
 	user_workspaces = "/user/workspaces",
 	repositories = "/repositories/%s?%ssort=-updated_on&pagelen=50",
@@ -1070,12 +1071,18 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_repository_detail(workspace, repo_slug, opts, on_done)
 	opts = opts or {}
+	local delayed_on_done = function(detail, err)
+		vim.defer_fn(function()
+			on_done(detail, err)
+		end, 2000)
+	end
+
 	if type(workspace) ~= "string" or workspace == "" then
-		on_done(nil, "Missing workspace slug")
+		delayed_on_done(nil, "Missing workspace slug")
 		return nil
 	end
 	if type(repo_slug) ~= "string" or repo_slug == "" then
-		on_done(nil, "Missing repository slug")
+		delayed_on_done(nil, "Missing repository slug")
 		return nil
 	end
 
@@ -1084,14 +1091,14 @@ function M.fetch_repository_detail(workspace, repo_slug, opts, on_done)
 	if not opts.force_load then
 		local cached = memory_cache.get(cachekey)
 		if cached and cached.value then
-			on_done(cached.value, nil)
+			delayed_on_done(cached.value, nil)
 			return nil
 		end
 	end
 
 	local user, token, auth_err = get_auth_from_config()
 	if auth_err then
-		on_done(nil, auth_err)
+		delayed_on_done(nil, auth_err)
 		return nil
 	end
 
@@ -1100,25 +1107,92 @@ function M.fetch_repository_detail(workspace, repo_slug, opts, on_done)
 
 	return http.curl_request("GET", url, headers, nil, function(result, err)
 		if err then
-			on_done(nil, err)
+			delayed_on_done(nil, err)
 			return
 		end
 
 		if type(result) ~= "table" then
-			on_done(nil, "Bitbucket response is not a JSON object")
+			delayed_on_done(nil, "Bitbucket response is not a JSON object")
 			return
 		end
 
 		local api_err = api_error_message(result)
 		if api_err ~= nil then
-			on_done(nil, api_err)
+			delayed_on_done(nil, api_err)
 			return
 		end
 
 		local detail = normalizer.normalize_repository_detail(result)
 
 		memory_cache.set(cachekey, detail, ttl)
-		on_done(detail, nil)
+		delayed_on_done(detail, nil)
+	end)
+end
+
+---@param workspace string
+---@param repo_slug string
+---@param ref string
+---@param readme_path string|nil
+---@param opts { force_load?: boolean }
+---@param on_done fun(readme: string|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_repository_readme(workspace, repo_slug, ref, readme_path, opts, on_done)
+	opts = opts or {}
+	local delayed_on_done = function(readme, err)
+		vim.defer_fn(function()
+			on_done(readme, err)
+		end, 2000)
+	end
+
+	if type(workspace) ~= "string" or workspace == "" then
+		delayed_on_done(nil, "Missing workspace slug")
+		return nil
+	end
+	if type(repo_slug) ~= "string" or repo_slug == "" then
+		delayed_on_done(nil, "Missing repository slug")
+		return nil
+	end
+	if type(ref) ~= "string" or ref == "" then
+		delayed_on_done(nil, "Missing repository ref")
+		return nil
+	end
+
+	local path = tostring(readme_path or "")
+	if path == "" then
+		path = "README.md"
+	end
+
+	local ttl = ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
+	local cachekey = string.format("bitbucket:mem:repo_readme:%s/%s:%s:%s", workspace, repo_slug, ref, path)
+	if not opts.force_load then
+		local cached = memory_cache.get(cachekey)
+		if cached and cached.value then
+			delayed_on_done(tostring(cached.value), nil)
+			return nil
+		end
+	end
+
+	local user, token, auth_err = get_auth_from_config()
+	if auth_err then
+		delayed_on_done(nil, auth_err)
+		return nil
+	end
+
+	local encoded_ref = ref:gsub(" ", "%%20")
+	local encoded_path = path:gsub(" ", "%%20")
+	local url = API_BASE .. string.format(ENDPOINTS.repository_source_file, workspace, repo_slug, encoded_ref, encoded_path)
+	local headers = build_headers(user, token)
+	headers.Accept = "text/plain"
+
+	return http.curl_text_request("GET", url, headers, nil, function(result, err)
+		if err ~= nil then
+			delayed_on_done(nil, err)
+			return
+		end
+
+		local text = tostring(result or "")
+		memory_cache.set(cachekey, text, ttl)
+		delayed_on_done(text, nil)
 	end)
 end
 

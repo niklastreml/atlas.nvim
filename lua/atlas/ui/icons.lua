@@ -2,8 +2,8 @@ local M = {}
 
 local ICONS = {
 	provider = {
-		jira = "",
-		bitbucket = "",
+		jira = "󰌃",
+		bitbucket = "",
 	},
 	entity = {
 		refresh = "󰑐",

@@ -20,7 +20,7 @@ Accept: application/json
   }
 %}
 
-### README candidate: README.md (main branch)
+### README candidate
 GET https://api.bitbucket.org/2.0/repositories/{{workspace}}/{{repo_slug}}/src/{{bitbucket_main_branch}}/README.md
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
