@@ -68,7 +68,7 @@ return {
             key = "M",
             layout = "compact", -- "compact" or "plain"
             repos = {
-              { workspace = "your-workspace", repo = "atlas" },
+              { workspace = "your-workspace", repo = "atlas", readme = "README.md" }, --- readme is optional, if provided it will be rendered in the PR details panel. Defaults to README.md
             },
 
             ---@param pr BitbucketPR
