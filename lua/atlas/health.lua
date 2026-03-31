@@ -1,6 +1,7 @@
 local M = {}
 
 local config = require("atlas.config")
+local checkout = require("atlas.bitbucket.checkout")
 
 ---@param section string
 ---@param user_key string
@@ -19,6 +20,46 @@ local function check_credentials(section, user_key, token_key, label)
 	vim.health.warn(string.format("%s credentials missing (%s and/or %s)", label, user_key, token_key))
 end
 
+---@param bin string
+---@param required boolean
+---@param label string
+local function check_executable(bin, required, label)
+	if vim.fn.executable(bin) == 1 then
+		vim.health.ok(string.format("%s found: %s", label, bin))
+		return
+	end
+
+	if required then
+		vim.health.error(string.format("%s missing: %s", label, bin))
+	else
+		vim.health.warn(string.format("%s not found: %s", label, bin))
+	end
+end
+
+local function check_repo_paths()
+	local bitbucket = (config.options and config.options.bitbucket) or {}
+	local repo_paths = bitbucket.repo_paths or {}
+
+	if vim.tbl_isempty(repo_paths) then
+		vim.health.warn("bitbucket.repo_paths is empty (local checkout/custom actions may not work)")
+		return
+	end
+
+	local ok, err = checkout.validate_repo_paths(repo_paths)
+	if not ok then
+		vim.health.error(string.format("bitbucket.repo_paths invalid: %s", tostring(err)))
+		return
+	end
+
+	vim.health.ok(
+		string.format(
+			"bitbucket.repo_paths configured (%d mapping%s)",
+			vim.tbl_count(repo_paths),
+			vim.tbl_count(repo_paths) == 1 and "" or "s"
+		)
+	)
+end
+
 function M.check()
 	--- Requirements
 	vim.health.start("Requirements")
@@ -27,9 +68,13 @@ function M.check()
 	else
 		vim.health.ok("Neovim version compatible")
 	end
+	check_executable("git", true, "Git")
 
-	vim.health.start("Provider Config")
+	vim.health.start("Bitbucket")
+	check_repo_paths()
 	check_credentials("bitbucket", "user", "token", "Bitbucket")
+
+	vim.health.start("Jira")
 	check_credentials("jira", "email", "token", "Jira")
 end
 

@@ -117,19 +117,26 @@ bitbucket = {
   },
   custom_actions = {
     {
-      id = "my_action",
-      label = "My custom action",
+      id = "open_tmux_window",
+      label = "Open repo in tmux window",
       ---@param pr BitbucketPR
       ---@param ctx table
       ---@param done fun(ok: boolean|nil, message: string|nil)
-      run = function(pr, ctx, done)
+      run = function(_, ctx, done)
         if not ctx.repo_path then
           done(false, "No repo path")
           return
         end
 
-        -- do async work...
-        done(true, "Action done")
+        vim.system({ "tmux", "new-window", "-c", ctx.repo_path }, { text = true }, function(res)
+          vim.schedule(function()
+            if res.code ~= 0 then
+              done(false, "Failed to open tmux window")
+              return
+            end
+            done(true, "Opened tmux window")
+          end)
+        end)
       end,
     },
   },
@@ -143,6 +150,8 @@ bitbucket = {
 - [x] PR actions: merge, approve, request changes
 - [x] Add custom actions to PRs
 - [x] Resolve and checkout PR branches locally
+- [ ] Bulk actions: approve/request changes on multiple PRs at once
+- [ ] PR files: fuzzy filter changed files by path
 
 <img width="2541" height="1365" alt="CleanShot 2026-03-31 at 02 54 23" src="https://github.com/user-attachments/assets/931ec50b-a0ca-4321-9326-3d53aea2432f" />
 
