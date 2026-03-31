@@ -141,6 +141,7 @@ bitbucket = {
   },
 }
 ```
+![CleanShot2026-03-31at20 08 06-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/a8ca355b-09e2-428c-b3fb-3280fd161110)
 
 ### Features
 
