@@ -151,6 +151,7 @@ bitbucket = {
 - [x] Add custom actions to PRs
 - [x] Resolve and checkout PR branches locally
 - [ ] Pagination for API results (PRs, comments, commits, files, activity)
+- [ ] Switch between open, merged and superseded PRs
 - [ ] Bulk actions: approve/request changes on multiple PRs at once
 - [ ] PR files: fuzzy filter changed files by path
 

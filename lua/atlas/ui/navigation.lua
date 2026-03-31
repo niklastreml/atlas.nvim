@@ -176,7 +176,7 @@ function M.register_keys(buf)
 				local current = M.current_item()
 				if panel.is_open() then
 					local selected = panel_state.selected_item
-					if type(selected) == "table" and selected.kind == "pr" then
+					if type(selected) == "table" and (selected.kind == "pr" or selected.kind == "issue") then
 						panel.close()
 						return
 					end
@@ -188,19 +188,20 @@ function M.register_keys(buf)
 			key = "[",
 			desc = "Previous panel tab",
 			callback = function()
-				if ui_state.current_view == "bitbucket" then
-					local function current_bb_tab_controller()
-						local item = panel_state.selected_item
-						if type(item) == "table" and item.kind == "repo" then
-							return require("atlas.bitbucket.ui.panel.repository.controller")
-						end
-						return require("atlas.bitbucket.ui.panel.prs.controller")
+				local panel = require("atlas.ui.panel")
+				if not panel.is_open() then
+					return
+				end
+
+				if ui_state.current_view == "jira" then
+					require("atlas.jira.panel.init").prev_tab()
+				elseif ui_state.current_view == "bitbucket" then
+					local item = panel_state.selected_item
+					if type(item) == "table" and item.kind == "repo" then
+						require("atlas.bitbucket.ui.panel.repository.controller").prev_tab()
+					else
+						require("atlas.bitbucket.ui.panel.prs.controller").prev_tab()
 					end
-					local panel = require("atlas.ui.panel")
-					if not panel.is_open() then
-						return
-					end
-					current_bb_tab_controller().prev_tab()
 				end
 			end,
 		},
@@ -208,19 +209,20 @@ function M.register_keys(buf)
 			key = "]",
 			desc = "Next panel tab",
 			callback = function()
-				if ui_state.current_view == "bitbucket" then
-					local function current_bb_tab_controller()
-						local item = panel_state.selected_item
-						if type(item) == "table" and item.kind == "repo" then
-							return require("atlas.bitbucket.ui.panel.repository.controller")
-						end
-						return require("atlas.bitbucket.ui.panel.prs.controller")
+				local panel = require("atlas.ui.panel")
+				if not panel.is_open() then
+					return
+				end
+
+				if ui_state.current_view == "jira" then
+					require("atlas.jira.panel.init").next_tab()
+				elseif ui_state.current_view == "bitbucket" then
+					local item = panel_state.selected_item
+					if type(item) == "table" and item.kind == "repo" then
+						require("atlas.bitbucket.ui.panel.repository.controller").next_tab()
+					else
+						require("atlas.bitbucket.ui.panel.prs.controller").next_tab()
 					end
-					local panel = require("atlas.ui.panel")
-					if not panel.is_open() then
-						return
-					end
-					current_bb_tab_controller().next_tab()
 				end
 			end,
 		},

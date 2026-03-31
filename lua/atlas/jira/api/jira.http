@@ -1,4 +1,3 @@
-@jira_api_version = 3
 @jira_issue_key = KAN-1
 @jira_project_key = KAN
 @jira_transition_id = 31
@@ -6,13 +5,13 @@
 @jira_comment_id = 10001
 
 ### Get current user
-GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/myself
+GET {{JIRA_BASE_URL}}/rest/api/3/myself
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 Content-Type: application/json
 
-### Search issues (v3)
-POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/search/jql
+### Search issues
+POST {{JIRA_BASE_URL}}/rest/api/3/search/jql
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -26,13 +25,13 @@ Accept: application/json
 
 
 ### Get transitions
-GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/transitions
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/transitions
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
 
 ### Transition issue
-POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/transitions
+POST {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/transitions
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -45,7 +44,7 @@ Accept: application/json
 
 
 ### Add worklog
-POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/worklog
+POST {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/worklog
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -71,7 +70,7 @@ Accept: application/json
 
 
 ### Assign issue
-PUT {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/assignee
+PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/assignee
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -82,25 +81,25 @@ Accept: application/json
 
 
 ### Get issue details
-GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
 
 ### Get project statuses
-GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/project/{{jira_project_key}}/statuses
+GET {{JIRA_BASE_URL}}/rest/api/3/project/{{jira_project_key}}/statuses
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
 
 ### Get comments
-GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/comment
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
 
 ### Add comment
-POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/comment
+POST {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -125,7 +124,7 @@ Accept: application/json
 
 
 ### Edit comment
-PUT {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}/comment/{{jira_comment_id}}
+PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment/{{jira_comment_id}}
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -150,7 +149,7 @@ Accept: application/json
 
 
 ### Update issue fields
-PUT {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/{{jira_issue_key}}
+PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -163,7 +162,7 @@ Accept: application/json
 
 
 ### Create issue
-POST {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue
+POST {{JIRA_BASE_URL}}/rest/api/3/issue
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Content-Type: application/json
 Accept: application/json
@@ -182,6 +181,6 @@ Accept: application/json
 
 
 ### Get create metadata
-GET {{JIRA_BASE_URL}}/rest/api/{{jira_api_version}}/issue/createmeta?projectKeys={{jira_project_key}}
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/createmeta?projectKeys={{jira_project_key}}
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json

@@ -4,42 +4,54 @@ local layout = require("atlas.ui.layout")
 local state = require("atlas.ui.panel.state")
 local ui_state = require("atlas.ui.main.state")
 
+local function current_panel_controller()
+	local provider = state.active_provider
+	if provider == "jira" then
+		return require("atlas.jira.panel.init")
+	end
+
+	local item = state.selected_item
+	if type(item) == "table" and item.kind == "repo" then
+		return require("atlas.bitbucket.ui.panel.repository.controller")
+	end
+	return require("atlas.bitbucket.ui.panel.prs.controller")
+end
+
+local function refresh_current_panel()
+	local provider = state.active_provider
+	if provider == "jira" then
+		require("atlas.jira.panel.init").refresh()
+		return
+	end
+
+	local item = state.selected_item
+	if type(item) == "table" and item.kind == "repo" then
+		require("atlas.bitbucket.ui.panel.repository.controller").refresh_selected_repo()
+		return
+	end
+	require("atlas.bitbucket.ui.panel.prs.controller").refresh_selected_pr()
+end
+
 local function register_panel_keys()
 	local buf = layout.buf_id("detail")
 	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
 		return
 	end
 
-	local function current_bb_controller()
-		local item = state.selected_item
-		if type(item) == "table" and item.kind == "repo" then
-			return require("atlas.bitbucket.ui.panel.repository.controller")
-		end
-		return require("atlas.bitbucket.ui.panel.prs.controller")
-	end
-
-	local function refresh_current_bb_panel()
-		local item = state.selected_item
-		if type(item) == "table" and item.kind == "repo" then
-			require("atlas.bitbucket.ui.panel.repository.controller").refresh_selected_repo()
-			return
-		end
-		require("atlas.bitbucket.ui.panel.prs.controller").refresh_selected_pr()
-	end
 	vim.keymap.set("n", "q", function()
 		M.close()
 	end, { buffer = buf, silent = true, nowait = true })
 
 	vim.keymap.set("n", "[", function()
-		current_bb_controller().prev_tab()
+		current_panel_controller().prev_tab()
 	end, { buffer = buf, silent = true, nowait = true })
 
 	vim.keymap.set("n", "]", function()
-		current_bb_controller().next_tab()
+		current_panel_controller().next_tab()
 	end, { buffer = buf, silent = true, nowait = true })
 
 	vim.keymap.set("n", "r", function()
-		refresh_current_bb_panel()
+		refresh_current_panel()
 	end, { buffer = buf, silent = true, nowait = true })
 end
 
@@ -91,6 +103,11 @@ end
 function M.on_select(provider, item)
 	state.set_selection(provider, item)
 	if not M.is_open() then
+		return
+	end
+
+	if provider == "jira" then
+		require("atlas.jira.panel.init").on_select(item)
 		return
 	end
 
