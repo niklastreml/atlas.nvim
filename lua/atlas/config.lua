@@ -8,9 +8,6 @@
 --- @field base_url string
 --- @field email string
 --- @field token string
---- @field type string|nil
---- @field api_version string|nil
---- @field limit number|nil
 --- @field cache_ttl number|nil
 --- @field views JiraViewConfig[]|nil
 
@@ -57,9 +54,6 @@ M.options = {
 		base_url = vim.env.JIRA_BASE_URL or "",
 		email = vim.env.JIRA_EMAIL or "",
 		token = vim.env.JIRA_TOKEN or "",
-		type = vim.env.JIRA_AUTH_TYPE or "basic",
-		api_version = vim.env.JIRA_API_VERSION or "3",
-		limit = 200,
 		cache_ttl = 300,
 		views = nil,
 	},
