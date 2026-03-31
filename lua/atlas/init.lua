@@ -1,7 +1,8 @@
 local M = {}
 local logger = require("atlas.core.logger")
 
-M.setup = function(opts)
+---@param opts AtlasConfig|nil
+function M.setup(opts)
 	require("atlas.config").setup(opts)
 	require("atlas.core.logger").clear()
 end

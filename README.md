@@ -98,15 +98,13 @@ return {
 
 You can add custom PR actions under `bitbucket.custom_actions`.
 
-`ctx` includes:
+Context type:
 
-- `repo_path` (resolved local path or `nil`)
-- `workspace`
-- `repo`
-- `source_branch`
-- `target_branch`
-- `pr_id`
-- `pr_url`
+```lua
+---@class BitbucketCustomActionContext
+---@field repo_path string|nil
+---@field pr BitbucketPR
+```
 
 Example:
 
@@ -119,8 +117,9 @@ bitbucket = {
     {
       id = "open_tmux_window",
       label = "Open repo in tmux window",
+      confirmation = true, -- present a confirmation prompt before running the action
       ---@param pr BitbucketPR
-      ---@param ctx table
+      ---@param ctx BitbucketCustomActionContext
       ---@param done fun(ok: boolean|nil, message: string|nil)
       run = function(_, ctx, done)
         if not ctx.repo_path then

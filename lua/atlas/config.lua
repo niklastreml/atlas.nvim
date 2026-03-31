@@ -27,10 +27,15 @@
 ---@field layout "compact"|"plain"|nil
 ---@field filter? fun(pr: BitbucketPR, ctx: table): boolean
 
+---@class BitbucketCustomActionContext
+---@field repo_path string|nil
+---@field pr BitbucketPR
+
 ---@class BitbucketCustomAction
 ---@field id string
 ---@field label string
----@field run fun(pr: BitbucketPR, ctx: table, done: fun(ok: boolean|nil, message: string|nil))
+---@field confirmation boolean|nil
+---@field run fun(pr: BitbucketPR, ctx: BitbucketCustomActionContext, done: fun(ok: boolean|nil, message: string|nil))
 
 --- @class BitbucketConfig
 --- @field user string

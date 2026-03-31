@@ -7,6 +7,26 @@ local footer = require("atlas.ui.components.footer")
 local checkout = require("atlas.bitbucket.checkout")
 local logger = require("atlas.core.logger")
 
+---@param action_label string
+---@param on_confirmed fun()
+local function confirm_action(action_label, on_confirmed)
+	vim.ui.input({
+		prompt = string.format("Confirm %s? [y/N]: ", action_label),
+	}, function(input)
+		if input == nil then
+			return
+		end
+
+		local normalized = vim.trim(tostring(input)):lower()
+		if normalized ~= "y" and normalized ~= "yes" then
+			footer.notify("info", "Action cancelled")
+			return
+		end
+
+		on_confirmed()
+	end)
+end
+
 ---@param value string
 ---@param label string
 local function copy_value(value, label)
@@ -31,6 +51,7 @@ function M.open_pr_actions_popup(pr)
 		{
 			id = "checkout",
 			label = "Checkout",
+			confirmation = false,
 			run = function()
 				if pr == nil then
 					footer.notify("warn", "No PR selected")
@@ -59,6 +80,7 @@ function M.open_pr_actions_popup(pr)
 		{
 			id = "merge",
 			label = "Merge",
+			confirmation = true,
 			run = function()
 				local merge_url = tostring((pr.links or {}).merge or "")
 				if merge_url == "" then
@@ -84,6 +106,7 @@ function M.open_pr_actions_popup(pr)
 		{
 			id = "request_changes",
 			label = "Request changes",
+			confirmation = false,
 			run = function()
 				footer.notify("loading", "Starting Request changes...")
 				service.request_changes_pullrequest(tostring((pr.links or {}).request_changes or ""), function(_, err)
@@ -101,6 +124,7 @@ function M.open_pr_actions_popup(pr)
 		{
 			id = "approve",
 			label = "Approve",
+			confirmation = false,
 			run = function()
 				footer.notify("loading", "Starting Approve...")
 				service.approve_pullrequest(tostring((pr.links or {}).approve or ""), function(_, err)
@@ -122,12 +146,7 @@ function M.open_pr_actions_popup(pr)
 	local repo_path = checkout.resolve_repo_path_for_pr(pr, { require_git = false, require_existing = false })
 	local ctx = {
 		repo_path = repo_path,
-		workspace = tostring(pr.repo.workspace or ""),
-		repo = tostring(pr.repo.repo or ""),
-		source_branch = tostring(pr.source_branch or ""),
-		target_branch = tostring(pr.target_branch or ""),
-		pr_id = tonumber(pr.id) or nil,
-		pr_url = tostring((pr.links or {}).self or ""),
+		pr = pr,
 	}
 
 	local options = {}
@@ -140,6 +159,7 @@ function M.open_pr_actions_popup(pr)
 			table.insert(options, {
 				id = tostring(item.id or item.label),
 				label = item.label,
+				confirmation = item.confirmation == true,
 				run = function()
 					footer.notify("loading", string.format("Running %s...", tostring(item.label)))
 
@@ -182,6 +202,12 @@ function M.open_pr_actions_popup(pr)
 		if choice == nil then
 			return
 		end
+
+		if choice.confirmation == true then
+			confirm_action(choice.label, choice.run)
+			return
+		end
+
 		choice.run()
 	end)
 end
