@@ -19,13 +19,16 @@ local TAB_ORDER = {
 
 detail_spinner = spinner.create({
 	interval_ms = 120,
-		on_tick = function()
+	on_tick = function()
 		local repo = state.current_repo
 		local is_detail_loading = state.current_detail == "loading"
 		local is_readme_loading = state.current_readme == "loading"
 		local is_branches_loading = state.current_branches == "loading"
 		local is_tags_loading = state.current_tags == "loading"
-		if repo == nil or (not is_detail_loading and not is_readme_loading and not is_branches_loading and not is_tags_loading) then
+		if
+			repo == nil
+			or (not is_detail_loading and not is_readme_loading and not is_branches_loading and not is_tags_loading)
+		then
 			detail_spinner:stop()
 			return
 		end
@@ -67,8 +70,12 @@ local function apply_tab_buffer_mode(tab)
 
 	if tab == "overview" then
 		vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
+		vim.api.nvim_set_option_value("syntax", "markdown", { buf = buf })
+		pcall(vim.treesitter.start, buf, "markdown")
 	else
 		vim.api.nvim_set_option_value("filetype", "atlas-detail", { buf = buf })
+		vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
+		pcall(vim.treesitter.stop, buf, "markdown")
 	end
 end
 
@@ -249,7 +256,7 @@ function M.select_tab(tab)
 			M.refresh()
 			start_spinner()
 			footer.notify("loading", "Loading branches...")
-			local branches_url = tostring((((detail.links or {}).branches or {}).href) or "")
+			local branches_url = tostring(((detail.links or {}).branches or {}).href or "")
 			service.fetch_repository_branches(branches_url, { force_load = false }, function(branches, err)
 				stop_spinner()
 				if err ~= nil then
@@ -270,7 +277,7 @@ function M.select_tab(tab)
 			M.refresh()
 			start_spinner()
 			footer.notify("loading", "Loading tags...")
-			local tags_url = tostring((((detail.links or {}).tags or {}).href) or "")
+			local tags_url = tostring(((detail.links or {}).tags or {}).href or "")
 			service.fetch_repository_tags(tags_url, { force_load = false }, function(tags, err)
 				stop_spinner()
 				if err ~= nil then

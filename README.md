@@ -5,7 +5,7 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 > [!CAUTION]
 > **Still in early development, will have breaking changes!**
 
-<img width="2532" height="1366" alt="CleanShot 2026-03-31 at 02 51 32" src="https://github.com/user-attachments/assets/d08dde1f-8bae-446f-8db1-a9f53b118fad" />
+<img width="2541" height="1365" alt="CleanShot 2026-03-31 at 02 54 23" src="https://github.com/user-attachments/assets/931ec50b-a0ca-4321-9326-3d53aea2432f" />
 
 ### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
@@ -150,10 +150,11 @@ bitbucket = {
 - [x] PR actions: merge, approve, request changes
 - [x] Add custom actions to PRs
 - [x] Resolve and checkout PR branches locally
+- [ ] Pagination for API results (PRs, comments, commits, files, activity)
 - [ ] Bulk actions: approve/request changes on multiple PRs at once
 - [ ] PR files: fuzzy filter changed files by path
 
-<img width="2541" height="1365" alt="CleanShot 2026-03-31 at 02 54 23" src="https://github.com/user-attachments/assets/931ec50b-a0ca-4321-9326-3d53aea2432f" />
+<img width="2532" height="1366" alt="CleanShot 2026-03-31 at 02 51 32" src="https://github.com/user-attachments/assets/d08dde1f-8bae-446f-8db1-a9f53b118fad" />
 
 ## Jira
 

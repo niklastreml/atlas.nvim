@@ -86,8 +86,12 @@ local function apply_tab_buffer_mode(tab)
 
 	if tab == "overview" then
 		vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
+		vim.api.nvim_set_option_value("syntax", "markdown", { buf = buf })
+		pcall(vim.treesitter.start, buf, "markdown")
 	else
 		vim.api.nvim_set_option_value("filetype", "atlas-detail", { buf = buf })
+		vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
+		pcall(vim.treesitter.stop, buf, "markdown")
 	end
 end
 
