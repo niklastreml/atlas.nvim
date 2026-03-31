@@ -54,6 +54,12 @@ return {
         user = os.getenv("BITBUCKET_USER") or "",
         token = os.getenv("BITBUCKET_TOKEN") or "",
         cache_ttl = 300,
+        -- Maps `workspace/repo` to local paths. Used for checkout and custom actions.
+        repo_paths = {
+          ["your-workspace/*"] = "~/code/repos/*",
+          ["your-workspace/atlas"] = "~/code/atlas",
+        },
+        custom_actions = {}, -- See Custom Actions below.
 
         ---@type BitbucketViewConfig[]
         views = {
@@ -88,19 +94,62 @@ return {
 }
 ```
 
+### Custom Actions
+
+You can add custom PR actions under `bitbucket.custom_actions`.
+
+`ctx` includes:
+
+- `repo_path` (resolved local path or `nil`)
+- `workspace`
+- `repo`
+- `source_branch`
+- `target_branch`
+- `pr_id`
+- `pr_url`
+
+Example:
+
+```lua
+bitbucket = {
+  repo_paths = {
+    ["your-workspace/*"] = "~/code/repos/*",
+  },
+  custom_actions = {
+    {
+      id = "my_action",
+      label = "My custom action",
+      ---@param pr BitbucketPR
+      ---@param ctx table
+      ---@param done fun(ok: boolean|nil, message: string|nil)
+      run = function(pr, ctx, done)
+        if not ctx.repo_path then
+          done(false, "No repo path")
+          return
+        end
+
+        -- do async work...
+        done(true, "Action done")
+      end,
+    },
+  },
+}
+```
+
 ### Features
 
 - [x] Multiple Bitbucket views
 - [x] PR tabs: overview, activity, comments, commits, files
 - [x] PR actions: merge, approve, request changes
-- [x] Repository tabs: overview, branches, tags
+- [x] Add custom actions to PRs
+- [x] Resolve and checkout PR branches locally
 
 <img width="2541" height="1365" alt="CleanShot 2026-03-31 at 02 54 23" src="https://github.com/user-attachments/assets/931ec50b-a0ca-4321-9326-3d53aea2432f" />
 
 ## Jira
 
 > [!NOTE]
-Inspired by [jira.nvim](https://github.com/letieu/jira.nvim). This plugin is adapted for my personal workflow and preferences. I highly recommend checking out the original project for a more general-purpose solution.
+Inspired by [jira.nvim](https://github.com/letieu/jira.nvim) since it fitted nicely in this here. I highly recommend checking out the original project for a more general-purpose solution.
 
 ### Configuration
 
