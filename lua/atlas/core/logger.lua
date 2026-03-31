@@ -97,8 +97,19 @@ end
 ---@param context table|nil
 local function write(level, message, context)
 	local line = string.format("%s [%s] %s%s", now_iso(), level, to_text(message), context_suffix(context))
-	enforce_max_size(log_path())
-	vim.fn.writefile({ line }, log_path(), "a")
+	local path = log_path()
+
+	local function do_write()
+		enforce_max_size(path)
+		vim.fn.writefile({ line }, path, "a")
+	end
+
+	if vim.in_fast_event() then
+		vim.schedule(do_write)
+		return
+	end
+
+	do_write()
 end
 
 ---@param message any

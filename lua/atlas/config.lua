@@ -27,12 +27,18 @@
 ---@field layout "compact"|"plain"|nil
 ---@field filter? fun(pr: BitbucketPR, ctx: table): boolean
 
+---@class BitbucketCustomAction
+---@field id string
+---@field label string
+---@field run fun(pr: BitbucketPR, ctx: table, done: fun(ok: boolean|nil, message: string|nil))
+
 --- @class BitbucketConfig
 --- @field user string
 --- @field token string
 --- @field cache_ttl number|nil
 --- @field views BitbucketViewConfig[]|nil
 --- @field repo_paths table<string, string>|nil
+---@field custom_actions BitbucketCustomAction[]|nil
 
 --- @class AtlasConfig
 --- @field jira JiraConfig
@@ -59,6 +65,7 @@ M.options = {
 		cache_ttl = 300,
 		views = nil,
 		repo_paths = {},
+		custom_actions = {},
 	},
 }
 

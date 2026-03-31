@@ -5,6 +5,7 @@ local service = require("atlas.bitbucket.api.service")
 local navigation = require("atlas.ui.navigation")
 local footer = require("atlas.ui.components.footer")
 local checkout = require("atlas.bitbucket.checkout")
+local logger = require("atlas.core.logger")
 
 ---@param value string
 ---@param label string
@@ -19,32 +20,6 @@ local function copy_value(value, label)
 	footer.notify("info", string.format("Copied %s", label))
 end
 
----@params pr BitbucketPR|nil
-function M.checkout_pr(pr)
-	if pr == nil then
-		footer.notify("warn", "No PR selected")
-		return
-	end
-
-	local cfg = require("atlas.config").options.bitbucket or {}
-	if vim.tbl_isempty(cfg.repo_paths or {}) then
-		footer.notify("warn", "No repository paths configured for checkout")
-		return
-	end
-
-	footer.notify("loading", string.format("Checking out PR #%s", tostring(pr.id or "")))
-	checkout.checkout_pr(pr, function(success, err)
-		vim.schedule(function()
-			if err ~= nil then
-				footer.notify("error", string.format("Checkout failed: %s", tostring(err)))
-				return
-			end
-
-			footer.notify("success", string.format("Checked out PR #%s", tostring(pr.id or "")))
-		end)
-	end)
-end
-
 ---@param pr BitbucketPR|nil
 function M.open_pr_actions_popup(pr)
 	if pr == nil then
@@ -52,11 +27,151 @@ function M.open_pr_actions_popup(pr)
 		return
 	end
 
-	local options = {
-		{ id = "merge", label = "Merge" },
-		{ id = "request_changes", label = "Request changes" },
-		{ id = "approve", label = "Approve" },
+	local builtin = {
+		{
+			id = "checkout",
+			label = "Checkout",
+			run = function()
+				if pr == nil then
+					footer.notify("warn", "No PR selected")
+					return
+				end
+
+				local cfg = require("atlas.config").options.bitbucket or {}
+				if vim.tbl_isempty(cfg.repo_paths or {}) then
+					footer.notify("warn", "No repository paths configured for checkout")
+					return
+				end
+
+				footer.notify("loading", string.format("Checking out PR #%s", tostring(pr.id or "")))
+				checkout.checkout_pr(pr, function(success, err)
+					vim.schedule(function()
+						if err ~= nil then
+							footer.notify("error", string.format("Checkout failed: %s", tostring(err)))
+							return
+						end
+
+						footer.notify("success", string.format("Checked out PR #%s", tostring(pr.id or "")))
+					end)
+				end)
+			end,
+		},
+		{
+			id = "merge",
+			label = "Merge",
+			run = function()
+				local merge_url = tostring((pr.links or {}).merge or "")
+				if merge_url == "" then
+					merge_url = tostring((((pr._raw or {}).links or {}).merge or {}).href or "")
+				end
+
+				footer.notify("loading", "Starting Merge...")
+				service.merge_pullrequest(merge_url, {
+					close_source_branch = true,
+					merge_strategy = "merge_commit",
+				}, function(_, err)
+					if err ~= nil then
+						footer.notify("error", string.format("Merge failed: %s", tostring(err)))
+						return
+					end
+					footer.notify("success", "Merge succeeded")
+					actions.refresh_current_view(function()
+						navigation.focus_first_item()
+					end)
+				end)
+			end,
+		},
+		{
+			id = "request_changes",
+			label = "Request changes",
+			run = function()
+				footer.notify("loading", "Starting Request changes...")
+				service.request_changes_pullrequest(tostring((pr.links or {}).request_changes or ""), function(_, err)
+					if err ~= nil then
+						footer.notify("error", string.format("Request changes failed: %s", tostring(err)))
+						return
+					end
+					footer.notify("success", "Request changes succeeded")
+					actions.refresh_current_view(function()
+						navigation.focus_first_item()
+					end)
+				end)
+			end,
+		},
+		{
+			id = "approve",
+			label = "Approve",
+			run = function()
+				footer.notify("loading", "Starting Approve...")
+				service.approve_pullrequest(tostring((pr.links or {}).approve or ""), function(_, err)
+					if err ~= nil then
+						footer.notify("error", string.format("Approve failed: %s", tostring(err)))
+						return
+					end
+					footer.notify("success", "Approve succeeded")
+					actions.refresh_current_view(function()
+						navigation.focus_first_item()
+					end)
+				end)
+			end,
+		},
 	}
+
+	local cfg = require("atlas.config").options.bitbucket or {}
+	local custom_actions = cfg.custom_actions or {}
+	local repo_path = checkout.resolve_repo_path_for_pr(pr, { require_git = false, require_existing = false })
+	local ctx = {
+		repo_path = repo_path,
+		workspace = tostring(pr.repo.workspace or ""),
+		repo = tostring(pr.repo.repo or ""),
+		source_branch = tostring(pr.source_branch or ""),
+		target_branch = tostring(pr.target_branch or ""),
+		pr_id = tonumber(pr.id) or nil,
+		pr_url = tostring((pr.links or {}).self or ""),
+	}
+
+	local options = {}
+	for _, item in ipairs(builtin) do
+		table.insert(options, item)
+	end
+
+	for _, item in ipairs(custom_actions) do
+		if type(item) == "table" and type(item.label) == "string" and type(item.run) == "function" then
+			table.insert(options, {
+				id = tostring(item.id or item.label),
+				label = item.label,
+				run = function()
+					footer.notify("loading", string.format("Running %s...", tostring(item.label)))
+
+					local done_called = false
+					local function done(ok, message)
+						if done_called then
+							return
+						end
+						done_called = true
+
+						vim.schedule(function()
+							if ok == false then
+								footer.notify("error", tostring(message or (item.label .. " failed")))
+								logger.logerror(string.format("Custom action failed: %s", tostring(message)))
+								return
+							end
+							footer.notify("success", tostring(message or (item.label .. " done")))
+						end)
+					end
+
+					local ok, err = pcall(item.run, pr, ctx, done)
+					if not ok then
+						--- in case the call crashes, call done ourself
+						done(false, string.format("Custom action failed: %s", tostring(err)))
+						logger.logerror(
+							string.format("Custom action '%s' execution error: %s", item.label, tostring(err))
+						)
+					end
+				end,
+			})
+		end
+	end
 
 	vim.ui.select(options, {
 		prompt = string.format("PR #%s action", tostring(pr.id or "")),
@@ -67,39 +182,7 @@ function M.open_pr_actions_popup(pr)
 		if choice == nil then
 			return
 		end
-		footer.notify("loading", string.format("Starting %s for PR #%s", choice.label, tostring(pr.id or "")))
-
-		local function on_done(_, err)
-			if err ~= nil then
-				footer.notify("error", string.format("%s failed: %s", choice.label, tostring(err)))
-				return
-			end
-			footer.notify("success", string.format("%s succeeded", choice.label))
-			actions.refresh_current_view(function()
-				navigation.focus_first_item()
-			end)
-		end
-
-		if choice.id == "merge" then
-			local merge_url = tostring((pr.links or {}).merge or "")
-			if merge_url == "" then
-				merge_url = tostring((((pr._raw or {}).links or {}).merge or {}).href or "")
-			end
-			service.merge_pullrequest(merge_url, {
-				close_source_branch = true,
-				merge_strategy = "merge_commit",
-			}, on_done)
-			return
-		end
-
-		if choice.id == "approve" then
-			service.approve_pullrequest(tostring((pr.links or {}).approve or ""), on_done)
-			return
-		end
-
-		if choice.id == "request_changes" then
-			service.request_changes_pullrequest(tostring((pr.links or {}).request_changes or ""), on_done)
-		end
+		choice.run()
 	end)
 end
 

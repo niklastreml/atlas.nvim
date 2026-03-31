@@ -1,6 +1,7 @@
 local M = {}
 
 local config = require("atlas.config")
+local logger = require("atlas.core.logger")
 
 local function trim(s)
 	if type(s) ~= "string" then
@@ -101,12 +102,13 @@ end
 
 ---@param repo_paths table<string, string>
 ---@param repo_name string
----@param opts {require_git: boolean|nil }
+---@param opts {require_git: boolean|nil, require_existing: boolean|nil }
 ---@return string|nil repo_path
 ---@return string|nil err
 function M.resolve_repo_path(repo_paths, repo_name, opts)
 	opts = opts or {}
 	local require_git = opts.require_git ~= false
+	local require_existing = opts.require_existing ~= false
 
 	local ok, err = M.validate_repo_paths(repo_paths)
 	if not ok then
@@ -133,7 +135,7 @@ function M.resolve_repo_path(repo_paths, repo_name, opts)
 		return nil, string.format("no repo_paths mapping for '%s'", repo_name)
 	end
 
-	if vim.fn.isdirectory(resolved) ~= 1 then
+	if require_existing and vim.fn.isdirectory(resolved) ~= 1 then
 		return nil, string.format("mapped path does not exist: %s", resolved)
 	end
 
@@ -145,6 +147,27 @@ function M.resolve_repo_path(repo_paths, repo_name, opts)
 	end
 
 	return resolved, nil
+end
+
+---@param pr BitbucketPR|nil
+---@param opts {require_git: boolean|nil, require_existing: boolean|nil }
+---@return string|nil repo_path
+---@return string|nil err
+function M.resolve_repo_path_for_pr(pr, opts)
+	if type(pr) ~= "table" then
+		return nil, "no PR selected"
+	end
+
+	local repo = pr.repo or {}
+	local ws = tostring(repo.workspace or "")
+	local slug = tostring(repo.repo or "")
+	if ws == "" or slug == "" then
+		return nil, "missing PR destination repository fields"
+	end
+
+	local repo_name = string.format("%s/%s", ws, slug)
+	local mapping = (config.options.bitbucket or {}).repo_paths or {}
+	return M.resolve_repo_path(mapping, repo_name, opts)
 end
 
 ---@class BitbucketCheckoutResult
@@ -164,19 +187,13 @@ function M.checkout_pr(pr, on_done)
 	local src_branch = tostring(pr.source_branch or "")
 	if src_branch == "" then
 		on_done(nil, "PR source branch is missing")
-	end
-
-	local repo = pr.repo or {}
-	local ws = tostring(repo.workspace or "")
-	local slug = tostring(repo.repo or "")
-	if ws == "" or slug == "" then
-		on_done(nil, "missing PR destination repository fields")
 		return
 	end
 
-	local mapping = (config.options.bitbucket or {}).repo_paths or {}
-	local repo_path, resolve_err =
-		M.resolve_repo_path(mapping, string.format("%s/%s", ws, slug), { require_git = true })
+	local repo_path, resolve_err = M.resolve_repo_path_for_pr(pr, {
+		require_git = true,
+		require_existing = true,
+	})
 	if not repo_path then
 		on_done(nil, resolve_err)
 		return
@@ -184,7 +201,13 @@ function M.checkout_pr(pr, on_done)
 
 	run({ "git", "checkout", src_branch }, repo_path, function(checkout_res)
 		if checkout_res.code == 0 then
+			logger.loginfo("checkout.checkout_pr switched existing branch", {
+				pr_id = pr.id,
+				repo_path = repo_path,
+				branch = src_branch,
+			})
 			on_done({ repo_path = repo_path, local_branch = src_branch }, nil)
+			return
 		end
 
 		run({ "git", "fetch", "origin", src_branch }, repo_path, function(fetch_res)
@@ -193,6 +216,13 @@ function M.checkout_pr(pr, on_done)
 				if ferr == "" then
 					ferr = string.format("git fetch failed with code %d", fetch_res.code)
 				end
+				logger.logerror("checkout.checkout_pr fetch failed", {
+					pr_id = pr.id,
+					repo_path = repo_path,
+					branch = src_branch,
+					code = fetch_res.code,
+					error = ferr,
+				})
 				on_done(nil, ferr)
 				return
 			end
@@ -203,9 +233,22 @@ function M.checkout_pr(pr, on_done)
 					if cerr == "" then
 						cerr = "git checkout branch failed"
 					end
+					logger.logerror("checkout.checkout_pr create branch failed", {
+						pr_id = pr.id,
+						repo_path = repo_path,
+						branch = src_branch,
+						code = create_res.code,
+						error = cerr,
+					})
 					on_done(nil, cerr)
 					return
 				end
+
+				logger.loginfo("checkout.checkout_pr created and switched branch", {
+					pr_id = pr.id,
+					repo_path = repo_path,
+					branch = src_branch,
+				})
 
 				on_done({ repo_path = repo_path, local_branch = src_branch }, nil)
 			end)
