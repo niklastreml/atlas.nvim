@@ -3,111 +3,40 @@ local M = {}
 local config = require("atlas.config")
 local icons = require("atlas.ui.icons")
 local state = require("atlas.jira.state")
+local normalizer = require("atlas.jira.api.normalizer")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
 local utils = require("atlas.utils")
 local footer = require("atlas.ui.components.footer")
 
-local function fake_rows()
-	return {
-		{
-			kind = "project",
-			key = "ATLAS",
-			name = "ATLAS",
-			expanded = true,
-			children = {
-				{
-					kind = "issue",
-					id = "ATLAS-101",
-					name = "Implement Jira panel architecture",
-					title = "Implement Jira panel architecture",
-					assignee = "emrearmagan",
-					status = "In Progress",
-					priority = "High",
-					type = "Story",
-					updated = "2h",
-					_item = { kind = "issue", key = "ATLAS-101" },
-				},
-				{
-					kind = "issue",
-					id = "ATLAS-102",
-					name = "Add comment line map support",
-					title = "Add comment line map support",
-					assignee = "emrearmagan",
-					status = "To Do",
-					priority = "Medium",
-					type = "Task",
-					updated = "5h",
-					_item = { kind = "issue", key = "ATLAS-102" },
-				},
-				{
-					kind = "issue",
-					id = "ATLAS-103",
-					name = "Fix ADF rendering for code blocks",
-					title = "Fix ADF rendering for code blocks",
-					assignee = "Unassigned",
-					status = "To Do",
-					priority = "Low",
-					type = "Bug",
-					updated = "1d",
-					_item = { kind = "issue", key = "ATLAS-103" },
-				},
-				{
-					kind = "issue",
-					id = "ATLAS-104",
-					name = "Add worklog tab to panel",
-					title = "Add worklog tab to panel",
-					assignee = "team-bot",
-					status = "Review",
-					priority = "Medium",
-					type = "Task",
-					updated = "3h",
-					_item = { kind = "issue", key = "ATLAS-104" },
-				},
-				{
-					kind = "issue",
-					id = "ATLAS-105",
-					name = "Refactor transition action flow",
-					title = "Refactor transition action flow",
-					assignee = "emrearmagan",
-					status = "Done",
-					priority = "High",
-					type = "Story",
-					updated = "6h",
-					_item = { kind = "issue", key = "ATLAS-105" },
-				},
-			},
-			_item = { kind = "project", key = "ATLAS" },
-		},
-	}
+---@param view JiraViewConfig|nil
+---@return string
+local function view_id(view)
+	if view == nil then
+		return ""
+	end
+	return view.key or view.name or ""
 end
 
 ---@param opts { width: number, height: number }
 function M.render(opts)
-	footer.set_items({
-		{ text = "Issues", hl_group = "AtlasFooterText" },
-		{ text = "|", hl_group = "AtlasFooterText" },
-		{ text = "r refresh", hl_group = "AtlasFooterText" },
-	})
-
 	local views = (config.options.jira and config.options.jira.views) or {}
-	if state.active_view_key == nil and views[1] then
-		state.active_view_key = views[1].key or views[1].name
-	end
+	local active = state.active_view
+	local active_id = view_id(active)
 
 	local nav_items = {}
 	for _, v in ipairs(views) do
-		local key = v.key or v.name
+		local id = view_id(v)
 		local label = v.key and string.format("%s (%s)", v.name, v.key) or v.name
 		table.insert(nav_items, {
 			label = label,
-			active = key == state.active_view_key,
+			active = id == active_id,
 		})
 	end
 
 	local actions = {
-		{ label = string.format(" %s Refresh (r) ", icons.entity("refresh")), hl_group = "AtlasJiraTheme" },
+		{ label = string.format(" %s Refresh (R) ", icons.entity("refresh")), hl_group = "AtlasJiraTheme" },
 	}
 
 	local lines, spans = {}, {}
@@ -137,40 +66,69 @@ function M.render(opts)
 
 	table.insert(lines, "")
 
-	local tbl_lines, tbl_map, tbl_spans = table_view.render({
-		width = opts.width,
-		margin = 0,
-		columns = {
-			{ key = "name", name = "Project / Issue", min_width = 30 },
-			{ key = "id", name = "Key", min_width = 12 },
-			{ key = "assignee", name = "Assignee", min_width = 16 },
-			{ key = "status", name = "Status", min_width = 14 },
-			{ key = "updated", name = "Updated", min_width = 8 },
-		},
-		rows = fake_rows(),
-		tree = {
-			children_key = "children",
-			expanded_field = "expanded",
-			default_expanded = true,
-			indent = "  ",
-			show_indicator = true,
-			leaf_prefix = "└─ ",
-		},
-		cell_hl = function(row, col)
-			if row.kind == "project" and col.key == "name" then
-				return "AtlasTextPositive"
-			end
-			if row.kind == "issue" and col.key == "status" then
-				return "AtlasTextWarning"
-			end
-			return "AtlasTextMuted"
-		end,
-	})
+	if state.error then
+		table.insert(lines, "Error: " .. state.error)
+	elseif state.is_loading then
+		table.insert(lines, "Loading...")
+	elseif state.issues == nil or #state.issues == 0 then
+		table.insert(lines, "No issues found.")
+	else
+		local tbl_lines, tbl_map, tbl_spans = table_view.render({
+			width = opts.width,
+			margin = 1,
+			columns = {
+				{ key = "name", name = "Issue", min_width = 30 },
+				{ key = "id", name = "Key", min_width = 12 },
+				{ key = "type", name = "Type", min_width = 10 },
+				{ key = "assignee", name = "Assignee", min_width = 16 },
+				{ key = "status", name = "Status", min_width = 14 },
+			},
+			rows = state.issue_tree,
+			tree = {
+				children_key = "children",
+				expanded_field = "expanded",
+				default_expanded = true,
+				indent = "  ",
+				show_indicator = true,
+				leaf_prefix = "└─ ",
+			},
+			cell_hl = function(row, col)
+				if col.key == "status" then
+					if row.status_category == "Done" then
+						return "AtlasTextPositive"
+					end
+					if row.status_category == "In Progress" or row.status_category == "In Arbeit" then
+						return "AtlasTextWarning"
+					end
+					return "AtlasTextMuted"
+				end
+				if col.key == "type" then
+					return "AtlasTextMuted"
+				end
+				if col.key == "id" then
+					return "AtlasTextMuted"
+				end
+				return nil
+			end,
+		})
 
-	local table_base = #lines
-	utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
-	for lnum, node in pairs(tbl_map) do
-		line_map[table_base + lnum] = node
+		local table_base = #lines
+		utils.append_block(lines, spans, { lines = tbl_lines, spans = tbl_spans })
+
+		for lnum, node in pairs(tbl_map) do
+			line_map[table_base + lnum] = node
+		end
+
+		local issue_count = #(state.issues or {})
+		local user_name = (state.current_user and state.current_user.display_name) or ""
+		local footer_items = {
+			{ text = string.format("%d issues", issue_count), hl_group = "AtlasFooterText" },
+		}
+		if user_name ~= "" then
+			table.insert(footer_items, { text = "|", hl_group = "AtlasFooterText" })
+			table.insert(footer_items, { text = "@" .. user_name, hl_group = "AtlasFooterText" })
+		end
+		footer.set_items(footer_items)
 	end
 
 	return lines, spans, line_map

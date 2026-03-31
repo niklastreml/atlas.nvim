@@ -1,5 +1,6 @@
 --- Jira ---
 ---@class JiraViewConfig
+---@field project string
 ---@field name string
 ---@field key string|nil
 ---@field jql string|nil
@@ -68,17 +69,6 @@ M.options = {
 	},
 }
 
----@return JiraViewConfig
-local function default_jira_views()
-	return {
-		{
-			name = "Active Sprint",
-			key = "S",
-			jql = "project = '%s' AND (sprint in openSprints()) ORDER BY status ASC, assignee ASC, Rank ASC",
-		},
-	}
-end
-
 local function normalize_views()
 	if M.options.bitbucket.views and #M.options.bitbucket.views > 0 then
 		for _, view in ipairs(M.options.bitbucket.views) do
@@ -88,10 +78,6 @@ local function normalize_views()
 				end
 			end
 		end
-	end
-
-	if not M.options.jira.views or #M.options.jira.views == 0 then
-		M.options.jira.views = default_jira_views()
 	end
 end
 

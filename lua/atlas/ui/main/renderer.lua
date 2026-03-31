@@ -34,6 +34,17 @@ function M.render(view, opts)
 
 	if target_view == "jira" then
 		state.current_view = "jira"
+		local jira_state = require("atlas.jira.state")
+		local should_refresh = (opts and opts.force_refresh)
+			or (not jira_state.is_loading and jira_state.issue_tree == nil and jira_state.error == nil)
+		if should_refresh then
+			require("atlas.jira.ui.controller").refresh_current_view(function()
+				if opts and opts.autofocus then
+					require("atlas.ui.navigation").focus_first_item()
+				end
+			end)
+		end
+
 		lines, spans, line_map = require("atlas.jira.ui.renderer").render({ width = width, height = height })
 	elseif target_view == "bitbucket" then
 		state.current_view = "bitbucket"
