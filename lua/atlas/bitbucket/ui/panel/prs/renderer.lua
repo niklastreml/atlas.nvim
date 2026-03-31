@@ -120,6 +120,12 @@ local function lines_for_pr(pr, width)
 	end
 	local rule_width = math.max(1, width)
 	table.insert(lines, string.rep("─", rule_width))
+	table.insert(spans, {
+		line = #lines - 1,
+		start_col = 0,
+		end_col = #(lines[#lines] or ""),
+		hl_group = "AtlasTextMuted",
+	})
 
 	--- Content
 	local body_lines, body_spans = render_tab_content(

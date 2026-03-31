@@ -412,8 +412,16 @@ function M.render(opts)
 	for idx, row in ipairs(rows) do
 		if row._tree_separator then
 			local sep = tostring(row._tree_separator_char or "─")
+			local content_width = math.max(width - (margin * 2), 1)
+			local sep_line = string.rep(" ", margin) .. string.rep(sep, content_width)
 			table.insert(lines, "")
-			table.insert(lines, string.rep(" ", margin) .. string.rep(sep, math.max(width - (margin * 2), 1)))
+			table.insert(lines, sep_line)
+			table.insert(spans, {
+				line = #lines - 1,
+				start_col = margin,
+				end_col = #sep_line,
+				hl_group = "AtlasTextMuted",
+			})
 			line_map[#lines] = row
 			table.insert(lines, "")
 		else

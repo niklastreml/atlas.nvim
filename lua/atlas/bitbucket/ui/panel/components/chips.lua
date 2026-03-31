@@ -1,6 +1,8 @@
 local M = {}
 local utils = require("atlas.utils")
 
+local MAX_HASH_CHIP_LEN = 12
+
 ---@param state string|nil
 ---@return string|nil
 local function state_hl(state)
@@ -24,6 +26,8 @@ function M.render(pr)
 	local commit_hash = tostring(pr.source_commit_hash or "")
 	if commit_hash == "" then
 		commit_hash = "-"
+	elseif #commit_hash > MAX_HASH_CHIP_LEN then
+		commit_hash = commit_hash:sub(1, MAX_HASH_CHIP_LEN)
 	end
 
 	local chips = {
