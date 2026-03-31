@@ -1133,22 +1133,16 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_repository_readme(workspace, repo_slug, ref, readme_path, opts, on_done)
 	opts = opts or {}
-	local delayed_on_done = function(readme, err)
-		vim.defer_fn(function()
-			on_done(readme, err)
-		end, 2000)
-	end
-
 	if type(workspace) ~= "string" or workspace == "" then
-		delayed_on_done(nil, "Missing workspace slug")
+		on_done(nil, "Missing workspace slug")
 		return nil
 	end
 	if type(repo_slug) ~= "string" or repo_slug == "" then
-		delayed_on_done(nil, "Missing repository slug")
+		on_done(nil, "Missing repository slug")
 		return nil
 	end
 	if type(ref) ~= "string" or ref == "" then
-		delayed_on_done(nil, "Missing repository ref")
+		on_done(nil, "Missing repository ref")
 		return nil
 	end
 
@@ -1162,14 +1156,14 @@ function M.fetch_repository_readme(workspace, repo_slug, ref, readme_path, opts,
 	if not opts.force_load then
 		local cached = memory_cache.get(cachekey)
 		if cached and cached.value then
-			delayed_on_done(tostring(cached.value), nil)
+			on_done(tostring(cached.value), nil)
 			return nil
 		end
 	end
 
 	local user, token, auth_err = get_auth_from_config()
 	if auth_err then
-		delayed_on_done(nil, auth_err)
+		on_done(nil, auth_err)
 		return nil
 	end
 
@@ -1181,13 +1175,13 @@ function M.fetch_repository_readme(workspace, repo_slug, ref, readme_path, opts,
 
 	return http.curl_text_request("GET", url, headers, nil, function(result, err)
 		if err ~= nil then
-			delayed_on_done(nil, err)
+			on_done(nil, err)
 			return
 		end
 
 		local text = tostring(result or "")
 		memory_cache.set(cachekey, text, ttl)
-		delayed_on_done(text, nil)
+		on_done(text, nil)
 	end)
 end
 
