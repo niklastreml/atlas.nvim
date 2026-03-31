@@ -5,8 +5,7 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 > [!CAUTION]
 > **Still in early development, will have breaking changes!**
 
-| <img src="./examples/bitbucket_example.png" style="border-radius: 8px;" alt="Bitbucket PRs" /> | <img src="./examples/jira_example.png" style="border-radius: 8px;" alt="Jira Issues" /> |
-
+<img width="2532" height="1366" alt="CleanShot 2026-03-31 at 02 51 32" src="https://github.com/user-attachments/assets/d08dde1f-8bae-446f-8db1-a9f53b118fad" />
 
 ### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
@@ -95,6 +94,8 @@ return {
 - [x] PR tabs: overview, activity, comments, commits, files
 - [x] PR actions: merge, approve, request changes
 - [x] Repository tabs: overview, branches, tags
+
+<img width="2541" height="1365" alt="CleanShot 2026-03-31 at 02 54 23" src="https://github.com/user-attachments/assets/931ec50b-a0ca-4321-9326-3d53aea2432f" />
 
 ## Jira
 
