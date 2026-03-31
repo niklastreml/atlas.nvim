@@ -145,6 +145,13 @@ local function register_dynamic_keys(buf, views)
 				main_actions.open_pr_search_popup()
 			end,
 		},
+		{
+			key = "co",
+			desc = "Checkout PR locally",
+			callback = function()
+				main_actions.checkout_pr(selected_pr())
+			end,
+		},
 	}
 	local view_items = {}
 

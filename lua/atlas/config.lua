@@ -32,6 +32,7 @@
 --- @field token string
 --- @field cache_ttl number|nil
 --- @field views BitbucketViewConfig[]|nil
+--- @field repo_paths table<string, string>|nil
 
 --- @class AtlasConfig
 --- @field jira JiraConfig
@@ -57,6 +58,7 @@ M.options = {
 		token = vim.env.BITBUCKET_TOKEN or "",
 		cache_ttl = 300,
 		views = nil,
+		repo_paths = {},
 	},
 }
 

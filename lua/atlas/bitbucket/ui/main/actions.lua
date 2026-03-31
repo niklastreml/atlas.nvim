@@ -4,6 +4,7 @@ local actions = require("atlas.bitbucket.ui.main.controller")
 local service = require("atlas.bitbucket.api.service")
 local navigation = require("atlas.ui.navigation")
 local footer = require("atlas.ui.components.footer")
+local checkout = require("atlas.bitbucket.checkout")
 
 ---@param value string
 ---@param label string
@@ -16,6 +17,32 @@ local function copy_value(value, label)
 	vim.fn.setreg("+", value)
 	vim.fn.setreg('"', value)
 	footer.notify("info", string.format("Copied %s", label))
+end
+
+---@params pr BitbucketPR|nil
+function M.checkout_pr(pr)
+	if pr == nil then
+		footer.notify("warn", "No PR selected")
+		return
+	end
+
+	local cfg = require("atlas.config").options.bitbucket or {}
+	if vim.tbl_isempty(cfg.repo_paths or {}) then
+		footer.notify("warn", "No repository paths configured for checkout")
+		return
+	end
+
+	footer.notify("loading", string.format("Checking out PR #%s", tostring(pr.id or "")))
+	checkout.checkout_pr(pr, function(success, err)
+		vim.schedule(function()
+			if err ~= nil then
+				footer.notify("error", string.format("Checkout failed: %s", tostring(err)))
+				return
+			end
+
+			footer.notify("success", string.format("Checked out PR #%s", tostring(pr.id or "")))
+		end)
+	end)
 end
 
 ---@param pr BitbucketPR|nil
@@ -166,10 +193,7 @@ function M.open_pr_search_popup()
 				footer.notify("loading", "Searching repositories...")
 				service.fetch_workspace_repositories(selected_ws.slug, input, function(repos, repo_err)
 					if repo_err ~= nil then
-						footer.notify(
-							"error",
-							string.format("Repo search failed: %s", tostring(repo_err))
-						)
+						footer.notify("error", string.format("Repo search failed: %s", tostring(repo_err)))
 						return
 					end
 
