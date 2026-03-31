@@ -91,7 +91,7 @@ local function apply_tab_buffer_mode(tab)
 	end
 end
 
----@param item table
+---@param item table|nil
 function M.on_select(item)
 	cancel_all_handles()
 	local pr = nil

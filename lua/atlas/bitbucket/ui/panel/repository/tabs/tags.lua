@@ -66,7 +66,7 @@ function M.render(repo, detail, width)
 		rows = rows,
 		cell_hl = function(row, col)
 			if col.key == "hash" then
-				return "AtlasTextMuted"
+				return highlights.dynamic_for(row.hash)
 			end
 			if col.key == "message" then
 				return "AtlasTextMuted"

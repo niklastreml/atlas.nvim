@@ -2,10 +2,10 @@
 
 A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your editor.
 
-| <img src="./examples/bitbucket_example.png" style="border-radius: 8px;" alt="Bitbucket PRs" /> | <img src="./examples/jira_example.png" style="border-radius: 8px;" alt="Jira Issues" /> |
+> [!CAUTION]
+> **Still in early development, will have breaking changes!**
 
-> [!NOTE]
-Inspired by [jira.nvim](https://github.com/letieu/jira.nvim). This plugin is adapted for my personal workflow and preferences. I highly recommend checking out the original project for a more general-purpose solution.
+| <img src="./examples/bitbucket_example.png" style="border-radius: 8px;" alt="Bitbucket PRs" /> | <img src="./examples/jira_example.png" style="border-radius: 8px;" alt="Jira Issues" /> |
 
 
 ### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
@@ -13,12 +13,15 @@ Inspired by [jira.nvim](https://github.com/letieu/jira.nvim). This plugin is ada
 ```lua
 {
   "emrearmagan/atlas.nvim",
+  dependencies = {
+    "MeanderingProgrammer/render-markdown.nvim", -- optional but recommended
+  },
   config = function()
     require("atlas").setup({
-      -- See configuration below
+        bitbucket = { }, -- See configuration below
+        jira = { },      -- See configuration below
     })
   end,
-  cmd = { "Bitbucket", "Jira" },
 }
 ```
 
@@ -29,75 +32,117 @@ use {
   "emrearmagan/atlas.nvim",
   config = function()
     require("atlas").setup({
-      -- See configuration below
+        bitbucket = { }, -- See configuration below
+        jira = { },      -- See configuration below
     })
   end
 }
 ```
+> [!tip]
+> It's a good idea to run `:checkhealth atlas` to see if everything is set up correctly.
 
-## Configuration
+## Bitbucket
+
+### Configuration
 
 ```lua
-require("atlas").setup({
-  -- Bitbucket
-  bitbucket = {
-    user = os.getenv("BITBUCKET_USER"),
-    token = os.getenv("BITBUCKET_TOKEN"),
-    workspace = os.getenv("BITBUCKET_WORKSPACE"),
-    account_id = os.getenv("BITBUCKET_ACCOUNT_ID"),
-  },
-  repos = {
-    { workspace = "your-workspace", repo = "repo-name" },
-  },
-  bitbucket_views = {
-    { name = "Me", key = "m", filter = function(pr, account_id)
-      return pr.author.account_id == account_id
-    end },
-    { name = "All", key = "a", filter = function(pr, account_id)
-      return pr.author.account_id ~= account_id
-    end },
-  },
-  
-  -- Jira
-  jira = {
-    base = os.getenv("JIRA_BASE_URL"),
-    email = os.getenv("JIRA_EMAIL"),
-    token = os.getenv("JIRA_TOKEN"),
-  },
-  jira_views = {
-    { name = "Active Sprint", key = "S", jql = 'project = "%s" AND sprint in openSprints()' },
-  },
-  
-  -- Caching
-  cache_ttl = 300, -- 5 minutes
-})
+return {
+  "emrearmagan/atlas.nvim",
+  config = function()
+    require("atlas").setup({
+      ---@type BitbucketConfig
+      bitbucket = {
+        user = os.getenv("BITBUCKET_USER") or "",
+        token = os.getenv("BITBUCKET_TOKEN") or "",
+        cache_ttl = 300,
+
+        ---@type BitbucketViewConfig[]
+        views = {
+          {
+            name = "Me",
+            key = "M",
+            layout = "compact", -- "compact" or "plain"
+            repos = {
+              { workspace = "your-workspace", repo = "atlas" },
+            },
+
+            ---@param pr BitbucketPR
+            ---@param ctx table
+            filter = function(pr, ctx)
+              local user = ctx.user or {}
+              return pr.author and pr.author.account_id == user.account_id
+            end,
+          },
+          {
+            name = "Others",
+            key = "O",
+            layout = "plain", -- "compact" or "plain"
+            repos = {
+              { workspace = "your-workspace", repo = "atlas" },
+              { workspace = "your-workspace", repo = "other-repo" },
+            },
+          },
+        },
+      },
+    })
+  end,
+}
 ```
 
-## Environment Variables
+### Features
 
-```bash
-# Bitbucket
-export BITBUCKET_USER="your.email@example.com"
-export BITBUCKET_TOKEN="your-app-password"
-export BITBUCKET_WORKSPACE="your-workspace"
-export BITBUCKET_ACCOUNT_ID="your-account-id"
+- [x] Multiple Bitbucket views
+- [x] PR tabs: overview, activity, comments, commits, files
+- [x] PR actions: merge, approve, request changes
+- [x] Repository tabs: overview, branches, tags
 
-# Jira
-export JIRA_BASE_URL="https://your-domain.atlassian.net"
-export JIRA_EMAIL="your.email@example.com"
-export JIRA_TOKEN="your-api-token"
+## Jira
+
+> [!NOTE]
+Inspired by [jira.nvim](https://github.com/letieu/jira.nvim). This plugin is adapted for my personal workflow and preferences. I highly recommend checking out the original project for a more general-purpose solution.
+
+### Configuration
+
+```lua
+return {
+  "emrearmagan/atlas.nvim",
+  config = function()
+    require("atlas").setup({
+    })
+  end,
+}
 ```
 
-## Commands
+### Commands
+
+- `:AtlasBitbucket` - Open Bitbucket PR picker
+- `:AtlasLogs` - Toggle Atlas logs
+
+### Keymaps
+
+### Main UI
+
+| Context | Key | Action |
+|---|---|---|
+| Global | `q` | Close Atlas |
+| Global | `j` / `k` | Move cursor |
+| Global | `gg` / `G` | First / last item |
+| Global | `[` / `]` | Previous / next panel tab |
+| Bitbucket | `p` | Toggle PR panel (or switch to PR panel) |
+| Bitbucket | `o` | Toggle repository panel (or switch to repository panel) |
 
 ### Bitbucket
-- `:Bitbucket` - Open PR viewer
 
-### Jira
-- `:Jira [PROJECT_KEY]` - Open Jira board
-- `:Jira info <ISSUE_KEY>` - View issue details
-- `:Jira edit <ISSUE_KEY>` - Edit issue
-- `:Jira create [PROJECT_KEY]` - Create new issue
+| Key | Action |
+|---|---|
+| `R` | Refresh current Bitbucket view |
+| `r` | Refetch selected PR |
+| `a` | Open PR actions |
+| `gx` | Open PR in browser |
+| `y` | Copy PR id |
+| `Y` | Copy PR URL |
+| `/` | Search repositories |
+
 
 ## License
 

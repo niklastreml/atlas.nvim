@@ -289,6 +289,7 @@ vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
 		end
 		M.reflow()
 		require("atlas.ui.main.renderer").render(ui_state.current_view)
+		require("atlas.ui.panel.init").refresh()
 	end,
 })
 

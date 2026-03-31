@@ -173,11 +173,15 @@ function M.register_keys(buf)
 			desc = "Toggle detail pane",
 			callback = function()
 				local panel = require("atlas.ui.panel")
+				local current = M.current_item()
 				if panel.is_open() then
-					panel.close()
-					return
+					local selected = panel_state.selected_item
+					if type(selected) == "table" and selected.kind == "pr" then
+						panel.close()
+						return
+					end
 				end
-				panel.show(ui_state.current_view, M.current_item())
+				panel.show(ui_state.current_view, current)
 			end,
 		},
 		{

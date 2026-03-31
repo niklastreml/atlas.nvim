@@ -117,9 +117,13 @@ local function register_dynamic_keys(buf, views)
 				end
 
 				local panel = require("atlas.ui.panel")
+				local panel_state = require("atlas.ui.panel.state")
 				if panel.is_open() then
-					panel.close()
-					return
+					local selected = panel_state.selected_item
+					if type(selected) == "table" and selected.kind == "repo" then
+						panel.close()
+						return
+					end
 				end
 				panel.show("bitbucket", repo)
 			end,
