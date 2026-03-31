@@ -10,22 +10,36 @@ local function register_panel_keys()
 		return
 	end
 
-	---TODO: Need to consider the other providers
-	local bb_panel = require("atlas.bitbucket.ui.panel.prs.controller")
+	local function current_bb_controller()
+		local item = state.selected_item
+		if type(item) == "table" and item.kind == "repo" then
+			return require("atlas.bitbucket.ui.panel.repository.controller")
+		end
+		return require("atlas.bitbucket.ui.panel.prs.controller")
+	end
+
+	local function refresh_current_bb_panel()
+		local item = state.selected_item
+		if type(item) == "table" and item.kind == "repo" then
+			require("atlas.bitbucket.ui.panel.repository.controller").refresh_selected_repo()
+			return
+		end
+		require("atlas.bitbucket.ui.panel.prs.controller").refresh_selected_pr()
+	end
 	vim.keymap.set("n", "q", function()
 		M.close()
 	end, { buffer = buf, silent = true, nowait = true })
 
 	vim.keymap.set("n", "[", function()
-		bb_panel.prev_tab()
+		current_bb_controller().prev_tab()
 	end, { buffer = buf, silent = true, nowait = true })
 
 	vim.keymap.set("n", "]", function()
-		bb_panel.next_tab()
+		current_bb_controller().next_tab()
 	end, { buffer = buf, silent = true, nowait = true })
 
 	vim.keymap.set("n", "r", function()
-		bb_panel.refresh_selected_pr()
+		refresh_current_bb_panel()
 	end, { buffer = buf, silent = true, nowait = true })
 end
 

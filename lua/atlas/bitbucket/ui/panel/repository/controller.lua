@@ -186,6 +186,21 @@ function M.refresh()
 	end
 end
 
+function M.refresh_selected_repo()
+	local repo = state.current_repo
+	if repo == nil then
+		return
+	end
+	service.clear_memory_cache()
+
+	cancel_handle()
+	cancel_readme_handle()
+	stop_spinner()
+
+	state.set_current(repo)
+	M.select_tab(state.current_tab)
+end
+
 ---@param tab "overview"|"branches"|"tags"
 function M.select_tab(tab)
 	state.set_current_tab(tab)

@@ -103,6 +103,16 @@ local function register_dynamic_keys(buf, views)
 			key = "r",
 			desc = "Refetch selected PR",
 			callback = function()
+				local panel = require("atlas.ui.panel")
+				local panel_state = require("atlas.ui.panel.state")
+				if panel.is_open() then
+					local selected = panel_state.selected_item
+					if type(selected) == "table" and selected.kind == "repo" then
+						require("atlas.bitbucket.ui.panel.repository.controller").refresh_selected_repo()
+						return
+					end
+				end
+
 				main_actions.refresh_selected_pr_cache(selected_pr())
 			end,
 		},
