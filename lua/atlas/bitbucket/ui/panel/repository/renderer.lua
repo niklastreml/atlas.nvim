@@ -43,20 +43,25 @@ local function repo_lines(repo, width)
 	local full_width = math.max((width or 1), 1)
 	local content_width = math.max(full_width - (PADDING_X * 2), 1)
 	local tab = state.current_tab or "overview"
-	local tabs_line, tabs_spans = tabs.render_repo(tab)
+	local tabs_lines, tabs_spans = tabs.render_repo(tab, full_width, PADDING_X)
 	local detail = state.current_detail
 
 	if detail == "loading" then
 		local loading_line = spinner.with_text("Loading...")
-		local rows = { pad_line(loading_line), pad_line(""), pad_line(tabs_line), pad_line("") }
+		local rows = { pad_line(loading_line), pad_line("") }
+		local tabs_base = #rows
+		for _, tab_line in ipairs(tabs_lines or {}) do
+			table.insert(rows, tab_line)
+		end
+		table.insert(rows, pad_line(""))
 		local spans = {
 			{ line = 0, start_col = PADDING_X, end_col = PADDING_X + #loading_line, hl_group = "AtlasTextMuted" },
 		}
 		for _, span in ipairs(tabs_spans or {}) do
 			table.insert(spans, {
-				line = 2,
-				start_col = span.start_col + PADDING_X,
-				end_col = span.end_col + PADDING_X,
+				line = tabs_base + (span.line or 0),
+				start_col = span.start_col,
+				end_col = span.end_col,
 				hl_group = span.hl_group,
 			})
 		end
@@ -116,10 +121,10 @@ local function repo_lines(repo, width)
 	local chips_line_idx = #rows
 	table.insert(rows, pad_line(chips_line))
 	table.insert(rows, pad_line(""))
-	local tabs_line_idx = #rows
-	table.insert(rows, pad_line(tabs_line))
-	local rule_line_idx = #rows
-	table.insert(rows, string.rep("─", full_width))
+	local tabs_base = #rows
+	for _, tab_line in ipairs(tabs_lines or {}) do
+		table.insert(rows, tab_line)
+	end
 	table.insert(rows, pad_line(""))
 
 	for _, span in ipairs(chips_spans or {}) do
@@ -132,18 +137,12 @@ local function repo_lines(repo, width)
 	end
 	for _, span in ipairs(tabs_spans or {}) do
 		table.insert(out_spans, {
-			line = tabs_line_idx,
-			start_col = span.start_col + PADDING_X,
-			end_col = span.end_col + PADDING_X,
+			line = tabs_base + (span.line or 0),
+			start_col = span.start_col,
+			end_col = span.end_col,
 			hl_group = span.hl_group,
 		})
 	end
-	table.insert(out_spans, {
-		line = rule_line_idx,
-		start_col = 0,
-		end_col = #(rows[rule_line_idx + 1] or ""),
-		hl_group = "AtlasTextMuted",
-	})
 
 	local detail_table = type(detail) == "table" and detail or nil
 	local body_lines, body_spans = render_tab_content(tab, repo, detail_table, content_width)

@@ -4,7 +4,7 @@ local controller = require("atlas.jira.panel.tabs.worklogs.controller")
 local renderer = require("atlas.jira.panel.tabs.worklogs.renderer")
 local keymap = require("atlas.jira.panel.tabs.worklogs.keymap")
 
----@param issue table
+---@param issue JiraIssue|nil
 function M.activate(issue)
 	keymap.setup()
 	controller.fetch_if_needed(issue)

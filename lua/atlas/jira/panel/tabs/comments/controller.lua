@@ -1,7 +1,11 @@
 local M = {}
+local state = require("atlas.jira.panel.tabs.comments.state")
 
----@param issue table
-function M.fetch_if_needed(issue) end
+---@param issue JiraIssue|nil
+function M.fetch_if_needed(issue)
+	state.issue = issue
+	state.line_map = {}
+end
 
 function M.refresh() end
 

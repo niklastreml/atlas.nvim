@@ -2,6 +2,7 @@ local M = {}
 
 local panel_state = require("atlas.jira.panel.state")
 local layout = require("atlas.ui.layout")
+local ns = vim.api.nvim_create_namespace("atlas.jira.panel")
 
 local TABS = {
 	{ key = "overview", label = "Overview", mod = "atlas.jira.panel.tabs.overview" },
@@ -19,7 +20,7 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
----@param issue table|nil
+---@param issue JiraIssue|nil
 function M.on_select(issue)
 	panel_state.set_current(issue)
 	if issue ~= nil then
@@ -91,22 +92,35 @@ function M.render()
 	end
 
 	local lines = {}
+	local spans = {}
 
 	if panel_state.current_issue == nil then
 		lines = { "", "  Nothing selected..." }
+		panel_state.line_map = {}
 	else
-		local issue = panel_state.current_issue
-		table.insert(lines, "")
-		table.insert(lines, "  " .. tostring((issue._item or {}).key or issue.id or ""))
-		table.insert(lines, "  " .. tostring(issue.title or issue.name or ""))
-		table.insert(lines, "")
-		table.insert(lines, "  [" .. panel_state.current_tab .. "]")
-		table.insert(lines, "")
-		table.insert(lines, "  Panel content goes here...")
+		local tab = get_tab_module(panel_state.current_tab)
+		if tab and type(tab.render) == "function" then
+			local tab_line_map = nil
+			lines, spans, tab_line_map = tab.render(vim.api.nvim_win_get_width(win))
+			panel_state.line_map = tab_line_map or {}
+		else
+			lines = { "", "  Unknown tab: " .. tostring(panel_state.current_tab) }
+			panel_state.line_map = {}
+		end
 	end
 
 	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+	for _, span in ipairs(spans or {}) do
+		if type(span) == "table" and span.line ~= nil and span.start_col ~= nil and span.end_col ~= nil and span.hl_group ~= nil then
+			vim.api.nvim_buf_set_extmark(buf, ns, span.line, span.start_col, {
+				end_row = span.line,
+				end_col = span.end_col,
+				hl_group = span.hl_group,
+			})
+		end
+	end
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
 

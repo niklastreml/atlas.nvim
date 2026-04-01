@@ -1,17 +1,19 @@
 local M = {
+	---@type JiraIssue|nil
 	current_issue = nil,
+	---@type "overview"|"comments"|"worklogs"
 	current_tab = "overview",
 	line_map = {},
 }
 
----@param issue table|nil
+---@param issue JiraIssue|nil
 function M.set_current(issue)
 	M.current_issue = issue
 	M.current_tab = "overview"
 	M.line_map = {}
 end
 
----@param tab string
+---@param tab "overview"|"comments"|"worklogs"
 function M.set_current_tab(tab)
 	M.current_tab = tab
 	M.line_map = {}

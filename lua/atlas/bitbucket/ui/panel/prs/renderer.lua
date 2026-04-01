@@ -107,25 +107,19 @@ local function lines_for_pr(pr, width)
 	table.insert(lines, pad_line(""))
 
 	--- Tabs
-	local tabs_line, tabs_spans = tabs.render_pr(state.current_tab)
-	local tabs_line_index = #lines
-	table.insert(lines, pad_line(tabs_line))
+	local tabs_lines, tabs_spans = tabs.render_pr(state.current_tab, width, PADDING_X)
+	local tabs_base = #lines
+	for _, tab_line in ipairs(tabs_lines or {}) do
+		table.insert(lines, tab_line)
+	end
 	for _, span in ipairs(tabs_spans) do
 		table.insert(spans, {
-			line = tabs_line_index,
-			start_col = span.start_col + PADDING_X,
-			end_col = span.end_col + PADDING_X,
+			line = tabs_base + (span.line or 0),
+			start_col = span.start_col,
+			end_col = span.end_col,
 			hl_group = span.hl_group,
 		})
 	end
-	local rule_width = math.max(1, width)
-	table.insert(lines, string.rep("─", rule_width))
-	table.insert(spans, {
-		line = #lines - 1,
-		start_col = 0,
-		end_col = #(lines[#lines] or ""),
-		hl_group = "AtlasTextMuted",
-	})
 
 	--- Content
 	local body_lines, body_spans = render_tab_content(

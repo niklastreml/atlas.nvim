@@ -36,6 +36,19 @@ Accept: application/json
   "maxResults": 10
 }
 
+### Get Description
+POST {{JIRA_BASE_URL}}/rest/api/3/search/jql
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "jql": "key = {{jira_issue_key}}",
+  "fields": ["description"],
+  "nextPageToken": "",
+  "maxResults": 10
+}
+
 
 ### Get transitions
 GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/transitions

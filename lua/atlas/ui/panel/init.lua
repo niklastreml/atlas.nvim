@@ -107,7 +107,11 @@ function M.on_select(provider, item)
 	end
 
 	if provider == "jira" then
-		require("atlas.jira.panel.init").on_select(item)
+		local jira_issue = item
+		if type(item) == "table" and type(item._issue) == "table" then
+			jira_issue = item._issue
+		end
+		require("atlas.jira.panel.init").on_select(jira_issue)
 		return
 	end
 
