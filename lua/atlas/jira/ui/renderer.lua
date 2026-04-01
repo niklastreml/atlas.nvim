@@ -3,7 +3,6 @@ local M = {}
 local config = require("atlas.config")
 local icons = require("atlas.ui.icons")
 local state = require("atlas.jira.state")
-local normalizer = require("atlas.jira.api.normalizer")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local table_view = require("atlas.ui.components.table")
@@ -17,6 +16,63 @@ local function view_id(view)
 		return ""
 	end
 	return view.key or view.name or ""
+end
+
+---@param issue JiraIssue
+---@param is_child boolean|nil
+---@return table
+local function issue_to_row(issue, is_child)
+	local icon = is_child and "" or icons.jira_type(issue.type)
+	local name = is_child and ("  " .. icons.jira_type(issue.type) .. " " .. issue.key .. " " .. issue.summary)
+		or (issue.key .. " " .. issue.summary)
+
+	local row = {
+		kind = "issue",
+		key = issue.key,
+		id = issue.key,
+		icon = icon,
+		name = name,
+		status = issue.status,
+		status_category = issue.status_category,
+		assignee = issue.assignee,
+		reporter = issue.reporter,
+		priority = issue.priority,
+		duedate = issue.duedate or "",
+		type = issue.type,
+		subtask = issue.subtask,
+		expanded = true,
+		_item = { kind = "issue", key = issue.key },
+		_issue = issue,
+		children = {},
+	}
+
+	for _, child in ipairs(issue.children or {}) do
+		table.insert(row.children, issue_to_row(child, true))
+	end
+
+	return row
+end
+
+---@param issues JiraIssue[]
+---@return table[]
+local function issues_to_rows(issues)
+	local rows = {}
+	for i, issue in ipairs(issues) do
+		table.insert(rows, issue_to_row(issue))
+		if i < #issues then
+			table.insert(rows, {
+				kind = "separator",
+				icon = "",
+				name = "",
+				priority = "",
+				duedate = "",
+				assignee = "",
+				reporter = "",
+				status = "",
+			})
+		end
+	end
+	return rows
 end
 
 ---@param opts { width: number, height: number }
@@ -70,27 +126,31 @@ function M.render(opts)
 		table.insert(lines, "Error: " .. state.error)
 	elseif state.is_loading then
 		table.insert(lines, "Loading...")
-	elseif state.issues == nil or #state.issues == 0 then
+	elseif state.issue_tree == nil or #state.issue_tree == 0 then
 		table.insert(lines, "No issues found.")
 	else
+		local rows = issues_to_rows(state.issue_tree)
+
 		local tbl_lines, tbl_map, tbl_spans = table_view.render({
 			width = opts.width,
 			margin = 1,
 			columns = {
+				{ key = "icon", name = "", can_grow = false },
 				{ key = "name", name = "Issue", min_width = 30 },
-				{ key = "id", name = "Key", min_width = 12 },
-				{ key = "type", name = "Type", min_width = 10 },
-				{ key = "assignee", name = "Assignee", min_width = 16 },
-				{ key = "status", name = "Status", min_width = 14 },
+				{ key = "priority", name = "Priority", width = 10, can_grow = false },
+				{ key = "duedate", name = "Due", width = 12, can_grow = false },
+				{ key = "assignee", name = "Assignee", width = 16, can_grow = false },
+				{ key = "reporter", name = "Reporter", width = 16, can_grow = false },
+				{ key = "status", name = "Status", width = 14, can_grow = false },
 			},
-			rows = state.issue_tree,
+			rows = rows,
 			tree = {
 				children_key = "children",
 				expanded_field = "expanded",
 				default_expanded = true,
-				indent = "  ",
+				indent = "",
 				show_indicator = true,
-				leaf_prefix = "└─ ",
+				leaf_prefix = "",
 			},
 			cell_hl = function(row, col)
 				if col.key == "status" then
@@ -102,10 +162,7 @@ function M.render(opts)
 					end
 					return "AtlasTextMuted"
 				end
-				if col.key == "type" then
-					return "AtlasTextMuted"
-				end
-				if col.key == "id" then
+				if col.key == "priority" or col.key == "duedate" or col.key == "reporter" then
 					return "AtlasTextMuted"
 				end
 				return nil

@@ -25,7 +25,14 @@ local ICONS = {
 		pending = "",
 		branch = "",
 		tag = "󰓹",
-		author = "",
+		author = "",
+	},
+	jira_type = {
+		epic = "󰛨",
+		story = "󰃀",
+		task = "󰄵",
+		bug = "",
+		subtask = "󰩊",
 	},
 	fallback = "•",
 }
@@ -38,6 +45,12 @@ end
 ---@param name "repo"|"refresh"|"pr"|"comments"|"tasks"|"created"|"updated"|"commit"|"overview"|"files"|"activity"|"comment"|"success"|"warning"|"info"|"error"|"pending"|"branch"|"tag"|"author"
 function M.entity(name)
 	return ICONS.entity[name] or ICONS.fallback
+end
+
+---@param name string
+function M.jira_type(name)
+	local lower = (name or ""):lower():gsub("[-%s]", "")
+	return ICONS.jira_type[lower] or ICONS.fallback
 end
 
 function M.fallback()

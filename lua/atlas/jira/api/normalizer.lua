@@ -103,82 +103,43 @@ function M.normalize_issues(raw_issues)
 end
 
 ---@param issues JiraIssue[]
----@return table[]
+---@return JiraIssue[]
 function M.build_issue_tree(issues)
 	local by_key = {}
 	for _, issue in ipairs(issues) do
-		by_key[issue.key] = {
-			kind = "issue",
-			key = issue.key,
-			id = issue.key,
-			name = issue.summary,
-			title = issue.summary,
-			status = issue.status,
-			status_category = issue.status_category,
-			assignee = issue.assignee,
-			reporter = issue.reporter,
-			priority = issue.priority,
-			type = issue.type,
-			subtask = issue.subtask,
-			children = {},
-			expanded = true,
-			_item = { kind = "issue", key = issue.key },
-			_issue = issue,
-		}
+		issue.children = {}
+		by_key[issue.key] = issue
 	end
 
 	for _, issue in ipairs(issues) do
 		local parent = issue.parent
 		if parent and not by_key[parent.key] then
-			by_key[parent.key] = {
-				kind = "issue",
-				key = parent.key,
-				id = parent.key,
-				name = parent.summary ~= "" and parent.summary or (parent.key .. " (Epic)"),
-				title = parent.summary ~= "" and parent.summary or (parent.key .. " (Epic)"),
-				status = parent.status,
-				status_category = parent.status_category,
-				assignee = parent.assignee,
-				reporter = parent.reporter,
-				priority = parent.priority,
-				type = parent.type,
-				subtask = parent.subtask,
-				children = {},
-				expanded = true,
-				_item = { kind = "issue", key = parent.key },
-				_issue = parent,
-			}
+			parent.children = {}
+			by_key[parent.key] = parent
 		end
 	end
 
 	local roots = {}
 	for _, issue in ipairs(issues) do
-		local node = by_key[issue.key]
 		if issue.parent and by_key[issue.parent.key] then
-			table.insert(by_key[issue.parent.key].children, node)
+			table.insert(by_key[issue.parent.key].children, issue)
 		else
-			table.insert(roots, node)
+			table.insert(roots, issue)
 		end
 	end
 
-	local placeholder_keys = {}
+	local seen_roots = {}
+	for _, r in ipairs(roots) do
+		seen_roots[r.key] = true
+	end
 	for _, issue in ipairs(issues) do
 		if issue.parent and by_key[issue.parent.key] then
-			local parent_node = by_key[issue.parent.key]
-			local already_root = false
-			for _, r in ipairs(roots) do
-				if r.key == parent_node.key then
-					already_root = true
-					break
-				end
-			end
-			if not already_root then
-				placeholder_keys[parent_node.key] = true
+			local pkey = issue.parent.key
+			if not seen_roots[pkey] and by_key[pkey].children and #by_key[pkey].children > 0 then
+				table.insert(roots, by_key[pkey])
+				seen_roots[pkey] = true
 			end
 		end
-	end
-	for pkey, _ in pairs(placeholder_keys) do
-		table.insert(roots, by_key[pkey])
 	end
 
 	return roots

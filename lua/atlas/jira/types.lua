@@ -16,3 +16,4 @@
 ---@field duedate string|nil
 ---@field subtask boolean
 ---@field parent JiraIssue|nil
+---@field children JiraIssue[]|nil
