@@ -14,6 +14,7 @@ local function bootstrap_common()
 	require("atlas.ui.popups.help").register_keys("Commands", {
 		{ key = ":AtlasBitbucket", desc = "Open Bitbucket picker" },
 		{ key = ":AtlasJira", desc = "Open Jira picker" },
+		{ key = ":AtlasLogs", desc = "Open Atlas logs" },
 	}, { index = 999 })
 end
 

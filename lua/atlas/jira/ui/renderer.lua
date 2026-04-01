@@ -8,27 +8,7 @@ local navbar = require("atlas.ui.components.navbar")
 local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
 local utils = require("atlas.utils")
 local footer = require("atlas.ui.components.footer")
-local highlights = require("atlas.ui.highlights")
-local STORY_POINTS_ICON = "󰫢"
-
----@param issue_type string|nil
----@return string
-local function issue_type_hl(issue_type)
-	local lower = tostring(issue_type or ""):lower()
-	if lower == "bug" then
-		return "AtlasLogError"
-	end
-	if lower == "story" then
-		return "AtlasTextPositive"
-	end
-	if lower == "epic" then
-		return "AtlasJiraEpic"
-	end
-	if lower == "task" or lower == "sub-task" or lower == "subtask" then
-		return "AtlasLogInfo"
-	end
-	return "AtlasTextMuted"
-end
+local helper = require("atlas.jira.ui.helper")
 
 ---@param row table
 ---@param col table
@@ -48,7 +28,7 @@ local function cell_hl(row, col, ctx)
 				table.insert(spans_for_cell, {
 					start_col = is - 1,
 					end_col = ie,
-					hl_group = issue_type_hl(issue.type),
+					hl_group = helper.issue_type_hl(issue.type),
 				})
 			end
 		end
@@ -56,26 +36,25 @@ local function cell_hl(row, col, ctx)
 		if type(issue) == "table" and type(issue.key) == "string" and issue.key ~= "" then
 			local s, e = ctx.text:find(issue.key, 1, true)
 			if s and e then
+				local title_start = e + 2
+				if title_start <= #ctx.text then
+					table.insert(spans_for_cell, {
+						start_col = title_start - 1,
+						end_col = #ctx.text,
+						hl_group = is_child and "Comment" or helper.issue_title_hl(),
+					})
+				end
+
 				table.insert(spans_for_cell, {
 					start_col = s - 1,
 					end_col = e,
 					hl_group = is_child and "LineNr" or "AtlasJiraKey",
 				})
-
-				if is_child then
-					local title_start = e + 2
-					if title_start <= #ctx.text then
-						table.insert(spans_for_cell, {
-							start_col = title_start - 1,
-							end_col = #ctx.text,
-							hl_group = "Comment",
-						})
-					end
-				end
 			end
 		end
 
-		local ss, se = ctx.text:find(STORY_POINTS_ICON, 1, true)
+		local story_points_icon = icons.entity("story_points")
+		local ss, se = ctx.text:find(story_points_icon, 1, true)
 		if ss and se then
 			table.insert(spans_for_cell, {
 				start_col = ss - 1,
@@ -101,38 +80,28 @@ local function cell_hl(row, col, ctx)
 	end
 
 	if col.key == "status" then
-		local hl_group = highlights.dynamic_for_bg(
-			type(issue) == "table" and type(issue.status_id) == "string" and ("jira-status:" .. issue.status_id) or nil
-		) or "AtlasTextMuted"
+		local hl_group = helper.status_hl(type(issue) == "table" and issue.status_id or nil)
 		return {
 			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
 		}
 	end
 
 	if col.key == "icon" then
-		local hl_group = type(issue) == "table" and issue_type_hl(issue.type) or "AtlasTextMuted"
+		local hl_group = type(issue) == "table" and helper.issue_type_hl(issue.type) or "AtlasTextMuted"
 		return {
 			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
 		}
 	end
 
 	if col.key == "assignee" then
-		local assignee_name = type(issue) == "table" and type(issue.assignee) == "string" and issue.assignee or ""
-		local hl_group = assignee_name == "" and "AtlasTextMutedItalic" or highlights.dynamic_for(assignee_name)
-		if hl_group == nil then
-			return nil
-		end
+		local hl_group = helper.person_hl(type(issue) == "table" and issue.assignee or nil)
 		return {
 			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
 		}
 	end
 
 	if col.key == "reporter" then
-		local reporter_name = type(issue) == "table" and type(issue.reporter) == "string" and issue.reporter or ""
-		local hl_group = reporter_name == "" and "AtlasTextMutedItalic" or highlights.dynamic_for(reporter_name)
-		if hl_group == nil then
-			return nil
-		end
+		local hl_group = helper.person_hl(type(issue) == "table" and issue.reporter or nil)
 		return {
 			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
 		}
@@ -162,7 +131,7 @@ local function issue_to_row(issue, is_child)
 	if type(story_points) == "number" then
 		points = (story_points % 1 == 0) and tostring(math.floor(story_points)) or tostring(story_points)
 	end
-	local name = points ~= "" and (title .. "  " .. STORY_POINTS_ICON .. " " .. points) or title
+	local name = points ~= "" and (title .. "  " .. icons.entity("story_points") .. " " .. points) or title
 	if is_child then
 		name = "  " .. name
 	end
@@ -182,7 +151,7 @@ local function issue_to_row(issue, is_child)
 		status = string.format(" %s ", issue.status),
 
 		expanded = true,
-		_item = { kind = "issue", key = issue.key },
+		_item = { kind = "issue", key = issue.key, _issue = issue },
 		_issue = issue,
 		children = {},
 	}
@@ -213,6 +182,108 @@ local function issues_to_rows(issues)
 		end
 	end
 	return rows
+end
+
+---@param issue JiraIssue
+---@return string[], table[]
+function M.issue_popup_content(issue)
+	local summary = issue.summary or ""
+	local title = string.format(" %s: %s", issue.key or "", summary)
+	local status_hl = helper.status_hl(issue.status_id)
+	local assignee_hl = helper.person_hl(issue.assignee)
+	local reporter_hl = helper.person_hl(issue.reporter)
+	local priority_hl = helper.priority_hl(issue.priority)
+	local parent_key = type(issue.parent) == "table" and issue.parent.key or nil
+	local parent_summary = type(issue.parent) == "table" and issue.parent.summary or nil
+
+	local lines = {
+		title,
+		"",
+		string.format(" Type:     %s", issue.type or "-"),
+		string.format(" Status:   %s", issue.status or "-"),
+		string.format(" Priority: %s", issue.priority or "-"),
+		string.format(" Assignee: %s", issue.assignee or "Unassigned"),
+		string.format(" Reporter: %s", issue.reporter or "Unknown"),
+		string.format(" Due:      %s", issue.duedate or "-"),
+	}
+
+	if type(issue.story_points) == "number" then
+		table.insert(lines, string.format(" Points:   %s", tostring(issue.story_points)))
+	end
+
+	if type(parent_key) == "string" and parent_key ~= "" then
+		table.insert(lines, string.format(" Parent:   %s", parent_key))
+		if type(parent_summary) == "string" and parent_summary ~= "" then
+			table.insert(lines, string.format("           %s", parent_summary))
+		end
+	end
+
+	local content_width = 1
+	for _, line in ipairs(lines) do
+		content_width = math.max(content_width, vim.fn.strdisplaywidth(line))
+	end
+	lines[2] = " " .. ("━"):rep(content_width)
+
+	local row = {
+		type = 2,
+		status = 3,
+		priority = 4,
+		assignee = 5,
+		reporter = 6,
+		due = 7,
+	}
+	local next_row = 8
+
+	local highlights = {
+		{ row = 0, col = 1, end_col = 1 + #(issue.key or ""), hl_group = "AtlasJiraKey" },
+		{ row = 1, col = 0, end_col = -1, hl_group = "AtlasTextMuted" },
+		{ row = row.type, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
+		{ row = row.status, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
+		{ row = row.priority, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
+		{ row = row.assignee, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
+		{ row = row.reporter, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
+		{ row = row.due, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
+		{ row = row.type, col = 11, end_col = -1, hl_group = helper.issue_type_hl(issue.type) },
+		{ row = row.status, col = 11, end_col = -1, hl_group = status_hl },
+		{ row = row.priority, col = 11, end_col = -1, hl_group = priority_hl },
+		{ row = row.assignee, col = 11, end_col = -1, hl_group = assignee_hl },
+		{ row = row.reporter, col = 11, end_col = -1, hl_group = reporter_hl },
+	}
+
+	if summary ~= "" then
+		table.insert(highlights, {
+			row = 0,
+			col = 3 + #(issue.key or ""),
+			end_col = -1,
+			hl_group = helper.issue_title_hl(),
+		})
+	end
+
+	if type(issue.story_points) == "number" then
+		row.points = next_row
+		next_row = next_row + 1
+		table.insert(highlights, { row = row.points, col = 1, end_col = 10, hl_group = "AtlasTextMuted" })
+		table.insert(highlights, { row = row.points, col = 11, end_col = -1, hl_group = "AtlasJiraStoryPoints" })
+	end
+
+	if type(parent_key) == "string" and parent_key ~= "" then
+		row.parent = next_row
+		next_row = next_row + 1
+		table.insert(highlights, { row = row.parent, col = 1, end_col = 10, hl_group = "AtlasTextMuted" })
+		table.insert(highlights, { row = row.parent, col = 11, end_col = -1, hl_group = "AtlasJiraKey" })
+
+		if type(parent_summary) == "string" and parent_summary ~= "" then
+			row.parent_summary = next_row
+			table.insert(highlights, {
+				row = row.parent_summary,
+				col = 11,
+				end_col = -1,
+				hl_group = "Comment",
+			})
+		end
+	end
+
+	return lines, highlights
 end
 
 ---@param opts { width: number, height: number }

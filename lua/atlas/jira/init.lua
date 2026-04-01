@@ -18,6 +18,13 @@ local function register_dynamic_keys(buf, views)
 				end)
 			end,
 		},
+		{
+			key = "K",
+			desc = "Show issue details popup",
+			callback = function()
+				controller.show_issue_details(buf)
+			end,
+		},
 	}
 
 	local view_items = {}

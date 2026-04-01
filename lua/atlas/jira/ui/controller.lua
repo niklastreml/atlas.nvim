@@ -5,6 +5,9 @@ local footer = require("atlas.ui.components.footer")
 local spinner = require("atlas.ui.popups.spinner")
 local state = require("atlas.jira.state")
 local layout = require("atlas.ui.layout")
+local navigation = require("atlas.ui.navigation")
+local info_popup = require("atlas.ui.popups.info")
+local renderer = require("atlas.jira.ui.renderer")
 local users = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
 local service = require("atlas.jira.api.service")
@@ -193,6 +196,28 @@ end
 function M.switch_view(view, on_done)
 	state.active_view = view
 	load_active_view({ force_load = false }, on_done)
+end
+
+---@param source_buf integer|nil
+function M.show_issue_details(source_buf)
+	local node = navigation.current_item()
+	if type(node) ~= "table" or node.kind ~= "issue" then
+		footer.notify("warn", "No issue selected")
+		return
+	end
+
+	local issue = type(node._issue) == "table" and node._issue or nil
+	if issue == nil then
+		footer.notify("warn", "Issue payload missing on line")
+		return
+	end
+
+	local lines, highlights = renderer.issue_popup_content(issue)
+	info_popup.show({
+		lines = lines,
+		highlights = highlights,
+		source_buf = source_buf,
+	})
 end
 
 return M
