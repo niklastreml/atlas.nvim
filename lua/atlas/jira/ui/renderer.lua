@@ -5,9 +5,141 @@ local icons = require("atlas.ui.icons")
 local state = require("atlas.jira.state")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
-local table_view = require("atlas.ui.components.table")
+local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
 local utils = require("atlas.utils")
 local footer = require("atlas.ui.components.footer")
+local highlights = require("atlas.ui.highlights")
+local STORY_POINTS_ICON = "󰫢"
+
+---@param issue_type string|nil
+---@return string
+local function issue_type_hl(issue_type)
+	local lower = tostring(issue_type or ""):lower()
+	if lower == "bug" then
+		return "AtlasLogError"
+	end
+	if lower == "story" then
+		return "AtlasTextPositive"
+	end
+	if lower == "epic" then
+		return "AtlasJiraEpic"
+	end
+	if lower == "task" or lower == "sub-task" or lower == "subtask" then
+		return "AtlasLogInfo"
+	end
+	return "AtlasTextMuted"
+end
+
+---@param row table
+---@param col table
+---@param ctx { text: string, padded: string, width: integer }
+---@return table[]|nil
+local function cell_hl(row, col, ctx)
+	local issue = row._issue
+
+	if col.key == "name" then
+		local spans_for_cell = {}
+		local is_child = (tonumber(row._tv2_depth) or 0) > 0
+
+		if is_child and type(issue) == "table" then
+			local issue_icon = icons.jira_icon(issue.type)
+			local is, ie = ctx.text:find(issue_icon, 1, true)
+			if is and ie then
+				table.insert(spans_for_cell, {
+					start_col = is - 1,
+					end_col = ie,
+					hl_group = issue_type_hl(issue.type),
+				})
+			end
+		end
+
+		if type(issue) == "table" and type(issue.key) == "string" and issue.key ~= "" then
+			local s, e = ctx.text:find(issue.key, 1, true)
+			if s and e then
+				table.insert(spans_for_cell, {
+					start_col = s - 1,
+					end_col = e,
+					hl_group = is_child and "LineNr" or "AtlasJiraKey",
+				})
+
+				if is_child then
+					local title_start = e + 2
+					if title_start <= #ctx.text then
+						table.insert(spans_for_cell, {
+							start_col = title_start - 1,
+							end_col = #ctx.text,
+							hl_group = "Comment",
+						})
+					end
+				end
+			end
+		end
+
+		local ss, se = ctx.text:find(STORY_POINTS_ICON, 1, true)
+		if ss and se then
+			table.insert(spans_for_cell, {
+				start_col = ss - 1,
+				end_col = se,
+				hl_group = "AtlasJiraStoryPoints",
+			})
+
+			local ns, ne = ctx.text:find("%d+%.?%d*", se + 1)
+			if ns and ne then
+				table.insert(spans_for_cell, {
+					start_col = ns - 1,
+					end_col = ne,
+					hl_group = "AtlasJiraStoryPoints",
+				})
+			end
+		end
+
+		return #spans_for_cell > 0 and spans_for_cell or nil
+	end
+
+	if col.key == "duedate" then
+		return nil
+	end
+
+	if col.key == "status" then
+		local hl_group = highlights.dynamic_for_bg(
+			type(issue) == "table" and type(issue.status_id) == "string" and ("jira-status:" .. issue.status_id) or nil
+		) or "AtlasTextMuted"
+		return {
+			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
+		}
+	end
+
+	if col.key == "icon" then
+		local hl_group = type(issue) == "table" and issue_type_hl(issue.type) or "AtlasTextMuted"
+		return {
+			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
+		}
+	end
+
+	if col.key == "assignee" then
+		local assignee_name = type(issue) == "table" and type(issue.assignee) == "string" and issue.assignee or ""
+		local hl_group = assignee_name == "" and "AtlasTextMutedItalic" or highlights.dynamic_for(assignee_name)
+		if hl_group == nil then
+			return nil
+		end
+		return {
+			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
+		}
+	end
+
+	if col.key == "reporter" then
+		local reporter_name = type(issue) == "table" and type(issue.reporter) == "string" and issue.reporter or ""
+		local hl_group = reporter_name == "" and "AtlasTextMutedItalic" or highlights.dynamic_for(reporter_name)
+		if hl_group == nil then
+			return nil
+		end
+		return {
+			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
+		}
+	end
+
+	return nil
+end
 
 ---@param view JiraViewConfig|nil
 ---@return string
@@ -22,24 +154,33 @@ end
 ---@param is_child boolean|nil
 ---@return table
 local function issue_to_row(issue, is_child)
-	local icon = is_child and "" or icons.jira_type(issue.type)
-	local name = is_child and ("  " .. icons.jira_type(issue.type) .. " " .. issue.key .. " " .. issue.summary)
+	local icon = is_child and "" or icons.jira_icon(issue.type)
+	local title = is_child and (icons.jira_icon(issue.type) .. " " .. issue.key .. " " .. issue.summary)
 		or (issue.key .. " " .. issue.summary)
+	local story_points = issue.story_points
+	local points = ""
+	if type(story_points) == "number" then
+		points = (story_points % 1 == 0) and tostring(math.floor(story_points)) or tostring(story_points)
+	end
+	local name = points ~= "" and (title .. "  " .. STORY_POINTS_ICON .. " " .. points) or title
+	if is_child then
+		name = "  " .. name
+	end
+	local due_display = utils.format_date(issue.duedate)
+	if due_display ~= "" then
+		due_display = string.format("%s %s", icons.entity("created"), due_display)
+	else
+		due_display = ""
+	end
 
 	local row = {
-		kind = "issue",
-		key = issue.key,
-		id = issue.key,
 		icon = icon,
 		name = name,
-		status = issue.status,
-		status_category = issue.status_category,
-		assignee = issue.assignee,
-		reporter = issue.reporter,
-		priority = issue.priority,
-		duedate = issue.duedate or "",
-		type = issue.type,
-		subtask = issue.subtask,
+		duedate = due_display,
+		assignee = string.format("%s %s", icons.entity("user"), issue.assignee or "Unassigned"),
+		reporter = string.format("%s %s", icons.entity("user"), issue.reporter or "Unknown"),
+		status = string.format(" %s ", issue.status),
+
 		expanded = true,
 		_item = { kind = "issue", key = issue.key },
 		_issue = issue,
@@ -64,7 +205,6 @@ local function issues_to_rows(issues)
 				kind = "separator",
 				icon = "",
 				name = "",
-				priority = "",
 				duedate = "",
 				assignee = "",
 				reporter = "",
@@ -92,7 +232,7 @@ function M.render(opts)
 	end
 
 	local actions = {
-		{ label = string.format(" %s Refresh (R) ", icons.entity("refresh")), hl_group = "AtlasJiraTheme" },
+		{ label = " Refresh (R) ", hl_group = "AtlasJiraTheme" },
 	}
 
 	local lines, spans = {}, {}
@@ -131,20 +271,30 @@ function M.render(opts)
 	else
 		local rows = issues_to_rows(state.issue_tree)
 
-		local tbl_lines, tbl_map, tbl_spans = table_view.render({
+		local tbl_lines, tbl_map, tbl_spans = table_tree_v2.render({
 			width = opts.width,
 			margin = 1,
 			columns = {
-				{ key = "icon", name = "", can_grow = false },
-				{ key = "name", name = "Issue", min_width = 30 },
-				{ key = "priority", name = "Priority", width = 10, can_grow = false },
-				{ key = "duedate", name = "Due", width = 12, can_grow = false },
-				{ key = "assignee", name = "Assignee", width = 16, can_grow = false },
-				{ key = "reporter", name = "Reporter", width = 16, can_grow = false },
-				{ key = "status", name = "Status", width = 14, can_grow = false },
+				{ key = "icon", name = "", can_grow = false, align = "center" },
+				{ key = "name", name = "󰌷 Issue" },
+				{ key = "duedate", name = "", can_grow = false, align = "center", align_title = true },
+				{
+					key = "assignee",
+					name = string.format("%s Assignee", icons.entity("user")),
+					max_width = 22,
+					can_grow = false,
+				},
+				{
+					key = "reporter",
+					name = string.format("%s Reporter", icons.entity("user")),
+					max_width = 22,
+					can_grow = false,
+				},
+				{ key = "status", name = " Status", can_grow = false, align = "center" },
 			},
 			rows = rows,
 			tree = {
+				column_key = "icon",
 				children_key = "children",
 				expanded_field = "expanded",
 				default_expanded = true,
@@ -152,25 +302,11 @@ function M.render(opts)
 				show_indicator = true,
 				leaf_prefix = "",
 			},
-			cell_hl = function(row, col)
-				if col.key == "status" then
-					if row.status_category == "Done" then
-						return "AtlasTextPositive"
-					end
-					if row.status_category == "In Progress" or row.status_category == "In Arbeit" then
-						return "AtlasTextWarning"
-					end
-					return "AtlasTextMuted"
-				end
-				if col.key == "priority" or col.key == "duedate" or col.key == "reporter" then
-					return "AtlasTextMuted"
-				end
-				return nil
-			end,
+			cell_hl = cell_hl,
 		})
 
 		local table_base = #lines
-		utils.append_block(lines, spans, { lines = tbl_lines, spans = tbl_spans })
+		utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
 
 		for lnum, node in pairs(tbl_map) do
 			line_map[table_base + lnum] = node

@@ -20,6 +20,12 @@ local function hash_string(text)
 	return h
 end
 
+---@param identifier string
+---@return integer
+local function palette_index(identifier)
+	return (hash_string(identifier) % #dynamic_palette) + 1
+end
+
 ---@type table<string, table>
 local groups = {
 	AtlasTabInactive = { bg = "#494d64", fg = "#a5adcb" },
@@ -27,6 +33,7 @@ local groups = {
 	AtlasSectionHeader = { fg = "#7f849c", bold = true, underline = true },
 
 	AtlasTextMuted = { fg = "#7f849c" },
+	AtlasTextMutedItalic = { fg = "#7f849c", italic = true },
 	AtlasTextPositive = { fg = "#a6da95", bold = true },
 	AtlasTextWarning = { fg = "#f9e2af", bold = true },
 
@@ -37,9 +44,12 @@ local groups = {
 	AtlasFooterBackground = { bg = "#202635" },
 	AtlasFooterText = { fg = "#7f849c" },
 
-	AtlasJiraTheme = { bg = "#0f4c81", bold = true },
-	AtlasBitbucketTheme = { bg = "#1e3a8a", bold = true },
+	AtlasJiraTheme = { bg = "#1e3a8a", bold = true },
+	AtlasJiraKey = { fg = "#89b4fa", bold = true },
+	AtlasJiraEpic = { fg = "#cba6f7", bold = true },
+	AtlasJiraStoryPoints = { fg = "#f38ba8", bold = true },
 
+	AtlasBitbucketTheme = { bg = "#1e3a8a", bold = true },
 	AtlasBitbucketPROpen = { fg = "#0b1320", bg = "#93c5fd", bold = true },
 	AtlasBitbucketPRMerged = { fg = "#0b1320", bg = "#86efac", bold = true },
 	AtlasBitbucketPRDeclined = { fg = "#0b1320", bg = "#fca5a5", bold = true },
@@ -52,8 +62,10 @@ function M.setup()
 	end
 
 	for idx, color in ipairs(dynamic_palette) do
-		local name = string.format("AtlasDynColor%02d", idx)
-		vim.api.nvim_set_hl(0, name, { fg = color })
+		local fg_name = string.format("AtlasDynColor%02d", idx)
+		local bg_name = string.format("AtlasDynBgColor%02d", idx)
+		vim.api.nvim_set_hl(0, fg_name, { fg = color })
+		vim.api.nvim_set_hl(0, bg_name, { fg = "#334155", bg = color })
 	end
 end
 
@@ -67,8 +79,21 @@ function M.dynamic_for(identifier)
 		return nil
 	end
 
-	local idx = (hash_string(identifier) % #dynamic_palette) + 1
+	local idx = palette_index(identifier)
 	return string.format("AtlasDynColor%02d", idx)
+end
+
+---Returns a stable dynamic background highlight group for an identifier.
+---Same identifier always maps to the same palette color.
+---@param identifier string|nil
+---@return string|nil
+function M.dynamic_for_bg(identifier)
+	if identifier == nil or identifier == "" then
+		return nil
+	end
+
+	local idx = palette_index(identifier)
+	return string.format("AtlasDynBgColor%02d", idx)
 end
 
 return M

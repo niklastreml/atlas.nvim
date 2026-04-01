@@ -1,5 +1,8 @@
 local M = {}
 
+local STORY_POINTS_FIELD = "customfield_10016"
+local APPROVERS_FIELD = "customfield_10003"
+
 ---@param value any
 ---@return boolean
 local function is_valid(value)
@@ -25,23 +28,24 @@ local function safe_get(obj, key, subkey)
 end
 
 ---@param raw_status table|nil
----@return string, string, string|nil
+---@return string|nil, string|nil, string|nil, string|nil
 local function extract_status(raw_status)
 	if not is_valid(raw_status) then
-		return "Unknown", "Unknown", nil
+		return nil, nil, nil, nil
 	end
 
-	local name = raw_status.name or "Unknown"
-	local category = "Unknown"
+	local name = safe_get(raw_status, "name")
+	local id = raw_status.id and tostring(raw_status.id) or nil
+	local category = nil
 	local color = nil
 
 	local cat = safe_get(raw_status, "statusCategory")
 	if is_valid(cat) then
-		category = cat.name or "Unknown"
+		category = cat.name
 		color = cat.colorName
 	end
 
-	return name, category, color
+	return name, id, category, color
 end
 
 ---@param raw_parent table|nil
@@ -52,40 +56,91 @@ local function extract_parent(raw_parent)
 	end
 
 	local pf = raw_parent.fields or {}
-	local status, status_category, status_color = extract_status(safe_get(pf, "status"))
+	local status, status_id, status_category, status_color = extract_status(safe_get(pf, "status"))
 
 	return {
 		key = tostring(raw_parent.key),
 		summary = tostring(pf.summary or ""),
 		status = status,
+		status_id = status_id,
 		status_category = status_category,
 		status_color = status_color,
-		type = safe_get(pf, "issuetype", "name") or "Epic",
-		priority = safe_get(pf, "priority", "name") or "None",
-		assignee = safe_get(pf, "assignee", "displayName") or "Unassigned",
-		reporter = safe_get(pf, "reporter", "displayName") or "Unknown",
+		type = safe_get(pf, "issuetype", "name"),
+		priority = safe_get(pf, "priority", "name"),
+		assignee = safe_get(pf, "assignee", "displayName"),
+		reporter = safe_get(pf, "reporter", "displayName"),
+		story_points = nil,
+		approvers = nil,
 		duedate = nil,
 		subtask = false,
 		parent = nil,
 	}
 end
 
+---@param value any
+---@return number|nil
+local function extract_story_points(value)
+	if not is_valid(value) then
+		return nil
+	end
+
+	if type(value) == "number" then
+		return value
+	end
+
+	if type(value) == "string" then
+		local n = tonumber(value)
+		if n then
+			return n
+		end
+	end
+
+	return nil
+end
+
+---@param raw_approvers any
+---@return string[]|nil
+local function extract_approvers(raw_approvers)
+	if type(raw_approvers) ~= "table" then
+		return nil
+	end
+
+	local out = {}
+	for _, approver in ipairs(raw_approvers) do
+		if type(approver) == "table" then
+			local name = approver.displayName
+			if type(name) == "string" and name ~= "" then
+				table.insert(out, name)
+			end
+		end
+	end
+
+	if #out == 0 then
+		return nil
+	end
+
+	return out
+end
+
 ---@param raw table
 ---@return JiraIssue
 function M.normalize_issue(raw)
 	local fields = raw.fields or {}
-	local status, status_category, status_color = extract_status(safe_get(fields, "status"))
+	local status, status_id, status_category, status_color = extract_status(safe_get(fields, "status"))
 
 	return {
 		key = tostring(raw.key or ""),
 		summary = tostring(fields.summary or ""),
 		status = status,
+		status_id = status_id,
 		status_category = status_category,
 		status_color = status_color,
-		type = safe_get(fields, "issuetype", "name") or "Task",
-		priority = safe_get(fields, "priority", "name") or "None",
-		assignee = safe_get(fields, "assignee", "displayName") or "Unassigned",
-		reporter = safe_get(fields, "reporter", "displayName") or "Unknown",
+		type = safe_get(fields, "issuetype", "name"),
+		priority = safe_get(fields, "priority", "name"),
+		assignee = safe_get(fields, "assignee", "displayName"),
+		reporter = safe_get(fields, "reporter", "displayName"),
+		story_points = extract_story_points(fields[STORY_POINTS_FIELD]),
+		approvers = extract_approvers(fields[APPROVERS_FIELD]),
 		duedate = fields.duedate,
 		subtask = safe_get(fields, "issuetype", "subtask") == true,
 		parent = extract_parent(safe_get(fields, "parent")),

@@ -26,13 +26,21 @@ local ICONS = {
 		branch = "",
 		tag = "󰓹",
 		author = "",
+		user = "",
 	},
 	jira_type = {
 		epic = "󰛨",
 		story = "󰃀",
-		task = "󰄵",
+		task = "",
 		bug = "",
 		subtask = "󰩊",
+
+		highest = "",
+		blocker = "",
+		high = "",
+		medium = "",
+		low = "",
+		lowest = "",
 	},
 	fallback = "•",
 }
@@ -42,13 +50,26 @@ function M.provider(name)
 	return ICONS.provider[name] or ICONS.fallback
 end
 
----@param name "repo"|"refresh"|"pr"|"comments"|"tasks"|"created"|"updated"|"commit"|"overview"|"files"|"activity"|"comment"|"success"|"warning"|"info"|"error"|"pending"|"branch"|"tag"|"author"
+---@param name "repo"|"refresh"|"pr"|"comments"|"tasks"|"created"|"updated"|"commit"|"overview"|"files"|"activity"|"comment"|"success"|"warning"|"info"|"error"|"pending"|"branch"|"tag"|"author"|"user"
 function M.entity(name)
 	return ICONS.entity[name] or ICONS.fallback
 end
 
----@param name string
-function M.jira_type(name)
+---@alias JiraIconName
+---| "epic"
+---| "story"
+---| "task"
+---| "bug"
+---| "subtask"
+---| "highest"
+---| "blocker"
+---| "high"
+---| "medium"
+---| "low"
+---| "lowest"
+
+---@param name JiraIconName|string|nil
+function M.jira_icon(name)
 	local lower = (name or ""):lower():gsub("[-%s]", "")
 	return ICONS.jira_type[lower] or ICONS.fallback
 end

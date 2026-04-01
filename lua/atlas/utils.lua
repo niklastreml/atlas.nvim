@@ -124,6 +124,21 @@ function M.relative_time_text(iso)
 	return string.format("%d %s%s ago", n, base, suffix)
 end
 
+---@param iso string|nil
+---@return string
+function M.format_date(iso)
+	if type(iso) ~= "string" or iso == "" then
+		return ""
+	end
+
+	local ymd = iso:match("^(%d%d%d%d%-%d%d%-%d%d)")
+	if ymd ~= nil then
+		return ymd
+	end
+
+	return ""
+end
+
 ---@param bytes number|string|nil
 ---@return string
 function M.human_size(bytes)

@@ -14,6 +14,8 @@ local SEARCH_FIELDS = {
 	"priority",
 	"issuetype",
 	"duedate",
+	"customfield_10016", --- story points
+	"customfield_10003", --- approvers
 }
 
 ---@param jql string

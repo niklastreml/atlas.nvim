@@ -6,13 +6,16 @@
 ---@class JiraIssue
 ---@field key string
 ---@field summary string
----@field status string
----@field status_category string
+---@field status string|nil
+---@field status_id string|nil
+---@field status_category string|nil
 ---@field status_color string|nil
----@field type string
----@field priority string
----@field assignee string
----@field reporter string
+---@field type string|nil
+---@field priority string|nil
+---@field assignee string|nil
+---@field reporter string|nil
+---@field story_points number|nil
+---@field approvers string[]|nil
 ---@field duedate string|nil
 ---@field subtask boolean
 ---@field parent JiraIssue|nil

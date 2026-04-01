@@ -18,7 +18,20 @@ Accept: application/json
 
 {
   "jql": "project = {{jira_project_key}} ORDER BY updated DESC",
-  "fields": ["summary", "status", "assignee", "reporter", "parent", "priority", "issuetype", "duedate"],
+  "fields": ["summary", "status", "assignee", "reporter", "parent", "priority", "issuetype", "duedate", "customfield_10016", "customfield_10003"],
+  "nextPageToken": "",
+  "maxResults": 10
+}
+
+### Search specific issue
+POST {{JIRA_BASE_URL}}/rest/api/3/search/jql
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "jql": "key = {{jira_issue_key}}",
+  "fields": ["*all"],
   "nextPageToken": "",
   "maxResults": 10
 }
