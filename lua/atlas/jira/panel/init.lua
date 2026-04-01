@@ -104,7 +104,8 @@ function M.render()
 			lines, spans, tab_line_map = tab.render(vim.api.nvim_win_get_width(win))
 			panel_state.line_map = tab_line_map or {}
 		else
-			lines = { "", "  Unknown tab: " .. tostring(panel_state.current_tab) }
+			lines =
+				{ "", "  Unknown tab: " .. tostring(panel_state.current_tab) .. ". You shouldn't even be here..󱃞 " }
 			panel_state.line_map = {}
 		end
 	end
@@ -113,7 +114,13 @@ function M.render()
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 	for _, span in ipairs(spans or {}) do
-		if type(span) == "table" and span.line ~= nil and span.start_col ~= nil and span.end_col ~= nil and span.hl_group ~= nil then
+		if
+			type(span) == "table"
+			and span.line ~= nil
+			and span.start_col ~= nil
+			and span.end_col ~= nil
+			and span.hl_group ~= nil
+		then
 			vim.api.nvim_buf_set_extmark(buf, ns, span.line, span.start_col, {
 				end_row = span.line,
 				end_col = span.end_col,

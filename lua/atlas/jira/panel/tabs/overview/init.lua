@@ -7,11 +7,12 @@ local keymap = require("atlas.jira.panel.tabs.overview.keymap")
 ---@param issue JiraIssue|nil
 function M.activate(issue)
 	keymap.setup()
-	controller.fetch_if_needed(issue)
+	controller.show(issue)
 end
 
 function M.deactivate()
 	keymap.teardown()
+	controller.deactivate()
 end
 
 ---@param width integer

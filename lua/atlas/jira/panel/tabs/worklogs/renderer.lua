@@ -3,6 +3,7 @@ local state = require("atlas.jira.panel.tabs.worklogs.state")
 local header = require("atlas.jira.panel.components.header")
 local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
+local spinner = require("atlas.ui.components.spinner")
 local PADDING_X = 2
 
 ---@param width integer
@@ -21,7 +22,29 @@ function M.render(width)
 	local tabs_lines, tabs_spans = tabs.render("worklogs", width, PADDING_X)
 	utils.append_block(lines, spans, { lines = tabs_lines, highlights = tabs_spans })
 	table.insert(lines, "")
-	table.insert(lines, "Worklogs tab content goes here...")
+
+	if state.worklogs_text == "loading" then
+		local loading = string.rep(" ", PADDING_X) .. spinner.with_text("Loading worklogs...")
+		table.insert(lines, loading)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #loading,
+			hl_group = "AtlasTextMuted",
+		})
+	elseif type(state.worklogs_text) == "string" and state.worklogs_text ~= "" then
+		for _, row in ipairs(utils.sanitize_markdown_lines(state.worklogs_text)) do
+			table.insert(lines, string.rep(" ", PADDING_X) .. row)
+		end
+	else
+		table.insert(lines, string.rep(" ", PADDING_X) .. "No worklogs")
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #lines[#lines],
+			hl_group = "AtlasTextMuted",
+		})
+	end
 
 	state.line_map = {
 		[1] = { kind = "issue", issue = issue },

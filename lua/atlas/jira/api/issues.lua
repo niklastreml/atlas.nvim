@@ -75,6 +75,44 @@ function M.search_issues(jql, on_done, opts)
 end
 
 function M.get_issue(issue_key, callback) end
+
+---@param issue_key string
+---@param on_done fun(description: any, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.get_issue_description(issue_key, on_done)
+	if type(issue_key) ~= "string" or issue_key == "" then
+		on_done(nil, "Missing issue key")
+		return nil
+	end
+
+	logger.loginfo("Jira fetch issue description", { issue_key = issue_key })
+
+	local data = {
+		jql = "key = " .. issue_key,
+		fields = { "description" },
+		maxResults = 1,
+	}
+
+	return service.request("POST", "/search/jql", data, function(result, err)
+		if err or not result then
+			logger.logerror("Jira description fetch failed", {
+				issue_key = issue_key,
+				error = err or "Empty response",
+			})
+			on_done(nil, err or "Empty response")
+			return
+		end
+
+		local first_issue = (result.issues or {})[1]
+		local description = first_issue and first_issue.fields and first_issue.fields.description or nil
+		logger.loginfo("Jira description fetch complete", {
+			issue_key = issue_key,
+			has_description = description ~= nil,
+		})
+		on_done(description, nil)
+	end)
+end
+
 function M.create_issue(fields, callback) end
 function M.update_issue(issue_key, fields, callback) end
 function M.get_create_meta(project_key, callback) end

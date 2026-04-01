@@ -3,6 +3,7 @@ local state = require("atlas.jira.panel.tabs.overview.state")
 local header = require("atlas.jira.panel.components.header")
 local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
+local spinner = require("atlas.ui.components.spinner")
 local PADDING_X = 2
 
 ---@param width integer
@@ -23,7 +24,45 @@ function M.render(width)
 	utils.append_block(lines, spans, { lines = tabs_lines, highlights = tabs_spans })
 	table.insert(lines, "")
 
-	table.insert(lines, "Overview tab content goes here...")
+	if state.adf_description == "loading" then
+		local loading = string.rep(" ", PADDING_X) .. spinner.with_text("Loading description...")
+		table.insert(lines, loading)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #loading,
+			hl_group = "AtlasTextMuted",
+		})
+	elseif state.adf_description == nil then
+		table.insert(lines, string.rep(" ", PADDING_X) .. "No description")
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #lines[#lines],
+			hl_group = "AtlasTextMuted",
+		})
+	else
+		table.insert(lines, string.rep(" ", PADDING_X) .. "Description")
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #lines[#lines],
+			hl_group = "AtlasTextMuted",
+		})
+
+		local desc_lines
+		if state.view_mode == "raw" then
+			local raw_text = vim.inspect(state.adf_description)
+			desc_lines = vim.split(raw_text, "\n", { plain = true })
+		else
+			desc_lines = utils.sanitize_markdown_lines(state.md_description or "")
+		end
+
+		for _, desc_line in ipairs(desc_lines) do
+			table.insert(lines, string.rep(" ", PADDING_X) .. desc_line)
+		end
+	end
+
 	state.line_map = {
 		[1] = { kind = "issue", issue = issue },
 		[#lines] = { kind = "overview" },
