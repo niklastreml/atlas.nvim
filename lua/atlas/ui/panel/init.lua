@@ -42,11 +42,23 @@ local function register_panel_keys()
 		M.close()
 	end, { buffer = buf, silent = true, nowait = true })
 
+	vim.keymap.set("n", "p", function()
+		M.toggle()
+	end, { buffer = buf, silent = true, nowait = true })
+
 	vim.keymap.set("n", "[", function()
 		current_panel_controller().prev_tab()
 	end, { buffer = buf, silent = true, nowait = true })
 
+	vim.keymap.set("n", "<S-Tab>", function()
+		current_panel_controller().prev_tab()
+	end, { buffer = buf, silent = true, nowait = true })
+
 	vim.keymap.set("n", "]", function()
+		current_panel_controller().next_tab()
+	end, { buffer = buf, silent = true, nowait = true })
+
+	vim.keymap.set("n", "<Tab>", function()
 		current_panel_controller().next_tab()
 	end, { buffer = buf, silent = true, nowait = true })
 

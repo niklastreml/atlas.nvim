@@ -2,8 +2,10 @@ local M = {}
 local state = require("atlas.jira.panel.tabs.overview.state")
 local header = require("atlas.jira.panel.components.header")
 local tabs = require("atlas.jira.panel.components.tabs")
+local chips = require("atlas.jira.panel.components.chips")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
+
 local PADDING_X = 2
 
 ---@param width integer
@@ -16,14 +18,32 @@ function M.render(width)
 	end
 
 	local lines, spans = {}, {}
+
+	--- Header
 	local header_lines, header_spans = header.render(issue, width)
 	utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
+
+	--- Tabs
 	local tabs_lines, tabs_spans = tabs.render("overview", width, PADDING_X)
-
 	utils.append_block(lines, spans, { lines = tabs_lines, highlights = tabs_spans })
-	table.insert(lines, "")
 
+	--- Chips
+	local mode_text = state.view_mode == "raw" and "ADF (m)" or "Markdown (m)"
+	local mode_line, mode_spans = chips.render({
+		{ text = mode_text, hl_group = "AtlasChipActive", active = true },
+	}, width)
+	table.insert(lines, mode_line)
+	for _, span in ipairs(mode_spans) do
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = span.start_col,
+			end_col = span.end_col,
+			hl_group = span.hl_group,
+		})
+	end
+
+	--- Content
 	if state.adf_description == "loading" then
 		local loading = string.rep(" ", PADDING_X) .. spinner.with_text("Loading description...")
 		table.insert(lines, loading)

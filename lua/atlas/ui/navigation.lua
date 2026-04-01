@@ -206,7 +206,49 @@ function M.register_keys(buf)
 			end,
 		},
 		{
+			key = "<S-Tab>",
+			desc = "Previous panel tab",
+			callback = function()
+				local panel = require("atlas.ui.panel")
+				if not panel.is_open() then
+					return
+				end
+
+				if ui_state.current_view == "jira" then
+					require("atlas.jira.panel.init").prev_tab()
+				elseif ui_state.current_view == "bitbucket" then
+					local item = panel_state.selected_item
+					if type(item) == "table" and item.kind == "repo" then
+						require("atlas.bitbucket.ui.panel.repository.controller").prev_tab()
+					else
+						require("atlas.bitbucket.ui.panel.prs.controller").prev_tab()
+					end
+				end
+			end,
+		},
+		{
 			key = "]",
+			desc = "Next panel tab",
+			callback = function()
+				local panel = require("atlas.ui.panel")
+				if not panel.is_open() then
+					return
+				end
+
+				if ui_state.current_view == "jira" then
+					require("atlas.jira.panel.init").next_tab()
+				elseif ui_state.current_view == "bitbucket" then
+					local item = panel_state.selected_item
+					if type(item) == "table" and item.kind == "repo" then
+						require("atlas.bitbucket.ui.panel.repository.controller").next_tab()
+					else
+						require("atlas.bitbucket.ui.panel.prs.controller").next_tab()
+					end
+				end
+			end,
+		},
+		{
+			key = "<Tab>",
 			desc = "Next panel tab",
 			callback = function()
 				local panel = require("atlas.ui.panel")

@@ -16,13 +16,18 @@ function M.render(width)
 	end
 
 	local lines, spans = {}, {}
+
+	--- Header
 	local header_lines, header_spans = header.render(issue, width)
 	utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
+
+	--- Tabs
 	local tabs_lines, tabs_spans = tabs.render("worklogs", width, PADDING_X)
 	utils.append_block(lines, spans, { lines = tabs_lines, highlights = tabs_spans })
-	table.insert(lines, "")
+	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
 
+	--- Content
 	if state.worklogs_text == "loading" then
 		local loading = string.rep(" ", PADDING_X) .. spinner.with_text("Loading worklogs...")
 		table.insert(lines, loading)

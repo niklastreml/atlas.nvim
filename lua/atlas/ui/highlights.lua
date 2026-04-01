@@ -49,6 +49,7 @@ local groups = {
 	AtlasJiraTitle = { link = "CursorLineNr" },
 	AtlasJiraEpic = { fg = "#cba6f7", bold = true },
 	AtlasJiraStoryPoints = { fg = "#f38ba8", bold = true },
+	AtlasChipActive = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
 
 	AtlasBitbucketTheme = { bg = "#1e3a8a", bold = true },
 	AtlasBitbucketPROpen = { fg = "#0b1320", bg = "#93c5fd", bold = true },
@@ -66,7 +67,7 @@ function M.setup()
 		local fg_name = string.format("AtlasDynColor%02d", idx)
 		local bg_name = string.format("AtlasDynBgColor%02d", idx)
 		vim.api.nvim_set_hl(0, fg_name, { fg = color })
-		vim.api.nvim_set_hl(0, bg_name, { fg = "#334155", bg = color })
+		vim.api.nvim_set_hl(0, bg_name, { fg = "#1e1e2e", bg = color })
 	end
 end
 
