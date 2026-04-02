@@ -162,6 +162,8 @@ function M.render(issue, width)
 	table.insert(lines, "")
 
 	local spans = {
+		{ line = 0, line_hl_group = "AtlasPanelHeaderBg" },
+		{ line = 1, line_hl_group = "AtlasPanelHeaderBg" },
 		{
 			line = 0,
 			start_col = 1,

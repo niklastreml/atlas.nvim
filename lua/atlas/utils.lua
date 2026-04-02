@@ -8,12 +8,19 @@ function M.append_block(lines, spans, block)
 		table.insert(lines, line)
 	end
 	for _, span in ipairs(block.highlights or {}) do
-		table.insert(spans, {
-			line = base + span.line,
-			start_col = span.start_col,
-			end_col = span.end_col,
-			hl_group = span.hl_group,
-		})
+		if type(span) == "table" and span.line_hl_group ~= nil then
+			table.insert(spans, {
+				line = base + span.line,
+				line_hl_group = span.line_hl_group,
+			})
+		else
+			table.insert(spans, {
+				line = base + span.line,
+				start_col = span.start_col,
+				end_col = span.end_col,
+				hl_group = span.hl_group,
+			})
+		end
 	end
 end
 

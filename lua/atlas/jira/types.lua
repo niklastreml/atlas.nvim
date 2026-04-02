@@ -3,6 +3,28 @@
 ---@field display_name string
 ---@field email string
 
+---@class JiraCommentAuthor
+---@field account_id string|nil
+---@field display_name string|nil
+---@field email string|nil
+
+---@class JiraComment
+---@field id string
+---@field self string|nil
+---@field author JiraCommentAuthor|nil
+---@field update_author JiraCommentAuthor|nil
+---@field body table|nil
+---@field created string|nil
+---@field updated string|nil
+---@field parent_id string|number|nil
+---@field jsd_public boolean|nil
+---@field children JiraComment[]|nil
+
+---@class JiraCommentPage
+---@field start_at number
+---@field total number
+---@field comments JiraComment[]
+
 ---@class JiraIssue
 ---@field key string
 ---@field summary string

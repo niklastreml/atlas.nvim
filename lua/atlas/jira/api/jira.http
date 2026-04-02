@@ -1,4 +1,4 @@
-@jira_issue_key = KAN-1
+@jira_issue_key = KAN-5
 @jira_project_key = KAN
 @jira_transition_id = 31
 @jira_account_id = 60129fc6a7fb40006900d080
@@ -119,7 +119,7 @@ Accept: application/json
 
 
 ### Get comments
-GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment?maxResults=1
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 

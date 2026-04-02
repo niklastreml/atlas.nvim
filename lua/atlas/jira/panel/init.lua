@@ -114,7 +114,11 @@ function M.render()
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 	for _, span in ipairs(spans or {}) do
-		if
+		if type(span) == "table" and span.line ~= nil and span.line_hl_group ~= nil then
+			vim.api.nvim_buf_set_extmark(buf, ns, span.line, 0, {
+				line_hl_group = span.line_hl_group,
+			})
+		elseif
 			type(span) == "table"
 			and span.line ~= nil
 			and span.start_col ~= nil

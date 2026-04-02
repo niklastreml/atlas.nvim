@@ -4,6 +4,7 @@ local header = require("atlas.jira.panel.components.header")
 local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
+local adf = require("atlas.jira.panel.tabs.overview.adf")
 local PADDING_X = 2
 
 ---@param width integer
@@ -27,26 +28,37 @@ function M.render(width)
 	utils.append_block(lines, spans, { lines = tabs_lines, highlights = tabs_spans })
 	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
 
-	--- Content
-	if state.comments_text == "loading" then
+	if type(state.comments) == "table" and #state.comments > 0 then
+		for idx, comment in ipairs(state.comments) do
+			local body = adf.to_markdown((comment or {}).body)
+			if body == "" then
+				body = "-"
+			end
+			for _, row in ipairs(utils.sanitize_markdown_lines(body)) do
+				table.insert(lines, string.rep(" ", PADDING_X) .. row)
+			end
+			if idx < #state.comments then
+				table.insert(lines, "")
+			end
+		end
+		table.insert(lines, "")
+	elseif state.state ~= "loading" then
+		table.insert(lines, string.rep(" ", PADDING_X) .. "No comments")
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #lines[#lines],
+			hl_group = "AtlasTextMuted",
+		})
+	end
+
+	if state.state == "loading" then
 		local loading = string.rep(" ", PADDING_X) .. spinner.with_text("Loading comments...")
 		table.insert(lines, loading)
 		table.insert(spans, {
 			line = #lines - 1,
 			start_col = 0,
 			end_col = #loading,
-			hl_group = "AtlasTextMuted",
-		})
-	elseif type(state.comments_text) == "string" and state.comments_text ~= "" then
-		for _, row in ipairs(utils.sanitize_markdown_lines(state.comments_text)) do
-			table.insert(lines, string.rep(" ", PADDING_X) .. row)
-		end
-	else
-		table.insert(lines, string.rep(" ", PADDING_X) .. "No comments")
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = 0,
-			end_col = #lines[#lines],
 			hl_group = "AtlasTextMuted",
 		})
 	end

@@ -200,7 +200,64 @@ function M.build_issue_tree(issues)
 	return roots
 end
 
-function M.normalize_comments(raw) end
+---@param raw_author table|nil
+---@return JiraCommentAuthor|nil
+local function normalize_comment_author(raw_author)
+	if type(raw_author) ~= "table" then
+		return nil
+	end
+
+	return {
+		account_id = raw_author.accountId and tostring(raw_author.accountId) or nil,
+		display_name = raw_author.displayName and tostring(raw_author.displayName) or nil,
+		email = raw_author.emailAddress and tostring(raw_author.emailAddress) or nil,
+	}
+end
+
+---@param raw_comment table|nil
+---@return JiraComment|nil
+local function normalize_comment(raw_comment)
+	if type(raw_comment) ~= "table" then
+		return nil
+	end
+
+	local parent_id = nil
+	if type(raw_comment.parentId) == "number" or type(raw_comment.parentId) == "string" then
+		parent_id = raw_comment.parentId
+	end
+
+	return {
+		id = tostring(raw_comment.id or ""),
+		self = raw_comment.self and tostring(raw_comment.self) or nil,
+		author = normalize_comment_author(raw_comment.author),
+		update_author = normalize_comment_author(raw_comment.updateAuthor),
+		body = type(raw_comment.body) == "table" and raw_comment.body or nil,
+		created = raw_comment.created and tostring(raw_comment.created) or nil,
+		updated = raw_comment.updated and tostring(raw_comment.updated) or nil,
+		parent_id = parent_id,
+		jsd_public = type(raw_comment.jsdPublic) == "boolean" and raw_comment.jsdPublic or nil,
+		children = nil,
+	}
+end
+
+---@param raw table|nil
+---@return JiraCommentPage
+function M.normalize_comments(raw)
+	local comments = {}
+	for _, raw_comment in ipairs((type(raw) == "table" and raw.comments) or {}) do
+		local comment = normalize_comment(raw_comment)
+		if comment ~= nil then
+			table.insert(comments, comment)
+		end
+	end
+
+	return {
+		start_at = tonumber(type(raw) == "table" and raw.startAt) or 0,
+		total = tonumber(type(raw) == "table" and raw.total) or #comments,
+		comments = comments,
+	}
+end
+
 function M.normalize_transitions(raw) end
 function M.normalize_worklogs(raw) end
 

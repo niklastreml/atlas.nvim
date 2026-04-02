@@ -29,6 +29,7 @@ end
 ---@type table<string, table>
 local groups = {
 	AtlasTabInactive = { bg = "#494d64", fg = "#a5adcb" },
+	AtlasPanelHeaderBg = { bg = "#494d64" },
 	AtlasColumnHeader = { fg = "#7f849c", bold = true },
 	AtlasSectionHeader = { fg = "#7f849c", bold = true, underline = true },
 
