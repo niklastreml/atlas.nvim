@@ -9,7 +9,7 @@ local mapped_buf = nil
 local TABS = {
 	{ key = "overview", label = "Overview", mod = "atlas.jira.panel.tabs.overview" },
 	{ key = "comments", label = "Comments", mod = "atlas.jira.panel.tabs.comments" },
-	{ key = "worklogs", label = "Worklogs", mod = "atlas.jira.panel.tabs.worklogs" },
+	{ key = "history", label = "History", mod = "atlas.jira.panel.tabs.history" },
 }
 
 ---@return table|nil

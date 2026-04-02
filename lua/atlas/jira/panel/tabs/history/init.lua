@@ -1,8 +1,8 @@
 local M = {}
 
-local controller = require("atlas.jira.panel.tabs.worklogs.controller")
-local renderer = require("atlas.jira.panel.tabs.worklogs.renderer")
-local keymap = require("atlas.jira.panel.tabs.worklogs.keymap")
+local controller = require("atlas.jira.panel.tabs.history.controller")
+local renderer = require("atlas.jira.panel.tabs.history.renderer")
+local keymap = require("atlas.jira.panel.tabs.history.keymap")
 
 ---@param issue JiraIssue|nil
 function M.activate(issue)

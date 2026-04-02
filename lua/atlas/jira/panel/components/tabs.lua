@@ -5,10 +5,10 @@ local tabs = require("atlas.ui.components.tabs")
 local JIRA_TABS = {
 	{ key = "overview", label = "Overview", icon = icons.entity("overview") },
 	{ key = "comments", label = "Comments", icon = icons.entity("comment") },
-	{ key = "worklogs", label = "Worklogs", icon = icons.entity("activity") },
+	{ key = "history", label = "History", icon = icons.entity("updated") },
 }
 
----@param active_tab "overview"|"comments"|"worklogs"
+---@param active_tab "overview"|"comments"|"history"
 ---@param width integer
 ---@param padding_x integer
 ---@return string[]

@@ -79,6 +79,38 @@ end
 function M.get_issue(issue_key, callback) end
 
 ---@param issue_key string
+---@param start_at number|nil
+---@param max_results number|nil
+---@param on_done fun(page: JiraIssueHistoryPage|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.get_issue_history_page(issue_key, start_at, max_results, on_done)
+	if type(issue_key) ~= "string" or issue_key == "" then
+		on_done(nil, "Missing issue key")
+		return nil
+	end
+
+	local start = math.max(0, tonumber(start_at) or 0)
+	local size = math.max(1, tonumber(max_results) or 100)
+
+	logger.loginfo("Jira fetch issue history page", {
+		issue_key = issue_key,
+		start_at = start,
+		max_results = size,
+	})
+
+	local endpoint = string.format("/issue/%s/changelog?startAt=%d&maxResults=%d", issue_key, start, size)
+
+	return service.request("GET", endpoint, nil, function(result, err)
+		if err or not result then
+			on_done(nil, err or "Empty response")
+			return
+		end
+
+		on_done(normalizer.normalize_issue_history_page(result, start, size), nil)
+	end)
+end
+
+---@param issue_key string
 ---@param on_done fun(description: any, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.get_issue_description(issue_key, on_done)

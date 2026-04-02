@@ -1,7 +1,7 @@
 local M = {
 	---@type JiraIssue|nil
 	current_issue = nil,
-	---@type "overview"|"comments"|"worklogs"
+	---@type "overview"|"comments"|"history"
 	current_tab = "overview",
 	line_map = {},
 }
@@ -13,7 +13,7 @@ function M.set_current(issue)
 	M.line_map = {}
 end
 
----@param tab "overview"|"comments"|"worklogs"
+---@param tab "overview"|"comments"|"history"
 function M.set_current_tab(tab)
 	M.current_tab = tab
 	M.line_map = {}

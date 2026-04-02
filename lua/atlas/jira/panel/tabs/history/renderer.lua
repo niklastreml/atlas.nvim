@@ -1,5 +1,5 @@
 local M = {}
-local state = require("atlas.jira.panel.tabs.worklogs.state")
+local state = require("atlas.jira.panel.tabs.history.state")
 local header = require("atlas.jira.panel.components.header")
 local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
@@ -23,26 +23,21 @@ function M.render(width)
 	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
 
 	--- Tabs
-	local tabs_lines, tabs_spans = tabs.render("worklogs", width, PADDING_X)
+	local tabs_lines, tabs_spans = tabs.render("history", width, PADDING_X)
 	utils.append_block(lines, spans, { lines = tabs_lines, highlights = tabs_spans })
 	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
 
 	--- Content
-	if state.worklogs_text == "loading" then
-		local loading = string.rep(" ", PADDING_X) .. spinner.with_text("Loading worklogs...")
-		table.insert(lines, loading)
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = 0,
-			end_col = #loading,
-			hl_group = "AtlasTextMuted",
-		})
-	elseif type(state.worklogs_text) == "string" and state.worklogs_text ~= "" then
-		for _, row in ipairs(utils.sanitize_markdown_lines(state.worklogs_text)) do
-			table.insert(lines, string.rep(" ", PADDING_X) .. row)
+	if type(state.history_items) == "table" and #state.history_items > 0 then
+		for _, entry in ipairs(state.history_items) do
+			for _, item in ipairs(entry.items or {}) do
+				local from = item.from_string or item.from or ""
+				local to = item.to_string or item.to or ""
+				table.insert(lines, string.rep(" ", PADDING_X) .. string.format("%s -> %s", tostring(from), tostring(to)))
+			end
 		end
-	else
-		table.insert(lines, string.rep(" ", PADDING_X) .. "No worklogs")
+	elseif not state.is_loading then
+		table.insert(lines, string.rep(" ", PADDING_X) .. "No history")
 		table.insert(spans, {
 			line = #lines - 1,
 			start_col = 0,
@@ -51,9 +46,20 @@ function M.render(width)
 		})
 	end
 
+	if state.is_loading then
+		local loading = string.rep(" ", PADDING_X) .. spinner.with_text("Loading history...")
+		table.insert(lines, loading)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #loading,
+			hl_group = "AtlasTextMuted",
+		})
+	end
+
 	state.line_map = {
 		[1] = { kind = "issue", issue = issue },
-		[#lines] = { kind = "worklogs" },
+		[#lines] = { kind = "history" },
 	}
 
 	return lines, spans, state.line_map

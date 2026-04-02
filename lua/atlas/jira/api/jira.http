@@ -1,4 +1,4 @@
-@jira_issue_key = KAN-5
+@jira_issue_key = KAN-2
 @jira_project_key = KAN
 @jira_transition_id = 31
 @jira_account_id = 60129fc6a7fb40006900d080
@@ -69,32 +69,6 @@ Accept: application/json
 }
 
 
-### Add worklog
-POST {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/worklog
-Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
-Content-Type: application/json
-Accept: application/json
-
-{
-  "timeSpent": "1h",
-  "comment": {
-    "type": "doc",
-    "version": 1,
-    "content": [
-      {
-        "type": "paragraph",
-        "content": [
-          {
-            "type": "text",
-            "text": "Worked on implementation"
-          }
-        ]
-      }
-    ]
-  }
-}
-
-
 ### Assign issue
 PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/assignee
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
@@ -111,15 +85,13 @@ GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
-
-### Get project statuses
-GET {{JIRA_BASE_URL}}/rest/api/3/project/{{jira_project_key}}/statuses
+### Get issue history
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/changelog?startAt=0&maxResults=100
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
-
 ### Get comments
-GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment?maxResults=1
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
@@ -204,9 +176,3 @@ Accept: application/json
     }
   }
 }
-
-
-### Get create metadata
-GET {{JIRA_BASE_URL}}/rest/api/3/issue/createmeta?projectKeys={{jira_project_key}}
-Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
-Accept: application/json

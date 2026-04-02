@@ -51,3 +51,40 @@
 ---@field subtask boolean
 ---@field parent JiraIssue|nil
 ---@field children JiraIssue[]|nil
+
+--------------------------------------------------------------------------------
+-- Issue History (Verlauf / Changelog)
+--------------------------------------------------------------------------------
+---@alias JiraIssueHistoryField
+---| "issuetype"
+---| "priority"
+---| "timeoriginalestimate"
+---| "timeestimate"
+---| "status"
+---| "Rank"
+---| "timespent"
+---| "WorklogId"
+---| "Comment"
+---| "assignee"
+
+---@class JiraIssueHistoryItem
+---@field field JiraIssueHistoryField|nil
+---@field field_type string|nil
+---@field from string|nil
+---@field from_string string|nil
+---@field to string|nil
+---@field to_string string|nil
+
+---@class JiraIssueHistoryEntry
+---@field id string
+---@field created string|nil
+---@field author JiraUser|nil
+---@field items JiraIssueHistoryItem[]
+
+---@class JiraIssueHistoryPage
+---@field self string|nil
+---@field start_at number
+---@field max_results number
+---@field total number
+---@field is_last boolean
+---@field values JiraIssueHistoryEntry[]
