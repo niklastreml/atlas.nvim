@@ -138,7 +138,7 @@ function M.show(issue)
 	require("atlas.jira.panel.init").refresh()
 
 	local function fetch_page(start_at)
-		active_handle = issues_api.get_issue_history_page(issue.key, start_at, 10, function(page, err)
+		active_handle = issues_api.get_issue_history_page(issue.key, start_at, 100, function(page, err)
 			active_handle = nil
 
 			if current_request_id ~= request_id then
@@ -187,7 +187,6 @@ function M.show(issue)
 	fetch_page(0)
 end
 
---- TODO: Add refresh keymap
 function M.refresh()
 	if state.issue == nil then
 		return

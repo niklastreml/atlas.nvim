@@ -123,8 +123,17 @@ function M.toggle_view_mode()
 	require("atlas.jira.panel.init").refresh()
 end
 
---- TODO: Add refresh keymap
-function M.refresh() end
+function M.refresh()
+	if state.issue == nil then
+		return
+	end
+
+	cancel_active_handle()
+	stop_spinner()
+	state.adf_description = nil
+	state.md_description = nil
+	M.show(state.issue)
+end
 
 function M.reset()
 	cancel_active_handle()

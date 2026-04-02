@@ -232,8 +232,17 @@ function M.show(issue)
 	fetch_next(0)
 end
 
---- TODO: Add refresh keymap
-function M.refresh() end
+function M.refresh()
+	if state.issue == nil then
+		return
+	end
+
+	cancel_active()
+	stop_spinner()
+	state.comments = nil
+	state.state = nil
+	M.show(state.issue)
+end
 
 function M.reset()
 	cancel_active()

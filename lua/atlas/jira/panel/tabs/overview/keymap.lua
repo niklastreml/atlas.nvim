@@ -17,6 +17,15 @@ function M.setup()
 		nowait = true,
 		desc = "Toggle adf/markdown",
 	})
+
+	vim.keymap.set("n", "r", function()
+		controller.refresh()
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Refresh overview",
+	})
 end
 
 function M.teardown()
@@ -26,6 +35,7 @@ function M.teardown()
 	end
 
 	pcall(vim.keymap.del, "n", "m", { buffer = buf })
+	pcall(vim.keymap.del, "n", "r", { buffer = buf })
 end
 
 return M

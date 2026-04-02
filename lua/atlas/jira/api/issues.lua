@@ -5,8 +5,6 @@ local normalizer = require("atlas.jira.api.normalizer")
 local cache = require("atlas.core.cache")
 local logger = require("atlas.core.logger")
 
-local ISSUE_DESCRIPTION_CACHE_KEY = "jira:issue:description:last"
-
 local SEARCH_FIELDS = {
 	"summary",
 	"status",
@@ -16,6 +14,7 @@ local SEARCH_FIELDS = {
 	"priority",
 	"issuetype",
 	"duedate",
+	-- TODO: Probably different in every board, need to make this configurable
 	"customfield_10016", --- story points
 	"customfield_10003", --- approvers
 }
@@ -139,15 +138,7 @@ function M.get_issue_description(issue_key, on_done)
 		return nil
 	end
 
-	local cached_value, cache_hit = service.get_memory_cache(ISSUE_DESCRIPTION_CACHE_KEY)
-	if cache_hit and type(cached_value) == "table" and cached_value.issue_key == issue_key then
-		logger.loginfo("Jira description cache hit", { issue_key = issue_key })
-		on_done(cached_value.description, nil)
-		return nil
-	end
-
 	logger.loginfo("Jira fetch issue description", { issue_key = issue_key })
-
 	local data = {
 		jql = "key = " .. issue_key,
 		fields = { "description" },
@@ -166,10 +157,6 @@ function M.get_issue_description(issue_key, on_done)
 
 		local first_issue = (result.issues or {})[1]
 		local description = first_issue and first_issue.fields and first_issue.fields.description or nil
-		service.set_memory_cache(ISSUE_DESCRIPTION_CACHE_KEY, {
-			issue_key = issue_key,
-			description = description,
-		})
 		logger.loginfo("Jira description fetch complete", {
 			issue_key = issue_key,
 			has_description = description ~= nil,

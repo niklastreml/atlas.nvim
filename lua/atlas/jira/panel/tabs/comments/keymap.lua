@@ -43,6 +43,15 @@ function M.setup()
 		nowait = true,
 		desc = "Add comment",
 	})
+
+	vim.keymap.set("n", "r", function()
+		controller.refresh()
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Refresh comments",
+	})
 end
 
 function M.teardown()
@@ -55,6 +64,7 @@ function M.teardown()
 	pcall(vim.keymap.del, "n", "e", { buffer = buf })
 	pcall(vim.keymap.del, "n", "d", { buffer = buf })
 	pcall(vim.keymap.del, "n", "a", { buffer = buf })
+	pcall(vim.keymap.del, "n", "r", { buffer = buf })
 end
 
 return M
