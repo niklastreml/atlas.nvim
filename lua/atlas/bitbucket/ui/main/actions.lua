@@ -195,6 +195,7 @@ function M.open_pr_actions_popup(pr)
 
 	vim.ui.select(options, {
 		prompt = string.format("PR #%s action", tostring(pr.id or "")),
+		kind = "atlas_bitbucket_pr_actions",
 		format_item = function(item)
 			return item.label
 		end,
@@ -316,6 +317,7 @@ function M.open_pr_search_popup()
 
 					vim.ui.select(list, {
 						prompt = "Select repository",
+						kind = "atlas_bitbucket_repo_select",
 						format_item = function(item)
 							return item.full_name ~= "" and item.full_name or item.name
 						end,
@@ -352,6 +354,7 @@ function M.open_pr_search_popup()
 
 		vim.ui.select(ws, {
 			prompt = "Select workspace",
+			kind = "atlas_bitbucket_workspace_select",
 			format_item = function(item)
 				return item.slug
 			end,

@@ -10,6 +10,13 @@ local footer = require("atlas.ui.components.footer")
 local function register_dynamic_keys(buf, views)
 	local items = {
 		{
+			key = "r",
+			desc = "Reload selected issue",
+			callback = function()
+				controller.refresh_current_issue()
+			end,
+		},
+		{
 			key = "R",
 			desc = "Refresh current Jira view",
 			callback = function()
@@ -23,6 +30,13 @@ local function register_dynamic_keys(buf, views)
 			desc = "Show issue details popup",
 			callback = function()
 				controller.show_issue_details(buf)
+			end,
+		},
+		{
+			key = "A",
+			desc = "Open Jira actions",
+			callback = function()
+				controller.open_actions()
 			end,
 		},
 	}

@@ -268,7 +268,30 @@ function M.normalize_comments(raw)
 	}
 end
 
-function M.normalize_transitions(raw) end
+---@param raw table|nil
+---@return JiraIssueTransitionPage
+function M.normalize_transitions(raw)
+	local transitions = {}
+	for _, t in ipairs((type(raw) == "table" and raw.transitions) or {}) do
+		if type(t) == "table" then
+			local to = type(t.to) == "table" and t.to or {}
+			local category = type(to.statusCategory) == "table" and to.statusCategory or {}
+
+			table.insert(transitions, {
+				id = tostring(t.id or ""),
+				name = tostring(t.name or ""),
+				to_status_id = to.id and tostring(to.id) or nil,
+				to_status_name = to.name and tostring(to.name) or nil,
+				to_status_category = category.key and tostring(category.key) or nil,
+				to_status_color = category.colorName and tostring(category.colorName) or nil,
+			})
+		end
+	end
+
+	return {
+		transitions = transitions,
+	}
+end
 function M.normalize_worklogs(raw) end
 
 ---@param raw table|nil

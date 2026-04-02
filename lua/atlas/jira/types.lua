@@ -53,6 +53,20 @@
 ---@field children JiraIssue[]|nil
 
 --------------------------------------------------------------------------------
+-- Issue Transitions
+--------------------------------------------------------------------------------
+---@class JiraIssueTransition
+---@field id string
+---@field name string
+---@field to_status_id string|nil
+---@field to_status_name string|nil
+---@field to_status_category string|nil
+---@field to_status_color string|nil
+
+---@class JiraIssueTransitionPage
+---@field transitions JiraIssueTransition[]
+
+--------------------------------------------------------------------------------
 -- Issue History (Verlauf / Changelog)
 --------------------------------------------------------------------------------
 ---@alias JiraIssueHistoryField

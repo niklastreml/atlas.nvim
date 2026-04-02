@@ -11,6 +11,7 @@ local renderer = require("atlas.jira.ui.renderer")
 local users = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
 local service = require("atlas.jira.api.service")
+local jira_actions = require("atlas.jira.actions")
 local logger = require("atlas.core.logger")
 
 local active_user_handle = nil
@@ -218,6 +219,104 @@ function M.show_issue_details(source_buf)
 		highlights = highlights,
 		source_buf = source_buf,
 	})
+end
+
+function M.open_actions()
+	local node = navigation.current_item()
+	if type(node) ~= "table" or node.kind ~= "issue" then
+		footer.notify("warn", "No issue selected")
+		return
+	end
+
+	local issue = type(node._issue) == "table" and node._issue or nil
+	if issue == nil then
+		footer.notify("warn", "Issue payload missing on line")
+		return
+	end
+
+	jira_actions.open({ issue = issue, source = "main" }, function(result, err)
+		if err ~= nil then
+			footer.notify("error", tostring(err))
+			return
+		end
+
+		if result ~= nil and result.message ~= nil and result.message ~= "" then
+			footer.notify("info", result.message, 1200)
+		end
+
+		if result ~= nil and result.changed_issue then
+			M.refresh_issue(issue)
+		end
+	end)
+end
+
+---@param issue JiraIssue|nil
+---@param on_done fun()|nil
+function M.refresh_issue(issue, on_done)
+	on_done = on_done or function() end
+
+	local issue_key = type(issue) == "table" and tostring(issue.key or "") or ""
+	if issue_key == "" then
+		footer.notify("warn", "Issue key missing")
+		on_done()
+		return
+	end
+
+	footer.notify("loading", string.format("Reloading %s...", issue_key))
+	issues_api.get_issue(issue_key, function(fetched_issue, err)
+		if err ~= nil or fetched_issue == nil then
+			footer.notify("error", tostring(err or "Failed to reload issue"))
+			on_done()
+			return
+		end
+
+		local issues = state.issues or {}
+		local replaced = false
+		for i, existing in ipairs(issues) do
+			if type(existing) == "table" and existing.key == issue_key then
+				issues[i] = fetched_issue
+				replaced = true
+				break
+			end
+		end
+
+		if not replaced then
+			table.insert(issues, fetched_issue)
+		end
+
+		state.issues = issues
+		state.issue_tree = require("atlas.jira.api.normalizer").build_issue_tree(issues)
+
+		require("atlas.ui.main.renderer").render("jira")
+		local panel = require("atlas.ui.panel")
+		if panel.is_open() then
+			local ui_panel_state = require("atlas.ui.panel.state")
+			local current_panel_issue = require("atlas.jira.panel.state").current_issue
+			local current_panel_key = type(current_panel_issue) == "table" and tostring(current_panel_issue.key or "")
+				or ""
+			if ui_panel_state.active_provider == "jira" and current_panel_key == issue_key then
+				panel.on_select("jira", fetched_issue)
+			end
+		end
+
+		footer.notify("success", string.format("Reloaded %s", issue_key), 1200)
+		on_done()
+	end)
+end
+
+---@param on_done fun()|nil
+function M.refresh_current_issue(on_done)
+	local node = navigation.current_item()
+	if type(node) ~= "table" or node.kind ~= "issue" then
+		footer.notify("warn", "No issue selected")
+		if on_done then
+			on_done()
+		end
+		return
+	end
+
+	local issue = type(node._issue) == "table" and node._issue or nil
+	M.refresh_issue(issue, on_done)
 end
 
 return M

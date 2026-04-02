@@ -1,8 +1,10 @@
 local M = {}
 
 local panel_state = require("atlas.jira.panel.state")
-local ui_panel_state = require("atlas.ui.panel.state")
 local layout = require("atlas.ui.layout")
+local footer = require("atlas.ui.components.footer")
+local jira_actions = require("atlas.jira.actions")
+local jira_controller = require("atlas.jira.ui.controller")
 local ns = vim.api.nvim_create_namespace("atlas.jira.panel")
 local mapped_buf = nil
 
@@ -79,8 +81,37 @@ local function register_panel_keys()
 		desc = "Last item in tab",
 	})
 
-	mapped_buf = buf
+	vim.keymap.set("n", "A", function()
+		local issue = panel_state.current_issue
+		if type(issue) ~= "table" then
+			footer.notify("warn", "No issue selected")
+			return
+		end
 
+		jira_actions.open({ issue = issue, source = "panel" }, function(result, err)
+			if err ~= nil then
+				footer.notify("error", tostring(err))
+				return
+			end
+
+			if result ~= nil and result.message ~= nil and result.message ~= "" then
+				footer.notify("info", result.message, 1200)
+			end
+
+			if result ~= nil and result.changed_issue then
+				jira_controller.refresh_issue(issue, function()
+					M.refresh()
+				end)
+			end
+		end)
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Open Jira actions",
+	})
+
+	mapped_buf = buf
 end
 
 ---@param issue JiraIssue|nil

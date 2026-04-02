@@ -76,7 +76,27 @@ function M.search_issues(jql, on_done, opts)
 	return fetch_page("")
 end
 
-function M.get_issue(issue_key, callback) end
+---@param issue_key string
+---@param callback fun(issue: JiraIssue|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.get_issue(issue_key, callback)
+	if type(issue_key) ~= "string" or issue_key == "" then
+		callback(nil, "Missing issue key")
+		return nil
+	end
+
+	logger.loginfo("Jira fetch issue", { issue_key = issue_key })
+	local endpoint = string.format("/issue/%s?fields=%s", issue_key, table.concat(SEARCH_FIELDS, ","))
+
+	return service.request("GET", endpoint, nil, function(result, err)
+		if err or not result then
+			callback(nil, err or "Empty response")
+			return
+		end
+
+		callback(normalizer.normalize_issue(result), nil)
+	end)
+end
 
 ---@param issue_key string
 ---@param start_at number|nil
