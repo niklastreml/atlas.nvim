@@ -1,6 +1,6 @@
-local M = {}
+-- Thanks: https://github.com/julianlam/adf-to-md and https://luarocks.org/modules/quiqueporta/adf2md
 
----FIX: TBH mostly ai generated but works for basic cases, needs more work to handle all edge cases and more complex ADF structures but its a good start...
+local M = {}
 
 local function collect_children(node, convert_node, ctx)
 	local parts = {}
@@ -105,15 +105,36 @@ node_handlers.embedCard = render_card
 
 node_handlers.status = function(node)
 	local color_map = {
-		blue = "🔵",
-		green = "🟢",
-		yellow = "🟡",
-		red = "🔴",
-		neutral = "⚪",
+		blue = "",
+		green = "",
+		yellow = "",
+		red = "",
+		neutral = "",
 	}
 	local color = node.attrs and node.attrs.color or "neutral"
 	local text = node.attrs and node.attrs.text or ""
-	return (color_map[color] or "⚪") .. " " .. text
+	return (color_map[color] or "") .. " " .. text
+end
+
+node_handlers.date = function(node)
+	local attrs = type(node.attrs) == "table" and node.attrs or {}
+	local timestamp = tostring(attrs.timestamp or "")
+	if timestamp == "" then
+		return ""
+	end
+
+	local milliseconds = tonumber(timestamp)
+	if milliseconds == nil then
+		return "[date](atlas-date:" .. timestamp .. ")"
+	end
+
+	local seconds = math.floor(milliseconds / 1000)
+	local label = os.date("!%Y-%m-%d", seconds)
+	if type(label) ~= "string" or label == "" then
+		label = "date"
+	end
+
+	return "[" .. label .. "](atlas-date:" .. timestamp .. ")"
 end
 
 node_handlers.listItem = function(node, convert_node, ctx)

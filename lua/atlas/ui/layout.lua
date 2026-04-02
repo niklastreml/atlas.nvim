@@ -75,8 +75,10 @@ local function create_buf(name, filetype)
 	vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
 	vim.api.nvim_set_option_value("bufhidden", "hide", { buf = buf })
 	vim.api.nvim_set_option_value("filetype", filetype, { buf = buf })
-	vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
-	pcall(vim.treesitter.stop, buf)
+	if filetype ~= "markdown" then
+		vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
+		pcall(vim.treesitter.stop, buf)
+	end
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 	return buf
 end
@@ -214,7 +216,8 @@ function M.toggle_detail()
 		return
 	end
 
-	state.detail_buf = ensure_buf("detail_buf", "AtlasDetail", "atlas-detail")
+	state.detail_buf = ensure_buf("detail_buf", "AtlasDetail", "markdown")
+	vim.api.nvim_set_option_value("filetype", "markdown", { buf = state.detail_buf })
 	state.detail_win = create_window(state.main_win, "rightbelow vsplit", state.detail_buf, apply_detail_win_opts)
 	pcall(vim.api.nvim_win_set_width, state.detail_win, math.max(math.floor(vim.o.columns * 0.40), 40))
 end

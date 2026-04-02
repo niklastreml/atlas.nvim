@@ -202,6 +202,22 @@ function M.human_duration(seconds)
 	return string.format("%dd %dh", days, rem_hours)
 end
 
+---@param value any
+---@return string
+function M.encode_pretty_json(value)
+	local ok, encoded = pcall(vim.json.encode, value, { indent = "  " })
+	if ok and type(encoded) == "string" and encoded ~= "" then
+		return encoded
+	end
+
+	local fallback_ok, fallback = pcall(vim.fn.json_encode, value)
+	if fallback_ok and type(fallback) == "string" and fallback ~= "" then
+		return fallback
+	end
+
+	return "{}"
+end
+
 ---@param text string|nil
 ---@return string[]
 function M.sanitize_lines(text)

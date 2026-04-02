@@ -97,16 +97,36 @@ function M.request(method, endpoint, data, on_done)
 	local headers = M.build_headers()
 	local payload = nil
 	if type(data) == "table" then
-		payload = vim.fn.json_encode(data)
+		local ok, encoded = pcall(vim.fn.json_encode, data)
+		if not ok then
+			logger.logerror("Jira payload encode failed", {
+				method = method,
+				endpoint = endpoint,
+				error = tostring(encoded),
+			})
+			on_done(nil, "Request payload is invalid")
+			return nil
+		end
+		payload = encoded
 	end
 
 	return http.curl_request(method, url, headers, payload, function(result, err)
 		if err then
+			logger.logerror("Jira request failed", {
+				method = method,
+				endpoint = endpoint,
+				error = tostring(err),
+			})
 			on_done(nil, err)
 			return
 		end
 
 		if type(result) ~= "table" then
+			logger.logerror("Jira response parse failed", {
+				method = method,
+				endpoint = endpoint,
+				error = "Jira response is not a JSON object",
+			})
 			on_done(nil, "Jira response is not a JSON object")
 			return
 		end
@@ -120,6 +140,11 @@ function M.request(method, endpoint, data, on_done)
 				table.insert(messages, k .. ": " .. v)
 			end
 			if #messages > 0 then
+				logger.logerror("Jira API returned errors", {
+					method = method,
+					endpoint = endpoint,
+					error = table.concat(messages, "; "),
+				})
 				on_done(nil, table.concat(messages, "; "))
 				return
 			end

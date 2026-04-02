@@ -26,6 +26,15 @@ function M.setup()
 		nowait = true,
 		desc = "Refresh overview",
 	})
+
+	vim.keymap.set("n", "e", function()
+		controller.edit_description()
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Edit description",
+	})
 end
 
 function M.teardown()
@@ -36,6 +45,7 @@ function M.teardown()
 
 	pcall(vim.keymap.del, "n", "m", { buffer = buf })
 	pcall(vim.keymap.del, "n", "r", { buffer = buf })
+	pcall(vim.keymap.del, "n", "e", { buffer = buf })
 end
 
 return M

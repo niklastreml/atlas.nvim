@@ -166,7 +166,40 @@ function M.get_issue_description(issue_key, on_done)
 end
 
 function M.create_issue(fields, callback) end
-function M.update_issue(issue_key, fields, callback) end
+
+---@param issue_key string
+---@param fields table
+---@param callback fun(ok: boolean, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.update_issue(issue_key, fields, callback)
+	if type(callback) ~= "function" then
+		return nil
+	end
+
+	if type(issue_key) ~= "string" or issue_key == "" then
+		callback(false, "Missing issue key")
+		return nil
+	end
+
+	if type(fields) ~= "table" then
+		callback(false, "Missing fields")
+		return nil
+	end
+
+	logger.loginfo("Jira update issue", { issue_key = issue_key })
+	local endpoint = string.format("/issue/%s", issue_key)
+	local payload = { fields = fields }
+
+	return service.request("PUT", endpoint, payload, function(_, err)
+		if err ~= nil then
+			callback(false, err)
+			return
+		end
+
+		callback(true, nil)
+	end)
+end
+
 function M.get_create_meta(project_key, callback) end
 
 return M
