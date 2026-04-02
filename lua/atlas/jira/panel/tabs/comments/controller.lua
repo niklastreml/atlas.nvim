@@ -113,15 +113,9 @@ function M.move(delta)
 	end
 
 	local line = vim.api.nvim_win_get_cursor(win)[1]
-	if is_comment_line(line) then
-		return
-	end
-
-	if delta > 0 then
-		M.move(0)
-	else
-		M.move(math.huge)
-	end
+	local step = delta > 0 and 1 or -1
+	local target = math.max(1, math.min(max_line, line + step))
+	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
 
 local panel_spinner = spinner.create({

@@ -3,9 +3,53 @@ local state = require("atlas.jira.panel.tabs.history.state")
 local panel_state = require("atlas.jira.panel.state")
 local issues_api = require("atlas.jira.api.issues")
 local spinner = require("atlas.ui.components.spinner")
+local footer = require("atlas.ui.components.footer")
 
 local active_handle = nil
 local request_id = 0
+
+---@return integer|nil
+local function detail_win()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return nil
+	end
+	return win
+end
+
+---@param lnum integer
+---@return boolean
+local function is_history_line(lnum)
+	local item = (state.line_map or {})[lnum]
+	if type(item) ~= "table" then
+		return false
+	end
+
+	return item.kind == "author"
+		or item.kind == "content"
+		or item.kind == "thread_author"
+		or item.kind == "thread_content"
+end
+
+---@param win integer
+---@param delta integer
+---@return boolean
+local function jump_next_history(win, delta)
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local buf = vim.api.nvim_win_get_buf(win)
+	local max_line = vim.api.nvim_buf_line_count(buf)
+	local step = delta > 0 and 1 or -1
+
+	for lnum = line + step, (step > 0 and max_line or 1), step do
+		if is_history_line(lnum) then
+			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			return true
+		end
+	end
+
+	return false
+end
 
 local panel_spinner = spinner.create({
 	interval_ms = 120,
@@ -90,6 +134,7 @@ function M.show(issue)
 	state.history_items = {}
 	state.is_loading = true
 	start_spinner()
+	footer.notify("loading", string.format("Loading history for %s...", issue.key))
 	require("atlas.jira.panel.init").refresh()
 
 	local function fetch_page(start_at)
@@ -103,6 +148,7 @@ function M.show(issue)
 			if err ~= nil or page == nil then
 				state.is_loading = false
 				stop_spinner()
+				footer.notify("error", string.format("Failed loading history for %s", issue.key))
 				require("atlas.jira.panel.init").refresh()
 				return
 			end
@@ -125,6 +171,11 @@ function M.show(issue)
 			if done then
 				state.is_loading = false
 				stop_spinner()
+				footer.notify(
+					"success",
+					string.format("History loaded for %s (%d)", issue.key, #state.history_items),
+					1200
+				)
 				require("atlas.jira.panel.init").refresh()
 				return
 			end
@@ -145,6 +196,50 @@ function M.refresh()
 	state.history_items = nil
 	state.is_loading = false
 	M.show(state.issue)
+end
+
+---@param delta integer
+function M.move(delta)
+	if panel_state.current_tab ~= "history" then
+		return
+	end
+
+	local win = detail_win()
+	if win == nil then
+		return
+	end
+
+	local buf = vim.api.nvim_win_get_buf(win)
+	local max_line = vim.api.nvim_buf_line_count(buf)
+
+	if delta == 0 then
+		for lnum = 1, max_line do
+			if is_history_line(lnum) then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
+		return
+	end
+
+	if delta == math.huge then
+		for lnum = max_line, 1, -1 do
+			if is_history_line(lnum) then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
+		return
+	end
+
+	if jump_next_history(win, delta) then
+		return
+	end
+
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local step = delta > 0 and 1 or -1
+	local target = math.max(1, math.min(max_line, line + step))
+	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
 
 function M.reset()

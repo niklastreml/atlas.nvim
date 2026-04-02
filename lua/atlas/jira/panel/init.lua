@@ -80,6 +80,7 @@ local function register_panel_keys()
 	})
 
 	mapped_buf = buf
+
 end
 
 ---@param issue JiraIssue|nil

@@ -8,24 +8,6 @@ function M.setup()
 		return
 	end
 
-	vim.keymap.set("n", "j", function()
-		controller.move(1)
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Next comment",
-	})
-
-	vim.keymap.set("n", "k", function()
-		controller.move(-1)
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Previous comment",
-	})
-
 	vim.keymap.set("n", "c", function()
 		controller.reply_to_comment()
 	end, {
@@ -69,8 +51,6 @@ function M.teardown()
 		return
 	end
 
-	pcall(vim.keymap.del, "n", "j", { buffer = buf })
-	pcall(vim.keymap.del, "n", "k", { buffer = buf })
 	pcall(vim.keymap.del, "n", "c", { buffer = buf })
 	pcall(vim.keymap.del, "n", "e", { buffer = buf })
 	pcall(vim.keymap.del, "n", "d", { buffer = buf })
