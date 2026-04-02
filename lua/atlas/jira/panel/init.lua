@@ -3,6 +3,7 @@ local M = {}
 local panel_state = require("atlas.jira.panel.state")
 local layout = require("atlas.ui.layout")
 local ns = vim.api.nvim_create_namespace("atlas.jira.panel")
+local mapped_buf = nil
 
 local TABS = {
 	{ key = "overview", label = "Overview", mod = "atlas.jira.panel.tabs.overview" },
@@ -20,9 +21,71 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
+local function register_panel_keys()
+	local buf = layout.buf_id("detail")
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+	if mapped_buf == buf then
+		return
+	end
+
+	vim.keymap.set("n", "j", function()
+		local tab = get_tab_module(panel_state.current_tab)
+		if tab ~= nil and type(tab.move_cursor) == "function" then
+			tab.move_cursor(1)
+		end
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Next item in tab",
+	})
+
+	vim.keymap.set("n", "k", function()
+		local tab = get_tab_module(panel_state.current_tab)
+		if tab ~= nil and type(tab.move_cursor) == "function" then
+			tab.move_cursor(-1)
+		end
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Previous item in tab",
+	})
+
+	vim.keymap.set("n", "gg", function()
+		local tab = get_tab_module(panel_state.current_tab)
+		if tab ~= nil and type(tab.move_cursor) == "function" then
+			tab.move_cursor(0)
+		end
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "First item in tab",
+	})
+
+	vim.keymap.set("n", "G", function()
+		local tab = get_tab_module(panel_state.current_tab)
+		if tab ~= nil and type(tab.move_cursor) == "function" then
+			tab.move_cursor(math.huge)
+		end
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Last item in tab",
+	})
+
+	mapped_buf = buf
+end
+
 ---@param issue JiraIssue|nil
 function M.on_select(issue)
 	panel_state.set_current(issue)
+	register_panel_keys()
+
 	if issue ~= nil then
 		M.select_tab("overview")
 	else
@@ -32,6 +95,8 @@ end
 
 ---@param tab_key string
 function M.select_tab(tab_key)
+	register_panel_keys()
+
 	local old_tab = get_tab_module(panel_state.current_tab)
 	if old_tab then
 		old_tab.deactivate()

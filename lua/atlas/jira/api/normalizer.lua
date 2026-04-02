@@ -231,7 +231,6 @@ local function normalize_comment(raw_comment)
 		id = tostring(raw_comment.id or ""),
 		self = raw_comment.self and tostring(raw_comment.self) or nil,
 		author = normalize_comment_author(raw_comment.author),
-		update_author = normalize_comment_author(raw_comment.updateAuthor),
 		body = adf.to_markdown(type(raw_comment.body) == "table" and raw_comment.body or nil),
 		_body = type(raw_comment.body) == "table" and raw_comment.body or nil,
 		created = raw_comment.created and tostring(raw_comment.created) or nil,

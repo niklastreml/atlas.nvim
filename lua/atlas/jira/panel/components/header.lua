@@ -70,7 +70,7 @@ function M.render(issue, width)
 			k2 = "Approvers:",
 			v2 = approvers,
 			approver_names = approver_names,
-			v2_hl = "AtlasTextMuted",
+			v2_hl = "AtlasTextMutedItalic",
 		},
 	}
 

@@ -18,7 +18,6 @@
 ---@field id string
 ---@field self string|nil
 ---@field author JiraCommentAuthor|nil
----@field update_author JiraCommentAuthor|nil
 ---@field body string
 ---@field _body table|nil -- raw adf
 ---@field created string|nil

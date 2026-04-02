@@ -6,6 +6,7 @@ local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local helper = require("atlas.jira.ui.helper")
+local comments_helper = require("atlas.jira.panel.tabs.comments.helper")
 local icons = require("atlas.ui.icons")
 local PADDING_X = 2
 
@@ -56,13 +57,11 @@ local function render_comment(lines, spans, line_map, comment, depth, branch_pre
 	end
 
 	local author = ((comment or {}).author or {}).display_name or "Unknown"
-	local author_id = tostring(((comment or {}).author or {}).account_id or "")
-	local current_user_id = tostring((jira_state.current_user or {}).account_id or "")
-	local can_edit = current_user_id ~= "" and author_id ~= "" and current_user_id == author_id
+	local is_deleted_comment = tostring((comment or {}).body or "") == "Comment deleted"
+	local can_edit = comments_helper.can_manage_comment(comment, jira_state.current_user)
 	local when = utils.relative_time_text((comment or {}).created)
 	local meta = meta_prefix .. string.format("%s  %s", author, when)
 	table.insert(lines, meta)
-	line_map[#lines] = { kind = "comment", comment = comment }
 	if #meta_prefix > 0 then
 		table.insert(spans, {
 			line = #lines - 1,
@@ -75,7 +74,7 @@ local function render_comment(lines, spans, line_map, comment, depth, branch_pre
 		line = #lines - 1,
 		start_col = #meta_prefix,
 		end_col = #meta_prefix + #author,
-		hl_group = helper.person_hl(author),
+		hl_group = is_deleted_comment and "AtlasTextMutedItalic" or helper.person_hl(author),
 	})
 	table.insert(spans, {
 		line = #lines - 1,
@@ -99,12 +98,20 @@ local function render_comment(lines, spans, line_map, comment, depth, branch_pre
 				hl_group = "AtlasTextMuted",
 			})
 		end
+		if is_deleted_comment then
+			table.insert(spans, {
+				line = #lines - 1,
+				start_col = #body_prefix,
+				end_col = #body_prefix + #row,
+				hl_group = "AtlasTextMutedItalic",
+			})
+		end
 	end
 
 	local children = (comment and comment.children) or {}
 
 	local actions = {
-		string.format("%s (r)", icons.entity("reply")),
+		string.format("%s (c)", icons.entity("reply")),
 	}
 	if can_edit then
 		table.insert(actions, string.format("%s (e)", icons.entity("edit")))
@@ -116,7 +123,6 @@ local function render_comment(lines, spans, line_map, comment, depth, branch_pre
 	end
 	local actions_line = actions_prefix .. "  " .. table.concat(actions, "   ")
 	table.insert(lines, actions_line)
-	line_map[#lines] = { kind = "comment", comment = comment }
 	table.insert(spans, {
 		line = #lines - 1,
 		start_col = 0,

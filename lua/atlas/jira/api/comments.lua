@@ -35,4 +35,32 @@ function M.add_comment(issue_key, comment, callback) end
 
 function M.edit_comment(issue_key, comment_id, comment, callback) end
 
+---@param issue_key string
+---@param comment_id string|number
+---@param callback fun(ok: boolean, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.delete_comment(issue_key, comment_id, callback)
+	if type(issue_key) ~= "string" or issue_key == "" then
+		callback(false, "Missing issue key")
+		return nil
+	end
+
+	local id = tostring(comment_id or "")
+	if id == "" then
+		callback(false, "Missing comment id")
+		return nil
+	end
+
+	logger.loginfo("Jira delete comment", { issue_key = issue_key, comment_id = id })
+	local endpoint = string.format("/issue/%s/comment/%s", issue_key, id)
+
+	return service.request("DELETE", endpoint, nil, function(_, err)
+		if err ~= nil then
+			callback(false, err)
+			return
+		end
+		callback(true, nil)
+	end)
+end
+
 return M

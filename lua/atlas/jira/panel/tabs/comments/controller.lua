@@ -1,74 +1,118 @@
 local M = {}
 local state = require("atlas.jira.panel.tabs.comments.state")
 local panel_state = require("atlas.jira.panel.state")
+local jira_state = require("atlas.jira.state")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 local comments_api = require("atlas.jira.api.comments")
+local helper = require("atlas.jira.panel.tabs.comments.helper")
 
 local active_handle = nil
-local COMMENTS_PAGE_SIZE = 1
+local COMMENTS_PAGE_SIZE = 20
 
----@param comments JiraComment[]|nil
-local function sort_comments_by_created(comments)
-	if type(comments) ~= "table" then
-		return
+---@return integer|nil
+local function detail_win()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return nil
 	end
-
-	table.sort(comments, function(a, b)
-		local ac = tostring((a and a.created) or "")
-		local bc = tostring((b and b.created) or "")
-		if ac == bc then
-			return tostring((a and a.id) or "") < tostring((b and b.id) or "")
-		end
-		return ac > bc
-	end)
+	return win
 end
 
----@param comments JiraComment[]|nil
-local function sort_comment_children(comments)
-	if type(comments) ~= "table" then
-		return
-	end
-
-	for _, comment in ipairs(comments) do
-		if type(comment) == "table" and type(comment.children) == "table" and #comment.children > 0 then
-			table.sort(comment.children, function(a, b)
-				local ac = tostring((a and a.created) or "")
-				local bc = tostring((b and b.created) or "")
-				if ac == bc then
-					return tostring((a and a.id) or "") < tostring((b and b.id) or "")
-				end
-				return ac < bc
-			end)
-			sort_comment_children(comment.children)
-		end
-	end
+---@param lnum integer
+---@return boolean
+local function is_comment_line(lnum)
+	local item = (state.line_map or {})[lnum]
+	return type(item) == "table" and item.kind == "comment"
 end
 
----@param comments JiraComment[]|nil
-local function rebuild_comment_tree(comments)
-	if type(comments) ~= "table" then
-		return
+---@return JiraComment|nil
+local function current_comment_under_cursor()
+	local win = detail_win()
+	if win == nil then
+		return nil
 	end
 
-	local by_id = {}
-	for _, comment in ipairs(comments) do
-		if type(comment) == "table" then
-			comment.children = {}
-			by_id[tostring(comment.id or "")] = comment
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local item = (state.line_map or {})[line]
+	if type(item) ~= "table" or item.kind ~= "comment" then
+		return nil
+	end
+
+	if type(item.comment) ~= "table" then
+		return nil
+	end
+
+	return item.comment
+end
+
+---@param win integer
+---@param delta integer
+---@return boolean
+local function jump_next_comment(win, delta)
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local buf = vim.api.nvim_win_get_buf(win)
+	local max_line = vim.api.nvim_buf_line_count(buf)
+	local step = delta > 0 and 1 or -1
+
+	for lnum = line + step, (step > 0 and max_line or 1), step do
+		if is_comment_line(lnum) then
+			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			return true
 		end
 	end
 
-	for _, comment in ipairs(comments) do
-		if type(comment) == "table" and comment.parent_id ~= nil then
-			local parent = by_id[tostring(comment.parent_id)]
-			if parent ~= nil then
-				table.insert(parent.children, comment)
+	return false
+end
+
+---@param delta integer
+function M.move(delta)
+	if panel_state.current_tab ~= "comments" then
+		return
+	end
+
+	local win = detail_win()
+	if win == nil then
+		return
+	end
+
+	local buf = vim.api.nvim_win_get_buf(win)
+	local max_line = vim.api.nvim_buf_line_count(buf)
+
+	if delta == 0 then
+		for lnum = 1, max_line do
+			if is_comment_line(lnum) then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
 			end
 		end
+		return
+	end
+	if delta == math.huge then
+		for lnum = max_line, 1, -1 do
+			if is_comment_line(lnum) then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
+		return
 	end
 
-	sort_comment_children(comments)
+	if jump_next_comment(win, delta) then
+		return
+	end
+
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	if is_comment_line(line) then
+		return
+	end
+
+	if delta > 0 then
+		M.move(0)
+	else
+		M.move(math.huge)
+	end
 end
 
 local panel_spinner = spinner.create({
@@ -161,9 +205,10 @@ function M.show(issue)
 			for _, comment in ipairs((page and page.comments) or {}) do
 				table.insert(state.comments, comment)
 			end
-			sort_comments_by_created(state.comments)
-			rebuild_comment_tree(state.comments)
+			helper.sort_comments_by_created(state.comments)
+			helper.rebuild_comment_tree(state.comments)
 			require("atlas.jira.panel.init").refresh()
+			M.move(0)
 
 			local loaded = #state.comments
 			local total = (page and page.total) or loaded
@@ -172,10 +217,15 @@ function M.show(issue)
 				return
 			end
 
+			state.comments = helper.ensure_deleted_parents(state.comments)
+			helper.sort_comments_by_created(state.comments)
+			helper.rebuild_comment_tree(state.comments)
+
 			state.state = nil
 			stop_spinner()
 			footer.notify("success", string.format("Comments loaded for %s (%d)", issue.key, loaded), 1200)
 			require("atlas.jira.panel.init").refresh()
+			M.move(0)
 		end)
 	end
 
@@ -197,8 +247,78 @@ end
 
 function M.add_comment() end
 
-function M.edit_comment_under_cursor() end
+function M.reply_to_comment() end
 
-function M.delete_comment_under_cursor() end
+function M.edit_comment()
+	local comment = current_comment_under_cursor()
+	if comment == nil then
+		footer.notify("warn", "No comment selected")
+		return
+	end
+
+	if not helper.can_manage_comment(comment, jira_state.current_user) then
+		footer.notify("warn", "You can only edit your own comments")
+		return
+	end
+
+	footer.notify("info", "Edit comment not implemented yet")
+end
+
+function M.delete_comment()
+	local issue = state.issue
+
+	local comment = current_comment_under_cursor()
+	if comment == nil then
+		footer.notify("warn", "No comment selected")
+		return
+	end
+
+	if not helper.can_manage_comment(comment, jira_state.current_user) then
+		return
+	end
+
+	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
+		footer.notify("warn", "No issue selected")
+		return
+	end
+
+	local comment_id = tostring(comment.id or "")
+	if comment_id == "" then
+		footer.notify("warn", "Invalid comment id")
+		return
+	end
+
+	vim.ui.input({
+		prompt = string.format("Delete comment %s? [y/N]: ", comment_id),
+	}, function(input)
+		if input == nil then
+			footer.notify("info", "Delete cancelled")
+			return
+		end
+
+		local normalized = vim.trim(tostring(input)):lower()
+		if normalized ~= "y" and normalized ~= "yes" then
+			footer.notify("info", "Delete cancelled")
+			return
+		end
+
+		footer.notify("loading", string.format("Deleting comment %s...", comment_id))
+		comments_api.delete_comment(issue.key, comment_id, function(ok, err)
+			if not ok then
+				footer.notify("error", err or "Failed to delete comment")
+				return
+			end
+
+			state.comments = helper.remove_comment(state.comments, comment_id)
+			state.comments = helper.ensure_deleted_parents(state.comments)
+			helper.sort_comments_by_created(state.comments)
+			helper.rebuild_comment_tree(state.comments)
+
+			require("atlas.jira.panel.init").refresh()
+			M.move(0)
+			footer.notify("success", "Comment deleted", 1200)
+		end)
+	end)
+end
 
 return M
