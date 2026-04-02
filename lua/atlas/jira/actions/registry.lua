@@ -2,6 +2,7 @@ local M = {}
 
 local transitions_api = require("atlas.jira.api.transitions")
 local users_api = require("atlas.jira.api.users")
+local issues_api = require("atlas.jira.api.issues")
 local footer = require("atlas.ui.components.footer")
 
 ---@class JiraActionContext
@@ -254,6 +255,54 @@ local ACTIONS = {
 							message = string.format("Reporter changed to %s", selected.display_name),
 						}, nil)
 					end)
+				end)
+			end)
+		end,
+	},
+	{
+		id = "edit_title",
+		label = "Edit title",
+		is_available = has_issue_key,
+		run = function(ctx, done)
+			local issue = ctx.issue
+			if not has_issue_key(ctx) or issue == nil then
+				done(nil, "No issue selected")
+				return
+			end
+
+			local issue_key = issue.key
+			local current_title = tostring(issue.summary or "")
+
+			vim.ui.input({
+				prompt = string.format("Title for %s: ", issue_key),
+				default = current_title,
+			}, function(input)
+				if input == nil then
+					done({ changed_issue = false, message = "Edit title cancelled" }, nil)
+					return
+				end
+
+				local new_title = vim.trim(tostring(input))
+				if new_title == "" then
+					done({ changed_issue = false, message = "Title cannot be empty" }, nil)
+					return
+				end
+
+				if new_title == current_title then
+					done({ changed_issue = false, message = "Title unchanged" }, nil)
+					return
+				end
+
+				footer.notify("loading", string.format("Updating title for %s...", issue_key))
+				issues_api.update_issue(issue_key, { summary = new_title }, function(ok, err)
+					if not ok then
+						footer.notify("error", err or "Failed to update title")
+						done(nil, err or "Failed to update title")
+						return
+					end
+
+					footer.notify("success", string.format("Title updated for %s", issue_key), 1200)
+					done({ changed_issue = true, message = "Title updated" }, nil)
 				end)
 			end)
 		end,
