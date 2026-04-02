@@ -22,6 +22,10 @@ function M.to_markdown(adf)
 			if type(node) == "table" then
 				if node.type == "text" then
 					table.insert(parts, tostring(node.text or ""))
+				elseif node.type == "mention" then
+					local attrs = node.attrs or {}
+					local mention_text = attrs.text or attrs.displayName or attrs.id or ""
+					table.insert(parts, string.format("`%s`", tostring(mention_text)))
 				elseif node.type == "hardBreak" then
 					table.insert(parts, "\\n")
 				elseif type(node.content) == "table" then

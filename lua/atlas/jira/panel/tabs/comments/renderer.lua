@@ -6,6 +6,7 @@ local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local helper = require("atlas.jira.ui.helper")
+local icons = require("atlas.ui.icons")
 local PADDING_X = 2
 
 ---@param comments JiraComment[]
@@ -34,25 +35,51 @@ end
 ---@param line_map table<number, table>
 ---@param comment JiraComment
 ---@param depth integer
-local function render_comment(lines, spans, line_map, comment, depth)
-	local indent = string.rep(" ", PADDING_X + (depth * 3))
+---@param branch_prefix string|nil
+---@param is_last boolean|nil
+local function render_comment(lines, spans, line_map, comment, depth, branch_prefix, is_last)
+	branch_prefix = branch_prefix or ""
+	is_last = is_last == true
+
+	local pad = string.rep(" ", PADDING_X)
+	local connector = ""
+	local continuation = ""
+	if depth > 0 then
+		connector = is_last and "└─ " or "├─ "
+		continuation = is_last and "   " or "│  "
+	end
+
+	local meta_prefix = pad .. branch_prefix .. connector
+	local body_prefix = pad .. branch_prefix .. continuation
+	if depth == 0 then
+		body_prefix = pad
+	end
+
 	local author = ((comment or {}).author or {}).display_name or "Unknown"
-	local author_id = tostring((((comment or {}).author or {}).account_id) or "")
-	local current_user_id = tostring(((jira_state.current_user or {}).account_id) or "")
+	local author_id = tostring(((comment or {}).author or {}).account_id or "")
+	local current_user_id = tostring((jira_state.current_user or {}).account_id or "")
 	local can_edit = current_user_id ~= "" and author_id ~= "" and current_user_id == author_id
 	local when = utils.relative_time_text((comment or {}).created)
-	local meta = indent .. string.format("%s  %s", author, when)
+	local meta = meta_prefix .. string.format("%s  %s", author, when)
 	table.insert(lines, meta)
 	line_map[#lines] = { kind = "comment", comment = comment }
+	if #meta_prefix > 0 then
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #meta_prefix,
+			hl_group = "AtlasTextMuted",
+		})
+	end
 	table.insert(spans, {
 		line = #lines - 1,
-		start_col = #indent,
-		end_col = #indent + #author,
+		start_col = #meta_prefix,
+		end_col = #meta_prefix + #author,
 		hl_group = helper.person_hl(author),
 	})
 	table.insert(spans, {
 		line = #lines - 1,
-		start_col = #indent + #author,
+		start_col = #meta_prefix + #author,
 		end_col = #meta,
 		hl_group = "AtlasTextMuted",
 	})
@@ -62,15 +89,32 @@ local function render_comment(lines, spans, line_map, comment, depth)
 		body = "-"
 	end
 	for _, row in ipairs(utils.sanitize_markdown_lines(body)) do
-		table.insert(lines, indent .. row)
+		table.insert(lines, body_prefix .. row)
 		line_map[#lines] = { kind = "comment", comment = comment }
+		if #body_prefix > 0 then
+			table.insert(spans, {
+				line = #lines - 1,
+				start_col = 0,
+				end_col = #body_prefix,
+				hl_group = "AtlasTextMuted",
+			})
+		end
 	end
 
-	local actions = "󰘍 Reply"
+	local children = (comment and comment.children) or {}
+
+	local actions = {
+		string.format("%s (r)", icons.entity("reply")),
+	}
 	if can_edit then
-		actions = actions .. "   󰏫 Edit   󰆴 Delete"
+		table.insert(actions, string.format("%s (e)", icons.entity("edit")))
+		table.insert(actions, string.format("%s (d)", icons.entity("delete")))
 	end
-	local actions_line = indent .. actions
+	local actions_prefix = body_prefix
+	if depth == 0 and #children > 0 then
+		actions_prefix = pad .. "│ "
+	end
+	local actions_line = actions_prefix .. "  " .. table.concat(actions, "   ")
 	table.insert(lines, actions_line)
 	line_map[#lines] = { kind = "comment", comment = comment }
 	table.insert(spans, {
@@ -80,9 +124,19 @@ local function render_comment(lines, spans, line_map, comment, depth)
 		hl_group = "AtlasTextMuted",
 	})
 
-	for _, child in ipairs((comment and comment.children) or {}) do
-		table.insert(lines, "")
-		render_comment(lines, spans, line_map, child, depth + 1)
+	for i, child in ipairs(children) do
+		local sep = pad .. branch_prefix .. continuation
+		if depth == 0 then
+			sep = pad .. "│"
+		end
+		table.insert(lines, sep)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #sep,
+			hl_group = "AtlasTextMuted",
+		})
+		render_comment(lines, spans, line_map, child, depth + 1, branch_prefix .. continuation, i == #children)
 	end
 end
 
@@ -118,14 +172,13 @@ function M.render(width)
 		end_col = #comments_title,
 		hl_group = "AtlasTextMuted",
 	})
-	table.insert(lines, "")
 
 	if type(state.comments) == "table" and #state.comments > 0 then
 		local roots = root_comments(state.comments)
 		local sep_width = math.max(8, width - (PADDING_X * 2))
 		local separator = string.rep(" ", PADDING_X) .. string.rep("─", sep_width)
 		for idx, comment in ipairs(roots) do
-			render_comment(lines, spans, line_map, comment, 0)
+			render_comment(lines, spans, line_map, comment, 0, "", idx == #roots)
 			if idx < #roots then
 				table.insert(lines, separator)
 				table.insert(spans, {
