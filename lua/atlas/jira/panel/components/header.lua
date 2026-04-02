@@ -51,8 +51,7 @@ function M.render(issue, width)
 	local user_icon = icons.entity("user")
 	local approvers, approver_names = approvers_value(issue and issue.approvers, user_icon)
 
-	local type_line = string.format(" %s %s", type_icon, issue_type)
-	local key_line = " " .. key
+	local type_key_line = string.format(" %s %s %s", type_icon, issue_type, key)
 	local title_line = " " .. title
 
 	local rows = {
@@ -153,8 +152,7 @@ function M.render(issue, width)
 	})
 
 	local lines = {
-		type_line,
-		key_line,
+		type_key_line,
 		title_line,
 		"",
 	}
@@ -164,14 +162,30 @@ function M.render(issue, width)
 	table.insert(lines, "")
 
 	local spans = {
-		{ line = 0, start_col = 1, end_col = #type_line, hl_group = helper.issue_type_hl(issue and issue.type) },
-		{ line = 1, start_col = 1, end_col = #key_line, hl_group = "AtlasJiraKey" },
-		{ line = 2, start_col = 1, end_col = #title_line, hl_group = helper.issue_title_hl() },
+		{
+			line = 0,
+			start_col = 1,
+			end_col = #(string.format("%s %s", type_icon, issue_type)) + 1,
+			hl_group = helper.issue_type_hl(issue and issue.type),
+		},
+		{ line = 1, start_col = 1, end_col = #title_line, hl_group = helper.issue_title_hl() },
 	}
+
+	if key ~= "" then
+		local ks = type_key_line:find(key, 1, true)
+		if ks then
+			table.insert(spans, {
+				line = 0,
+				start_col = ks - 1,
+				end_col = ks - 1 + #key,
+				hl_group = "AtlasJiraKey",
+			})
+		end
+	end
 
 	for _, span in ipairs(table_spans) do
 		table.insert(spans, {
-			line = span.line + 4,
+			line = span.line + 3,
 			start_col = span.start_col,
 			end_col = span.end_col,
 			hl_group = span.hl_group,
@@ -194,7 +208,7 @@ function M.render(issue, width)
 			hl_group = due_date ~= "" and "AtlasJiraChipDueDate" or "AtlasTextMuted",
 			active = true,
 		},
-	}, width)
+	}, width, 1)
 
 	if chip_line ~= "" then
 		table.insert(lines, chip_line)

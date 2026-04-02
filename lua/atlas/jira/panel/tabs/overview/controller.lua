@@ -95,10 +95,13 @@ function M.show(issue)
 			if type(description) == "table" then
 				state.adf_description = description
 				local markdown = adf.to_markdown(description)
-				state.md_description = markdown ~= "" and markdown or nil
+				-- Keep empty string to mark "loaded but empty" and avoid refetch loops.
+				state.md_description = markdown
 			else
+				-- Jira returns `description = null` for empty descriptions.
+				-- Treat this as loaded-empty so we do not refetch on every tab switch.
 				state.adf_description = nil
-				state.md_description = nil
+				state.md_description = ""
 			end
 			footer.notify("success", string.format("Description loaded for %s", issue_key), 1200)
 		end

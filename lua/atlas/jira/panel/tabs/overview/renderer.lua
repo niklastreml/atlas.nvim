@@ -53,7 +53,7 @@ function M.render(width)
 			end_col = #loading,
 			hl_group = "AtlasTextMuted",
 		})
-	elseif state.adf_description == nil then
+	elseif state.adf_description == nil or (state.view_mode == "markdown" and state.md_description == "") then
 		table.insert(lines, string.rep(" ", PADDING_X) .. "No description")
 		table.insert(spans, {
 			line = #lines - 1,
