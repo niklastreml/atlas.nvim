@@ -49,6 +49,9 @@ local groups = {
 	AtlasJiraTitle = { link = "CursorLineNr" },
 	AtlasJiraEpic = { fg = "#cba6f7", bold = true },
 	AtlasJiraStoryPoints = { fg = "#f38ba8", bold = true },
+	AtlasJiraChipStoryPoints = { fg = "#1e1e2e", bg = "#f38ba8", bold = true },
+	AtlasJiraChipDueDate = { fg = "#1e1e2e", bg = "#f9e2af", bold = true },
+	AtlasJiraChipParent = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
 	AtlasChipActive = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
 
 	AtlasBitbucketTheme = { bg = "#1e3a8a", bold = true },

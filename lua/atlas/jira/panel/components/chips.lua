@@ -8,9 +8,10 @@ local M = {}
 ---@param items JiraPanelChipItem[]
 ---@param width integer
 ---@param padding_x integer|nil
+---@param align "left"|"right"|nil
 ---@return string
 ---@return table[]
-function M.render(items, width, padding_x)
+function M.render(items, width, padding_x, align)
 	local rendered = {}
 	for _, item in ipairs(items or {}) do
 		if type(item.text) == "string" and item.text ~= "" then
@@ -36,7 +37,13 @@ function M.render(items, width, padding_x)
 
 	local content_text = table.concat(content)
 	local pad = math.max(0, padding_x or 0)
-	local left = math.max(0, width - #content_text - pad)
+	local alignment = (align == "right") and "right" or "left"
+	local left
+	if alignment == "right" then
+		left = math.max(0, width - #content_text - pad)
+	else
+		left = pad
+	end
 	local line = string.rep(" ", left) .. content_text
 
 	local spans = {}

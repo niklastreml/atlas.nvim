@@ -32,7 +32,7 @@ function M.render(width)
 	local mode_text = state.view_mode == "raw" and "ADF (m)" or "Markdown (m)"
 	local mode_line, mode_spans = chips.render({
 		{ text = mode_text, hl_group = "AtlasChipActive", active = true },
-	}, width)
+	}, width, nil, "right")
 	table.insert(lines, mode_line)
 	for _, span in ipairs(mode_spans) do
 		table.insert(spans, {
