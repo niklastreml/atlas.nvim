@@ -37,6 +37,7 @@ use {
   end
 }
 ```
+
 > [!tip]
 > It's a good idea to run `:checkhealth atlas` to see if everything is set up correctly.
 
@@ -94,7 +95,7 @@ return {
 }
 ```
 
-### Custom Actions
+#### Custom Actions
 
 You can add custom PR actions under `bitbucket.custom_actions`.
 
@@ -141,9 +142,10 @@ bitbucket = {
   },
 }
 ```
+
 ![CleanShot2026-03-31at20 08 06-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/a8ca355b-09e2-428c-b3fb-3280fd161110)
 
-### Features
+#### Features
 
 - [x] Multiple Bitbucket views
 - [x] PR tabs: overview, activity, comments, commits, files
@@ -160,7 +162,7 @@ bitbucket = {
 ## Jira
 
 > [!NOTE]
-Inspired by [jira.nvim](https://github.com/letieu/jira.nvim) since it fitted nicely in this here. I highly recommend checking out the original project for a more general-purpose solution.
+> Inspired by [jira.nvim](https://github.com/letieu/jira.nvim) since it fitted nicely in this here. I highly recommend checking out the original project for a more general-purpose solution.
 
 ### Configuration
 
@@ -169,13 +171,58 @@ return {
   "emrearmagan/atlas.nvim",
   config = function()
     require("atlas").setup({
+      ---@type JiraConfig
+      jira = {
+        base_url = os.getenv("JIRA_BASE_URL") or "",
+        email = os.getenv("JIRA_EMAIL") or "",
+        token = os.getenv("JIRA_TOKEN") or "",
+        cache_ttl = 300,
+
+        ---@type JiraViewConfig[]
+        views = {
+          {
+            name = "My Board",
+            key = "M",
+            project = "KAN",
+            -- project is optional
+            jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
+          },
+          {
+            name = "Team Board",
+            key = "T",
+            project = "KAN",
+          },
+        },
+      },
     })
   end,
 }
 ```
 
+#### Comments
+
+- Create, reply, edit, and delete comments directly in the Jira panel.
+
+#### Issue Editing (Experimental)
+
+- Edit issue description directly from Overview.
+- Supports markdown editing with markdown -> ADF conversion.
+- Supports raw ADF mode for direct document editing.
+
+#### Features
+
+- [x] Multiple Jira views
+- [x] Issue panel tabs: overview, comments, history
+- [x] Jira actions: transition, change assignee, change reporter, edit title
+- [x] Full comment workflows (create, reply, edit, delete)
+- [x] Markdown -> ADF conversion for issue descriptions (experimental)
+- [x] View and edit issues as markdown
+- [x] Search issues
+- [ ] Create issues
+
 ### Commands
 
+- `:AtlasJira` - Open Jira issue picker
 - `:AtlasBitbucket` - Open Bitbucket PR picker
 - `:AtlasLogs` - Toggle Atlas logs
 
@@ -183,27 +230,50 @@ return {
 
 ### Main UI
 
-| Context | Key | Action |
-|---|---|---|
-| Global | `q` | Close Atlas |
-| Global | `j` / `k` | Move cursor |
-| Global | `gg` / `G` | First / last item |
-| Global | `[` / `]` | Previous / next panel tab |
-| Bitbucket | `p` | Toggle PR panel (or switch to PR panel) |
-| Bitbucket | `o` | Toggle repository panel (or switch to repository panel) |
+| Context   | Key        | Action                                                  |
+| --------- | ---------- | ------------------------------------------------------- |
+| Global    | `q`        | Close Atlas                                             |
+| Global    | `j` / `k`  | Move cursor                                             |
+| Global    | `gg` / `G` | First / last item                                       |
+| Global    | `[` / `]`  | Previous / next panel tab                               |
+| Bitbucket | `p`        | Toggle PR panel (or switch to PR panel)                 |
+| Bitbucket | `o`        | Toggle repository panel (or switch to repository panel) |
 
 ### Bitbucket
 
-| Key | Action |
-|---|---|
-| `R` | Refresh current Bitbucket view |
-| `r` | Refetch selected PR |
-| `a` | Open PR actions |
-| `gx` | Open PR in browser |
-| `y` | Copy PR id |
-| `Y` | Copy PR URL |
-| `/` | Search repositories |
+| Key  | Action                         |
+| ---- | ------------------------------ |
+| `R`  | Refresh current Bitbucket view |
+| `r`  | Refetch selected PR            |
+| `a`  | Open PR actions                |
+| `gx` | Open PR in browser             |
+| `y`  | Copy PR id                     |
+| `Y`  | Copy PR URL                    |
+| `/`  | Search repositories            |
 
+### Jira
+
+| Key          | Action                                                    |
+| ------------ | --------------------------------------------------------- |
+| `R`          | Refresh current Jira view                                 |
+| `r`          | Reload selected issue                                     |
+| `K`          | Show issue details popup                                  |
+| `A`          | Open Jira actions                                         |
+| `<view.key>` | Switch Jira view (for each configured `jira.views[].key`) |
+
+### Jira Panel
+
+| Key        | Action                                  |
+| ---------- | --------------------------------------- |
+| `j` / `k`  | Move cursor in active tab               |
+| `gg` / `G` | First / last item in active tab         |
+| `A`        | Open Jira actions for current issue     |
+| `m`        | Toggle Overview mode (markdown/raw ADF) |
+| `e`        | Edit Overview description               |
+| `a`        | Add comment (Comments tab)              |
+| `c`        | Reply to comment (Comments tab)         |
+| `d`        | Delete comment (Comments tab)           |
+| `r`        | Refresh active tab data                 |
 
 ## License
 
