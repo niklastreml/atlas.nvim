@@ -8,11 +8,17 @@ local keymap = require("atlas.jira.panel.tabs.overview.keymap")
 function M.activate(issue)
 	keymap.setup()
 	controller.show(issue)
+	controller.move(0)
 end
 
 function M.deactivate()
 	keymap.teardown()
 	controller.deactivate()
+end
+
+---@param delta integer
+function M.move_cursor(delta)
+	controller.move(delta)
 end
 
 ---@param width integer

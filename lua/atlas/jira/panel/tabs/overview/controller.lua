@@ -8,6 +8,16 @@ local footer = require("atlas.ui.components.footer")
 
 local active_handle = nil
 
+---@return integer|nil
+local function detail_win()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return nil
+	end
+	return win
+end
+
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
@@ -121,6 +131,36 @@ function M.toggle_view_mode()
 	end
 
 	require("atlas.jira.panel.init").refresh()
+end
+
+---@param delta integer
+function M.move(delta)
+	if panel_state.current_tab ~= "overview" then
+		return
+	end
+
+	local win = detail_win()
+	if win == nil then
+		return
+	end
+
+	local buf = vim.api.nvim_win_get_buf(win)
+	local max_line = vim.api.nvim_buf_line_count(buf)
+
+	if delta == 0 then
+		vim.api.nvim_win_set_cursor(win, { 1, 0 })
+		return
+	end
+
+	if delta == math.huge then
+		vim.api.nvim_win_set_cursor(win, { max_line, 0 })
+		return
+	end
+
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local step = delta > 0 and 1 or -1
+	local target = math.max(1, math.min(max_line, line + step))
+	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
 
 function M.refresh()
