@@ -75,7 +75,7 @@ function M.render(width)
 			local raw_text = vim.inspect(state.adf_description)
 			desc_lines = vim.split(raw_text, "\n", { plain = true })
 		else
-			desc_lines = utils.sanitize_markdown_lines(state.md_description or "")
+			desc_lines = utils.sanitize_lines(state.md_description or "")
 		end
 
 		for _, desc_line in ipairs(desc_lines) do

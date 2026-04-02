@@ -17,7 +17,7 @@ local highlights = require("atlas.ui.highlights")
 ---@field padding_x integer|nil
 ---@field author_hl fun(item: AtlasThreadedItem, author: string): string|nil
 ---@field header_content_hl fun(item: AtlasThreadedItem, header_content: string): string|nil
----@field content_hl fun(item: AtlasThreadedItem, row: string): table[]|nil
+---@field content_hl fun(item: AtlasThreadedItem, row: string, row_index: integer): table[]|nil
 
 local function line_map_entry(item, part, depth)
 	local kind = part
@@ -154,7 +154,7 @@ local function render_content(lines, spans, line_map, item, depth, body_prefix, 
 
 	local content = tostring(raw_content)
 
-	for _, row in ipairs(utils.sanitize_markdown_lines(content)) do
+	for row_index, row in ipairs(utils.sanitize_lines(content)) do
 		table.insert(lines, body_prefix .. row)
 		put_map(line_map, #lines, line_map_entry(item, "content", depth))
 
@@ -162,7 +162,7 @@ local function render_content(lines, spans, line_map, item, depth, body_prefix, 
 			add_span(spans, #lines - 1, 0, #body_prefix, "AtlasTextMuted")
 		end
 
-		local content_hl = opts.content_hl(item, row)
+		local content_hl = opts.content_hl(item, row, row_index)
 		if content_hl then
 			for _, segment in ipairs(content_hl) do
 				add_span(

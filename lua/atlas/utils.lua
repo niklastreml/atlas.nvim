@@ -204,7 +204,7 @@ end
 
 ---@param text string|nil
 ---@return string[]
-function M.sanitize_markdown_lines(text)
+function M.sanitize_lines(text)
 	if type(text) ~= "string" or text == "" then
 		return { "-" }
 	end

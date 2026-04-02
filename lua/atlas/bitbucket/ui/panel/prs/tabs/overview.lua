@@ -52,7 +52,7 @@ function M.render(pr, detail, width)
 
 	local description_text = ((pr or {}).rendered or {}).description
 	description_text = (description_text or {}).raw or (pr or {}).description or ((pr or {}).summary or {}).raw or ""
-	local description = utils.sanitize_markdown_lines(description_text)
+	local description = utils.sanitize_lines(description_text)
 	local description_header = "Description"
 	table.insert(lines, description_header)
 	table.insert(spans, {

@@ -177,10 +177,10 @@ function M.render(issue, width)
 		local ks = type_key_line:find(key, 1, true)
 		if ks then
 			table.insert(spans, {
-				line = 0,
-				start_col = ks - 1,
-				end_col = ks - 1 + #key,
-				hl_group = "AtlasJiraKey",
+			line = 0,
+			start_col = ks - 1,
+			end_col = ks - 1 + #key,
+			hl_group = helper.issue_hl(key),
 			})
 		end
 	end

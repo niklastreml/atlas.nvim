@@ -113,7 +113,7 @@ function M.render(diffstat, diff, width)
 		return lines, spans
 	end
 
-	local diff_lines = utils.sanitize_markdown_lines(diff_text)
+	local diff_lines = utils.sanitize_lines(diff_text)
 	for _, line in ipairs(diff_lines) do
 		table.insert(lines, line)
 		local idx = #lines - 1

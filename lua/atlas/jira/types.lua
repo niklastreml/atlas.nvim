@@ -67,6 +67,7 @@
 ---| "Comment"
 ---| "assignee"
 ---| "description"
+---| "IssueParentAssociation"
 
 ---@class JiraIssueHistoryItem
 ---@field field JiraIssueHistoryField|nil

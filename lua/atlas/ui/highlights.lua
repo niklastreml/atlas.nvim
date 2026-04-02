@@ -35,6 +35,7 @@ local groups = {
 
 	AtlasTextMuted = { fg = "#7f849c" },
 	AtlasTextMutedItalic = { fg = "#7f849c", italic = true },
+	AtlasTextMutedStrikethrough = { fg = "#7f849c", strikethrough = true },
 	AtlasTextPositive = { fg = "#a6da95", bold = true },
 	AtlasTextWarning = { fg = "#f9e2af", bold = true },
 

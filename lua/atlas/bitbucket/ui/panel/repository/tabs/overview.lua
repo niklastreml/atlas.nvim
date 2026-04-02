@@ -9,7 +9,7 @@ function M.render()
 
 	local readme = repo_state.current_readme
 	if type(readme) == "string" and readme ~= "" and readme ~= "loading" then
-		return utils.sanitize_markdown_lines(readme), {}
+		return utils.sanitize_lines(readme), {}
 	end
 
 	local line = spinner.with_text("Loading readme...")

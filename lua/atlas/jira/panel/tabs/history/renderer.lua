@@ -73,6 +73,10 @@ local function item_header(item)
 		return string.format("%s worklog", action)
 	end
 
+	if field == "IssueParentAssociation" then
+		return string.format("%s parent issue", action)
+	end
+
 	return string.format("%s %s", action, field)
 end
 
@@ -81,6 +85,29 @@ end
 local function item_content(item)
 	local field = item.field
 	if field == "Comment" then
+		return nil
+	end
+
+	if field == "description" then
+		local from_value = item.from_string or item.from
+		local to_value = item.to_string or item.to
+		local from = type(from_value) == "string" and vim.trim(from_value:gsub("%s+", " ")) or ""
+		local to = type(to_value) == "string" and vim.trim(to_value:gsub("%s+", " ")) or ""
+		local has_from = from ~= ""
+		local has_to = to ~= ""
+
+		if has_from and has_to then
+			return string.format("%s\n\n↓\n\n%s", from, to)
+		end
+
+		if has_from then
+			return from
+		end
+
+		if has_to then
+			return to
+		end
+
 		return nil
 	end
 
@@ -110,6 +137,14 @@ local function item_content(item)
 		local from = format_estimate_value(item.from_string or item.from)
 		local to = format_estimate_value(item.to_string or item.to)
 		return string.format("%s -> %s", from, to)
+	end
+
+	if field == "IssueParentAssociation" then
+		local from = item.from_string or item.from
+		local to = item.to_string or item.to
+		local from_text = (type(from) == "string" and vim.trim(from) ~= "") and from or "None"
+		local to_text = (type(to) == "string" and vim.trim(to) ~= "") and to or "None"
+		return string.format("%s -> %s", tostring(from_text), tostring(to_text))
 	end
 
 	local from = item.from_string or item.from or ""
@@ -142,15 +177,34 @@ end
 
 ---@param item AtlasThreadedItem
 ---@param row string
+---@param row_index integer
 ---@return table[]|nil
-local function content_hl(item, row)
+local function content_hl(item, row, row_index)
 	local history_item = ((item or {}).line_map or {}).history_item
 	if history_item == nil then
 		return nil
 	end
 
 	local field = history_item.field
-	if field == "assignee" or field == "priority" or field == "issuetype" or field == "status" then
+	if field == "description" then
+		local from_value = history_item.from_string or history_item.from
+		local to_value = history_item.to_string or history_item.to
+		local from = type(from_value) == "string" and vim.trim(from_value:gsub("%s+", " ")) or ""
+		local to = type(to_value) == "string" and vim.trim(to_value:gsub("%s+", " ")) or ""
+		local has_from = from ~= ""
+		local has_to = to ~= ""
+		local old_line_count = has_from and 1 or 0
+
+		if has_from and row_index <= old_line_count then
+			return {
+				{ start_col = 0, end_col = #row, hl_group = "AtlasTextMutedStrikethrough" },
+			}
+		end
+
+		return nil
+	end
+
+	if field == "assignee" or field == "priority" or field == "issuetype" or field == "status" or field == "IssueParentAssociation" then
 		local s, e = row:find(" -> ", 1, true)
 		if s == nil or e == nil then
 			return nil
@@ -202,6 +256,15 @@ local function content_hl(item, row)
 		elseif field == "status" then
 			local from_hl = jira_ui_helper.status_hl(history_item.from)
 			local to_hl = jira_ui_helper.status_hl(history_item.to)
+
+			return {
+				{ start_col = 0, end_col = s - 1, hl_group = from_hl },
+				{ start_col = e, end_col = #row, hl_group = to_hl },
+			}
+		elseif field == "IssueParentAssociation" then
+			local from_value, to_value = side_values()
+			local from_hl = jira_ui_helper.issue_hl(from_value)
+			local to_hl = jira_ui_helper.issue_hl(to_value)
 
 			return {
 				{ start_col = 0, end_col = s - 1, hl_group = from_hl },

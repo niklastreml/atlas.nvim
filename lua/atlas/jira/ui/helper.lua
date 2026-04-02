@@ -26,6 +26,17 @@ function M.issue_title_hl()
 	return "AtlasJiraTitle"
 end
 
+---@param key string|nil
+---@return string
+function M.issue_hl(key)
+	local lower = tostring(key or ""):lower()
+	if lower == "" or lower == "none" then
+		return "AtlasTextMutedItalic"
+	end
+
+	return "AtlasJiraKey"
+end
+
 ---@param status_id string|nil
 ---@return string
 function M.status_hl(status_id)
