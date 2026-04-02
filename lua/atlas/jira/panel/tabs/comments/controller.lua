@@ -205,8 +205,7 @@ function M.show(issue)
 			for _, comment in ipairs((page and page.comments) or {}) do
 				table.insert(state.comments, comment)
 			end
-			helper.sort_comments_by_created(state.comments)
-			helper.rebuild_comment_tree(state.comments)
+			state.comments = helper.normalize_comments(state.comments, { include_deleted_parents = false })
 			require("atlas.jira.panel.init").refresh()
 			M.move(0)
 
@@ -217,9 +216,7 @@ function M.show(issue)
 				return
 			end
 
-			state.comments = helper.ensure_deleted_parents(state.comments)
-			helper.sort_comments_by_created(state.comments)
-			helper.rebuild_comment_tree(state.comments)
+			state.comments = helper.normalize_comments(state.comments)
 
 			state.state = nil
 			stop_spinner()
@@ -245,9 +242,111 @@ function M.deactivate()
 	stop_spinner()
 end
 
-function M.add_comment() end
+function M.add_comment()
+	local issue = state.issue
+	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
+		footer.notify("warn", "No issue selected")
+		return
+	end
 
-function M.reply_to_comment() end
+	vim.ui.input({
+		prompt = "Add comment: ",
+	}, function(input)
+		if input == nil then
+			footer.notify("info", "Add comment cancelled")
+			return
+		end
+
+		local body = tostring(input)
+		if vim.trim(body) == "" then
+			footer.notify("warn", "Comment cannot be empty")
+			return
+		end
+
+		footer.notify("loading", "Adding comment...")
+		comments_api.add_comment(issue.key, body, function(comment, err)
+			if err ~= nil then
+				footer.notify("error", err)
+				return
+			end
+
+			if type(state.comments) ~= "table" then
+				state.comments = {}
+			end
+
+			if type(comment) == "table" then
+				table.insert(state.comments, comment)
+			end
+
+			state.comments = helper.normalize_comments(state.comments)
+
+			require("atlas.jira.panel.init").refresh()
+			M.move(0)
+			footer.notify("success", "Comment added", 1200)
+		end)
+	end)
+end
+
+function M.reply_to_comment()
+	local issue = state.issue
+	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
+		footer.notify("warn", "No issue selected")
+		return
+	end
+
+	local parent = current_comment_under_cursor()
+	if parent == nil then
+		footer.notify("warn", "No comment selected")
+		return
+	end
+
+	local parent_id = tostring(parent.id or "")
+	if parent_id == "" then
+		footer.notify("warn", "Invalid parent comment")
+		return
+	end
+
+	local parent_label = ((parent.author or {}).display_name and tostring((parent.author or {}).display_name) ~= "")
+			and tostring((parent.author or {}).display_name)
+		or "unknown user"
+
+	vim.ui.input({
+		prompt = string.format("Reply to %s: ", parent_label),
+	}, function(input)
+		if input == nil then
+			footer.notify("info", "Reply cancelled")
+			return
+		end
+
+		local body = tostring(input)
+		if vim.trim(body) == "" then
+			footer.notify("warn", "Reply cannot be empty")
+			return
+		end
+
+		footer.notify("loading", string.format("Replying to %s...", parent_label))
+		comments_api.add_comment(issue.key, body, { parent_id = parent_id }, function(comment, err)
+			if err ~= nil then
+				footer.notify("error", err)
+				return
+			end
+
+			if type(state.comments) ~= "table" then
+				state.comments = {}
+			end
+
+			if type(comment) == "table" then
+				table.insert(state.comments, comment)
+			end
+
+			state.comments = helper.normalize_comments(state.comments)
+
+			require("atlas.jira.panel.init").refresh()
+			M.move(0)
+			footer.notify("success", "Reply added", 1200)
+		end)
+	end)
+end
 
 function M.edit_comment()
 	local comment = current_comment_under_cursor()
@@ -274,6 +373,7 @@ function M.delete_comment()
 	end
 
 	if not helper.can_manage_comment(comment, jira_state.current_user) then
+		footer.notify("warn", "You can only delete your own comments")
 		return
 	end
 
@@ -288,8 +388,12 @@ function M.delete_comment()
 		return
 	end
 
+	local comment_label = ((comment.author or {}).display_name and tostring((comment.author or {}).display_name) ~= "")
+			and tostring((comment.author or {}).display_name)
+		or "unknown user"
+
 	vim.ui.input({
-		prompt = string.format("Delete comment %s? [y/N]: ", comment_id),
+		prompt = string.format("Delete comment(%s) by %s? [y/N]: ", comment_id, comment_label),
 	}, function(input)
 		if input == nil then
 			footer.notify("info", "Delete cancelled")
@@ -310,9 +414,7 @@ function M.delete_comment()
 			end
 
 			state.comments = helper.remove_comment(state.comments, comment_id)
-			state.comments = helper.ensure_deleted_parents(state.comments)
-			helper.sort_comments_by_created(state.comments)
-			helper.rebuild_comment_tree(state.comments)
+			state.comments = helper.normalize_comments(state.comments)
 
 			require("atlas.jira.panel.init").refresh()
 			M.move(0)

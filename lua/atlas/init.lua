@@ -32,6 +32,11 @@ function M.open(view)
 	logger.loginfo("Atlas open requested", { view = view })
 
 	local layout = require("atlas.ui.layout")
+	local panel = require("atlas.ui.panel")
+	if panel.is_open() then
+		panel.close()
+	end
+
 	layout.ensure_open()
 	bootstrap_common()
 	bootstrap_provider(view)

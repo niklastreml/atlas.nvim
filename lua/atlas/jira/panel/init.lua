@@ -1,6 +1,7 @@
 local M = {}
 
 local panel_state = require("atlas.jira.panel.state")
+local ui_panel_state = require("atlas.ui.panel.state")
 local layout = require("atlas.ui.layout")
 local ns = vim.api.nvim_create_namespace("atlas.jira.panel")
 local mapped_buf = nil
@@ -202,6 +203,13 @@ end
 
 function M.refresh()
 	M.render()
+end
+
+function M.deactivate()
+	local tab = get_tab_module(panel_state.current_tab)
+	if tab ~= nil and type(tab.deactivate) == "function" then
+		tab.deactivate()
+	end
 end
 
 return M

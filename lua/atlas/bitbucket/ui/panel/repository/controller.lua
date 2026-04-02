@@ -208,6 +208,13 @@ function M.refresh_selected_repo()
 	M.select_tab(state.current_tab)
 end
 
+function M.deactivate()
+	cancel_handle()
+	cancel_readme_handle()
+	stop_spinner()
+	state.reset()
+end
+
 ---@param tab "overview"|"branches"|"tags"
 function M.select_tab(tab)
 	state.set_current_tab(tab)

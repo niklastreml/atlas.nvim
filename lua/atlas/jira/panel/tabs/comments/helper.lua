@@ -146,4 +146,20 @@ function M.ensure_deleted_parents(comments)
 	return comments
 end
 
+---@param comments JiraComment[]|nil
+---@param opts? { include_deleted_parents?: boolean }
+---@return JiraComment[]
+function M.normalize_comments(comments, opts)
+	local next_comments = type(comments) == "table" and comments or {}
+	local include_deleted_parents = opts == nil or opts.include_deleted_parents ~= false
+
+	if include_deleted_parents then
+		next_comments = M.ensure_deleted_parents(next_comments)
+	end
+
+	M.sort_comments_by_created(next_comments)
+	M.rebuild_comment_tree(next_comments)
+	return next_comments
+end
+
 return M

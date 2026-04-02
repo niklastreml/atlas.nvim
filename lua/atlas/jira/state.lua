@@ -3,7 +3,7 @@
 ---@field current_view JiraViewConfig|nil
 ---@field is_loading boolean
 ---@field error string|nil
----@field current_user JiraCurrentUser|nil
+---@field current_user JiraUser|nil
 ---@field issues JiraIssue[]|nil
 ---@field issue_tree table[]|nil
 ---@field line_map table<number, table>

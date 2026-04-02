@@ -4,6 +4,19 @@ local layout = require("atlas.ui.layout")
 local state = require("atlas.ui.panel.state")
 local ui_state = require("atlas.ui.main.state")
 
+---@param provider "bitbucket"|"jira"|nil
+local function deactivate_provider(provider)
+	if provider == "jira" then
+		require("atlas.jira.panel.init").deactivate()
+		return
+	end
+
+	if provider == "bitbucket" then
+		require("atlas.bitbucket.ui.panel.repository.controller").deactivate()
+		require("atlas.bitbucket.ui.panel.prs.controller").deactivate()
+	end
+end
+
 local function current_panel_controller()
 	local provider = state.active_provider
 	if provider == "jira" then
@@ -113,6 +126,11 @@ end
 ---@param provider "bitbucket"|"jira"
 ---@param item table|nil
 function M.on_select(provider, item)
+	local previous_provider = state.active_provider
+	if previous_provider ~= provider then
+		deactivate_provider(previous_provider)
+	end
+
 	state.set_selection(provider, item)
 	if not M.is_open() then
 		return

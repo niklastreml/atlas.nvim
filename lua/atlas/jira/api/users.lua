@@ -5,7 +5,7 @@ local service = require("atlas.jira.api.service")
 local cache = require("atlas.core.cache")
 local logger = require("atlas.core.logger")
 
----@param callback fun(user: JiraCurrentUser|nil, err: string|nil)
+---@param callback fun(user: JiraUser|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.get_myself(callback)
 	logger.loginfo("Jira fetch current user")

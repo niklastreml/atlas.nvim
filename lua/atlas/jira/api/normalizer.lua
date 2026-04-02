@@ -1,5 +1,5 @@
 local M = {}
-local adf = require("atlas.jira.panel.tabs.overview.adf")
+local adf = require("atlas.jira.converted.adf")
 
 local STORY_POINTS_FIELD = "customfield_10016"
 local APPROVERS_FIELD = "customfield_10003"

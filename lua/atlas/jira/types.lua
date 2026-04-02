@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- Current User
 --------------------------------------------------------------------------------
----@class JiraCurrentUser
+---@class JiraUser
 ---@field account_id string
 ---@field display_name string
 ---@field email string

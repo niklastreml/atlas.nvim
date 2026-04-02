@@ -2,7 +2,7 @@ local M = {}
 local state = require("atlas.jira.panel.tabs.overview.state")
 local panel_state = require("atlas.jira.panel.state")
 local issues = require("atlas.jira.api.issues")
-local adf = require("atlas.jira.panel.tabs.overview.adf")
+local adf = require("atlas.jira.converted.adf")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 

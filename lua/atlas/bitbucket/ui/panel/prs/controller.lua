@@ -553,4 +553,10 @@ function M.refresh_selected_pr()
 	M.select_tab(current_tab)
 end
 
+function M.deactivate()
+	cancel_all_handles()
+	stop_spinner()
+	panel_state.reset_current()
+end
+
 return M
