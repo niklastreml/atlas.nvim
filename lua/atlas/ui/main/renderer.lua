@@ -29,6 +29,10 @@ function M.render(view, opts)
 	local line_map = {}
 
 	local target_view = view or state.current_view or "jira"
+	local previous_view = state.current_view
+	if previous_view == "jira" and target_view ~= "jira" then
+		require("atlas.jira.ui.controller").teardown()
+	end
 	local width = vim.api.nvim_win_get_width(win)
 	local height = vim.api.nvim_win_get_height(win)
 

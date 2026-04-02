@@ -17,6 +17,7 @@ local logger = require("atlas.core.logger")
 
 local active_user_handle = nil
 local active_issues_handle = nil
+local active_issue_reload_handles = {}
 
 local function render_main_if_jira_active()
 	if not layout.is_open() then
@@ -38,6 +39,21 @@ local refresh_status_spinner = status_spinner.create({
 		render_main_if_jira_active()
 	end,
 })
+
+local function cancel_issue_reload_handles()
+	for _, handle in ipairs(active_issue_reload_handles) do
+		if handle ~= nil and handle.cancel then
+			pcall(handle.cancel)
+		end
+	end
+	active_issue_reload_handles = {}
+end
+
+local function reset_reload_state()
+	refresh_status_spinner:stop()
+	state.reloading_issue_keys = {}
+	state.reload_spinner_frame = "⠋"
+end
 
 local function has_reloading_issues()
 	for _, count in pairs(state.reloading_issue_keys or {}) do
@@ -89,6 +105,9 @@ local function cancel_active_requests()
 		pcall(active_issues_handle.cancel)
 	end
 	active_issues_handle = nil
+
+	cancel_issue_reload_handles()
+	reset_reload_state()
 end
 
 ---@param view JiraViewConfig|nil
@@ -326,7 +345,15 @@ function M.refresh_issue(issue, on_done)
 
 	footer.notify("loading", string.format("Reloading %s...", issue_key))
 	begin_issue_reload(issue_key)
-	issues_api.get_issue(issue_key, function(fetched_issue, err)
+	local reload_handle = nil
+	reload_handle = issues_api.get_issue(issue_key, function(fetched_issue, err)
+		for i = #active_issue_reload_handles, 1, -1 do
+			if active_issue_reload_handles[i] == reload_handle then
+				table.remove(active_issue_reload_handles, i)
+				break
+			end
+		end
+
 		if err ~= nil or fetched_issue == nil then
 			end_issue_reload(issue_key)
 			footer.notify("error", tostring(err or "Failed to reload issue"))
@@ -367,6 +394,12 @@ function M.refresh_issue(issue, on_done)
 		footer.notify("success", string.format("Reloaded %s", issue_key), 1200)
 		on_done()
 	end)
+	table.insert(active_issue_reload_handles, reload_handle)
+end
+
+function M.teardown()
+	cancel_active_requests()
+	service.clear_memory_cache()
 end
 
 ---@param on_done fun()|nil
