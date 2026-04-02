@@ -80,7 +80,11 @@ local function cell_hl(row, col, ctx)
 	end
 
 	if col.key == "status" then
-		local hl_group = helper.status_hl(type(issue) == "table" and issue.status_id or nil)
+		local issue_key = type(issue) == "table" and tostring(issue.key or "") or ""
+		local is_reloading = issue_key ~= ""
+			and (tonumber((state.reloading_issue_keys or {})[issue_key]) or 0) > 0
+		local hl_group = is_reloading and "AtlasTextMuted"
+			or helper.status_hl(type(issue) == "table" and issue.status_id or nil)
 		return {
 			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
 		}
@@ -148,7 +152,15 @@ local function issue_to_row(issue, is_child)
 		duedate = due_display,
 		assignee = string.format("%s %s", icons.entity("user"), issue.assignee or "Unassigned"),
 		reporter = string.format("%s %s", icons.entity("user"), issue.reporter or "Unknown"),
-		status = string.format(" %s ", issue.status),
+		status = (function()
+			local issue_key = tostring(issue.key or "")
+			local is_reloading = issue_key ~= ""
+				and (tonumber((state.reloading_issue_keys or {})[issue_key]) or 0) > 0
+			if is_reloading then
+				return string.format(" %s ", state.reload_spinner_frame or "⠋")
+			end
+			return string.format(" %s ", issue.status)
+		end)(),
 
 		expanded = true,
 		_item = { kind = "issue", key = issue.key, _issue = issue },

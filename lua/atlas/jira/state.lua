@@ -9,6 +9,8 @@
 ---@field line_map table<number, table>
 ---@field latest_request_tokens table<string, integer>
 ---@field request_seq integer
+---@field reloading_issue_keys table<string, integer>
+---@field reload_spinner_frame string
 
 ---@type JiraState
 local M = {
@@ -22,6 +24,8 @@ local M = {
 	line_map = {},
 	latest_request_tokens = {},
 	request_seq = 0,
+	reloading_issue_keys = {},
+	reload_spinner_frame = "⠋",
 }
 
 return M

@@ -7,6 +7,7 @@ local state = require("atlas.jira.state")
 local layout = require("atlas.ui.layout")
 local navigation = require("atlas.ui.navigation")
 local info_popup = require("atlas.ui.popups.info")
+local status_spinner = require("atlas.ui.components.spinner")
 local renderer = require("atlas.jira.ui.renderer")
 local users = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
@@ -16,6 +17,67 @@ local logger = require("atlas.core.logger")
 
 local active_user_handle = nil
 local active_issues_handle = nil
+
+local function render_main_if_jira_active()
+	if not layout.is_open() then
+		return
+	end
+
+	local ui_main_state = require("atlas.ui.main.state")
+	if ui_main_state.current_view ~= "jira" then
+		return
+	end
+
+	require("atlas.ui.main.renderer").render("jira")
+end
+
+local refresh_status_spinner = status_spinner.create({
+	interval_ms = 120,
+	on_tick = function(frame)
+		state.reload_spinner_frame = frame
+		render_main_if_jira_active()
+	end,
+})
+
+local function has_reloading_issues()
+	for _, count in pairs(state.reloading_issue_keys or {}) do
+		if (tonumber(count) or 0) > 0 then
+			return true
+		end
+	end
+	return false
+end
+
+---@param issue_key string
+local function begin_issue_reload(issue_key)
+	state.reloading_issue_keys = state.reloading_issue_keys or {}
+	state.reloading_issue_keys[issue_key] = (tonumber(state.reloading_issue_keys[issue_key]) or 0) + 1
+
+	if not refresh_status_spinner:is_running() then
+		refresh_status_spinner:start()
+	end
+
+	state.reload_spinner_frame = refresh_status_spinner:current_frame()
+	render_main_if_jira_active()
+end
+
+---@param issue_key string
+local function end_issue_reload(issue_key)
+	state.reloading_issue_keys = state.reloading_issue_keys or {}
+	local next_count = (tonumber(state.reloading_issue_keys[issue_key]) or 0) - 1
+	if next_count > 0 then
+		state.reloading_issue_keys[issue_key] = next_count
+	else
+		state.reloading_issue_keys[issue_key] = nil
+	end
+
+	if not has_reloading_issues() then
+		refresh_status_spinner:stop()
+		state.reload_spinner_frame = "⠋"
+	end
+
+	render_main_if_jira_active()
+end
 
 local function cancel_active_requests()
 	if active_user_handle ~= nil and active_user_handle.cancel then
@@ -263,8 +325,10 @@ function M.refresh_issue(issue, on_done)
 	end
 
 	footer.notify("loading", string.format("Reloading %s...", issue_key))
+	begin_issue_reload(issue_key)
 	issues_api.get_issue(issue_key, function(fetched_issue, err)
 		if err ~= nil or fetched_issue == nil then
+			end_issue_reload(issue_key)
 			footer.notify("error", tostring(err or "Failed to reload issue"))
 			on_done()
 			return
@@ -286,6 +350,7 @@ function M.refresh_issue(issue, on_done)
 
 		state.issues = issues
 		state.issue_tree = require("atlas.jira.api.normalizer").build_issue_tree(issues)
+		end_issue_reload(issue_key)
 
 		require("atlas.ui.main.renderer").render("jira")
 		local panel = require("atlas.ui.panel")
