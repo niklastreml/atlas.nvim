@@ -218,6 +218,7 @@ return {
 - [x] Markdown -> ADF conversion for issue descriptions (experimental)
 - [x] View and edit issues as markdown
 - [x] Search issues
+- [ ] Add support for custom fields in issue details
 - [ ] Create issues
 
 ### Commands
@@ -230,26 +231,27 @@ return {
 
 ### Main UI
 
-| Context   | Key        | Action                                                  |
-| --------- | ---------- | ------------------------------------------------------- |
-| Global    | `q`        | Close Atlas                                             |
-| Global    | `j` / `k`  | Move cursor                                             |
-| Global    | `gg` / `G` | First / last item                                       |
-| Global    | `[` / `]`  | Previous / next panel tab                               |
-| Bitbucket | `p`        | Toggle PR panel (or switch to PR panel)                 |
-| Bitbucket | `o`        | Toggle repository panel (or switch to repository panel) |
+| Context   | Key        | Action                                  |
+| --------- | ---------- | --------------------------------------- |
+| Global    | `q`        | Close Atlas                             |
+| Global    | `j` / `k`  | Move cursor                             |
+| Global    | `gg` / `G` | First / last item                       |
+| Global    | `[` / `]`  | Previous / next panel tab               |
+| Bitbucket | `p`        | Toggle PR panel (or switch to PR panel) |
 
 ### Bitbucket
 
-| Key  | Action                         |
-| ---- | ------------------------------ |
-| `R`  | Refresh current Bitbucket view |
-| `r`  | Refetch selected PR            |
-| `a`  | Open PR actions                |
-| `gx` | Open PR in browser             |
-| `y`  | Copy PR id                     |
-| `Y`  | Copy PR URL                    |
-| `/`  | Search repositories            |
+| Key          | Action                                                         |
+| ------------ | -------------------------------------------------------------- |
+| `<view.key>` | Switch Bitbucket view (for each configured `jira.views[].key`) |
+| `R`          | Refresh current Bitbucket view                                 |
+| `r`          | Refetch selected PR                                            |
+| `a`          | Open PR actions                                                |
+| `gx`         | Open PR in browser                                             |
+| `y`          | Copy PR id                                                     |
+| `Y`          | Copy PR URL                                                    |
+| `/`          | Search repositories                                            |
+| `o`          | Toggle repository panel                                        |
 
 ### Jira
 
