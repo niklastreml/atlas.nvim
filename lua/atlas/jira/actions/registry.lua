@@ -260,6 +260,56 @@ local ACTIONS = {
 		end,
 	},
 	{
+		id = "search_issues",
+		label = "Search issues",
+		is_available = function()
+			return true
+		end,
+		run = function(_, done)
+			vim.ui.input({
+				prompt = "Search Jira issues (text or JQL): ",
+			}, function(input)
+				if input == nil then
+					done({ changed_issue = false, message = "Search cancelled" }, nil)
+					return
+				end
+
+				local query = vim.trim(tostring(input))
+				if query == "" then
+					done({ changed_issue = false, message = "Search query cannot be empty" }, nil)
+					return
+				end
+
+				local lower = query:lower()
+				local is_ticket_key = query:match("^[A-Z]+%-%d+$") ~= nil
+				local looks_like_jql = query:find("[=<>~]") ~= nil
+					or lower:match("^%s*order%s+by%s+") ~= nil
+					or lower:find(" and ", 1, true) ~= nil
+					or lower:find(" or ", 1, true) ~= nil
+
+				local jql = nil
+				if is_ticket_key then
+					jql = string.format('key = "%s"', query)
+				elseif looks_like_jql then
+					jql = query
+				else
+					local escaped_query = query:gsub("\\", "\\\\"):gsub('"', '\\"')
+					jql = string.format('text ~ "%s" ORDER BY updated DESC', escaped_query)
+				end
+
+				local search_view = {
+					name = "Search (JQL)",
+					jql = jql,
+				}
+
+				require("atlas.jira.ui.controller").switch_view(search_view, function()
+					require("atlas.ui.navigation").focus_first_item()
+				end)
+				done({ changed_issue = false, message = "Search view opened" }, nil)
+			end)
+		end,
+	},
+	{
 		id = "edit_title",
 		label = "Edit title",
 		is_available = has_issue_key,

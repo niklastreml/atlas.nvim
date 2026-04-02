@@ -39,6 +39,13 @@ local function register_dynamic_keys(buf, views)
 				controller.open_actions()
 			end,
 		},
+		{
+			key = "/",
+			desc = "Search issues",
+			callback = function()
+				controller.open_issue_search_popup()
+			end,
+		},
 	}
 
 	local view_items = {}

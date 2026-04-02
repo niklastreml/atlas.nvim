@@ -59,18 +59,18 @@ function M.render(issue, width)
 			k1 = "Status:",
 			v1 = status,
 			v1_hl = helper.status_hl(issue and issue.status_id),
-			k2 = "Assignee:",
-			v2 = string.format("%s %s", user_icon, assignee),
-			v2_hl = helper.person_hl(issue and issue.assignee),
-		},
-		{
-			k1 = "Reporter:",
-			v1 = string.format("%s %s", user_icon, reporter),
-			v1_hl = helper.person_hl(issue and issue.reporter),
 			k2 = "Approvers:",
 			v2 = approvers,
 			approver_names = approver_names,
 			v2_hl = "AtlasTextMutedItalic",
+		},
+		{
+			k1 = "Assignee:",
+			v1 = string.format("%s %s", user_icon, assignee),
+			v1_hl = helper.person_hl(issue and issue.assignee),
+			k2 = "Reporter:",
+			v2 = string.format("%s %s", user_icon, reporter),
+			v2_hl = helper.person_hl(issue and issue.reporter),
 		},
 	}
 

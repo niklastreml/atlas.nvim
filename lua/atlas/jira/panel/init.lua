@@ -22,6 +22,23 @@ local function sync_render_markdown()
 	pcall(vim.api.nvim_buf_call, buf, function()
 		render_markdown.set_buf(true)
 	end)
+
+	--FIX: Re-apply tab navigation keys after render-markdown attaches. This is bad and should be refactored
+	vim.keymap.set("n", "[", function()
+		M.prev_tab()
+	end, { buffer = buf, silent = true, nowait = true })
+
+	vim.keymap.set("n", "]", function()
+		M.next_tab()
+	end, { buffer = buf, silent = true, nowait = true })
+
+	vim.keymap.set("n", "<S-Tab>", function()
+		M.prev_tab()
+	end, { buffer = buf, silent = true, nowait = true })
+
+	vim.keymap.set("n", "<Tab>", function()
+		M.next_tab()
+	end, { buffer = buf, silent = true, nowait = true })
 end
 
 local TABS = {
@@ -247,7 +264,7 @@ function M.render()
 		end
 	end
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-  --- FIX: Does not work great...
+	--- FIX: Does not work great...
 	sync_render_markdown()
 end
 

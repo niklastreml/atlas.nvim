@@ -305,12 +305,23 @@ function M.render(opts)
 	local active_id = view_id(active)
 
 	local nav_items = {}
+	local active_is_listed = false
 	for _, v in ipairs(views) do
 		local id = view_id(v)
 		local label = v.key and string.format("%s (%s)", v.name, v.key) or v.name
+		if id == active_id then
+			active_is_listed = true
+		end
 		table.insert(nav_items, {
 			label = label,
 			active = id == active_id,
+		})
+	end
+
+	if not active_is_listed and type(active) == "table" then
+		table.insert(nav_items, {
+			label = tostring(active.name or "-"),
+			active = true,
 		})
 	end
 
