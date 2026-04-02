@@ -6,6 +6,7 @@ local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 local comments_api = require("atlas.jira.api.comments")
 local helper = require("atlas.jira.panel.tabs.comments.helper")
+local markdown_editor = require("atlas.jira.ui.markdown_editor")
 
 local active_handle = nil
 local COMMENTS_PAGE_SIZE = 20
@@ -349,6 +350,12 @@ function M.reply_to_comment()
 end
 
 function M.edit_comment()
+	local issue = state.issue
+	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
+		footer.notify("warn", "No issue selected")
+		return
+	end
+
 	local comment = current_comment_under_cursor()
 	if comment == nil then
 		footer.notify("warn", "No comment selected")
@@ -360,7 +367,48 @@ function M.edit_comment()
 		return
 	end
 
-	footer.notify("info", "Edit comment not implemented yet")
+	local comment_id = tostring(comment.id or "")
+	if comment_id == "" then
+		footer.notify("warn", "Invalid comment id")
+		return
+	end
+
+	local current_body = tostring(comment.body or "")
+
+	markdown_editor.open({
+		key = string.format("comment-%s-%s", issue.key, comment_id),
+		title = string.format("Edit Comment %s", comment_id),
+		initial_text = current_body,
+		width_ratio = 0.65,
+		height_ratio = 0.65,
+		on_save = function(body)
+			if vim.trim(body) == "" then
+				footer.notify("warn", "Comment cannot be empty")
+				return
+			end
+
+			footer.notify("loading", string.format("Updating comment %s...", comment_id))
+			comments_api.edit_comment(issue.key, comment_id, body, function(updated_comment, err)
+				if err ~= nil then
+					footer.notify("error", err)
+					return
+				end
+
+				state.comments = helper.remove_comment(state.comments, comment_id)
+				if type(updated_comment) == "table" then
+					table.insert(state.comments, updated_comment)
+				end
+				state.comments = helper.normalize_comments(state.comments)
+
+				require("atlas.jira.panel.init").refresh()
+				M.move(0)
+				footer.notify("success", "Comment updated", 1200)
+			end)
+		end,
+		on_cancel = function()
+			footer.notify("info", "Edit cancelled")
+		end,
+	})
 end
 
 function M.delete_comment()

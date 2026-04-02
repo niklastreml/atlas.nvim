@@ -83,7 +83,49 @@ function M.add_comment(issue_key, comment, opts, callback)
 	end)
 end
 
-function M.edit_comment(issue_key, comment_id, comment, callback) end
+---@param issue_key string
+---@param comment_id string|number
+---@param comment string
+---@param callback fun(comment: JiraComment|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.edit_comment(issue_key, comment_id, comment, callback)
+	if type(callback) ~= "function" then
+		return nil
+	end
+
+	if type(issue_key) ~= "string" or issue_key == "" then
+		callback(nil, "Missing issue key")
+		return nil
+	end
+
+	local id = tostring(comment_id or "")
+	if id == "" then
+		callback(nil, "Missing comment id")
+		return nil
+	end
+
+	local body = type(comment) == "string" and comment or ""
+	if vim.trim(body) == "" then
+		callback(nil, "Comment cannot be empty")
+		return nil
+	end
+
+	logger.loginfo("Jira edit comment", { issue_key = issue_key, comment_id = id })
+	local endpoint = string.format("/issue/%s/comment/%s", issue_key, id)
+	local payload = {
+		body = markdown.to_adf(body),
+	}
+
+	return service.request("PUT", endpoint, payload, function(result, err)
+		if err or not result then
+			callback(nil, err or "Empty response")
+			return
+		end
+
+		local page = normalizer.normalize_comments({ comments = { result } })
+		callback(page.comments[1], nil)
+	end)
+end
 
 ---@param issue_key string
 ---@param comment_id string|number

@@ -15,6 +15,23 @@ local function parse_inline(text)
 	local i = 1
 
 	while i <= #text do
+		local ms, me, mention_label, mention_id = text:find("%[(.-)%]%{mention:([^}]+)%}", i)
+		if ms == i then
+			local mention_text = mention_label
+			if mention_text ~= "" and mention_text:sub(1, 1) ~= "@" then
+				mention_text = "@" .. mention_text
+			end
+
+			table.insert(nodes, {
+				type = "mention",
+				attrs = {
+					id = mention_id,
+					text = mention_text,
+					accessLevel = "",
+				},
+			})
+			i = me + 1
+		else
 		local s, e, label, url = text:find("%[(.-)%]%((.-)%)", i)
 		if s == i then
 			table.insert(nodes, {
@@ -68,6 +85,7 @@ local function parse_inline(text)
 		else
 			table.insert(nodes, text_node(text:sub(i, i)))
 			i = i + 1
+		end
 		end
 	end
 

@@ -74,7 +74,19 @@ node_handlers.paragraph = function(node, convert_node, ctx)
 end
 
 node_handlers.mention = function(node)
-	return node.attrs and node.attrs.text or ""
+	local attrs = type(node.attrs) == "table" and node.attrs or {}
+	local mention_id = tostring(attrs.id or "")
+	local mention_text = tostring(attrs.text or "")
+
+	if mention_text == "" then
+		return ""
+	end
+
+	if mention_id ~= "" then
+		return string.format("[%s]{mention:%s}", mention_text, mention_id)
+	end
+
+	return mention_text
 end
 
 node_handlers.emoji = function(node)
