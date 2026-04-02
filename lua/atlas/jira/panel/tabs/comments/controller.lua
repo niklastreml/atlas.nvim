@@ -25,7 +25,11 @@ end
 ---@return boolean
 local function is_comment_line(lnum)
 	local item = (state.line_map or {})[lnum]
-	return type(item) == "table" and item.kind == "comment"
+	if type(item) ~= "table" or type(item.comment) ~= "table" then
+		return false
+	end
+
+	return item.kind == "content" or item.kind == "thread_content"
 end
 
 ---@return JiraComment|nil
@@ -37,7 +41,11 @@ local function current_comment_under_cursor()
 
 	local line = vim.api.nvim_win_get_cursor(win)[1]
 	local item = (state.line_map or {})[line]
-	if type(item) ~= "table" or item.kind ~= "comment" then
+	if type(item) ~= "table" then
+		return nil
+	end
+
+	if item.kind ~= "content" and item.kind ~= "thread_content" then
 		return nil
 	end
 

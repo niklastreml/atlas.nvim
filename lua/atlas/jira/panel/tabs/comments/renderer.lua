@@ -5,9 +5,9 @@ local header = require("atlas.jira.panel.components.header")
 local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
-local helper = require("atlas.jira.ui.helper")
 local comments_helper = require("atlas.jira.panel.tabs.comments.helper")
 local icons = require("atlas.ui.icons")
+local threads = require("atlas.ui.components.threads")
 local PADDING_X = 2
 
 ---@param comments JiraComment[]
@@ -31,119 +31,41 @@ local function root_comments(comments)
 	return roots
 end
 
----@param lines string[]
----@param spans table[]
----@param line_map table<number, table>
 ---@param comment JiraComment
----@param depth integer
----@param branch_prefix string|nil
----@param is_last boolean|nil
-local function render_comment(lines, spans, line_map, comment, depth, branch_prefix, is_last)
-	branch_prefix = branch_prefix or ""
-	is_last = is_last == true
-
-	local pad = string.rep(" ", PADDING_X)
-	local connector = ""
-	local continuation = ""
-	if depth > 0 then
-		connector = is_last and "└─ " or "├─ "
-		continuation = is_last and "   " or "│  "
-	end
-
-	local meta_prefix = pad .. branch_prefix .. connector
-	local body_prefix = pad .. branch_prefix .. continuation
-	if depth == 0 then
-		body_prefix = pad
-	end
-
+---@return AtlasThreadedItem
+local function to_thread_item(comment)
 	local author = ((comment or {}).author or {}).display_name or "Unknown"
-	local is_deleted_comment = tostring((comment or {}).body or "") == "Comment deleted"
-	local can_edit = comments_helper.can_manage_comment(comment, jira_state.current_user)
 	local when = utils.relative_time_text((comment or {}).created)
-	local meta = meta_prefix .. string.format("%s  %s", author, when)
-	table.insert(lines, meta)
-	if #meta_prefix > 0 then
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = 0,
-			end_col = #meta_prefix,
-			hl_group = "AtlasTextMuted",
-		})
-	end
-	table.insert(spans, {
-		line = #lines - 1,
-		start_col = #meta_prefix,
-		end_col = #meta_prefix + #author,
-		hl_group = is_deleted_comment and "AtlasTextMutedItalic" or helper.person_hl(author),
-	})
-	table.insert(spans, {
-		line = #lines - 1,
-		start_col = #meta_prefix + #author,
-		end_col = #meta,
-		hl_group = "AtlasTextMuted",
-	})
-
 	local body = tostring((comment or {}).body or "")
-	if body == "" then
-		body = "-"
-	end
-	for _, row in ipairs(utils.sanitize_markdown_lines(body)) do
-		table.insert(lines, body_prefix .. row)
-		line_map[#lines] = { kind = "comment", comment = comment }
-		if #body_prefix > 0 then
-			table.insert(spans, {
-				line = #lines - 1,
-				start_col = 0,
-				end_col = #body_prefix,
-				hl_group = "AtlasTextMuted",
-			})
-		end
-		if is_deleted_comment then
-			table.insert(spans, {
-				line = #lines - 1,
-				start_col = #body_prefix,
-				end_col = #body_prefix + #row,
-				hl_group = "AtlasTextMutedItalic",
-			})
-		end
-	end
+	local can_edit = comments_helper.can_manage_comment(comment, jira_state.current_user)
 
-	local children = (comment and comment.children) or {}
-
-	local actions = {
+	local footer_items = {
 		string.format("%s (c)", icons.entity("reply")),
 	}
 	if can_edit then
-		table.insert(actions, string.format("%s (e)", icons.entity("edit")))
-		table.insert(actions, string.format("%s (d)", icons.entity("delete")))
+		table.insert(footer_items, string.format("%s (e)", icons.entity("edit")))
+		table.insert(footer_items, string.format("%s (d)", icons.entity("delete")))
 	end
-	local actions_prefix = body_prefix
-	if depth == 0 and #children > 0 then
-		actions_prefix = pad .. "│ "
-	end
-	local actions_line = actions_prefix .. "  " .. table.concat(actions, "   ")
-	table.insert(lines, actions_line)
-	table.insert(spans, {
-		line = #lines - 1,
-		start_col = 0,
-		end_col = #actions_line,
-		hl_group = "AtlasTextMuted",
-	})
 
-	for i, child in ipairs(children) do
-		local sep = pad .. branch_prefix .. continuation
-		if depth == 0 then
-			sep = pad .. "│"
-		end
-		table.insert(lines, sep)
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = 0,
-			end_col = #sep,
-			hl_group = "AtlasTextMuted",
-		})
-		render_comment(lines, spans, line_map, child, depth + 1, branch_prefix .. continuation, i == #children)
+	local children = {}
+	for _, child in ipairs((comment and comment.children) or {}) do
+		table.insert(children, to_thread_item(child))
 	end
+
+	return {
+		author = tostring(author),
+		timestamp = tostring(when),
+		content = body,
+		footer_items = footer_items,
+		children = children,
+		line_map = {
+			comment = comment,
+		},
+		meta = {
+			comment = comment,
+			is_deleted = body == "Comment deleted",
+		},
+	}
 end
 
 ---@param width integer
@@ -181,19 +103,26 @@ function M.render(width)
 
 	if type(state.comments) == "table" and #state.comments > 0 then
 		local roots = root_comments(state.comments)
-		local sep_width = math.max(8, width - (PADDING_X * 2))
-		local separator = string.rep(" ", PADDING_X) .. string.rep("─", sep_width)
-		for idx, comment in ipairs(roots) do
-			render_comment(lines, spans, line_map, comment, 0, "", idx == #roots)
-			if idx < #roots then
-				table.insert(lines, separator)
-				table.insert(spans, {
-					line = #lines - 1,
-					start_col = 0,
-					end_col = #separator,
-					hl_group = "AtlasTextMuted",
-				})
-			end
+		local items = {}
+		for _, comment in ipairs(roots) do
+			table.insert(items, to_thread_item(comment))
+		end
+
+		local item_lines, item_spans, item_map = threads.render(items, {
+			padding_x = PADDING_X,
+			content_hl = function(item)
+				local meta = item.meta or {}
+				if meta.is_deleted then
+					return "AtlasTextMutedItalic"
+				end
+				return nil
+			end,
+		})
+
+		local offset = #lines
+		utils.append_block(lines, spans, { lines = item_lines, highlights = item_spans })
+		for lnum, entry in pairs(item_map or {}) do
+			line_map[offset + lnum] = entry
 		end
 		table.insert(lines, "")
 	elseif state.state ~= "loading" then
