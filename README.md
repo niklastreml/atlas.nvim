@@ -5,7 +5,10 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 > [!CAUTION]
 > **Still in early development, will have breaking changes!**
 
-<img width="2541" height="1365" alt="CleanShot 2026-03-31 at 02 54 23" src="https://github.com/user-attachments/assets/931ec50b-a0ca-4321-9326-3d53aea2432f" />
+<div>
+  <img src="https://github.com/user-attachments/assets/fcf4e957-aa9a-409b-921d-9b8a476b9522" width="49%" />
+  <img src="https://github.com/user-attachments/assets/931ec50b-a0ca-4321-9326-3d53aea2432f" width="49%" />
+</div>
 
 ### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
@@ -202,12 +205,16 @@ return {
 #### Comments
 
 - Create, reply, edit, and delete comments directly in the Jira panel.
+  
+<img width="1001" height="426" alt="CleanShot 2026-04-03 at 01 07 06" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
 
 #### Issue Editing (Experimental)
 
 - Edit issue description directly from Overview.
 - Supports markdown editing with markdown -> ADF conversion.
 - Supports raw ADF mode for direct document editing.
+  
+<img width="2520" height="1373" alt="CleanShot 2026-04-03 at 01 11 10" src="https://github.com/user-attachments/assets/b46a4018-6adf-4b9f-b6fe-0b8bdbb5efaa" />
 
 #### Features
 
