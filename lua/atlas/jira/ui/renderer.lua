@@ -41,14 +41,14 @@ local function cell_hl(row, col, ctx)
 					table.insert(spans_for_cell, {
 						start_col = title_start - 1,
 						end_col = #ctx.text,
-						hl_group = is_child and "Comment" or helper.issue_title_hl(),
+						hl_group = helper.issue_title_hl(is_child and "" or issue.summary),
 					})
 				end
 
 				table.insert(spans_for_cell, {
 					start_col = s - 1,
 					end_col = e,
-					hl_group = is_child and "LineNr" or "AtlasJiraKey",
+					hl_group = helper.issue_hl(is_child and "" or issue.key),
 				})
 			end
 		end
@@ -235,7 +235,7 @@ function M.issue_popup_content(issue)
 	local next_row = 8
 
 	local highlights = {
-		{ row = 0, col = 1, end_col = 1 + #(issue.key or ""), hl_group = "AtlasJiraKey" },
+		{ row = 0, col = 1, end_col = 1 + #(issue.key or ""), hl_group = helper.issue_hl(issue.key) },
 		{ row = 1, col = 0, end_col = -1, hl_group = "AtlasTextMuted" },
 		{ row = row.type, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
 		{ row = row.status, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
@@ -251,11 +251,11 @@ function M.issue_popup_content(issue)
 	}
 
 	if summary ~= "" then
-		table.insert(highlights, {
+			table.insert(highlights, {
 			row = 0,
 			col = 3 + #(issue.key or ""),
 			end_col = -1,
-			hl_group = helper.issue_title_hl(),
+			hl_group = helper.issue_title_hl(summary),
 		})
 	end
 
@@ -270,7 +270,7 @@ function M.issue_popup_content(issue)
 		row.parent = next_row
 		next_row = next_row + 1
 		table.insert(highlights, { row = row.parent, col = 1, end_col = 10, hl_group = "AtlasTextMuted" })
-		table.insert(highlights, { row = row.parent, col = 11, end_col = -1, hl_group = "AtlasJiraKey" })
+		table.insert(highlights, { row = row.parent, col = 11, end_col = -1, hl_group = helper.issue_hl(parent_key) })
 
 		if type(parent_summary) == "string" and parent_summary ~= "" then
 			row.parent_summary = next_row

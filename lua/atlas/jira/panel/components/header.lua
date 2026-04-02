@@ -170,7 +170,7 @@ function M.render(issue, width)
 			end_col = #(string.format("%s %s", type_icon, issue_type)) + 1,
 			hl_group = helper.issue_type_hl(issue and issue.type),
 		},
-		{ line = 1, start_col = 1, end_col = #title_line, hl_group = helper.issue_title_hl() },
+		{ line = 1, start_col = 1, end_col = #title_line, hl_group = helper.issue_title_hl(title) },
 	}
 
 	if key ~= "" then

@@ -21,8 +21,13 @@ function M.issue_type_hl(issue_type)
 	return "AtlasTextMuted"
 end
 
+---@param title string|nil
 ---@return string
-function M.issue_title_hl()
+function M.issue_title_hl(title)
+	if type(title) ~= "string" or vim.trim(title) == "" then
+		return "Comment"
+	end
+
 	return "AtlasJiraTitle"
 end
 
@@ -31,7 +36,7 @@ end
 function M.issue_hl(key)
 	local lower = tostring(key or ""):lower()
 	if lower == "" or lower == "none" then
-		return "AtlasTextMutedItalic"
+		return "LineNr"
 	end
 
 	return "AtlasJiraKey"
