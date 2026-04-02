@@ -39,6 +39,22 @@ local function start_spinner()
 	panel_spinner:start()
 end
 
+---@param entries JiraIssueHistoryEntry[]|nil
+local function sort_history_entries(entries)
+	if type(entries) ~= "table" then
+		return
+	end
+
+	table.sort(entries, function(a, b)
+		local ac = tostring((a and a.created) or "")
+		local bc = tostring((b and b.created) or "")
+		if ac == bc then
+			return tostring((a and a.id) or "") < tostring((b and b.id) or "")
+		end
+		return ac > bc
+	end)
+end
+
 ---@param issue JiraIssue|nil
 function M.show(issue)
 	request_id = request_id + 1
@@ -77,14 +93,10 @@ function M.show(issue)
 	require("atlas.jira.panel.init").refresh()
 
 	local function fetch_page(start_at)
-		active_handle = issues_api.get_issue_history_page(issue.key, start_at, 1, function(page, err)
+		active_handle = issues_api.get_issue_history_page(issue.key, start_at, 10, function(page, err)
 			active_handle = nil
 
 			if current_request_id ~= request_id then
-				return
-			end
-
-			if panel_state.current_tab ~= "history" then
 				return
 			end
 
@@ -102,6 +114,8 @@ function M.show(issue)
 			for _, entry in ipairs(page.values or {}) do
 				table.insert(state.history_items, entry)
 			end
+
+			sort_history_entries(state.history_items)
 
 			require("atlas.jira.panel.init").refresh()
 
@@ -141,6 +155,7 @@ end
 
 function M.deactivate()
 	cancel_active_handle()
+	state.is_loading = false
 	stop_spinner()
 end
 

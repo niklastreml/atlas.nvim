@@ -66,6 +66,7 @@
 ---| "WorklogId"
 ---| "Comment"
 ---| "assignee"
+---| "description"
 
 ---@class JiraIssueHistoryItem
 ---@field field JiraIssueHistoryField|nil

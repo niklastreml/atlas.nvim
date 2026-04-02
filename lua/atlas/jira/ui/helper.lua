@@ -51,10 +51,16 @@ end
 ---@param name string|nil
 ---@return string
 function M.person_hl(name)
-	if type(name) ~= "string" or name == "" then
+	if type(name) ~= "string" then
 		return "AtlasTextMutedItalic"
 	end
-	return highlights.dynamic_for(name) or "AtlasTextMuted"
+
+	local lower = vim.trim(name):lower()
+	if lower == "" or lower == "unassigned" or lower == "none" then
+		return "AtlasTextMutedItalic"
+	end
+
+	return highlights.dynamic_for(lower) or "AtlasTextMuted"
 end
 
 return M

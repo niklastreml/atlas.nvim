@@ -28,6 +28,15 @@ local function safe_get(obj, key, subkey)
 	return val
 end
 
+---@param value any
+---@return string|nil
+local function to_string_or_nil(value)
+	if not is_valid(value) then
+		return nil
+	end
+	return tostring(value)
+end
+
 ---@param raw_status table|nil
 ---@return string|nil, string|nil, string|nil, string|nil
 local function extract_status(raw_status)
@@ -283,12 +292,12 @@ function M.normalize_issue_history_page(raw, fallback_start_at, fallback_max_res
 			for _, raw_item in ipairs(raw_entry.items or {}) do
 				if type(raw_item) == "table" then
 					table.insert(items, {
-						field = tostring(raw_item.field) or nil,
-						field_type = raw_item.fieldtype and tostring(raw_item.fieldtype) or nil,
-						from = raw_item.from ~= nil and tostring(raw_item.from) or nil,
-						from_string = raw_item.fromString ~= nil and tostring(raw_item.fromString) or nil,
-						to = raw_item.to ~= nil and tostring(raw_item.to) or nil,
-						to_string = raw_item.toString ~= nil and tostring(raw_item.toString) or nil,
+						field = to_string_or_nil(raw_item.field),
+						field_type = to_string_or_nil(raw_item.fieldtype),
+						from = to_string_or_nil(raw_item.from),
+						from_string = to_string_or_nil(raw_item.fromString),
+						to = to_string_or_nil(raw_item.to),
+						to_string = to_string_or_nil(raw_item.toString),
 					})
 				end
 			end

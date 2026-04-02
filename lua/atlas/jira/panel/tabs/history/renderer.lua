@@ -4,7 +4,240 @@ local header = require("atlas.jira.panel.components.header")
 local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
+local threads = require("atlas.ui.components.threads")
+local highlights = require("atlas.ui.highlights")
+local icons = require("atlas.ui.icons")
+local jira_ui_helper = require("atlas.jira.ui.helper")
 local PADDING_X = 2
+
+---@param value string|nil
+---@return string
+local function format_estimate_value(value)
+	if value == nil or value == "" then
+		return utils.human_duration(0)
+	end
+
+	local n = tonumber(value)
+	if n == nil then
+		return tostring(value)
+	end
+
+	return utils.human_duration(n)
+end
+
+---@param item JiraIssueHistoryItem
+---@return string|nil
+local function item_header(item)
+	---@return "added"|"deleted"|"updated"
+	local function change_action()
+		local from = item.from_string or item.from
+		local to = item.to_string or item.to
+		local has_from = type(from) == "string" and vim.trim(from) ~= ""
+		local has_to = type(to) == "string" and vim.trim(to) ~= ""
+
+		if has_from and not has_to then
+			return "deleted"
+		end
+
+		if not has_from and has_to then
+			return "added"
+		end
+
+		return "updated"
+	end
+
+	local field = item.field
+	local action = change_action()
+
+	if field == "Comment" then
+		return string.format("%s a comment", action)
+	end
+
+	if field == "issuetype" then
+		return string.format("%s issue type", action)
+	end
+
+	if field == "timeoriginalestimate" then
+		return string.format("%s original estimate", action)
+	end
+
+	if field == "timeestimate" then
+		return string.format("%s remaining estimate", action)
+	end
+
+	if field == "timespent" then
+		return string.format("%s time spent", action)
+	end
+
+	if field == "WorklogId" then
+		return string.format("%s worklog", action)
+	end
+
+	return string.format("%s %s", action, field)
+end
+
+---@param item JiraIssueHistoryItem
+---@return string|nil
+local function item_content(item)
+	local field = item.field
+	if field == "Comment" then
+		return nil
+	end
+
+	if field == "assignee" then
+		local from = item.from_string or item.from or "Unassigned"
+		local to = item.to_string or item.to or ""
+		return string.format("%s %s -> %s %s", icons.entity("user"), tostring(from), icons.entity("user"), tostring(to))
+	end
+
+	if field == "priority" then
+		local from = item.from_string or item.from or ""
+		local to = item.to_string or item.to or ""
+		local from_icon = icons.jira_icon(from)
+		local to_icon = icons.jira_icon(to)
+		return string.format("%s %s -> %s %s", from_icon, tostring(from), to_icon, tostring(to))
+	end
+
+	if field == "issuetype" then
+		local from = item.from_string or item.from or ""
+		local to = item.to_string or item.to or ""
+		local from_icon = icons.jira_icon(from)
+		local to_icon = icons.jira_icon(to)
+		return string.format("%s %s -> %s %s", from_icon, tostring(from), to_icon, tostring(to))
+	end
+
+	if field == "timeoriginalestimate" or field == "timeestimate" or field == "timespent" then
+		local from = format_estimate_value(item.from_string or item.from)
+		local to = format_estimate_value(item.to_string or item.to)
+		return string.format("%s -> %s", from, to)
+	end
+
+	local from = item.from_string or item.from or ""
+	local to = item.to_string or item.to or ""
+	return string.format("%s -> %s", tostring(from), tostring(to))
+end
+
+---@param item JiraIssueHistoryItem
+---@return string[]|nil
+local function item_footer(item)
+	return nil
+end
+
+---@param item AtlasThreadedItem
+---@param _text string
+---@return string|nil
+local function header_content_hl(item, _text)
+	local history_item = ((item or {}).line_map or {}).history_item
+	if history_item == nil then
+		return nil
+	end
+
+	local field = history_item.field
+	if field == "timeoriginalestimate" or field == "timeestimate" or field == "timespent" then
+		return highlights.dynamic_for("time")
+	end
+
+	return highlights.dynamic_for(field:lower())
+end
+
+---@param item AtlasThreadedItem
+---@param row string
+---@return table[]|nil
+local function content_hl(item, row)
+	local history_item = ((item or {}).line_map or {}).history_item
+	if history_item == nil then
+		return nil
+	end
+
+	local field = history_item.field
+	if field == "assignee" or field == "priority" or field == "issuetype" or field == "status" then
+		local s, e = row:find(" -> ", 1, true)
+		if s == nil or e == nil then
+			return nil
+		end
+
+		local function side_values()
+			local from_segment = row:sub(1, s - 1)
+			local to_segment = row:sub(e + 1)
+
+			local from_space = from_segment:find(" ", 1, true)
+			local to_space = to_segment:find(" ", 1, true)
+
+			local from_value = vim.trim(from_space and from_segment:sub(from_space + 1) or from_segment)
+			local to_value = vim.trim(to_space and to_segment:sub(to_space + 1) or to_segment)
+
+			return from_value, to_value
+		end
+
+		if field == "assignee" then
+			local from_name, to_name = side_values()
+
+			local from_hl = jira_ui_helper.person_hl(from_name)
+			local to_hl = jira_ui_helper.person_hl(to_name)
+
+			return {
+				{ start_col = 0, end_col = s - 1, hl_group = from_hl },
+				{ start_col = e, end_col = #row, hl_group = to_hl },
+			}
+		elseif field == "priority" then
+			local from_priority, to_priority = side_values()
+
+			local from_hl = jira_ui_helper.priority_hl(from_priority)
+			local to_hl = jira_ui_helper.priority_hl(to_priority)
+
+			return {
+				{ start_col = 0, end_col = s - 1, hl_group = from_hl },
+				{ start_col = e, end_col = #row, hl_group = to_hl },
+			}
+		elseif field == "issuetype" then
+			local from_type, to_type = side_values()
+
+			local from_hl = jira_ui_helper.issue_type_hl(from_type)
+			local to_hl = jira_ui_helper.issue_type_hl(to_type)
+
+			return {
+				{ start_col = 0, end_col = s - 1, hl_group = from_hl },
+				{ start_col = e, end_col = #row, hl_group = to_hl },
+			}
+		elseif field == "status" then
+			local from_hl = jira_ui_helper.status_hl(history_item.from)
+			local to_hl = jira_ui_helper.status_hl(history_item.to)
+
+			return {
+				{ start_col = 0, end_col = s - 1, hl_group = from_hl },
+				{ start_col = e, end_col = #row, hl_group = to_hl },
+			}
+		end
+	end
+
+	return nil
+end
+
+---@param entries JiraIssueHistoryEntry[]|nil
+---@return AtlasThreadedItem[]
+local function to_thread_items(entries)
+	local out = {}
+	for _, entry in ipairs(entries or {}) do
+		local author = ((entry or {}).author or {}).display_name or "Unknown"
+		local timestamp = utils.relative_time_text((entry or {}).created)
+
+		for _, item in ipairs((entry or {}).items or {}) do
+			table.insert(out, {
+				author = tostring(author),
+				timestamp = tostring(timestamp),
+				header_content = item_header(item),
+				content = item_content(item),
+				footer_items = item_footer(item),
+				line_map = {
+					history_entry = entry,
+					history_item = item,
+				},
+			})
+		end
+	end
+
+	return out
+end
 
 ---@param width integer
 ---@return string[], table[], table|nil
@@ -16,6 +249,7 @@ function M.render(width)
 	end
 
 	local lines, spans = {}, {}
+	local line_map = {}
 
 	--- Header
 	local header_lines, header_spans = header.render(issue, width)
@@ -29,12 +263,17 @@ function M.render(width)
 
 	--- Content
 	if type(state.history_items) == "table" and #state.history_items > 0 then
-		for _, entry in ipairs(state.history_items) do
-			for _, item in ipairs(entry.items or {}) do
-				local from = item.from_string or item.from or ""
-				local to = item.to_string or item.to or ""
-				table.insert(lines, string.rep(" ", PADDING_X) .. string.format("%s -> %s", tostring(from), tostring(to)))
-			end
+		local items = to_thread_items(state.history_items)
+		local item_lines, item_spans, item_map = threads.render(items, width, {
+			padding_x = PADDING_X,
+			header_content_hl = header_content_hl,
+			content_hl = content_hl,
+		})
+
+		local offset = #lines
+		utils.append_block(lines, spans, { lines = item_lines, highlights = item_spans })
+		for lnum, entry in pairs(item_map or {}) do
+			line_map[offset + lnum] = entry
 		end
 	elseif not state.is_loading then
 		table.insert(lines, string.rep(" ", PADDING_X) .. "No history")
@@ -57,10 +296,9 @@ function M.render(width)
 		})
 	end
 
-	state.line_map = {
-		[1] = { kind = "issue", issue = issue },
-		[#lines] = { kind = "history" },
-	}
+	line_map[1] = line_map[1] or { kind = "issue", issue = issue }
+	line_map[#lines] = line_map[#lines] or { kind = "history" }
+	state.line_map = line_map
 
 	return lines, spans, state.line_map
 end

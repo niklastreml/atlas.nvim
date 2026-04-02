@@ -108,12 +108,14 @@ function M.render(width)
 			table.insert(items, to_thread_item(comment))
 		end
 
-		local item_lines, item_spans, item_map = threads.render(items, {
+		local item_lines, item_spans, item_map = threads.render(items, width, {
 			padding_x = PADDING_X,
-			content_hl = function(item)
+			content_hl = function(item, row)
 				local meta = item.meta or {}
 				if meta.is_deleted then
-					return "AtlasTextMutedItalic"
+					return {
+						{ start_col = 0, end_col = #row, hl_group = "AtlasTextMutedItalic" },
+					}
 				end
 				return nil
 			end,

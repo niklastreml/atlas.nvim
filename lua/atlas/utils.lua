@@ -168,6 +168,40 @@ function M.human_size(bytes)
 	return string.format("%.1f %s", n, units[i])
 end
 
+---@param seconds number|string|nil
+---@return string
+function M.human_duration(seconds)
+	local total = tonumber(seconds)
+	if total == nil then
+		return ""
+	end
+
+	if total < 0 then
+		total = 0
+	end
+
+	local minutes = math.floor(total / 60)
+	if minutes < 60 then
+		return string.format("%dm", minutes)
+	end
+
+	local hours = math.floor(minutes / 60)
+	local rem_minutes = minutes % 60
+	if hours < 24 then
+		if rem_minutes == 0 then
+			return string.format("%dh", hours)
+		end
+		return string.format("%dh %dm", hours, rem_minutes)
+	end
+
+	local days = math.floor(hours / 24)
+	local rem_hours = hours % 24
+	if rem_hours == 0 then
+		return string.format("%dd", days)
+	end
+	return string.format("%dd %dh", days, rem_hours)
+end
+
 ---@param text string|nil
 ---@return string[]
 function M.sanitize_markdown_lines(text)
