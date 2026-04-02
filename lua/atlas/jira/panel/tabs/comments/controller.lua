@@ -2,10 +2,74 @@ local M = {}
 local state = require("atlas.jira.panel.tabs.comments.state")
 local panel_state = require("atlas.jira.panel.state")
 local spinner = require("atlas.ui.components.spinner")
+local footer = require("atlas.ui.components.footer")
 local comments_api = require("atlas.jira.api.comments")
 
 local active_handle = nil
 local COMMENTS_PAGE_SIZE = 1
+
+---@param comments JiraComment[]|nil
+local function sort_comments_by_created(comments)
+	if type(comments) ~= "table" then
+		return
+	end
+
+	table.sort(comments, function(a, b)
+		local ac = tostring((a and a.created) or "")
+		local bc = tostring((b and b.created) or "")
+		if ac == bc then
+			return tostring((a and a.id) or "") < tostring((b and b.id) or "")
+		end
+		return ac > bc
+	end)
+end
+
+---@param comments JiraComment[]|nil
+local function sort_comment_children(comments)
+	if type(comments) ~= "table" then
+		return
+	end
+
+	for _, comment in ipairs(comments) do
+		if type(comment) == "table" and type(comment.children) == "table" and #comment.children > 0 then
+			table.sort(comment.children, function(a, b)
+				local ac = tostring((a and a.created) or "")
+				local bc = tostring((b and b.created) or "")
+				if ac == bc then
+					return tostring((a and a.id) or "") < tostring((b and b.id) or "")
+				end
+				return ac < bc
+			end)
+			sort_comment_children(comment.children)
+		end
+	end
+end
+
+---@param comments JiraComment[]|nil
+local function rebuild_comment_tree(comments)
+	if type(comments) ~= "table" then
+		return
+	end
+
+	local by_id = {}
+	for _, comment in ipairs(comments) do
+		if type(comment) == "table" then
+			comment.children = {}
+			by_id[tostring(comment.id or "")] = comment
+		end
+	end
+
+	for _, comment in ipairs(comments) do
+		if type(comment) == "table" and comment.parent_id ~= nil then
+			local parent = by_id[tostring(comment.parent_id)]
+			if parent ~= nil then
+				table.insert(parent.children, comment)
+			end
+		end
+	end
+
+	sort_comment_children(comments)
+end
 
 local panel_spinner = spinner.create({
 	interval_ms = 120,
@@ -71,6 +135,7 @@ function M.show(issue)
 	state.comments = {}
 	state.state = "loading"
 	start_spinner()
+	footer.notify("loading", string.format("Loading comments for %s...", issue.key))
 	require("atlas.jira.panel.init").refresh()
 
 	if not same_issue then
@@ -88,6 +153,7 @@ function M.show(issue)
 			if err ~= nil then
 				state.state = nil
 				stop_spinner()
+				footer.notify("error", string.format("Failed loading comments for %s", issue.key))
 				require("atlas.jira.panel.init").refresh()
 				return
 			end
@@ -95,6 +161,8 @@ function M.show(issue)
 			for _, comment in ipairs((page and page.comments) or {}) do
 				table.insert(state.comments, comment)
 			end
+			sort_comments_by_created(state.comments)
+			rebuild_comment_tree(state.comments)
 			require("atlas.jira.panel.init").refresh()
 
 			local loaded = #state.comments
@@ -106,6 +174,7 @@ function M.show(issue)
 
 			state.state = nil
 			stop_spinner()
+			footer.notify("success", string.format("Comments loaded for %s (%d)", issue.key, loaded), 1200)
 			require("atlas.jira.panel.init").refresh()
 		end)
 	end

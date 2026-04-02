@@ -1,4 +1,5 @@
 local M = {}
+local adf = require("atlas.jira.panel.tabs.overview.adf")
 
 local STORY_POINTS_FIELD = "customfield_10016"
 local APPROVERS_FIELD = "customfield_10003"
@@ -231,7 +232,8 @@ local function normalize_comment(raw_comment)
 		self = raw_comment.self and tostring(raw_comment.self) or nil,
 		author = normalize_comment_author(raw_comment.author),
 		update_author = normalize_comment_author(raw_comment.updateAuthor),
-		body = type(raw_comment.body) == "table" and raw_comment.body or nil,
+		body = adf.to_markdown(type(raw_comment.body) == "table" and raw_comment.body or nil),
+		_body = type(raw_comment.body) == "table" and raw_comment.body or nil,
 		created = raw_comment.created and tostring(raw_comment.created) or nil,
 		updated = raw_comment.updated and tostring(raw_comment.updated) or nil,
 		parent_id = parent_id,

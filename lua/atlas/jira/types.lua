@@ -1,8 +1,14 @@
+--------------------------------------------------------------------------------
+-- Current User
+--------------------------------------------------------------------------------
 ---@class JiraCurrentUser
 ---@field account_id string
 ---@field display_name string
 ---@field email string
 
+--------------------------------------------------------------------------------
+-- Comments
+--------------------------------------------------------------------------------
 ---@class JiraCommentAuthor
 ---@field account_id string|nil
 ---@field display_name string|nil
@@ -13,7 +19,8 @@
 ---@field self string|nil
 ---@field author JiraCommentAuthor|nil
 ---@field update_author JiraCommentAuthor|nil
----@field body table|nil
+---@field body string
+---@field _body table|nil -- raw adf
 ---@field created string|nil
 ---@field updated string|nil
 ---@field parent_id string|number|nil
@@ -25,6 +32,9 @@
 ---@field total number
 ---@field comments JiraComment[]
 
+--------------------------------------------------------------------------------
+-- Issue
+--------------------------------------------------------------------------------
 ---@class JiraIssue
 ---@field key string
 ---@field summary string

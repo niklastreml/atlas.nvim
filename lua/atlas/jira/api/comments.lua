@@ -22,14 +22,12 @@ function M.get_comments_page(issue_key, start_at, max_results, callback)
 	local endpoint = string.format("/issue/%s/comment?startAt=%d&maxResults=%d", issue_key, start, size)
 
 	return service.request("GET", endpoint, nil, function(result, err)
-		vim.defer_fn(function()
-			if err or not result then
-				callback(nil, err or "Empty response")
-				return
-			end
+		if err or not result then
+			callback(nil, err or "Empty response")
+			return
+		end
 
-			callback(normalizer.normalize_comments(result), nil)
-		end, 400)
+		callback(normalizer.normalize_comments(result), nil)
 	end)
 end
 
