@@ -2,10 +2,25 @@ local M = {}
 
 local config = require("atlas.config")
 local controller = require("atlas.jira.ui.controller")
+local actions = require("atlas.jira.ui.actions")
 local help = require("atlas.ui.popups.help")
 local navigation = require("atlas.ui.navigation")
 local layout = require("atlas.ui.layout")
 local footer = require("atlas.ui.components.footer")
+
+---@return JiraIssue|nil
+local function selected_issue()
+	local node = navigation.current_item()
+	if type(node) ~= "table" then
+		return nil
+	end
+
+	if node.kind == "issue" and type(node._issue) == "table" then
+		return node._issue
+	end
+
+	return nil
+end
 
 local function register_dynamic_keys(buf, views)
 	local items = {
@@ -37,6 +52,34 @@ local function register_dynamic_keys(buf, views)
 			desc = "Open Jira actions",
 			callback = function()
 				controller.open_actions()
+			end,
+		},
+		{
+			key = "c",
+			desc = "Create Jira issue",
+			callback = function()
+				actions.create_issue()
+			end,
+		},
+		{
+			key = "gx",
+			desc = "Open issue in browser",
+			callback = function()
+				actions.browse_issue(selected_issue())
+			end,
+		},
+		{
+			key = "y",
+			desc = "Copy issue key",
+			callback = function()
+				actions.copy_issue_key(selected_issue())
+			end,
+		},
+		{
+			key = "Y",
+			desc = "Copy issue URL",
+			callback = function()
+				actions.copy_issue_url(selected_issue())
 			end,
 		},
 		{

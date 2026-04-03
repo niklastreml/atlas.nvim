@@ -1,7 +1,6 @@
 local M = {}
 
 local controller = require("atlas.bitbucket.ui.controller")
-local service = require("atlas.bitbucket.api.service")
 local users = require("atlas.bitbucket.api.users")
 local actions = require("atlas.bitbucket.actions")
 local navigation = require("atlas.ui.navigation")
@@ -57,19 +56,12 @@ function M.browse_current_pr(pr)
 		return
 	end
 
-	local raw_html = (((pr._raw or {}).links or {}).html or {}).href
-	if raw_html ~= nil and raw_html ~= "" then
-		vim.ui.open(tostring(raw_html))
-		return
+	local url = pr.links.html or ""
+	if url == nil or url == "" then
+		footer.notify("warn", "No URL found for PR")
 	end
 
-	local url = tostring((pr.links or {}).self or "")
-	if url == "" then
-		footer.notify("warn", "No PR selected")
-		return
-	end
-
-	vim.ui.open(url)
+	vim.ui.open(tostring(url))
 end
 
 ---@param pr BitbucketPR|nil
@@ -84,14 +76,12 @@ function M.copy_current_pr_url(pr)
 		return
 	end
 
-	local raw_html = (((pr._raw or {}).links or {}).html or {}).href
-	if raw_html ~= nil and raw_html ~= "" then
-		copy_value(tostring(raw_html), "PR URL")
-		return
+	local url = pr.links.html or ""
+	if url == nil or url == "" then
+		footer.notify("warn", "No URL found for PR")
 	end
 
-	local url = tostring((pr.links or {}).self or "")
-	copy_value(url, "PR URL")
+	copy_value(tostring(url), "PR URL")
 end
 
 ---@param pr BitbucketPR|nil

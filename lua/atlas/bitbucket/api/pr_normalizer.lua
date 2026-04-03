@@ -92,6 +92,7 @@ function M.pullrequests(result, workspace, repo)
 			is_draft = pr.draft == true,
 			state = tostring(pr.state or ""),
 			links = {
+				html = tostring((as_table(links.html) or {}).href or ""),
 				self = tostring((as_table(links.self) or {}).href or ""),
 				merge = tostring((as_table(links.merge) or {}).href or ""),
 				commits = tostring((as_table(links.commits) or {}).href or ""),

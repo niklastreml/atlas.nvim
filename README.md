@@ -206,7 +206,7 @@ return {
 #### Comments
 
 - Create, reply, edit, and delete comments directly in the Jira panel.
-  
+
 <img width="1001" height="426" alt="CleanShot 2026-04-03 at 01 07 06" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
 
 #### Issue Editing (Experimental)
@@ -214,7 +214,7 @@ return {
 - Edit issue description directly from Overview.
 - Supports markdown editing with markdown -> ADF conversion.
 - Supports raw ADF mode for direct document editing.
-  
+
 <img width="2520" height="1373" alt="CleanShot 2026-04-03 at 01 11 10" src="https://github.com/user-attachments/assets/b46a4018-6adf-4b9f-b6fe-0b8bdbb5efaa" />
 
 #### Features
@@ -239,51 +239,49 @@ return {
 
 ### Main UI
 
-| Context   | Key        | Action                                  |
-| --------- | ---------- | --------------------------------------- |
-| Global    | `q`        | Close Atlas                             |
-| Global    | `j` / `k`  | Move cursor                             |
-| Global    | `gg` / `G` | First / last item                       |
-| Global    | `[` / `]`  | Previous / next panel tab               |
-| Bitbucket | `p`        | Toggle PR panel (or switch to PR panel) |
+| Key        | Action                    |
+| ---------- | ------------------------- |
+| `q`        | Close Atlas               |
+| `j` / `k`  | Move cursor               |
+| `gg` / `G` | First / last item         |
+| `[` / `]`  | Previous / next panel tab |
+| `p`        | Toggle detail panel       |
 
 ### Bitbucket
 
-| Key          | Action                                                         |
-| ------------ | -------------------------------------------------------------- |
-| `<view.key>` | Switch Bitbucket view (for each configured `jira.views[].key`) |
-| `R`          | Refresh current Bitbucket view                                 |
-| `r`          | Refetch selected PR                                            |
-| `A`          | Open PR actions                                                |
-| `gx`         | Open PR in browser                                             |
-| `y`          | Copy PR id                                                     |
-| `Y`          | Copy PR URL                                                    |
-| `/`          | Search repositories                                            |
-| `o`          | Toggle repository panel                                        |
+| Key  | Action                         |
+| ---- | ------------------------------ |
+| `R`  | Refresh current Bitbucket view |
+| `r`  | Refetch selected PR            |
+| `A`  | Open PR actions                |
+| `gx` | Open PR in browser             |
+| `y`  | Copy PR id                     |
+| `Y`  | Copy PR URL                    |
+| `/`  | Search repositories            |
+| `o`  | Toggle repository panel        |
 
 ### Jira
 
-| Key          | Action                                                    |
-| ------------ | --------------------------------------------------------- |
-| `R`          | Refresh current Jira view                                 |
-| `r`          | Reload selected issue                                     |
-| `K`          | Show issue details popup                                  |
-| `A`          | Open Jira actions                                         |
-| `<view.key>` | Switch Jira view (for each configured `jira.views[].key`) |
+| Key  | Action                    |
+| ---- | ------------------------- |
+| `R`  | Refresh current Jira view |
+| `r`  | Reload selected issue     |
+| `K`  | Show issue details popup  |
+| `A`  | Open Jira actions         |
+| `c`  | Create issue              |
+| `gx` | Open issue in browser     |
+| `y`  | Copy issue key            |
+| `Y`  | Copy issue URL            |
 
 ### Jira Panel
 
-| Key        | Action                                  |
-| ---------- | --------------------------------------- |
-| `j` / `k`  | Move cursor in active tab               |
-| `gg` / `G` | First / last item in active tab         |
-| `A`        | Open Jira actions for current issue     |
-| `m`        | Toggle Overview mode (markdown/raw ADF) |
-| `e`        | Edit Overview description               |
-| `a`        | Add comment (Comments tab)              |
-| `c`        | Reply to comment (Comments tab)         |
-| `d`        | Delete comment (Comments tab)           |
-| `r`        | Refresh active tab data                 |
+| Key | Action                                  |
+| --- | --------------------------------------- |
+| `m` | Toggle Overview mode (markdown/raw ADF) |
+| `e` | Edit Overview description               |
+| `a` | Add comment (Comments tab)              |
+| `c` | Reply to comment (Comments tab)         |
+| `d` | Delete comment (Comments tab)           |
 
 ## License
 

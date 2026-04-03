@@ -29,6 +29,7 @@
 ---@field nickname string
 
 ---@class BitbucketPRLinks
+---@field html string
 ---@field self string
 ---@field merge string
 ---@field commits string
