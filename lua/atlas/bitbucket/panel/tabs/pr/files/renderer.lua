@@ -8,6 +8,14 @@ local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 
+local CONTENT_PADDING = 1
+
+---@param text string
+---@return string
+local function with_content_padding(text)
+	return string.rep(" ", CONTENT_PADDING) .. tostring(text or "")
+end
+
 ---@param width integer
 ---@return string[] lines
 ---@return table[] spans
@@ -49,7 +57,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs_component.render_pr(panel_state.current_tab, width, 0)
+	local tab_lines, tab_spans = tabs_component.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
 	local tab_base = #lines
 	for _, line in ipairs(tab_lines) do
 		table.insert(lines, line)
@@ -70,11 +78,11 @@ function M.render(width)
 
 	if diffstat_loading or diff_loading then
 		local loading_line = spinner.with_text("Loading file changes...")
-		table.insert(lines, loading_line)
+		table.insert(lines, with_content_padding(loading_line))
 		table.insert(spans, {
 			line = #lines - 1,
-			start_col = 0,
-			end_col = #loading_line,
+			start_col = CONTENT_PADDING,
+			end_col = CONTENT_PADDING + #loading_line,
 			hl_group = "AtlasTextMuted",
 		})
 		state.line_map = line_map
@@ -83,12 +91,12 @@ function M.render(width)
 
 	local entries = (type(diffstat) == "table" and diffstat.entries) or {}
 	local file_header = "Files"
-	table.insert(lines, file_header)
+	table.insert(lines, with_content_padding(file_header))
 	table.insert(spans, {
 		line = #lines - 1,
-		start_col = 0,
-		end_col = #file_header,
-		hl_group = "AtlasSectionHeader",
+		start_col = CONTENT_PADDING,
+		end_col = CONTENT_PADDING + #file_header,
+		hl_group = "AtlasColumnHeader",
 	})
 
 	local added = 0
@@ -102,23 +110,23 @@ function M.render(width)
 	local removed_text = string.format("-%d removed", removed)
 	local stats_line = string.format("%s  %s", added_text, removed_text)
 	local stats_line_index = #lines
-	table.insert(lines, stats_line)
+	table.insert(lines, with_content_padding(stats_line))
 	table.insert(spans, {
 		line = stats_line_index,
-		start_col = 0,
-		end_col = #added_text,
+		start_col = CONTENT_PADDING,
+		end_col = CONTENT_PADDING + #added_text,
 		hl_group = "AtlasTextPositive",
 	})
 	table.insert(spans, {
 		line = stats_line_index,
-		start_col = #added_text + 2,
-		end_col = #stats_line,
+		start_col = CONTENT_PADDING + #added_text + 2,
+		end_col = CONTENT_PADDING + #stats_line,
 		hl_group = "AtlasTextWarning",
 	})
 	table.insert(lines, "")
 
 	if #entries == 0 then
-		table.insert(lines, "No files changed.")
+		table.insert(lines, with_content_padding("No files changed."))
 	else
 		for _, entry in ipairs(entries) do
 			local status = tostring(entry.status or ""):lower()
@@ -150,11 +158,11 @@ function M.render(width)
 			end
 
 			local file_line = string.format("%s %s", marker, path)
-			table.insert(lines, file_line)
+			table.insert(lines, with_content_padding(file_line))
 			table.insert(spans, {
 				line = #lines - 1,
-				start_col = 0,
-				end_col = 1,
+				start_col = CONTENT_PADDING,
+				end_col = CONTENT_PADDING + 1,
 				hl_group = hl_group,
 			})
 		end
@@ -163,21 +171,21 @@ function M.render(width)
 
 	local diff_text = (type(diff) == "table" and type(diff.text) == "string") and diff.text or ""
 	if diff_text == "" then
-		table.insert(lines, "No diff available.")
+		table.insert(lines, with_content_padding("No diff available."))
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
 
 	local diff_lines = utils.sanitize_lines(diff_text)
 	for _, line in ipairs(diff_lines) do
-		table.insert(lines, line)
+		table.insert(lines, with_content_padding(line))
 		local idx = #lines - 1
 		if line:match("^%+") and not line:match("^%+%+%+") then
-			table.insert(spans, { line = idx, start_col = 0, end_col = #line, hl_group = "AtlasTextPositive" })
+			table.insert(spans, { line = idx, start_col = CONTENT_PADDING, end_col = CONTENT_PADDING + #line, hl_group = "AtlasTextPositive" })
 		elseif line:match("^%-") and not line:match("^%-%-%-") then
-			table.insert(spans, { line = idx, start_col = 0, end_col = #line, hl_group = "AtlasTextWarning" })
+			table.insert(spans, { line = idx, start_col = CONTENT_PADDING, end_col = CONTENT_PADDING + #line, hl_group = "AtlasTextWarning" })
 		elseif line:match("^@@") then
-			table.insert(spans, { line = idx, start_col = 0, end_col = #line, hl_group = "AtlasTextMuted" })
+			table.insert(spans, { line = idx, start_col = CONTENT_PADDING, end_col = CONTENT_PADDING + #line, hl_group = "AtlasTextMuted" })
 		end
 	end
 

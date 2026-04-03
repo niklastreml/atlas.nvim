@@ -51,7 +51,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs_component.render_pr(panel_state.current_tab, width, 0)
+	local tab_lines, tab_spans = tabs_component.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
 	local tab_base = #lines
 	for _, line in ipairs(tab_lines) do
 		table.insert(lines, line)

@@ -1,6 +1,10 @@
 local M = {}
 
 local panel_state = require("atlas.bitbucket.panel.state")
+local bitbucket_actions = require("atlas.bitbucket.actions")
+local bitbucket_controller = require("atlas.bitbucket.ui.controller")
+local bitbucket_service = require("atlas.bitbucket.api.service")
+local checkout = require("atlas.bitbucket.checkout")
 local layout = require("atlas.ui.layout")
 local footer = require("atlas.ui.components.footer")
 local ns = vim.api.nvim_create_namespace("atlas.bitbucket.panel")
@@ -146,8 +150,40 @@ local function register_panel_keys()
 			return
 		end
 
-		-- TODO: Wire actions when UI layer is created
-		footer.notify("info", "Actions not yet wired", 1200)
+		if panel_state.panel_type ~= "pr" then
+			footer.notify("warn", "Actions are only available for PR panel")
+			return
+		end
+
+		local repo_path = checkout.resolve_repo_path_for_pr(item, {
+			require_git = false,
+			require_existing = false,
+		})
+
+		---@type BitbucketActionContext
+		local ctx = {
+			pr = item,
+			source = "panel",
+			repo_path = repo_path,
+		}
+
+		bitbucket_actions.open(ctx, function(result, err)
+			if err ~= nil then
+				footer.notify("error", tostring(err))
+				return
+			end
+
+			if result ~= nil and result.message ~= nil and result.message ~= "" then
+				footer.notify("info", result.message, 1200)
+			end
+
+			if result ~= nil and result.changed_pr then
+				bitbucket_service.clear_pullrequest_memory_cache(item)
+				bitbucket_controller.refresh_pr(item, function()
+					M.refresh()
+				end)
+			end
+		end)
 	end, {
 		buffer = buf,
 		silent = true,

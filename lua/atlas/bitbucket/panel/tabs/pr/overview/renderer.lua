@@ -10,6 +10,14 @@ local icons = require("atlas.ui.icons")
 local table_view = require("atlas.ui.components.table")
 local spinner = require("atlas.ui.components.spinner")
 
+local CONTENT_PADDING = 1
+
+---@param text string
+---@return string
+local function with_content_padding(text)
+	return string.rep(" ", CONTENT_PADDING) .. tostring(text or "")
+end
+
 ---@param decision string
 ---@return string
 local function decision_icon(decision)
@@ -86,7 +94,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs.render_pr(panel_state.current_tab, width, 0)
+	local tab_lines, tab_spans = tabs.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
 	local tab_base = #lines
 	for _, line in ipairs(tab_lines) do
 		table.insert(lines, line)
@@ -108,15 +116,15 @@ function M.render(width)
 		or ""
 	local description = utils.sanitize_lines(description_text)
 	local description_header = "Description"
-	table.insert(lines, description_header)
+	table.insert(lines, with_content_padding(description_header))
 	table.insert(spans, {
 		line = #lines - 1,
-		start_col = 0,
-		end_col = #description_header,
-		hl_group = "AtlasSectionHeader",
+		start_col = CONTENT_PADDING,
+		end_col = CONTENT_PADDING + #description_header,
+		hl_group = "AtlasColumnHeader",
 	})
 	for _, line in ipairs(description) do
-		table.insert(lines, line)
+		table.insert(lines, with_content_padding(line))
 	end
 	table.insert(lines, "")
 
@@ -125,29 +133,29 @@ function M.render(width)
 	local decisions = (not is_loading and detail and detail.decisions) or {}
 	local approvals = (not is_loading and detail and detail.approvals_count) or 0
 	local reviewers_line = is_loading and "Reviewers (...)" or string.format("Reviewers (%d/%d)", approvals, #decisions)
-	table.insert(lines, reviewers_line)
+	table.insert(lines, with_content_padding(reviewers_line))
 	table.insert(spans, {
 		line = #lines - 1,
-		start_col = 0,
-		end_col = #reviewers_line,
-		hl_group = "AtlasSectionHeader",
+		start_col = CONTENT_PADDING,
+		end_col = CONTENT_PADDING + #reviewers_line,
+		hl_group = "AtlasColumnHeader",
 	})
 	local count_text = is_loading and "(...)" or string.format("(%d/%d)", approvals, #decisions)
 	local count_start = #reviewers_line - #count_text
 	table.insert(spans, {
 		line = #lines - 1,
-		start_col = count_start,
-		end_col = #reviewers_line,
+		start_col = CONTENT_PADDING + count_start,
+		end_col = CONTENT_PADDING + #reviewers_line,
 		hl_group = "AtlasTextMuted",
 	})
 
 	if is_loading then
 		local loading_line = spinner.with_text("Loading reviewers...")
-		table.insert(lines, loading_line)
+		table.insert(lines, with_content_padding(loading_line))
 		table.insert(spans, {
 			line = #lines - 1,
-			start_col = 0,
-			end_col = #loading_line,
+			start_col = CONTENT_PADDING,
+			end_col = CONTENT_PADDING + #loading_line,
 			hl_group = "AtlasTextMuted",
 		})
 		state.line_map = line_map
@@ -155,7 +163,7 @@ function M.render(width)
 	end
 
 	if #decisions == 0 then
-		table.insert(lines, "no reviewers yet")
+		table.insert(lines, with_content_padding("no reviewers yet"))
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
@@ -210,13 +218,13 @@ function M.render(width)
 
 	local base = #lines
 	for _, line in ipairs(table_lines) do
-		table.insert(lines, line)
+		table.insert(lines, with_content_padding(line))
 	end
 	for _, span in ipairs(table_spans or {}) do
 		table.insert(spans, {
 			line = base + span.line,
-			start_col = span.start_col,
-			end_col = span.end_col,
+			start_col = CONTENT_PADDING + span.start_col,
+			end_col = CONTENT_PADDING + span.end_col,
 			hl_group = span.hl_group,
 		})
 	end

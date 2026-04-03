@@ -17,30 +17,32 @@ local REPO_TABS = {
 }
 
 ---@param active_tab "overview"|"activity"|"comments"|"commits"|"files"
----@param width integer
----@param padding_x integer
+---@param opts { width: integer, padding_x?: integer }
 ---@return string[] lines
 ---@return table[] spans
-function M.render_pr(active_tab, width, padding_x)
+function M.render_pr(active_tab, opts)
+	local width = opts.width
+	local pad = opts.padding_x
 	return tabs.render(PR_TABS, active_tab, width, {
 		active_hl = nil,
 		inactive_hl = "AtlasTextMuted",
 		gap = " ",
-		padding_x = padding_x,
+		padding_x = pad,
 	})
 end
 
 ---@param active_tab "overview"|"branches"|"tags"
----@param width integer
----@param padding_x integer
+---@param opts { width: integer, padding_x?: integer }
 ---@return string[] lines
 ---@return table[] spans
-function M.render_repo(active_tab, width, padding_x)
+function M.render_repo(active_tab, opts)
+	local width = opts.width
+	local pad = opts.padding_x
 	return tabs.render(REPO_TABS, active_tab, width, {
 		active_hl = nil,
 		inactive_hl = "AtlasTextMuted",
 		gap = " ",
-		padding_x = padding_x,
+		padding_x = pad,
 	})
 end
 
