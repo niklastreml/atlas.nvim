@@ -196,7 +196,7 @@ function M.register_keys(buf)
 				if ui_state.current_view == "jira" then
 					require("atlas.jira.panel.init").prev_tab()
 				elseif ui_state.current_view == "bitbucket" then
-					require("atlas.bitbucketv2.panel.init").prev_tab()
+					require("atlas.bitbucket.panel.init").prev_tab()
 				end
 			end,
 		},
@@ -212,7 +212,7 @@ function M.register_keys(buf)
 				if ui_state.current_view == "jira" then
 					require("atlas.jira.panel.init").prev_tab()
 				elseif ui_state.current_view == "bitbucket" then
-					require("atlas.bitbucketv2.panel.init").prev_tab()
+					require("atlas.bitbucket.panel.init").prev_tab()
 				end
 			end,
 		},
@@ -228,7 +228,7 @@ function M.register_keys(buf)
 				if ui_state.current_view == "jira" then
 					require("atlas.jira.panel.init").next_tab()
 				elseif ui_state.current_view == "bitbucket" then
-					require("atlas.bitbucketv2.panel.init").next_tab()
+					require("atlas.bitbucket.panel.init").next_tab()
 				end
 			end,
 		},
@@ -244,7 +244,7 @@ function M.register_keys(buf)
 				if ui_state.current_view == "jira" then
 					require("atlas.jira.panel.init").next_tab()
 				elseif ui_state.current_view == "bitbucket" then
-					require("atlas.bitbucketv2.panel.init").next_tab()
+					require("atlas.bitbucket.panel.init").next_tab()
 				end
 			end,
 		},

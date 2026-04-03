@@ -253,7 +253,7 @@ return {
 | `<view.key>` | Switch Bitbucket view (for each configured `jira.views[].key`) |
 | `R`          | Refresh current Bitbucket view                                 |
 | `r`          | Refetch selected PR                                            |
-| `a`          | Open PR actions                                                |
+| `A`          | Open PR actions                                                |
 | `gx`         | Open PR in browser                                             |
 | `y`          | Copy PR id                                                     |
 | `Y`          | Copy PR URL                                                    |

@@ -21,7 +21,7 @@ end
 ---@param view "jira"|"bitbucket"
 local function bootstrap_provider(view)
 	if view == "bitbucket" then
-		require("atlas.bitbucketv2").setup()
+		require("atlas.bitbucket").setup()
 		return
 	end
 

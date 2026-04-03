@@ -52,18 +52,18 @@ function M.render(view, opts)
 		lines, spans, line_map = require("atlas.jira.ui.renderer").render({ width = width, height = height })
 	elseif target_view == "bitbucket" then
 		state.current_view = "bitbucket"
-		local bitbucket_state = require("atlas.bitbucketv2.state")
+		local bitbucket_state = require("atlas.bitbucket.state")
 		local should_refresh = (opts and opts.force_refresh)
 			or (not bitbucket_state.is_loading and bitbucket_state.repos == nil and bitbucket_state.error == nil)
 		if should_refresh then
-			require("atlas.bitbucketv2.ui.controller").refresh_current_view(function()
+			require("atlas.bitbucket.ui.controller").refresh_current_view(function()
 				if opts and opts.autofocus then
 					require("atlas.ui.navigation").focus_first_item()
 				end
 			end)
 		end
 
-		lines, spans, line_map = require("atlas.bitbucketv2.ui.renderer").render({ width = width, height = height })
+		lines, spans, line_map = require("atlas.bitbucket.ui.renderer").render({ width = width, height = height })
 	end
 
 	state.line_map = line_map or {}

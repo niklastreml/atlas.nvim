@@ -9,7 +9,7 @@ function M.render(provider)
 	end
 
 	if provider == "bitbucket" then
-		require("atlas.bitbucketv2.panel.init").refresh()
+		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 end

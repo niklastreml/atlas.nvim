@@ -12,7 +12,7 @@ local function deactivate_provider(provider)
 	end
 
 	if provider == "bitbucket" then
-		require("atlas.bitbucketv2.panel.init").deactivate()
+		require("atlas.bitbucket.panel.init").deactivate()
 	end
 end
 
@@ -22,7 +22,7 @@ local function current_panel_controller()
 		return require("atlas.jira.panel.init")
 	end
 
-	return require("atlas.bitbucketv2.panel.init")
+	return require("atlas.bitbucket.panel.init")
 end
 
 local function refresh_current_panel()
@@ -32,7 +32,7 @@ local function refresh_current_panel()
 		return
 	end
 
-	require("atlas.bitbucketv2.panel.init").refresh()
+	require("atlas.bitbucket.panel.init").refresh()
 end
 
 local function register_panel_keys()
@@ -136,7 +136,7 @@ function M.on_select(provider, item)
 	end
 
 	if provider == "bitbucket" then
-		local bb_panel = require("atlas.bitbucketv2.panel.init")
+		local bb_panel = require("atlas.bitbucket.panel.init")
 
 		-- Determine panel type from item kind
 		local panel_type = nil
