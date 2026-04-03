@@ -1,8 +1,5 @@
 @jira_issue_key = KAN-2
 @jira_project_key = KAN
-@jira_transition_id = 31
-@jira_account_id = 60129fc6a7fb40006900d080
-@jira_comment_id = 10001
 
 ### Get current user
 GET {{JIRA_BASE_URL}}/rest/api/3/myself
@@ -55,6 +52,13 @@ GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/transitions
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
+> {%
+  const firstTransitionId = response.body?.transitions?.[0]?.id;
+  if (firstTransitionId) {
+    client.global.set("jira_transition_id", String(firstTransitionId));
+  }
+%}
+
 
 ### Transition issue
 POST {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/transitions
@@ -68,6 +72,18 @@ Accept: application/json
   }
 }
 
+
+### Get assignable users
+GET {{JIRA_BASE_URL}}/rest/api/3/user/assignable/search?issueKey={{jira_issue_key}}&query=
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Accept: application/json
+
+> {%
+  const firstAccountId = response.body?.[0]?.accountId;
+  if (firstAccountId) {
+    client.global.set("jira_account_id", String(firstAccountId));
+  }
+%}
 
 ### Assign issue
 PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/assignee
@@ -94,6 +110,13 @@ Accept: application/json
 GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
+
+> {%
+  const firstCommentId = response.body?.comments?.[0]?.id;
+  if (firstCommentId) {
+    client.global.set("jira_comment_id", String(firstCommentId));
+  }
+%}
 
 
 ### Add comment
@@ -144,20 +167,6 @@ Accept: application/json
     ]
   }
 }
-
-
-### Update issue fields
-PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}
-Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
-Content-Type: application/json
-Accept: application/json
-
-{
-  "fields": {
-    "summary": "Updated summary from atlas.nvim"
-  }
-}
-
 
 ### Create issue
 POST {{JIRA_BASE_URL}}/rest/api/3/issue

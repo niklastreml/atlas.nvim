@@ -9,12 +9,7 @@ function M.render(provider)
 	end
 
 	if provider == "bitbucket" then
-		local item = state.selected_item
-		if type(item) == "table" and item.kind == "repo" then
-			require("atlas.bitbucket.ui.panel.repository.controller").refresh()
-		else
-			require("atlas.bitbucket.ui.panel.prs.controller").refresh()
-		end
+		require("atlas.bitbucketv2.panel.init").refresh()
 		return
 	end
 end

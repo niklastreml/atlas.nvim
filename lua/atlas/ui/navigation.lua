@@ -196,12 +196,7 @@ function M.register_keys(buf)
 				if ui_state.current_view == "jira" then
 					require("atlas.jira.panel.init").prev_tab()
 				elseif ui_state.current_view == "bitbucket" then
-					local item = panel_state.selected_item
-					if type(item) == "table" and item.kind == "repo" then
-						require("atlas.bitbucket.ui.panel.repository.controller").prev_tab()
-					else
-						require("atlas.bitbucket.ui.panel.prs.controller").prev_tab()
-					end
+					require("atlas.bitbucketv2.panel.init").prev_tab()
 				end
 			end,
 		},
@@ -217,12 +212,7 @@ function M.register_keys(buf)
 				if ui_state.current_view == "jira" then
 					require("atlas.jira.panel.init").prev_tab()
 				elseif ui_state.current_view == "bitbucket" then
-					local item = panel_state.selected_item
-					if type(item) == "table" and item.kind == "repo" then
-						require("atlas.bitbucket.ui.panel.repository.controller").prev_tab()
-					else
-						require("atlas.bitbucket.ui.panel.prs.controller").prev_tab()
-					end
+					require("atlas.bitbucketv2.panel.init").prev_tab()
 				end
 			end,
 		},
@@ -238,12 +228,7 @@ function M.register_keys(buf)
 				if ui_state.current_view == "jira" then
 					require("atlas.jira.panel.init").next_tab()
 				elseif ui_state.current_view == "bitbucket" then
-					local item = panel_state.selected_item
-					if type(item) == "table" and item.kind == "repo" then
-						require("atlas.bitbucket.ui.panel.repository.controller").next_tab()
-					else
-						require("atlas.bitbucket.ui.panel.prs.controller").next_tab()
-					end
+					require("atlas.bitbucketv2.panel.init").next_tab()
 				end
 			end,
 		},
@@ -259,12 +244,7 @@ function M.register_keys(buf)
 				if ui_state.current_view == "jira" then
 					require("atlas.jira.panel.init").next_tab()
 				elseif ui_state.current_view == "bitbucket" then
-					local item = panel_state.selected_item
-					if type(item) == "table" and item.kind == "repo" then
-						require("atlas.bitbucket.ui.panel.repository.controller").next_tab()
-					else
-						require("atlas.bitbucket.ui.panel.prs.controller").next_tab()
-					end
+					require("atlas.bitbucketv2.panel.init").next_tab()
 				end
 			end,
 		},

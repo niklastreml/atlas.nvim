@@ -12,8 +12,7 @@ local function deactivate_provider(provider)
 	end
 
 	if provider == "bitbucket" then
-		require("atlas.bitbucket.ui.panel.repository.controller").deactivate()
-		require("atlas.bitbucket.ui.panel.prs.controller").deactivate()
+		require("atlas.bitbucketv2.panel.init").deactivate()
 	end
 end
 
@@ -23,11 +22,7 @@ local function current_panel_controller()
 		return require("atlas.jira.panel.init")
 	end
 
-	local item = state.selected_item
-	if type(item) == "table" and item.kind == "repo" then
-		return require("atlas.bitbucket.ui.panel.repository.controller")
-	end
-	return require("atlas.bitbucket.ui.panel.prs.controller")
+	return require("atlas.bitbucketv2.panel.init")
 end
 
 local function refresh_current_panel()
@@ -37,12 +32,7 @@ local function refresh_current_panel()
 		return
 	end
 
-	local item = state.selected_item
-	if type(item) == "table" and item.kind == "repo" then
-		require("atlas.bitbucket.ui.panel.repository.controller").refresh_selected_repo()
-		return
-	end
-	require("atlas.bitbucket.ui.panel.prs.controller").refresh_selected_pr()
+	require("atlas.bitbucketv2.panel.init").refresh()
 end
 
 local function register_panel_keys()
@@ -146,15 +136,28 @@ function M.on_select(provider, item)
 	end
 
 	if provider == "bitbucket" then
-		local repo_controller = require("atlas.bitbucket.ui.panel.repository.controller")
-		local prs_controller = require("atlas.bitbucket.ui.panel.prs.controller")
-		repo_controller.on_select(nil)
-		prs_controller.on_select(nil)
+		local bb_panel = require("atlas.bitbucketv2.panel.init")
 
-		if type(item) == "table" and item.kind == "repo" then
-			repo_controller.on_select(item)
+		-- Determine panel type from item kind
+		local panel_type = nil
+		local panel_item = nil
+
+		if type(item) == "table" then
+			if item.kind == "repo" then
+				panel_type = "repo"
+				-- For repos, the item itself contains workspace/repo_slug/full_name
+				panel_item = item
+			elseif item.kind == "pr" or item.kind == "pr_meta" then
+				panel_type = "pr"
+				-- For PRs, the actual PR data is in item.pr
+				panel_item = item.pr
+			end
+		end
+
+		if panel_type ~= nil then
+			bb_panel.on_select(panel_type, panel_item)
 		else
-			prs_controller.on_select(item)
+			bb_panel.on_select(nil, nil)
 		end
 		return
 	end
