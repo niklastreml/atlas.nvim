@@ -56,7 +56,7 @@ function M.render(width)
 	local line_map = {}
 
 	local pr = state.pr
-	local detail = panel_state.current_pr_detail
+	local detail = state.detail
 
 	if pr == nil then
 		return { "", "  No PR selected..." }, {}, nil

@@ -152,7 +152,7 @@ function M.render(width)
 	local max_width = math.max(20, width or 60)
 
 	local pr = state.pr
-	local comments = panel_state.current_pr_comments
+	local comments = state.comments
 
 	if pr == nil then
 		return { "", "  No PR selected..." }, {}, nil

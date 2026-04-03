@@ -18,8 +18,8 @@ function M.render(width)
 	local line_map = {}
 
 	local pr = state.pr
-	local diffstat = panel_state.current_pr_diffstat
-	local diff = panel_state.current_pr_diff
+	local diffstat = state.diffstat
+	local diff = state.diff
 
 	if pr == nil then
 		return { "", "  No PR selected..." }, {}, nil

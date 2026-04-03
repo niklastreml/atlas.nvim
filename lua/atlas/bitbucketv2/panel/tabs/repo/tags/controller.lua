@@ -1,5 +1,6 @@
 local M = {}
-local state = require("atlas.bitbucketv2.panel.tabs.repo.tags.state")
+local tab_state = require("atlas.bitbucketv2.panel.tabs.repo.tags.state")
+local state = require("atlas.bitbucketv2.panel.tabs.repo.state")
 local panel_state = require("atlas.bitbucketv2.panel.state")
 local repositories = require("atlas.bitbucketv2.api.repositories")
 local spinner = require("atlas.ui.components.spinner")
@@ -10,13 +11,24 @@ local tags_handle = nil
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		local tags_loading = panel_state.current_repo_tags == "loading"
-		if not tags_loading then
+		local waiting_for_detail = state.detail == "loading"
+		local tags_loading = tab_state.tags == "loading"
+		if not waiting_for_detail and not tags_loading then
 			panel_spinner:stop()
 			return
 		end
 
 		if panel_state.current_tab ~= "tags" then
+			return
+		end
+
+		if tags_handle == nil and tab_state.repo ~= nil and tags_loading and not waiting_for_detail then
+			if type(state.detail) == "table" then
+				M.show(tab_state.repo)
+			else
+				tab_state.tags = nil
+				panel_spinner:stop()
+			end
 			return
 		end
 
@@ -44,7 +56,7 @@ end
 
 ---@param repo table|nil
 function M.show(repo)
-	local prev_name = state.repo and state.repo.full_name or nil
+	local prev_name = tab_state.repo and tab_state.repo.full_name or nil
 	local next_name = repo and repo.full_name or nil
 	local same_repo = prev_name == next_name
 
@@ -52,58 +64,65 @@ function M.show(repo)
 		cancel_handles()
 	end
 
-	local tags_loading = panel_state.current_repo_tags == "loading"
-	if same_repo and tags_loading then
-		state.repo = repo
-		state.line_map = {}
+	local tags_loading = tab_state.tags == "loading"
+	if same_repo and tags_loading and (state.detail == "loading" or tags_handle ~= nil) then
+		tab_state.repo = repo
+		tab_state.line_map = {}
 		start_spinner()
 		require("atlas.bitbucketv2.panel.init").refresh()
 		return
 	end
 
 	stop_spinner()
-	state.repo = repo
-	state.line_map = {}
+	tab_state.repo = repo
+	tab_state.line_map = {}
 
 	if repo == nil then
-		panel_state.set_repo_tags(nil)
+		tab_state.tags = nil
 		return
 	end
 
-	if same_repo and panel_state.current_repo_tags ~= nil and panel_state.current_repo_tags ~= "loading" then
+	if same_repo and tab_state.tags ~= nil and tab_state.tags ~= "loading" then
 		return
 	end
 
-	local detail = panel_state.current_repo_detail
-	if detail == nil or detail == "loading" then
-		panel_state.set_repo_tags(nil)
+	local detail = state.detail
+	if detail == "loading" then
+		tab_state.tags = "loading"
+		start_spinner()
+		require("atlas.bitbucketv2.panel.init").refresh()
+		return
+	end
+
+	if detail == nil then
+		tab_state.tags = nil
 		footer.notify("warn", "Repository detail not loaded yet")
 		return
 	end
 
 	local tags_url = (detail.links and detail.links.tags and detail.links.tags.href) or ""
 	if tags_url == "" then
-		panel_state.set_repo_tags(nil)
+		tab_state.tags = nil
 		footer.notify("error", "Missing tags URL")
 		return
 	end
 
 	-- Fetch tags
-	panel_state.set_repo_tags_loading()
+	tab_state.tags = "loading"
 	start_spinner()
 
 	tags_handle = repositories.fetch_tags(tags_url, {}, function(tags, err)
 		tags_handle = nil
 
-		if state.repo == nil or state.repo.full_name ~= next_name then
+		if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
 			return
 		end
 
 		if err ~= nil then
-			panel_state.set_repo_tags(nil)
+			tab_state.tags = nil
 			footer.notify("error", "Failed to load tags: " .. tostring(err))
 		else
-			panel_state.set_repo_tags(tags)
+			tab_state.tags = tags
 			footer.notify("success", "Tags loaded", 1200)
 		end
 
@@ -116,19 +135,19 @@ function M.show(repo)
 end
 
 function M.refresh()
-	if state.repo == nil then
+	if tab_state.repo == nil then
 		return
 	end
 
 	cancel_handles()
-	panel_state.set_repo_tags(nil)
-	M.show(state.repo)
+	tab_state.tags = nil
+	M.show(tab_state.repo)
 end
 
 function M.reset()
 	cancel_handles()
 	stop_spinner()
-	state.reset()
+	tab_state.reset()
 end
 
 function M.deactivate()

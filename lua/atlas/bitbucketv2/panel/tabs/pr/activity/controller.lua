@@ -53,7 +53,7 @@ end
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		if panel_state.current_pr_activity ~= "loading" then
+		if state.activity ~= "loading" then
 			panel_spinner:stop()
 			return
 		end
@@ -94,7 +94,7 @@ function M.show(pr)
 		cancel_active_handle()
 	end
 
-	if same_pr and panel_state.current_pr_activity == "loading" then
+	if same_pr and state.activity == "loading" then
 		state.pr = pr
 		state.line_map = {}
 		start_spinner()
@@ -107,22 +107,22 @@ function M.show(pr)
 	state.line_map = {}
 
 	if pr == nil then
-		panel_state.set_pr_activity(nil)
+		state.activity = nil
 		return
 	end
 
-	if same_pr and panel_state.current_pr_activity ~= nil and panel_state.current_pr_activity ~= "loading" then
+	if same_pr and state.activity ~= nil and state.activity ~= "loading" then
 		return
 	end
 
 	local activity_url = (pr.links or {}).activity
 	if type(activity_url) ~= "string" or activity_url == "" then
-		panel_state.set_pr_activity(nil)
+		state.activity = nil
 		footer.notify("error", "Missing activity URL")
 		return
 	end
 
-	panel_state.set_pr_activity_loading()
+	state.activity = "loading"
 	start_spinner()
 	footer.notify("loading", "Loading activity...")
 	require("atlas.bitbucketv2.panel.init").refresh()
@@ -135,10 +135,10 @@ function M.show(pr)
 		end
 
 		if err ~= nil then
-			panel_state.set_pr_activity(nil)
+			state.activity = nil
 			footer.notify("error", "Failed to load activity: " .. tostring(err))
 		else
-			panel_state.set_pr_activity(activity)
+			state.activity = activity
 			footer.notify("success", "Activity loaded", 1200)
 		end
 
@@ -159,7 +159,7 @@ function M.refresh()
 	end
 
 	cancel_active_handle()
-	panel_state.set_pr_activity_loading()
+	state.activity = "loading"
 	start_spinner()
 	require("atlas.bitbucketv2.panel.init").refresh()
 
@@ -171,10 +171,10 @@ function M.refresh()
 		end
 
 		if err ~= nil then
-			panel_state.set_pr_activity(nil)
+			state.activity = nil
 			footer.notify("error", "Failed to refresh activity")
 		else
-			panel_state.set_pr_activity(activity)
+			state.activity = activity
 			footer.notify("success", "Activity refreshed", 1200)
 		end
 

@@ -10,7 +10,7 @@ local active_handle = nil
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		if panel_state.current_pr_commits ~= "loading" then
+		if state.commits ~= "loading" then
 			panel_spinner:stop()
 			return
 		end
@@ -51,7 +51,7 @@ function M.show(pr)
 		cancel_active_handle()
 	end
 
-	if same_pr and panel_state.current_pr_commits == "loading" then
+	if same_pr and state.commits == "loading" then
 		state.pr = pr
 		state.line_map = {}
 		start_spinner()
@@ -64,22 +64,22 @@ function M.show(pr)
 	state.line_map = {}
 
 	if pr == nil then
-		panel_state.set_pr_commits(nil)
+		state.commits = nil
 		return
 	end
 
-	if same_pr and panel_state.current_pr_commits ~= nil and panel_state.current_pr_commits ~= "loading" then
+	if same_pr and state.commits ~= nil and state.commits ~= "loading" then
 		return
 	end
 
 	local commits_url = (pr.links or {}).commits
 	if type(commits_url) ~= "string" or commits_url == "" then
-		panel_state.set_pr_commits(nil)
+		state.commits = nil
 		footer.notify("error", "Missing commits URL")
 		return
 	end
 
-	panel_state.set_pr_commits_loading()
+	state.commits = "loading"
 	start_spinner()
 	footer.notify("loading", "Loading commits...")
 	require("atlas.bitbucketv2.panel.init").refresh()
@@ -92,10 +92,10 @@ function M.show(pr)
 		end
 
 		if err ~= nil then
-			panel_state.set_pr_commits(nil)
+			state.commits = nil
 			footer.notify("error", "Failed to load commits: " .. tostring(err))
 		else
-			panel_state.set_pr_commits(commits)
+			state.commits = commits
 			footer.notify("success", "Commits loaded", 1200)
 		end
 
@@ -116,7 +116,7 @@ function M.refresh()
 	end
 
 	cancel_active_handle()
-	panel_state.set_pr_commits_loading()
+	state.commits = "loading"
 	start_spinner()
 	require("atlas.bitbucketv2.panel.init").refresh()
 
@@ -128,10 +128,10 @@ function M.refresh()
 		end
 
 		if err ~= nil then
-			panel_state.set_pr_commits(nil)
+			state.commits = nil
 			footer.notify("error", "Failed to refresh commits")
 		else
-			panel_state.set_pr_commits(commits)
+			state.commits = commits
 			footer.notify("success", "Commits refreshed", 1200)
 		end
 

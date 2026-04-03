@@ -1,6 +1,7 @@
 local M = {}
 
-local state = require("atlas.bitbucketv2.panel.tabs.repo.branches.state")
+local tab_state = require("atlas.bitbucketv2.panel.tabs.repo.branches.state")
+local state = require("atlas.bitbucketv2.panel.tabs.repo.state")
 local panel_state = require("atlas.bitbucketv2.panel.state")
 local header = require("atlas.bitbucketv2.panel.components.header")
 local chips = require("atlas.bitbucketv2.panel.components.chips")
@@ -20,9 +21,9 @@ function M.render(width)
 	local spans = {}
 	local line_map = {}
 
-	local repo = state.repo
-	local detail = panel_state.current_repo_detail
-	local branches = panel_state.current_repo_branches
+	local repo = tab_state.repo
+	local detail = state.detail
+	local branches = tab_state.branches
 
 	if repo == nil then
 		return { "", "  No repository selected..." }, {}, nil
@@ -158,7 +159,7 @@ function M.render(width)
 		})
 	end
 
-	state.line_map = line_map
+	tab_state.line_map = line_map
 	return lines, spans, line_map
 end
 

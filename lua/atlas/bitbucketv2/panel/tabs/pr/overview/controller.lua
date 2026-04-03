@@ -10,7 +10,7 @@ local active_handle = nil
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		if panel_state.current_pr_detail ~= "loading" then
+		if state.detail ~= "loading" then
 			panel_spinner:stop()
 			return
 		end
@@ -51,7 +51,7 @@ function M.show(pr)
 		cancel_active_handle()
 	end
 
-	if same_pr and panel_state.current_pr_detail == "loading" then
+	if same_pr and state.detail == "loading" then
 		state.pr = pr
 		state.line_map = {}
 		start_spinner()
@@ -64,11 +64,11 @@ function M.show(pr)
 	state.line_map = {}
 
 	if pr == nil then
-		panel_state.set_pr_detail(nil)
+		state.detail = nil
 		return
 	end
 
-	if same_pr and panel_state.current_pr_detail ~= nil and panel_state.current_pr_detail ~= "loading" then
+	if same_pr and state.detail ~= nil and state.detail ~= "loading" then
 		return
 	end
 
@@ -78,12 +78,12 @@ function M.show(pr)
 	local pr_id = tostring(pr.id or "")
 
 	if workspace == "" or repo_slug == "" or pr_id == "" then
-		panel_state.set_pr_detail(nil)
+		state.detail = nil
 		footer.notify("error", "Missing PR info for detail fetch")
 		return
 	end
 
-	panel_state.set_pr_detail_loading()
+	state.detail = "loading"
 	start_spinner()
 	footer.notify("loading", string.format("Loading PR #%s...", pr_id))
 	require("atlas.bitbucketv2.panel.init").refresh()
@@ -96,10 +96,10 @@ function M.show(pr)
 		end
 
 		if err ~= nil then
-			panel_state.set_pr_detail(nil)
+			state.detail = nil
 			footer.notify("error", string.format("Failed to load PR #%s: %s", pr_id, tostring(err)))
 		else
-			panel_state.set_pr_detail(detail)
+			state.detail = detail
 			footer.notify("success", string.format("PR #%s loaded", pr_id), 1200)
 		end
 
@@ -124,7 +124,7 @@ function M.refresh()
 	end
 
 	cancel_active_handle()
-	panel_state.set_pr_detail_loading()
+	state.detail = "loading"
 	start_spinner()
 	require("atlas.bitbucketv2.panel.init").refresh()
 
@@ -136,10 +136,10 @@ function M.refresh()
 		end
 
 		if err ~= nil then
-			panel_state.set_pr_detail(nil)
+			state.detail = nil
 			footer.notify("error", string.format("Failed to refresh PR #%s", pr_id))
 		else
-			panel_state.set_pr_detail(detail)
+			state.detail = detail
 			footer.notify("success", string.format("PR #%s refreshed", pr_id), 1200)
 		end
 

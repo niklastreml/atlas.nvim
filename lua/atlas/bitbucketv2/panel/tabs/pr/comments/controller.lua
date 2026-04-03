@@ -50,7 +50,7 @@ end
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		if panel_state.current_pr_comments ~= "loading" then
+		if state.comments ~= "loading" then
 			panel_spinner:stop()
 			return
 		end
@@ -91,7 +91,7 @@ function M.show(pr)
 		cancel_active_handle()
 	end
 
-	if same_pr and panel_state.current_pr_comments == "loading" then
+	if same_pr and state.comments == "loading" then
 		state.pr = pr
 		state.line_map = {}
 		start_spinner()
@@ -104,22 +104,22 @@ function M.show(pr)
 	state.line_map = {}
 
 	if pr == nil then
-		panel_state.set_pr_comments(nil)
+		state.comments = nil
 		return
 	end
 
-	if same_pr and panel_state.current_pr_comments ~= nil and panel_state.current_pr_comments ~= "loading" then
+	if same_pr and state.comments ~= nil and state.comments ~= "loading" then
 		return
 	end
 
 	local comments_url = (pr.links or {}).comments
 	if type(comments_url) ~= "string" or comments_url == "" then
-		panel_state.set_pr_comments(nil)
+		state.comments = nil
 		footer.notify("error", "Missing comments URL")
 		return
 	end
 
-	panel_state.set_pr_comments_loading()
+	state.comments = "loading"
 	start_spinner()
 	footer.notify("loading", "Loading comments...")
 	require("atlas.bitbucketv2.panel.init").refresh()
@@ -132,10 +132,10 @@ function M.show(pr)
 		end
 
 		if err ~= nil then
-			panel_state.set_pr_comments(nil)
+			state.comments = nil
 			footer.notify("error", "Failed to load comments: " .. tostring(err))
 		else
-			panel_state.set_pr_comments(comments)
+			state.comments = comments
 			footer.notify("success", "Comments loaded", 1200)
 		end
 
@@ -156,7 +156,7 @@ function M.refresh()
 	end
 
 	cancel_active_handle()
-	panel_state.set_pr_comments_loading()
+	state.comments = "loading"
 	start_spinner()
 	require("atlas.bitbucketv2.panel.init").refresh()
 
@@ -168,10 +168,10 @@ function M.refresh()
 		end
 
 		if err ~= nil then
-			panel_state.set_pr_comments(nil)
+			state.comments = nil
 			footer.notify("error", "Failed to refresh comments")
 		else
-			panel_state.set_pr_comments(comments)
+			state.comments = comments
 			footer.notify("success", "Comments refreshed", 1200)
 		end
 

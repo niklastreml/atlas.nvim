@@ -1,5 +1,6 @@
 local M = {}
-local state = require("atlas.bitbucketv2.panel.tabs.repo.overview.state")
+local tab_state = require("atlas.bitbucketv2.panel.tabs.repo.overview.state")
+local state = require("atlas.bitbucketv2.panel.tabs.repo.state")
 local panel_state = require("atlas.bitbucketv2.panel.state")
 local repositories = require("atlas.bitbucketv2.api.repositories")
 local spinner = require("atlas.ui.components.spinner")
@@ -11,8 +12,8 @@ local readme_handle = nil
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		local detail_loading = panel_state.current_repo_detail == "loading"
-		local readme_loading = panel_state.current_repo_readme == "loading"
+		local detail_loading = state.detail == "loading"
+		local readme_loading = tab_state.readme == "loading"
 		if not detail_loading and not readme_loading then
 			panel_spinner:stop()
 			return
@@ -51,7 +52,7 @@ end
 
 ---@param repo table|nil
 function M.show(repo)
-	local prev_name = state.repo and state.repo.full_name or nil
+	local prev_name = tab_state.repo and tab_state.repo.full_name or nil
 	local next_name = repo and repo.full_name or nil
 	local same_repo = prev_name == next_name
 
@@ -59,32 +60,31 @@ function M.show(repo)
 		cancel_handles()
 	end
 
-	local detail_loading = panel_state.current_repo_detail == "loading"
-	local readme_loading = panel_state.current_repo_readme == "loading"
+	local detail_loading = state.detail == "loading"
+	local readme_loading = tab_state.readme == "loading"
 	if same_repo and (detail_loading or readme_loading) then
-		state.repo = repo
-		state.line_map = {}
+		tab_state.repo = repo
+		tab_state.line_map = {}
 		start_spinner()
 		require("atlas.bitbucketv2.panel.init").refresh()
 		return
 	end
 
 	stop_spinner()
-	state.repo = repo
-	state.line_map = {}
+	tab_state.repo = repo
+	tab_state.line_map = {}
 
 	if repo == nil then
-		panel_state.set_repo_detail(nil)
-		panel_state.set_repo_readme(nil)
+		state.reset()
 		return
 	end
 
 	if
 		same_repo
-		and panel_state.current_repo_detail ~= nil
-		and panel_state.current_repo_detail ~= "loading"
-		and panel_state.current_repo_readme ~= nil
-		and panel_state.current_repo_readme ~= "loading"
+		and state.detail ~= nil
+		and state.detail ~= "loading"
+		and tab_state.readme ~= nil
+		and tab_state.readme ~= "loading"
 	then
 		return
 	end
@@ -93,45 +93,46 @@ function M.show(repo)
 	local repo_slug = tostring(repo.repo_slug or repo.slug or "")
 
 	if workspace == "" or repo_slug == "" then
-		panel_state.set_repo_detail(nil)
-		panel_state.set_repo_readme(nil)
+		state.reset()
 		footer.notify("error", "Missing repository info")
 		return
 	end
 
 	-- Fetch detail
-	panel_state.set_repo_detail_loading()
+	state.detail = "loading"
+	tab_state.readme = "loading"
 	start_spinner()
 
 	detail_handle = repositories.fetch_detail(workspace, repo_slug, {}, function(detail, err)
 		detail_handle = nil
 
-		if state.repo == nil or state.repo.full_name ~= next_name then
+		if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
 			return
 		end
 
 		if err ~= nil then
-			panel_state.set_repo_detail(nil)
+			state.detail = nil
+			tab_state.readme = nil
 			footer.notify("error", "Failed to load repo detail: " .. tostring(err))
 		else
-			panel_state.set_repo_detail(detail)
+			state.detail = detail
 
 			local ref = (detail.mainbranch or {}).name or "main"
 			local readme_path = tostring(repo.readme or "README.md")
 
-			panel_state.set_repo_readme_loading()
+			tab_state.readme = "loading"
 
 			readme_handle = repositories.fetch_readme(workspace, repo_slug, ref, readme_path, {}, function(readme, readme_err)
 				readme_handle = nil
 
-				if state.repo == nil or state.repo.full_name ~= next_name then
+				if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
 					return
 				end
 
 				if readme_err ~= nil then
-					panel_state.set_repo_readme(nil)
+					tab_state.readme = nil
 				else
-					panel_state.set_repo_readme(readme)
+					tab_state.readme = readme
 				end
 
 				stop_spinner()
@@ -148,18 +149,20 @@ function M.show(repo)
 end
 
 function M.refresh()
-	if state.repo == nil then
+	if tab_state.repo == nil then
 		return
 	end
 
 	cancel_handles()
-	M.show(state.repo)
+	state.reset()
+	M.show(tab_state.repo)
 end
 
 function M.reset()
 	cancel_handles()
 	stop_spinner()
 	state.reset()
+	tab_state.reset()
 end
 
 function M.deactivate()

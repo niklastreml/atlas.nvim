@@ -11,8 +11,8 @@ local diff_handle = nil
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		local diffstat_loading = panel_state.current_pr_diffstat == "loading"
-		local diff_loading = panel_state.current_pr_diff == "loading"
+		local diffstat_loading = state.diffstat == "loading"
+		local diff_loading = state.diff == "loading"
 		if not diffstat_loading and not diff_loading then
 			panel_spinner:stop()
 			return
@@ -59,8 +59,8 @@ function M.show(pr)
 		cancel_handles()
 	end
 
-	local diffstat_loading = panel_state.current_pr_diffstat == "loading"
-	local diff_loading = panel_state.current_pr_diff == "loading"
+	local diffstat_loading = state.diffstat == "loading"
+	local diff_loading = state.diff == "loading"
 	if same_pr and (diffstat_loading or diff_loading) then
 		state.pr = pr
 		state.line_map = {}
@@ -74,17 +74,17 @@ function M.show(pr)
 	state.line_map = {}
 
 	if pr == nil then
-		panel_state.set_pr_diffstat(nil)
-		panel_state.set_pr_diff(nil)
+		state.diffstat = nil
+		state.diff = nil
 		return
 	end
 
 	if
 		same_pr
-		and panel_state.current_pr_diffstat ~= nil
-		and panel_state.current_pr_diffstat ~= "loading"
-		and panel_state.current_pr_diff ~= nil
-		and panel_state.current_pr_diff ~= "loading"
+		and state.diffstat ~= nil
+		and state.diffstat ~= "loading"
+		and state.diff ~= nil
+		and state.diff ~= "loading"
 	then
 		return
 	end
@@ -93,10 +93,10 @@ function M.show(pr)
 	local diff_url = (pr.links or {}).diff
 
 	if type(diffstat_url) ~= "string" or diffstat_url == "" then
-		panel_state.set_pr_diffstat(nil)
+		state.diffstat = nil
 		footer.notify("error", "Missing diffstat URL")
 	else
-		panel_state.set_pr_diffstat_loading()
+		state.diffstat = "loading"
 		start_spinner()
 
 		diffstat_handle = pullrequests.fetch_diffstat(diffstat_url, {}, function(diffstat, err)
@@ -107,13 +107,13 @@ function M.show(pr)
 			end
 
 			if err ~= nil then
-				panel_state.set_pr_diffstat(nil)
+				state.diffstat = nil
 				footer.notify("error", "Failed to load diffstat: " .. tostring(err))
 			else
-				panel_state.set_pr_diffstat(diffstat)
+				state.diffstat = diffstat
 			end
 
-			if panel_state.current_pr_diff ~= "loading" then
+			if state.diff ~= "loading" then
 				stop_spinner()
 				footer.notify("success", "Files loaded", 1200)
 			end
@@ -122,10 +122,10 @@ function M.show(pr)
 	end
 
 	if type(diff_url) ~= "string" or diff_url == "" then
-		panel_state.set_pr_diff(nil)
+		state.diff = nil
 		footer.notify("error", "Missing diff URL")
 	else
-		panel_state.set_pr_diff_loading()
+		state.diff = "loading"
 		start_spinner()
 
 		diff_handle = pullrequests.fetch_diff(diff_url, {}, function(diff, err)
@@ -136,13 +136,13 @@ function M.show(pr)
 			end
 
 			if err ~= nil then
-				panel_state.set_pr_diff(nil)
+				state.diff = nil
 				footer.notify("error", "Failed to load diff: " .. tostring(err))
 			else
-				panel_state.set_pr_diff(diff)
+				state.diff = diff
 			end
 
-			if panel_state.current_pr_diffstat ~= "loading" then
+			if state.diffstat ~= "loading" then
 				stop_spinner()
 				footer.notify("success", "Files loaded", 1200)
 			end
@@ -164,8 +164,8 @@ function M.refresh()
 	local diff_url = (pr.links or {}).diff
 
 	cancel_handles()
-	panel_state.set_pr_diffstat_loading()
-	panel_state.set_pr_diff_loading()
+	state.diffstat = "loading"
+	state.diff = "loading"
 	start_spinner()
 	require("atlas.bitbucketv2.panel.init").refresh()
 
@@ -178,12 +178,12 @@ function M.refresh()
 			end
 
 			if err ~= nil then
-				panel_state.set_pr_diffstat(nil)
+				state.diffstat = nil
 			else
-				panel_state.set_pr_diffstat(diffstat)
+				state.diffstat = diffstat
 			end
 
-			if panel_state.current_pr_diff ~= "loading" then
+			if state.diff ~= "loading" then
 				stop_spinner()
 				footer.notify("success", "Files refreshed", 1200)
 			end
@@ -200,12 +200,12 @@ function M.refresh()
 			end
 
 			if err ~= nil then
-				panel_state.set_pr_diff(nil)
+				state.diff = nil
 			else
-				panel_state.set_pr_diff(diff)
+				state.diff = diff
 			end
 
-			if panel_state.current_pr_diffstat ~= "loading" then
+			if state.diffstat ~= "loading" then
 				stop_spinner()
 				footer.notify("success", "Files refreshed", 1200)
 			end

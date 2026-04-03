@@ -21,7 +21,7 @@ function M.render(width)
 	local line_map = {}
 
 	local pr = state.pr
-	local commits = panel_state.current_pr_commits
+	local commits = state.commits
 
 	if pr == nil then
 		return { "", "  No PR selected..." }, {}, nil

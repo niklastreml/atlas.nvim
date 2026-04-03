@@ -1,7 +1,6 @@
 local M = {}
 
 local state = require("atlas.bitbucketv2.panel.tabs.pr.activity.state")
-local panel_state = require("atlas.bitbucketv2.panel.state")
 local header = require("atlas.bitbucketv2.panel.components.header")
 local chips = require("atlas.bitbucketv2.panel.components.chips")
 local tabs = require("atlas.bitbucketv2.panel.components.tabs")
@@ -22,7 +21,7 @@ function M.render(width)
 	local line_map = {}
 
 	local pr = state.pr
-	local activity = panel_state.current_pr_activity
+	local activity = state.activity
 
 	if pr == nil then
 		return { "", "  No PR selected..." }, {}, nil
@@ -47,6 +46,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
+	local panel_state = require("atlas.bitbucketv2.panel.state")
 	local tab_lines, tab_spans = tabs.render_pr(panel_state.current_tab, width, 0)
 	local tab_base = #lines
 	for _, line in ipairs(tab_lines) do

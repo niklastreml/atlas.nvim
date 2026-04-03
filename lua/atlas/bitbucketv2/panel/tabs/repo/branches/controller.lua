@@ -1,5 +1,6 @@
 local M = {}
-local state = require("atlas.bitbucketv2.panel.tabs.repo.branches.state")
+local tab_state = require("atlas.bitbucketv2.panel.tabs.repo.branches.state")
+local state = require("atlas.bitbucketv2.panel.tabs.repo.state")
 local panel_state = require("atlas.bitbucketv2.panel.state")
 local repositories = require("atlas.bitbucketv2.api.repositories")
 local spinner = require("atlas.ui.components.spinner")
@@ -10,13 +11,24 @@ local branches_handle = nil
 local panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
-		local branches_loading = panel_state.current_repo_branches == "loading"
-		if not branches_loading then
+		local waiting_for_detail = state.detail == "loading"
+		local branches_loading = tab_state.branches == "loading"
+		if not waiting_for_detail and not branches_loading then
 			panel_spinner:stop()
 			return
 		end
 
 		if panel_state.current_tab ~= "branches" then
+			return
+		end
+
+		if branches_handle == nil and tab_state.repo ~= nil and branches_loading and not waiting_for_detail then
+			if type(state.detail) == "table" then
+				M.show(tab_state.repo)
+			else
+				tab_state.branches = nil
+				panel_spinner:stop()
+			end
 			return
 		end
 
@@ -44,7 +56,7 @@ end
 
 ---@param repo table|nil
 function M.show(repo)
-	local prev_name = state.repo and state.repo.full_name or nil
+	local prev_name = tab_state.repo and tab_state.repo.full_name or nil
 	local next_name = repo and repo.full_name or nil
 	local same_repo = prev_name == next_name
 
@@ -52,59 +64,66 @@ function M.show(repo)
 		cancel_handles()
 	end
 
-	local branches_loading = panel_state.current_repo_branches == "loading"
-	if same_repo and branches_loading then
-		state.repo = repo
-		state.line_map = {}
+	local branches_loading = tab_state.branches == "loading"
+	if same_repo and branches_loading and (state.detail == "loading" or branches_handle ~= nil) then
+		tab_state.repo = repo
+		tab_state.line_map = {}
 		start_spinner()
 		require("atlas.bitbucketv2.panel.init").refresh()
 		return
 	end
 
 	stop_spinner()
-	state.repo = repo
-	state.line_map = {}
+	tab_state.repo = repo
+	tab_state.line_map = {}
 
 	if repo == nil then
-		panel_state.set_repo_branches(nil)
+		tab_state.branches = nil
 		return
 	end
 
 	-- If we already have branches for this repo, don't refetch
-	if same_repo and panel_state.current_repo_branches ~= nil and panel_state.current_repo_branches ~= "loading" then
+	if same_repo and tab_state.branches ~= nil and tab_state.branches ~= "loading" then
 		return
 	end
 
 	-- We need the repo detail to get the branches URL
-	local detail = panel_state.current_repo_detail
-	if detail == nil or detail == "loading" then
-		panel_state.set_repo_branches(nil)
+	local detail = state.detail
+	if detail == "loading" then
+		tab_state.branches = "loading"
+		start_spinner()
+		require("atlas.bitbucketv2.panel.init").refresh()
+		return
+	end
+
+	if detail == nil then
+		tab_state.branches = nil
 		footer.notify("warn", "Repository detail not loaded yet")
 		return
 	end
 
 	local branches_url = (detail.links and detail.links.branches and detail.links.branches.href) or ""
 	if branches_url == "" then
-		panel_state.set_repo_branches(nil)
+		tab_state.branches = nil
 		footer.notify("error", "Missing branches URL")
 		return
 	end
 
-	panel_state.set_repo_branches_loading()
+	tab_state.branches = "loading"
 	start_spinner()
 
 	branches_handle = repositories.fetch_branches(branches_url, {}, function(branches, err)
 		branches_handle = nil
 
-		if state.repo == nil or state.repo.full_name ~= next_name then
+		if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
 			return
 		end
 
 		if err ~= nil then
-			panel_state.set_repo_branches(nil)
+			tab_state.branches = nil
 			footer.notify("error", "Failed to load branches: " .. tostring(err))
 		else
-			panel_state.set_repo_branches(branches)
+			tab_state.branches = branches
 			footer.notify("success", "Branches loaded", 1200)
 		end
 
@@ -117,19 +136,19 @@ function M.show(repo)
 end
 
 function M.refresh()
-	if state.repo == nil then
+	if tab_state.repo == nil then
 		return
 	end
 
 	cancel_handles()
-	panel_state.set_repo_branches(nil)
-	M.show(state.repo)
+	tab_state.branches = nil
+	M.show(tab_state.repo)
 end
 
 function M.reset()
 	cancel_handles()
 	stop_spinner()
-	state.reset()
+	tab_state.reset()
 end
 
 function M.deactivate()
