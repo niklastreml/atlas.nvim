@@ -6,8 +6,9 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 > **Still in early development, will have breaking changes!**
 
 <div>
-  <img src="https://github.com/user-attachments/assets/fcf4e957-aa9a-409b-921d-9b8a476b9522" width="49%" />
-  <img src="https://github.com/user-attachments/assets/931ec50b-a0ca-4321-9326-3d53aea2432f" width="49%" />
+  
+  <img src="https://github.com/user-attachments/assets/3da6e584-47a1-411e-91f6-110dbdc75293" width="49%" />
+  <img src="https://github.com/user-attachments/assets/80eeb59a-4a04-40e0-90fb-92ac5d4da249" width="49%" />
 </div>
 
 ### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
