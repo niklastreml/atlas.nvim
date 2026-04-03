@@ -37,9 +37,12 @@ function M.render(pr, width)
 	local timestamp = (pr.created_on and pr.created_on ~= "") and pr.created_on or ""
 	local timestamp_text = utils.relative_time_text(timestamp)
 	local updated_text = utils.relative_time_text(tostring(pr.updated_on or timestamp or ""))
-	local repo_name = tostring((pr.repo or {}).name or "-")
-	local source_branch = tostring(pr.source_branch or "-")
-	local target_branch = tostring(pr.target_branch or "-")
+	local workspace = tostring(pr.workspace or "")
+	local repo_slug = tostring(pr.repo or "")
+	local repo_name = (workspace ~= "" and repo_slug ~= "") and (workspace .. "/" .. repo_slug)
+		or (repo_slug ~= "" and repo_slug or "-")
+	local source_branch = tostring((pr.source or {}).branch or "-")
+	local target_branch = tostring((pr.destination or {}).branch or "-")
 	local close_source = pr.close_source_branch == true
 	local branch_icon = icons.entity("branch")
 	local repo_icon = icons.entity("repo")
@@ -150,7 +153,7 @@ function M.render(pr, width)
 end
 
 ---@param repo { workspace:string|nil, full_name:string|nil, readme:string|nil }
----@param detail BitbucketRepositoryDetail
+---@param detail BitbucketRepository
 ---@param width integer|nil
 ---@return string[] lines
 ---@return table[] spans

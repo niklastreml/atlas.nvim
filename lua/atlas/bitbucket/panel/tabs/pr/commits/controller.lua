@@ -85,7 +85,7 @@ function M.show(pr)
 	footer.notify("loading", "Loading commits...")
 	require("atlas.bitbucket.panel.init").refresh()
 
-	active_handle = pullrequests.fetch_commits(commits_url, {}, function(commits, err)
+	active_handle = pullrequests.fetch_commits(commits_url, function(commits, err)
 		active_handle = nil
 
 		if state.pr == nil or state.pr.id ~= next_id then
@@ -106,11 +106,11 @@ function M.show(pr)
 end
 
 function M.refresh()
-	if state.pr == nil then
+	local pr = state.pr
+	if pr == nil then
 		return
 	end
 
-	local pr = state.pr
 	local commits_url = (pr.links or {}).commits
 	if type(commits_url) ~= "string" or commits_url == "" then
 		return
@@ -121,7 +121,7 @@ function M.refresh()
 	start_spinner()
 	require("atlas.bitbucket.panel.init").refresh()
 
-	active_handle = pullrequests.fetch_commits(commits_url, { force_load = true }, function(commits, err)
+	active_handle = pullrequests.fetch_commits(commits_url, function(commits, err)
 		active_handle = nil
 
 		if state.pr == nil then

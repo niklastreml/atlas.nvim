@@ -2,6 +2,7 @@ local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.comments.state")
 local panel_state = require("atlas.bitbucket.panel.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
+local helper = require("atlas.bitbucket.panel.tabs.pr.comments.helper")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 
@@ -136,7 +137,7 @@ function M.show(pr)
 			state.comments = nil
 			footer.notify("error", "Failed to load comments: " .. tostring(err))
 		else
-			state.comments = comments
+			state.comments = helper.normalize_comments((comments or {}).entries)
 			footer.notify("success", "Comments loaded", 1200)
 		end
 
@@ -146,11 +147,11 @@ function M.show(pr)
 end
 
 function M.refresh()
-	if state.pr == nil then
+	local pr = state.pr
+	if pr == nil then
 		return
 	end
 
-	local pr = state.pr
 	local comments_url = (pr.links or {}).comments
 	if type(comments_url) ~= "string" or comments_url == "" then
 		return
@@ -172,7 +173,7 @@ function M.refresh()
 			state.comments = nil
 			footer.notify("error", "Failed to refresh comments")
 		else
-			state.comments = comments
+			state.comments = helper.normalize_comments((comments or {}).entries)
 			footer.notify("success", "Comments refreshed", 1200)
 		end
 
@@ -234,6 +235,5 @@ function M.move(delta)
 	local target = math.max(1, math.min(max_line, line + step))
 	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
-
 
 return M

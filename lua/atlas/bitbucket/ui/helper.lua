@@ -53,6 +53,58 @@ function M.pr_state_hl(state)
 	return "AtlasTextMuted"
 end
 
+---@param prs BitbucketPR[]|nil
+---@return BitbucketPRViewGroup[]
+function M.group_prs_by_repo(prs)
+	local source = prs or {}
+	local grouped = {}
+	local order = {}
+
+	for _, pr in ipairs(source) do
+		local workspace = tostring(pr.workspace or "")
+		local repo = tostring(pr.repo or "")
+		local key = workspace .. "/" .. repo
+		if grouped[key] == nil then
+			grouped[key] = {
+				workspace = workspace,
+				repo = repo,
+				prs = {},
+			}
+			table.insert(order, key)
+		end
+		table.insert(grouped[key].prs, pr)
+	end
+
+	local out = {}
+	for _, key in ipairs(order) do
+		table.insert(out, grouped[key])
+	end
+
+	return out
+end
+
+---@param view BitbucketViewConfig|nil
+---@return string
+function M.view_id(view)
+	if view == nil then
+		return "default"
+	end
+	return view.key or view.name or "default"
+end
+
+---@param a BitbucketViewConfig|nil
+---@param b BitbucketViewConfig|nil
+---@return boolean
+function M.same_view(a, b)
+	if a == nil and b == nil then
+		return true
+	end
+	if a == nil or b == nil then
+		return false
+	end
+	return M.view_id(a) == M.view_id(b)
+end
+
 ---@param row table
 ---@param col TableColumn
 ---@param ctx { text: string, padded: string, width: integer }
@@ -101,7 +153,7 @@ function M.cell_hl(row, col, ctx)
 	return nil
 end
 
----@param repos BitbucketRepoPRGroup[]|nil
+---@param repos BitbucketPRViewGroup[]|nil
 ---@param current_user BitbucketCurrentUser|nil
 ---@return table[]
 function M.build_footer_items(repos, current_user)
@@ -111,7 +163,7 @@ function M.build_footer_items(repos, current_user)
 	local seen = {}
 
 	for _, group in ipairs(groups) do
-		pr_count = pr_count + #(group.pullrequests or {})
+		pr_count = pr_count + #(group.prs or {})
 		local name = group.repo
 		if name ~= nil and name ~= "" and not seen[name] then
 			seen[name] = true
@@ -215,17 +267,19 @@ local function plain_tree_columns()
 end
 
 local function append_compact_group_rows(rows, group)
+	local full_name = string.format("%s/%s", tostring(group.workspace or ""), tostring(group.repo or ""))
 	local repo_ctx = {
 		kind = "repo",
 		workspace = group.workspace,
 		repo_slug = group.repo,
-		full_name = group.full_name,
-		readme = group.readme,
+		full_name = full_name,
 	}
 
-	for _, pr in ipairs(group.pullrequests or {}) do
+	for _, pr in ipairs(group.prs or {}) do
 		local author_name = tostring((pr.author and pr.author.name) or "Unknown")
-		local repo_name = tostring(group.full_name or "")
+		local repo_name = full_name
+		local source_branch = tostring((((pr.source or {}).branch) or "?"))
+		local target_branch = tostring((((pr.destination or {}).branch) or "?"))
 		table.insert(rows, {
 			kind = "pr",
 			pr_icon = icons.entity("pr"),
@@ -238,13 +292,13 @@ local function append_compact_group_rows(rows, group)
 			repo_hl = repo_name,
 			created = utils.relative_time(pr.created_on),
 			updated = utils.relative_time(pr.updated_on),
-			_item = { kind = "pr", id = pr.id, repo = group.full_name, pr = pr, _repo = repo_ctx },
+			_item = { kind = "pr", id = pr.id, repo = full_name, pr = pr, _repo = repo_ctx },
 		})
 
 		table.insert(rows, {
 			kind = "meta",
 			pr_icon = "",
-			repo_pr = string.format("%s → %s", pr.source_branch or "?", pr.target_branch or "?"),
+			repo_pr = string.format("%s → %s", source_branch, target_branch),
 			comments = "",
 			tasks = "",
 			author = "",
@@ -255,7 +309,7 @@ local function append_compact_group_rows(rows, group)
 			_item = {
 				kind = "pr_meta",
 				id = pr.id,
-				repo = group.full_name,
+				repo = full_name,
 				pr = pr,
 				_repo = repo_ctx,
 			},
@@ -263,7 +317,7 @@ local function append_compact_group_rows(rows, group)
 	end
 end
 
----@param repo_groups BitbucketRepoPRGroup[]
+---@param repo_groups BitbucketPRViewGroup[]
 ---@return { rows: table[], columns: table[] }
 function M.build_compact_table(repo_groups)
 	local rows = {}
@@ -276,15 +330,16 @@ function M.build_compact_table(repo_groups)
 	}
 end
 
----@param repo_groups BitbucketRepoPRGroup[]
+---@param repo_groups BitbucketPRViewGroup[]
 ---@return { rows: table[], columns: table[] }
 function M.build_plain_tree_table(repo_groups)
 	local rows = {}
 	for _, group in ipairs(repo_groups or {}) do
+		local full_name = string.format("%s/%s", tostring(group.workspace or ""), tostring(group.repo or ""))
 		local repo_row = {
 			kind = "repo",
-			repo_name = group.full_name,
-			name = string.format("%s %s", icons.entity("repo"), group.full_name),
+			repo_name = full_name,
+			name = string.format("%s %s", icons.entity("repo"), full_name),
 			branch = "",
 			comments = "",
 			tasks = "",
@@ -295,20 +350,21 @@ function M.build_plain_tree_table(repo_groups)
 			children = {},
 			_item = {
 				kind = "repo",
-				repo = group.full_name,
+				repo = full_name,
 				workspace = group.workspace,
 				repo_slug = group.repo,
-				full_name = group.full_name,
-				readme = group.readme,
+				full_name = full_name,
 			},
 		}
 
-		for _, pr in ipairs(group.pullrequests or {}) do
+		for _, pr in ipairs(group.prs or {}) do
 			local author_name = tostring((pr.author and pr.author.name) or "Unknown")
+			local source_branch = tostring((((pr.source or {}).branch) or "?"))
+			local target_branch = tostring((((pr.destination or {}).branch) or "?"))
 			table.insert(repo_row.children, {
 				kind = "pr",
 				name = string.format("%s #%s %s", icons.entity("pr"), tostring(pr.id), pr.title or ""),
-				branch = string.format("%s -> %s", pr.source_branch or "?", pr.target_branch or "?"),
+				branch = string.format("%s -> %s", source_branch, target_branch),
 				comments = tostring(pr.comments),
 				tasks = tostring(pr.tasks),
 				author = string.format("%s %s", icons.entity("user"), author_name),
@@ -318,14 +374,13 @@ function M.build_plain_tree_table(repo_groups)
 				_item = {
 					kind = "pr",
 					id = pr.id,
-					repo = group.full_name,
+					repo = full_name,
 					pr = pr,
 					_repo = {
 						kind = "repo",
 						workspace = group.workspace,
 						repo_slug = group.repo,
-						full_name = group.full_name,
-						readme = group.readme,
+						full_name = full_name,
 					},
 				},
 			})

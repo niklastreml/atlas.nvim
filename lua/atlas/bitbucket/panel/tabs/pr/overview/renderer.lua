@@ -110,10 +110,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Description
-	local description_text = ((pr.rendered or {}).description or {}).raw
-		or pr.description
-		or (pr.summary or {}).raw
-		or ""
+	local description_text = pr.description or ""
 	local description = utils.sanitize_lines(description_text)
 	local description_header = "Description"
 	table.insert(lines, with_content_padding(description_header))
@@ -130,7 +127,29 @@ function M.render(width)
 
 	-- Reviewers
 	local is_loading = detail == "loading"
-	local decisions = (not is_loading and detail and detail.decisions) or {}
+	local decisions = {}
+	if not is_loading and detail then
+		for _, p in ipairs(detail.participants or {}) do
+			if tostring(p.role or "") == "REVIEWER" then
+				table.insert(decisions, {
+					name = p.name,
+					nickname = p.nickname,
+					decision = p.state or "pending",
+				})
+			end
+		end
+
+		if #decisions == 0 then
+			for _, r in ipairs(detail.reviewers or {}) do
+				table.insert(decisions, {
+					name = r.name,
+					nickname = r.nickname,
+					decision = "pending",
+				})
+			end
+		end
+	end
+
 	local approvals = (not is_loading and detail and detail.approvals_count) or 0
 	local reviewers_line = is_loading and "Reviewers (...)" or string.format("Reviewers (%d/%d)", approvals, #decisions)
 	table.insert(lines, with_content_padding(reviewers_line))

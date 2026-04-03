@@ -46,6 +46,7 @@ local function selected_repo()
 		if full_name == "" and workspace ~= "" and repo_slug ~= "" then
 			full_name = string.format("%s/%s", workspace, repo_slug)
 		end
+
 		return {
 			kind = "repo",
 			workspace = workspace,

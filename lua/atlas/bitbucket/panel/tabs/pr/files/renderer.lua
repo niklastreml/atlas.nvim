@@ -169,7 +169,7 @@ function M.render(width)
 	end
 	table.insert(lines, "")
 
-	local diff_text = (type(diff) == "table" and type(diff.text) == "string") and diff.text or ""
+	local diff_text = type(diff) == "string" and diff or ""
 	if diff_text == "" then
 		table.insert(lines, with_content_padding("No diff available."))
 		state.line_map = line_map

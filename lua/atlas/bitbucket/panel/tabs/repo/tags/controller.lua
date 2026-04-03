@@ -101,7 +101,7 @@ function M.show(repo)
 		return
 	end
 
-	local tags_url = (detail.links and detail.links.tags and detail.links.tags.href) or ""
+	local tags_url = (detail.links and detail.links.tags and detail.links.tags) or ""
 	if tags_url == "" then
 		tab_state.tags = nil
 		footer.notify("error", "Missing tags URL")

@@ -1,6 +1,10 @@
+---@class BitbucketPRCommentTreeNode
+---@field comment BitbucketPRCommentEntry
+---@field children BitbucketPRCommentTreeNode[]
+
 ---@class BitbucketPRCommentsTabState
 ---@field pr BitbucketPR|nil
----@field comments BitbucketPRComments|"loading"|nil
+---@field comments BitbucketPRCommentTreeNode[]|"loading"|nil
 ---@field line_map table<number, table>
 
 ---@class BitbucketPRCommentsTabState

@@ -34,7 +34,7 @@ end
 --   [pr] #123 Title                        c t author repo created updated
 --       source/branch -> target/branch     (meta row + separator line)
 ---@param opts { width: number, height: number }
----@param repos BitbucketRepoPRGroup[]
+---@param repos BitbucketPRViewGroup[]
 ---@return string[]
 ---@return table[]
 ---@return table<number, table>
@@ -56,7 +56,7 @@ end
 --   [repo]
 --   [children PR rows using tree renderer]
 ---@param opts { width: number, height: number }
----@param repos BitbucketRepoPRGroup[]
+---@param repos BitbucketPRViewGroup[]
 ---@return string[]
 ---@return table[]
 ---@return table<number, table>

@@ -25,28 +25,6 @@ local function cancel_active_requests()
 	active_pullrequests_handle = nil
 end
 
----@param view BitbucketViewConfig|nil
----@return string
-local function view_id(view)
-	if view == nil then
-		return "default"
-	end
-	return view.key or view.name or "default"
-end
-
----@param a BitbucketViewConfig|nil
----@param b BitbucketViewConfig|nil
----@return boolean
-local function same_view(a, b)
-	if a == nil and b == nil then
-		return true
-	end
-	if a == nil or b == nil then
-		return false
-	end
-	return view_id(a) == view_id(b)
-end
-
 ---@return integer
 local function next_request_token()
 	state.request_seq = (state.request_seq or 0) + 1
@@ -71,9 +49,9 @@ local function get_current_user(on_done)
 	end)
 end
 
----@param groups BitbucketRepoPRGroup[]|nil
+---@param groups BitbucketPRViewGroup[]|nil
 ---@param view BitbucketViewConfig|nil
----@return BitbucketRepoPRGroup[]
+---@return BitbucketPRViewGroup[]
 local function apply_filter(groups, view)
 	local source = groups or {}
 	local view_filter = (view and view.filter) or nil
@@ -88,7 +66,7 @@ local function apply_filter(groups, view)
 	local filtered_groups = {}
 	for _, group in ipairs(source) do
 		local prs = {}
-		for _, pr in ipairs(group.pullrequests or {}) do
+		for _, pr in ipairs(group.prs or {}) do
 			local ok, keep = pcall(view_filter, pr, ctx)
 			if ok and keep == true then
 				table.insert(prs, pr)
@@ -99,8 +77,7 @@ local function apply_filter(groups, view)
 			table.insert(filtered_groups, {
 				workspace = group.workspace,
 				repo = group.repo,
-				full_name = group.full_name,
-				pullrequests = prs,
+				prs = prs,
 			})
 		end
 	end
@@ -120,7 +97,7 @@ local function load_active_view(opts, on_done)
 	end
 
 	local target_view = state.active_view
-	local target_view_id = view_id(target_view)
+	local target_view_id = helper.view_id(target_view)
 	local token = next_request_token()
 	state.latest_request_tokens[target_view_id] = token
 	cancel_active_requests()
@@ -135,7 +112,7 @@ local function load_active_view(opts, on_done)
 	end
 
 	get_current_user(function(user_err)
-		if not same_view(state.active_view, target_view) then
+		if not helper.same_view(state.active_view, target_view) then
 			return
 		end
 
@@ -159,10 +136,10 @@ local function load_active_view(opts, on_done)
 
 		active_pullrequests_handle = pullrequests.fetch_pullrequests((target_view and target_view.repos) or {}, {
 			force_load = opts.force_load == true,
-		}, function(groups, err)
+		}, function(prs, err)
 			active_pullrequests_handle = nil
 
-			if not same_view(state.active_view, target_view) then
+			if not helper.same_view(state.active_view, target_view) then
 				return
 			end
 
@@ -179,7 +156,8 @@ local function load_active_view(opts, on_done)
 				first_err = err
 			end
 
-			local filtered_groups = apply_filter(groups, target_view)
+			local grouped_prs = helper.group_prs_by_repo(prs)
+			local filtered_groups = apply_filter(grouped_prs, target_view)
 			local has_groups = #filtered_groups > 0
 
 			if first_err ~= nil then
@@ -217,7 +195,6 @@ function M.refresh_current_view(on_done)
 	load_active_view({ force_load = true }, on_done)
 end
 
----TODO: Pretty bad. Checkout actions to refresh a pr and combine
 ---@param pr BitbucketPR|nil
 ---@param on_done fun()|nil
 function M.refresh_pr(pr, on_done)
@@ -229,9 +206,9 @@ function M.refresh_pr(pr, on_done)
 		return
 	end
 
-	local workspace = (pr.repo and pr.repo.workspace) or ""
-	local repo = (pr.repo and pr.repo.repo) or ""
 	local pr_id = pr.id
+	local workspace = tostring(pr.workspace or "")
+	local repo = tostring(pr.repo or "")
 
 	if workspace == "" or repo == "" then
 		footer.notify("warn", "PR missing workspace/repo info")
@@ -254,9 +231,9 @@ function M.refresh_pr(pr, on_done)
 
 		for _, group in ipairs(repos) do
 			if group.workspace == workspace and group.repo == repo then
-				for i, existing_pr in ipairs(group.pullrequests or {}) do
+				for i, existing_pr in ipairs(group.prs or {}) do
 					if existing_pr.id == pr_id then
-						group.pullrequests[i] = fetched_pr
+						group.prs[i] = fetched_pr
 						replaced = true
 						break
 					end

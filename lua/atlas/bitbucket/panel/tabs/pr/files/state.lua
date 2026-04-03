@@ -1,7 +1,7 @@
 ---@class BitbucketPRFilesTabState
 ---@field pr BitbucketPR|nil
 ---@field diffstat BitbucketPRDiffstat|"loading"|nil
----@field diff BitbucketPRDiff|"loading"|nil
+---@field diff string|"loading"|nil
 ---@field line_map table<number, table>
 
 ---@class BitbucketPRFilesTabState

@@ -1,5 +1,5 @@
 ---@class BitbucketRepoState
----@field detail BitbucketRepositoryDetail|"loading"|nil
+---@field detail BitbucketRepository|"loading"|nil
 
 ---@class BitbucketRepoState
 local M = {

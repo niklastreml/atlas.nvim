@@ -1,9 +1,8 @@
 local M = {}
 
 local service = require("atlas.bitbucket.api.service")
-local normalizer = require("atlas.bitbucket.api.normalizer")
+local pr_normalizer = require("atlas.bitbucket.api.pr_normalizer")
 local cache = require("atlas.core.cache")
-local memory_cache = require("atlas.core.memory_cache")
 local logger = require("atlas.core.logger")
 local http = require("atlas.core.http")
 local state = require("atlas.bitbucket.state")
@@ -17,23 +16,8 @@ end
 
 ---@param workspace string
 ---@param repo string
----@param readme string|nil
----@param pullrequests BitbucketPR[]
----@return BitbucketRepoPRGroup
-local function build_group(workspace, repo, readme, pullrequests)
-	return {
-		workspace = workspace,
-		repo = repo,
-		full_name = string.format("%s/%s", workspace, repo),
-		readme = (type(readme) == "string" and readme ~= "") and readme or "README.md",
-		pullrequests = pullrequests,
-	}
-end
-
----@param workspace string
----@param repo string
----@param opts { user: string, token: string, cache_ttl: number, force: boolean, readme?: string|nil }
----@param on_done fun(groups: BitbucketRepoPRGroup[], err: string|nil)
+---@param opts { user: string, token: string, cache_ttl: number, force: boolean, pagelen: number|nil }
+---@param on_done fun(prs: BitbucketPR[], err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 local function fetch_pullrequests_single(workspace, repo, opts, on_done)
 	local key = cache_key(workspace, repo)
@@ -41,11 +25,7 @@ local function fetch_pullrequests_single(workspace, repo, opts, on_done)
 		local cached = cache.get(key)
 		if cached and cached.value then
 			logger.loginfo("Bitbucket cache hit", { workspace = workspace, repo = repo })
-			if cached.value.readme == nil or cached.value.readme == "" then
-				cached.value.readme = (type(opts.readme) == "string" and opts.readme ~= "") and opts.readme
-					or "README.md"
-			end
-			on_done({ cached.value }, nil)
+			on_done(cached.value, nil)
 			return nil
 		end
 	end
@@ -55,7 +35,13 @@ local function fetch_pullrequests_single(workspace, repo, opts, on_done)
 		repo = repo,
 	})
 
-	local endpoint = string.format("/repositories/%s/%s/pullrequests?state=%s&pagelen=50", workspace, repo, state.pr_state)
+	local endpoint = string.format(
+		"/repositories/%s/%s/pullrequests?state=%s&pagelen=%d",
+		workspace,
+		repo,
+		state.pr_state,
+		tonumber(opts.pagelen) or 50
+	)
 	local user, token, _ = service.get_auth()
 	local headers = service.build_headers(user, token)
 
@@ -90,12 +76,8 @@ local function fetch_pullrequests_single(workspace, repo, opts, on_done)
 			return
 		end
 
-		local raw_values = result.values or {}
-		local normalized = normalizer.normalize_prs(raw_values, workspace, repo)
-		local group = build_group(workspace, repo, opts.readme, normalized)
-
-		cache.set(key, group, opts.cache_ttl)
-
+		local normalized = pr_normalizer.pullrequests(result, workspace, repo)
+		cache.set(key, normalized, opts.cache_ttl)
 		logger.loginfo("Fetch success", {
 			workspace = workspace,
 			repo = repo,
@@ -103,13 +85,13 @@ local function fetch_pullrequests_single(workspace, repo, opts, on_done)
 			cached = true,
 		})
 
-		on_done({ group }, nil)
+		on_done(normalized, nil)
 	end)
 end
 
 ---@param view_repos BitbucketRepoConfig[]
----@param opts { force_load: boolean }
----@param on_done fun(values: BitbucketRepoPRGroup[], err: string[]|nil)
+---@param opts { force_load: boolean, pagelen: number|nil }
+---@param on_done fun(values: BitbucketPR[], err: string[]|nil)
 ---@return { cancel: fun() }|nil
 function M.fetch_pullrequests(view_repos, opts, on_done)
 	if view_repos == nil or #view_repos == 0 then
@@ -132,7 +114,7 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 
 	local pending = #view_repos
 	local done = false
-	local all_groups = {}
+	local all_prs = {}
 	local errors = {}
 	local handles = {}
 
@@ -145,7 +127,7 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 		end
 	end
 
-	local function finish(groups, err)
+	local function finish(prs, err)
 		if done then
 			return
 		end
@@ -154,8 +136,8 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 			table.insert(errors, tostring(err))
 		end
 
-		for _, group in ipairs(groups or {}) do
-			table.insert(all_groups, group)
+		for _, pr in ipairs(prs or {}) do
+			table.insert(all_prs, pr)
 		end
 
 		pending = pending - 1
@@ -164,13 +146,13 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 
 			logger.loginfo("Bitbucket batch fetch completed", {
 				repo_count = #view_repos,
-				group_count = #all_groups,
+				pr_count = #all_prs,
 				error_count = #errors,
 			})
 			if #errors > 0 then
-				on_done(all_groups, errors)
+				on_done(all_prs, errors)
 			else
-				on_done(all_groups, nil)
+				on_done(all_prs, nil)
 			end
 		end
 	end
@@ -179,7 +161,7 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 		local handle = fetch_pullrequests_single(
 			repo.workspace,
 			repo.repo,
-			{ user = user, token = token, cache_ttl = ttl, force = opts.force_load, readme = repo.readme },
+			{ user = user, token = token, cache_ttl = ttl, force = opts.force_load, pagelen = opts.pagelen },
 			finish
 		)
 		if handle ~= nil then
@@ -195,7 +177,7 @@ end
 ---@param workspace string
 ---@param repo string
 ---@param pr_id string|number
----@param on_done fun(pr: BitbucketPR|nil, err: string|nil)
+---@param on_done fun(detail: BitbucketPRDetail|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_pullrequest(workspace, repo, pr_id, on_done)
 	local endpoint = string.format("/repositories/%s/%s/pullrequests/%s", workspace, repo, tostring(pr_id))
@@ -205,62 +187,22 @@ function M.fetch_pullrequest(workspace, repo, pr_id, on_done)
 			return
 		end
 
-		local pr = normalizer.normalize_pr(result, workspace, repo)
-		on_done(pr, nil)
-	end)
-end
-
----@param workspace string
----@param repo string
----@param pr_id string|number
----@param opts { force_load?: boolean }
----@param on_done fun(detail: BitbucketPRDetail|nil, err: string|nil)
----@return { job_id: integer, cancel: fun() }|nil
-function M.fetch_detail(workspace, repo, pr_id, opts, on_done)
-	opts = opts or {}
-	local ttl = service.cache_ttl()
-	local detail_cache_key = string.format("bitbucket:mem:pr_detail:%s/%s/%s", workspace, repo, tostring(pr_id))
-	if not opts.force_load then
-		local cached = memory_cache.get(detail_cache_key)
-		if cached and cached.value then
-			on_done(cached.value, nil)
-			return nil
-		end
-	end
-
-	local endpoint = string.format("/repositories/%s/%s/pullrequests/%s", workspace, repo, tostring(pr_id))
-	return service.request("GET", endpoint, nil, nil, function(result, err)
-		if err then
-			on_done(nil, err)
+		local detail = pr_normalizer.pr_detail(result, workspace, repo)
+		if not detail then
+			on_done(nil, "Invalid pull request detail response")
 			return
 		end
-
-		local detail = normalizer.normalize_pr_detail(result, workspace, repo)
-		memory_cache.set(detail_cache_key, detail, ttl)
-
 		on_done(detail, nil)
 	end)
 end
 
 ---@param diffstat_url string
----@param opts { force_load?: boolean }
 ---@param on_done fun(diffstat: BitbucketPRDiffstat|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_diffstat(diffstat_url, opts, on_done)
-	opts = opts or {}
-	local ttl = service.cache_ttl()
 	if type(diffstat_url) ~= "string" or diffstat_url == "" then
 		on_done(nil, "Missing Bitbucket diffstat URL")
 		return nil
-	end
-
-	local diffstat_cache_key = string.format("bitbucket:mem:pr_diffstat:%s", diffstat_url)
-	if not opts.force_load then
-		local cached = memory_cache.get(diffstat_cache_key)
-		if cached and cached.value then
-			on_done(cached.value, nil)
-			return nil
-		end
 	end
 
 	return service.request("GET", diffstat_url, nil, nil, function(result, err)
@@ -269,64 +211,18 @@ function M.fetch_diffstat(diffstat_url, opts, on_done)
 			return
 		end
 
-		local diffstat = normalizer.normalize_pr_diffstat(result)
-		memory_cache.set(diffstat_cache_key, diffstat, ttl)
+		local diffstat = pr_normalizer.pr_diffstat(result)
 		on_done(diffstat, nil)
 	end)
 end
 
----@param commits_url string
----@param opts { force_load?: boolean }
----@param on_done fun(commits: BitbucketPRCommits|nil, err: string|nil)
----@return { job_id: integer, cancel: fun() }|nil
-function M.fetch_commits(commits_url, opts, on_done)
-	opts = opts or {}
-	local ttl = service.cache_ttl()
-	if type(commits_url) ~= "string" or commits_url == "" then
-		on_done(nil, "Missing Bitbucket commits URL")
-		return nil
-	end
-
-	local commits_cache_key = string.format("bitbucket:mem:pr_commits:%s", commits_url)
-	if not opts.force_load then
-		local cached = memory_cache.get(commits_cache_key)
-		if cached and cached.value then
-			on_done(cached.value, nil)
-			return nil
-		end
-	end
-
-	return service.request("GET", commits_url, nil, nil, function(result, err)
-		if err then
-			on_done(nil, err)
-			return
-		end
-
-		local commits = normalizer.normalize_pr_commits(result)
-		memory_cache.set(commits_cache_key, commits, ttl)
-		on_done(commits, nil)
-	end)
-end
-
 ---@param diff_url string
----@param opts { force_load?: boolean }
----@param on_done fun(diff: BitbucketPRDiff|nil, err: string|nil)
+---@param on_done fun(diff: string|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.fetch_diff(diff_url, opts, on_done)
-	opts = opts or {}
-	local ttl = service.cache_ttl()
+function M.fetch_diff(diff_url, on_done)
 	if type(diff_url) ~= "string" or diff_url == "" then
 		on_done(nil, "Missing Bitbucket diff URL")
 		return nil
-	end
-
-	local diff_cache_key = string.format("bitbucket:mem:pr_diff:%s", diff_url)
-	if not opts.force_load then
-		local cached = memory_cache.get(diff_cache_key)
-		if cached and cached.value then
-			on_done(cached.value, nil)
-			return nil
-		end
 	end
 
 	return service.request_text("GET", diff_url, nil, nil, function(text, err)
@@ -335,31 +231,38 @@ function M.fetch_diff(diff_url, opts, on_done)
 			return
 		end
 
-		local diff = { text = text or "" }
-		memory_cache.set(diff_cache_key, diff, ttl)
+		local diff = text or ""
 		on_done(diff, nil)
 	end)
 end
 
----@param activity_url string
----@param opts { force_load?: boolean }
----@param on_done fun(activity: BitbucketPRActivity|nil, err: string|nil)
+---@param commits_url string
+---@param on_done fun(commits: BitbucketPRCommits|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.fetch_activity(activity_url, opts, on_done)
-	opts = opts or {}
-	local ttl = service.cache_ttl()
-	if type(activity_url) ~= "string" or activity_url == "" then
-		on_done(nil, "Missing Bitbucket activity URL")
+function M.fetch_commits(commits_url, on_done)
+	if type(commits_url) ~= "string" or commits_url == "" then
+		on_done(nil, "Missing Bitbucket commits URL")
 		return nil
 	end
 
-	local activity_cache_key = string.format("bitbucket:mem:pr_activity:%s", activity_url)
-	if not opts.force_load then
-		local cached = memory_cache.get(activity_cache_key)
-		if cached and cached.value then
-			on_done(cached.value, nil)
-			return nil
+	return service.request("GET", commits_url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
 		end
+
+		local commits = pr_normalizer.pr_commits(result)
+		on_done(commits, nil)
+	end)
+end
+
+---@param activity_url string
+---@param on_done fun(activity: BitbucketPRActivity|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_activity(activity_url, on_done)
+	if type(activity_url) ~= "string" or activity_url == "" then
+		on_done(nil, "Missing Bitbucket activity URL")
+		return nil
 	end
 
 	return service.request("GET", activity_url, nil, nil, function(result, err)
@@ -368,31 +271,18 @@ function M.fetch_activity(activity_url, opts, on_done)
 			return
 		end
 
-		local activity = normalizer.normalize_pr_activity(result)
-		memory_cache.set(activity_cache_key, activity, ttl)
+		local activity = pr_normalizer.pr_activity(result)
 		on_done(activity, nil)
 	end)
 end
 
 ---@param comments_url string
----@param opts { force_load?: boolean }
 ---@param on_done fun(comments: BitbucketPRComments|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_comments(comments_url, opts, on_done)
-	opts = opts or {}
-	local ttl = service.cache_ttl()
 	if type(comments_url) ~= "string" or comments_url == "" then
 		on_done(nil, "Missing Bitbucket comments URL")
 		return nil
-	end
-
-	local comments_cache_key = string.format("bitbucket:mem:pr_comments:%s", comments_url)
-	if not opts.force_load then
-		local cached = memory_cache.get(comments_cache_key)
-		if cached and cached.value then
-			on_done(cached.value, nil)
-			return nil
-		end
 	end
 
 	return service.request("GET", comments_url, nil, nil, function(result, err)
@@ -401,8 +291,7 @@ function M.fetch_comments(comments_url, opts, on_done)
 			return
 		end
 
-		local comments = normalizer.normalize_pr_comments(result)
-		memory_cache.set(comments_cache_key, comments, ttl)
+		local comments = pr_normalizer.pr_comments(result)
 		on_done(comments, nil)
 	end)
 end

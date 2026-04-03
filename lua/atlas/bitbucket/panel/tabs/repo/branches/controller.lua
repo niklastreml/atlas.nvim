@@ -103,7 +103,7 @@ function M.show(repo)
 		return
 	end
 
-	local branches_url = (detail.links and detail.links.branches and detail.links.branches.href) or ""
+	local branches_url = (detail.links and detail.links.branches) or ""
 	if branches_url == "" then
 		tab_state.branches = nil
 		footer.notify("error", "Missing branches URL")

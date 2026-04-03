@@ -128,7 +128,7 @@ function M.show(pr)
 	footer.notify("loading", "Loading activity...")
 	require("atlas.bitbucket.panel.init").refresh()
 
-	active_handle = pullrequests.fetch_activity(activity_url, {}, function(activity, err)
+	active_handle = pullrequests.fetch_activity(activity_url, function(activity, err)
 		active_handle = nil
 
 		if state.pr == nil or state.pr.id ~= next_id then
@@ -149,11 +149,11 @@ function M.show(pr)
 end
 
 function M.refresh()
-	if state.pr == nil then
+	local pr = state.pr
+	if pr == nil then
 		return
 	end
 
-	local pr = state.pr
 	local activity_url = (pr.links or {}).activity
 	if type(activity_url) ~= "string" or activity_url == "" then
 		return
@@ -164,7 +164,7 @@ function M.refresh()
 	start_spinner()
 	require("atlas.bitbucket.panel.init").refresh()
 
-	active_handle = pullrequests.fetch_activity(activity_url, { force_load = true }, function(activity, err)
+	active_handle = pullrequests.fetch_activity(activity_url, function(activity, err)
 		active_handle = nil
 
 		if state.pr == nil then
@@ -237,6 +237,5 @@ function M.move(delta)
 	local target = math.max(1, math.min(max_line, line + step))
 	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
-
 
 return M

@@ -25,7 +25,7 @@ end
 ---@return string line
 ---@return table[] spans
 function M.render(pr, opts)
-	local commit_hash = tostring(pr.source_commit_hash or "")
+	local commit_hash = tostring((pr.source or {}).commit_hash or "")
 	if commit_hash == "" then
 		commit_hash = "-"
 	elseif #commit_hash > MAX_HASH_CHIP_LEN then
@@ -38,7 +38,7 @@ function M.render(pr, opts)
 		pr.is_draft and { label = "DRAFT", hl = "AtlasBitbucketPRDraft" } or nil,
 	}
 
-	local pad = math.max(0, ((opts or {}).padding_x) or 1)
+	local pad = math.max(0, (opts or {}).padding_x or 1)
 	local line = string.rep(" ", pad)
 	local spans = {}
 	local col = pad
@@ -61,7 +61,7 @@ function M.render(pr, opts)
 	return line, spans
 end
 
----@param repo table
+---@param repo BitbucketRepository
 ---@param opts { padding_x?: integer }|nil
 ---@return string line
 ---@return table[] spans
@@ -72,12 +72,15 @@ function M.render_repo(repo, opts)
 
 	local chips = {
 		{ label = string.format("%s %s", icons.entity("files"), utils.human_size(repo.size)), hl = "AtlasTabInactive" },
-		{ label = string.format("%s %s", icons.entity("branch"), tostring((repo.mainbranch or {}).name or "-")), hl = "AtlasBitbucketPRMerged" },
+		{
+			label = string.format("%s %s", icons.entity("branch"), tostring(repo.mainbranch or "-")),
+			hl = "AtlasBitbucketPRMerged",
+		},
 		repo.is_private == true and { label = "private", hl = "AtlasBitbucketPRDraft" }
 			or { label = "public", hl = "AtlasTextPositive" },
 	}
 
-	local pad = math.max(0, ((opts or {}).padding_x) or 1)
+	local pad = math.max(0, (opts or {}).padding_x or 1)
 	local line = string.rep(" ", pad)
 	local spans = {}
 	local col = pad

@@ -117,29 +117,34 @@ function M.show(repo)
 			footer.notify("error", "Failed to load repo detail: " .. tostring(err))
 		else
 			state.detail = detail
-
-			local ref = (detail.mainbranch or {}).name or "main"
-			local readme_path = tostring(repo.readme or "README.md")
+			local ref = (detail.mainbranch or {}) or "-"
+			local readme_path = tostring(repo.readme)
 
 			tab_state.readme = "loading"
+			readme_handle = repositories.fetch_readme(
+				workspace,
+				repo_slug,
+				ref,
+				readme_path,
+				{},
+				function(readme, readme_err)
+					readme_handle = nil
 
-			readme_handle = repositories.fetch_readme(workspace, repo_slug, ref, readme_path, {}, function(readme, readme_err)
-				readme_handle = nil
+					if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
+						return
+					end
 
-				if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
-					return
+					if readme_err ~= nil then
+						tab_state.readme = nil
+					else
+						tab_state.readme = readme
+					end
+
+					stop_spinner()
+					footer.notify("success", "Repository loaded", 1200)
+					require("atlas.bitbucket.panel.init").refresh()
 				end
-
-				if readme_err ~= nil then
-					tab_state.readme = nil
-				else
-					tab_state.readme = readme
-				end
-
-				stop_spinner()
-				footer.notify("success", "Repository loaded", 1200)
-				require("atlas.bitbucket.panel.init").refresh()
-			end)
+			)
 		end
 
 		require("atlas.bitbucket.panel.init").refresh()
@@ -200,6 +205,5 @@ function M.move(delta)
 	local target = math.max(1, math.min(max_line, line + step))
 	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
-
 
 return M

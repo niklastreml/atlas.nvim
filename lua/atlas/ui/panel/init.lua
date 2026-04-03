@@ -145,11 +145,9 @@ function M.on_select(provider, item)
 		if type(item) == "table" then
 			if item.kind == "repo" then
 				panel_type = "repo"
-				-- For repos, the item itself contains workspace/repo_slug/full_name
 				panel_item = item
 			elseif item.kind == "pr" or item.kind == "pr_meta" then
 				panel_type = "pr"
-				-- For PRs, the actual PR data is in item.pr
 				panel_item = item.pr
 			end
 		end

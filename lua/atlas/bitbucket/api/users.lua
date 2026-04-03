@@ -1,6 +1,7 @@
 local M = {}
 
 local service = require("atlas.bitbucket.api.service")
+local user_normalizer = require("atlas.bitbucket.api.user_normalizer")
 local cache = require("atlas.core.cache")
 local memory_cache = require("atlas.core.memory_cache")
 local logger = require("atlas.core.logger")
@@ -29,18 +30,9 @@ function M.fetch_current_user(on_done)
 			return
 		end
 
-		local current_user = {
-			type = tostring(result.type or ""),
-			created_on = tostring(result.created_on or ""),
-			display_name = tostring(result.display_name or ""),
-			nickname = tostring(result.nickname or ""),
-			username = tostring(result.username or ""),
-			uuid = tostring(result.uuid or ""),
-			account_id = tostring(result.account_id or ""),
-		}
-
+		local current_user = user_normalizer.current_user(result)
 		logger.loginfo("Bitbucket current user fetch success", {
-			display_name = current_user.display_name,
+			display_name = current_user.display_name or current_user.name,
 		})
 		cache.set(cachekey, current_user, 86400)
 
@@ -69,16 +61,7 @@ function M.fetch_workspaces(on_done)
 			return
 		end
 
-		local workspaces = {}
-		for _, item in ipairs((result.values or {})) do
-			local workspace = (type(item.workspace) == "table") and item.workspace or {}
-			table.insert(workspaces, {
-				slug = tostring(workspace.slug or ""),
-				uuid = tostring(workspace.uuid or ""),
-				administrator = item.administrator == true,
-			})
-		end
-
+		local workspaces = user_normalizer.workspaces(result)
 		logger.loginfo("Bitbucket workspace fetch success", {
 			workspace_count = #workspaces,
 		})

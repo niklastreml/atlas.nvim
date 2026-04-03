@@ -1,17 +1,32 @@
 --------------------------------------------------------------------------------
--- Endpoint: GET /repositories/{{workspace}}/{{repo_slug}}/pullrequests?state=%s&pagelen=50
+-- User
 --------------------------------------------------------------------------------
 
+---@class BitbucketCurrentUser
+---@field name string|nil
+---@field account_id string|nil
+---@field nickname string|nil
+---@field display_name string
+---@field username string|nil
+---@field uuid string
+---@field created_on string|nil
+
+--------------------------------------------------------------------------------
+-- Workspace
+--------------------------------------------------------------------------------
+---@class BitbucketWorkspace
+---@field administrator boolean
+---@field slug string
+---@field uuid string
+---@field links_self string|nil
+
+--------------------------------------------------------------------------------
+-- PullRequest
+--------------------------------------------------------------------------------
 ---@class BitbucketPRAuthor
 ---@field name string
 ---@field account_id string
 ---@field nickname string
-
----@class BitbucketPRRepo
----@field name string
----@field link string
----@field workspace string
----@field repo string
 
 ---@class BitbucketPRLinks
 ---@field self string
@@ -25,9 +40,9 @@
 ---@field activity string
 ---@field statuses string
 
----@class BitbucketPRSummary
----@field raw string
----@field html string
+---@class BitbucketPRRef
+---@field branch string
+---@field commit_hash string
 
 ---@class BitbucketPR
 ---@field id number
@@ -37,55 +52,34 @@
 ---@field tasks number
 ---@field author BitbucketPRAuthor
 ---@field is_draft boolean
----@field state string
----@field repo BitbucketPRRepo
+---@field state  "OPEN"|"MERGED"|"DECLINED"
 ---@field links BitbucketPRLinks
----@field summary BitbucketPRSummary
----@field source_branch string
----@field target_branch string
----@field source_commit_hash string
+---@field destination BitbucketPRRef
+---@field source BitbucketPRRef
 ---@field close_source_branch boolean
 ---@field created_on string
 ---@field updated_on string
----@field _raw table
-
----@class BitbucketRepoPRGroup
 ---@field workspace string
 ---@field repo string
----@field full_name string
----@field readme string|nil
----@field pullrequests BitbucketPR[]
 
 --------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}
+-- PR Details
 --------------------------------------------------------------------------------
 
----@class BitbucketPRParticipant
----@field account_id string
----@field name string
----@field nickname string
+---@class BitbucketPRParticipant: BitbucketPRAuthor
 ---@field role string
 ---@field approved boolean
----@field state string|nil
----@field participated_on string|nil
-
----@class BitbucketPRReviewerDecision
----@field account_id string
----@field name string
----@field nickname string
----@field decision "approved"|"changes_requested"|"pending"
----@field approved boolean
+---@field state "approved"|"changes_requested"|"pending"|nil
 ---@field participated_on string|nil
 
 ---@class BitbucketPRDetail: BitbucketPR
 ---@field reviewers BitbucketPRAuthor[]
 ---@field participants BitbucketPRParticipant[]
----@field decisions BitbucketPRReviewerDecision[]
 ---@field approvals_count number
 ---@field changes_requested_count number
 
 --------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/diffstat/{workspace}/{repo_slug}
+-- PR Diff Stats
 --------------------------------------------------------------------------------
 
 ---@class BitbucketPRDiffstatFile
@@ -104,42 +98,13 @@
 ---@field size number
 
 --------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}/commits
+-- PR Activity
 --------------------------------------------------------------------------------
-
----@class BitbucketPRCommit
----@field hash string
----@field short_hash string
----@field date string
----@field message string
----@field author_name string
----@field author_nickname string
----@field html_url string
-
----@class BitbucketPRCommits
----@field entries BitbucketPRCommit[]
----@field size number
-
---------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/diff/{workspace}/{repo_slug}:{src}%0D{dst}?from_pullrequest_id={id}&topic=true
---------------------------------------------------------------------------------
-
----@class BitbucketPRDiff
----@field text string
-
---------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}/activity
---------------------------------------------------------------------------------
-
----@class BitbucketPRActivityActor
----@field name string
----@field account_id string
----@field nickname string
 
 ---@class BitbucketPRActivityUpdateEntry
 ---@field kind "update"
 ---@field date string
----@field actor BitbucketPRActivityActor
+---@field actor BitbucketPRAuthor
 ---@field state string
 ---@field draft boolean
 ---@field title string
@@ -155,13 +120,13 @@
 ---@class BitbucketPRActivityApprovalEntry
 ---@field kind "approval"
 ---@field date string
----@field actor BitbucketPRActivityActor
+---@field actor BitbucketPRAuthor
 
 ---@class BitbucketPRActivityCommentEntry
 ---@field kind "comment"
 ---@field date string
 ---@field updated_on string
----@field actor BitbucketPRActivityActor
+---@field actor BitbucketPRAuthor
 ---@field id number
 ---@field content_raw string
 ---@field deleted boolean
@@ -171,16 +136,11 @@
 
 ---@class BitbucketPRActivity
 ---@field entries BitbucketPRActivityEntry[]
----@field size number
+---@field next string|nil
 
 --------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}/comments
+-- Comments
 --------------------------------------------------------------------------------
-
----@class BitbucketPRCommentAuthor
----@field name string
----@field account_id string
----@field nickname string
 
 ---@class BitbucketPRCommentContent
 ---@field type string
@@ -198,77 +158,70 @@
 ---@class BitbucketPRCommentLinks
 ---@field self string
 ---@field html string
----@field code string
+---@field code string|nil
 
 ---@class BitbucketPRCommentEntry
 ---@field id number
----@field parent_id number|nil
 ---@field created_on string
 ---@field updated_on string
 ---@field content BitbucketPRCommentContent
----@field author BitbucketPRCommentAuthor
+---@field author BitbucketPRAuthor
 ---@field deleted boolean
 ---@field pending boolean
 ---@field comment_type string
 ---@field links BitbucketPRCommentLinks
 ---@field inline BitbucketPRCommentInline|nil
----@field children BitbucketPRCommentEntry[]
 
 ---@class BitbucketPRComments
 ---@field entries BitbucketPRCommentEntry[]
----@field size number
+---@field size number|nil
+---@field page number|nil
+---@field pagelen number|nil
+---@field next string|nil
+
+--------------------------------------------------------------------------------
+-- Commits
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRCommit
+---@field hash string
+---@field short_hash string
+---@field date string
+---@field message string
+---@field author_name string
+---@field author_nickname string
+---@field html_url string
+
+---@class BitbucketPRCommits
+---@field entries BitbucketPRCommit[]
 ---@field page number
----@field pagelen number
 
 --------------------------------------------------------------------------------
--- Endpoint: GET /2.0/user/workspaces
+-- Repository
 --------------------------------------------------------------------------------
-
----@class BitbucketWorkspace
----@field slug string
----@field uuid string
----@field administrator boolean
-
---------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}
---------------------------------------------------------------------------------
+---@class BitbucketRepositoryLinks
+---@field href string
+---@field commits string
+---@field branches string
+---@field tags string
 
 ---@class BitbucketRepository
 ---@field uuid string
+---@field type string
+---@field description string
 ---@field name string
 ---@field full_name string
 ---@field slug string
 ---@field workspace string
 ---@field is_private boolean
 ---@field updated_on string
-
---------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}
---------------------------------------------------------------------------------
-
----@class BitbucketRepositoryLink
----@field href string
-
----@class BitbucketRepositoryLinks
----@field commits BitbucketRepositoryLink
----@field branches BitbucketRepositoryLink
----@field tags BitbucketRepositoryLink
-
----@class BitbucketRepositoryMainBranch
----@field name string
----@field type string
-
----@class BitbucketRepositoryDetail
----@field description string
----@field is_private boolean
+---@field links BitbucketRepositoryLinks
 ---@field size number
 ---@field created_on string
----@field updated_on string
----@field links BitbucketRepositoryLinks
----@field mainbranch BitbucketRepositoryMainBranch|nil
+---@field mainbranch string
 
 --------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/refs/branches
+-- Branches
 --------------------------------------------------------------------------------
 
 ---@class BitbucketRepositoryBranch
@@ -280,10 +233,9 @@
 
 ---@class BitbucketRepositoryBranches
 ---@field entries BitbucketRepositoryBranch[]
----@field size number
 
 --------------------------------------------------------------------------------
--- Endpoint: GET /2.0/repositories/{workspace}/{repo_slug}/refs/tags
+-- Tags
 --------------------------------------------------------------------------------
 
 ---@class BitbucketRepositoryTag
@@ -295,17 +247,3 @@
 
 ---@class BitbucketRepositoryTags
 ---@field entries BitbucketRepositoryTag[]
----@field size number
-
---------------------------------------------------------------------------------
--- Endpoint: GET /2.0/user
---------------------------------------------------------------------------------
-
----@class BitbucketCurrentUser
----@field type string
----@field created_on string
----@field display_name string
----@field nickname string
----@field username string
----@field uuid string
----@field account_id string

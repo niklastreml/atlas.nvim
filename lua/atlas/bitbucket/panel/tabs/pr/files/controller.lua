@@ -129,7 +129,7 @@ function M.show(pr)
 		state.diff = "loading"
 		start_spinner()
 
-		diff_handle = pullrequests.fetch_diff(diff_url, {}, function(diff, err)
+		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
 			diff_handle = nil
 
 			if state.pr == nil or state.pr.id ~= next_id then
@@ -193,7 +193,7 @@ function M.refresh()
 	end
 
 	if type(diff_url) == "string" and diff_url ~= "" then
-		diff_handle = pullrequests.fetch_diff(diff_url, { force_load = true }, function(diff, err)
+		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
 			diff_handle = nil
 
 			if state.pr == nil then

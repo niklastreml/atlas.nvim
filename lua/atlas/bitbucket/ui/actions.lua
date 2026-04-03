@@ -101,7 +101,6 @@ function M.refresh_pr(pr)
 		return
 	end
 
-	service.clear_pullrequest_memory_cache(pr)
 	controller.refresh_pr(pr, function()
 		local panel = require("atlas.ui.panel")
 		if panel.is_open() then

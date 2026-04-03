@@ -1,3 +1,8 @@
+---@class BitbucketPRViewGroup
+---@field workspace string
+---@field repo string
+---@field prs BitbucketPR[]
+
 ---@class BitbucketState
 ---@field active_view BitbucketViewConfig|nil
 ---@field current_view BitbucketViewConfig|nil
@@ -5,7 +10,7 @@
 ---@field is_loading boolean
 ---@field error string|nil
 ---@field current_user BitbucketCurrentUser|nil
----@field repos BitbucketRepoPRGroup[]|nil
+---@field repos BitbucketPRViewGroup[]|nil
 ---@field pr_tree table[]|nil  -- Flat tree for main view rendering
 ---@field latest_request_tokens table<string, integer>
 ---@field request_seq integer

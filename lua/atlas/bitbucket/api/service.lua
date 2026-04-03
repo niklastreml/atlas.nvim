@@ -55,39 +55,6 @@ function M.clear_memory_cache()
 	memory_cache.clear_all()
 end
 
----@param pr BitbucketPR
-function M.clear_pullrequest_memory_cache(pr)
-	local workspace = tostring(pr.repo.workspace or "")
-	local repo = tostring(pr.repo.repo or "")
-	local pr_id = tostring(pr.id or "")
-	if workspace ~= "" and repo ~= "" and pr_id ~= "" then
-		memory_cache.delete(string.format("bitbucket:mem:pr_detail:%s/%s/%s", workspace, repo, pr_id))
-	end
-
-	local links = pr.links or {}
-	local commits_url = tostring(links.commits or "")
-	local diffstat_url = tostring(links.diffstat or "")
-	local diff_url = tostring(links.diff or "")
-	local comments_url = tostring(links.comments or "")
-	local activity_url = tostring(links.activity or "")
-
-	if commits_url ~= "" then
-		memory_cache.delete("bitbucket:mem:pr_commits:" .. commits_url)
-	end
-	if diffstat_url ~= "" then
-		memory_cache.delete("bitbucket:mem:pr_diffstat:" .. diffstat_url)
-	end
-	if diff_url ~= "" then
-		memory_cache.delete("bitbucket:mem:pr_diff:" .. diff_url)
-	end
-	if comments_url ~= "" then
-		memory_cache.delete("bitbucket:mem:pr_comments:" .. comments_url)
-	end
-	if activity_url ~= "" then
-		memory_cache.delete("bitbucket:mem:pr_activity:" .. activity_url)
-	end
-end
-
 ---@param result any
 ---@return string|nil
 function M.api_error_message(result)

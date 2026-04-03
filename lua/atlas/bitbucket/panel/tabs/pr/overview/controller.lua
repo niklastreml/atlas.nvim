@@ -73,9 +73,8 @@ function M.show(pr)
 		return
 	end
 
-	local repo = pr.repo or {}
-	local workspace = tostring(repo.workspace or "")
-	local repo_slug = tostring(repo.repo or "")
+	local workspace = tostring(pr.workspace or "")
+	local repo_slug = tostring(pr.repo or "")
 	local pr_id = tostring(pr.id or "")
 
 	if workspace == "" or repo_slug == "" or pr_id == "" then
@@ -89,7 +88,7 @@ function M.show(pr)
 	footer.notify("loading", string.format("Loading PR #%s...", pr_id))
 	require("atlas.bitbucket.panel.init").refresh()
 
-	active_handle = pullrequests.fetch_detail(workspace, repo_slug, pr_id, {}, function(detail, err)
+	active_handle = pullrequests.fetch_pullrequest(workspace, repo_slug, pr_id, function(detail, err)
 		active_handle = nil
 
 		if state.pr == nil or tostring(state.pr.id) ~= pr_id then
@@ -110,14 +109,13 @@ function M.show(pr)
 end
 
 function M.refresh()
-	if state.pr == nil then
+	local pr = state.pr
+	if pr == nil then
 		return
 	end
 
-	local pr = state.pr
-	local repo = pr.repo or {}
-	local workspace = tostring(repo.workspace or "")
-	local repo_slug = tostring(repo.repo or "")
+	local workspace = tostring(pr.workspace or "")
+	local repo_slug = tostring(pr.repo or "")
 	local pr_id = tostring(pr.id or "")
 
 	if workspace == "" or repo_slug == "" or pr_id == "" then
@@ -129,7 +127,7 @@ function M.refresh()
 	start_spinner()
 	require("atlas.bitbucket.panel.init").refresh()
 
-	active_handle = pullrequests.fetch_detail(workspace, repo_slug, pr_id, { force_load = true }, function(detail, err)
+	active_handle = pullrequests.fetch_pullrequest(workspace, repo_slug, pr_id, function(detail, err)
 		active_handle = nil
 
 		if state.pr == nil or tostring(state.pr.id) ~= pr_id then
