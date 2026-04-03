@@ -9,7 +9,8 @@ local footer = require("atlas.ui.components.footer")
 local detail_handle = nil
 local readme_handle = nil
 
-local panel_spinner = spinner.create({
+local panel_spinner
+panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
 		local detail_loading = state.detail == "loading"

@@ -1,28 +1,56 @@
 local M = {}
 
 local icons = require("atlas.ui.icons")
+local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
 local utils = require("atlas.utils")
-local highlights = require("atlas.ui.highlights")
-local table_view = require("atlas.ui.components.table")
+local helper = require("atlas.bitbucket.ui.helper")
+
+---@param spans table[]
+---@param lines string[]
+---@param line integer
+---@param start_col integer
+---@param end_col integer
+---@param hl_group string
+local function add_span(spans, lines, line, start_col, end_col, hl_group)
+	local text = lines[line + 1] or ""
+	local max_col = #text
+	local s = math.max(0, math.min(start_col, max_col))
+	local e = math.max(s, math.min(end_col, max_col))
+	if e <= s then
+		return
+	end
+	table.insert(spans, {
+		line = line,
+		start_col = s,
+		end_col = e,
+		hl_group = hl_group,
+	})
+end
 
 ---@param pr BitbucketPR
 ---@param width integer|nil
 ---@return string[] lines
 ---@return table[] spans
 function M.render(pr, width)
-	local author = (pr.author and pr.author.nickname) or (pr.author and pr.author.name) or "unknown"
+	local author_display = (pr.author and pr.author.nickname) or (pr.author and pr.author.name) or "unknown"
+	local author_name_for_hl = (pr.author and pr.author.name) or author_display
 	local timestamp = (pr.created_on and pr.created_on ~= "") and pr.created_on or ""
-	local repo = (pr.repo or {}).name or "-"
-	local pr_icon = icons.entity("pr")
+	local timestamp_text = utils.relative_time_text(timestamp)
+	local updated_text = utils.relative_time_text(tostring(pr.updated_on or timestamp or ""))
+	local repo_name = tostring((pr.repo or {}).name or "-")
+	local source_branch = tostring(pr.source_branch or "-")
+	local target_branch = tostring(pr.target_branch or "-")
+	local close_source = pr.close_source_branch == true
+	local branch_icon = icons.entity("branch")
 	local repo_icon = icons.entity("repo")
-	local source_icon = icons.entity("branch")
 	local author_icon = icons.entity("author")
-	local close_icon = (pr.close_source_branch and icons.entity("success")) or icons.entity("pending")
+	local id_text = string.format("#%s", tostring(pr.id or "?"))
+	local title_text = tostring(pr.title or "")
+	local title = string.format(" %s %s", id_text, title_text)
 
-	local title = string.format("%s #%s • %s", pr_icon, tostring(pr.id or "?"), tostring(pr.title or ""))
-	local byline = string.format("%s by @%s - %s", author_icon, author, utils.relative_time_text(timestamp))
-	local repo_icon_hl = highlights.dynamic_for(repo) or "AtlasTextPositive"
-	local close_line = string.format("close source %s", (pr.close_source_branch and "yes") or "no")
+	local by_prefix = string.format("%s by @", author_icon)
+	local by_sep = " - "
+	local byline = by_prefix .. author_display .. by_sep .. timestamp_text
 
 	local lines = {
 		title,
@@ -31,58 +59,87 @@ function M.render(pr, width)
 	}
 
 	local rows = {
-		{ icon = repo_icon, text = repo, icon_hl = repo_icon_hl },
 		{
-			icon = source_icon,
-			text = string.format("%s -> %s", tostring(pr.source_branch or "-"), tostring(pr.target_branch or "-")),
-			icon_hl = "AtlasTextPositive",
+			k1 = "Branch:",
+			v1 = string.format("%s %s -> %s", branch_icon, source_branch, target_branch),
+			v1_hl = "AtlasTextPositive",
+			k2 = "Repo:",
+			v2 = string.format("%s %s", repo_icon, repo_name),
+			v2_hl = helper.repo_hl(repo_name),
 		},
 		{
-			icon = close_icon,
-			text = close_line,
-			icon_hl = (pr.close_source_branch and "AtlasTextPositive") or "AtlasTextMuted",
+			k1 = "Close source:",
+			v1 = close_source and "yes" or "no",
+			v1_hl = close_source and "AtlasTextPositive" or "AtlasLogError",
+			k2 = "Updated:",
+			v2 = updated_text,
+			v2_hl = "AtlasTextMuted",
 		},
 	}
 
-	local table_lines, _, table_spans = table_view.render({
-		width = width or 60,
-		margin = 0,
-		column_gap = 1,
-		show_header = false,
-		fill = false,
+	local table_lines, _, table_spans = table_tree_v2.render({
 		columns = {
-			{ key = "icon", name = "", width = 2, can_grow = false },
-			{ key = "text", name = "", min_width = 20, can_grow = false },
+			{ key = "k1", name = "", can_grow = false },
+			{ key = "v1", name = "", can_grow = true },
+			{ key = "k2", name = "", can_grow = false },
+			{ key = "v2", name = "", can_grow = true, grow_last = true },
 		},
 		rows = rows,
+		width = width or 60,
+		margin = 1,
+		show_header = false,
+		column_gap = 2,
+		fill = true,
 		cell_hl = function(row, col)
-			if col.key == "icon" then
-				return row.icon_hl
+			if col.key == "k1" or col.key == "k2" then
+				local label = col.key == "k1" and row.k1 or row.k2
+				return {
+					{ start_col = 0, end_col = #label, hl_group = "AtlasTextMuted" },
+				}
 			end
-			if col.key == "text" then
-				return "AtlasTextMuted"
+
+			if col.key == "v1" then
+				return {
+					{ start_col = 0, end_col = #row.v1, hl_group = row.v1_hl },
+				}
 			end
+
+			if col.key == "v2" then
+				return {
+					{ start_col = 0, end_col = #row.v2, hl_group = row.v2_hl },
+				}
+			end
+
 			return nil
 		end,
 	})
 
-	local table_base = #lines
-	for _, line in ipairs(table_lines) do
-		table.insert(lines, line)
+	for _, l in ipairs(table_lines) do
+		table.insert(lines, l)
 	end
+	table.insert(lines, "")
 
-	local id_prefix = string.format("%s #%s • ", pr_icon, tostring(pr.id or "?"))
+	local author_hl = helper.author_hl(author_name_for_hl)
 	local spans = {
-		{ line = 0, line_hl_group = "AtlasTabInactive" },
-		{ line = 1, line_hl_group = "AtlasTabInactive" },
-		{ line = 0, start_col = 0, end_col = #pr_icon, hl_group = "AtlasBitbucketTheme" },
-		{ line = 1, start_col = 0, end_col = #author_icon, hl_group = "AtlasTextWarning" },
-		{ line = 0, start_col = #id_prefix, end_col = #title, hl_group = "AtlasTextMuted" },
+		{ line = 0, line_hl_group = "AtlasPanelHeaderBg" },
+		{ line = 1, line_hl_group = "AtlasPanelHeaderBg" },
 	}
 
-	for _, span in ipairs(table_spans or {}) do
+	local id_start = 1
+	local id_end = id_start + #id_text
+	add_span(spans, lines, 0, id_start, id_end, "AtlasTextMuted")
+
+	local author_start = #by_prefix - 1
+	local author_end = author_start + #("@" .. author_display)
+	add_span(spans, lines, 1, author_start, author_end, author_hl)
+
+	local ts_start = author_end + #by_sep
+	local ts_end = ts_start + #timestamp_text
+	add_span(spans, lines, 1, ts_start, ts_end, "AtlasTextMuted")
+
+	for _, span in ipairs(table_spans) do
 		table.insert(spans, {
-			line = table_base + span.line,
+			line = span.line + 3,
 			start_col = span.start_col,
 			end_col = span.end_col,
 			hl_group = span.hl_group,
@@ -92,30 +149,19 @@ function M.render(pr, width)
 	return lines, spans
 end
 
----@param repo table
+---@param repo { workspace:string|nil, full_name:string|nil, readme:string|nil }
 ---@param detail BitbucketRepositoryDetail
 ---@param width integer|nil
 ---@return string[] lines
 ---@return table[] spans
 function M.render_repo(repo, detail, width)
-	local repo_icon = icons.entity("repo")
-	local created_icon = icons.entity("created")
-	local updated_icon = icons.entity("updated")
-
-	local full_name = tostring(repo.full_name or repo.repo or "Repository")
-	local title = string.format("%s %s", repo_icon, full_name)
-
-	local is_private = detail.is_private == true
-	local updated_on = tostring(detail.updated_on or "")
-	local byline = string.format(
-		"%s %s - %s",
-		icons.entity("author"),
-		is_private and "private" or "public",
-		utils.relative_time_text(updated_on)
-	)
-
-	local created_on = "-"
-	created_on = utils.relative_time_text(tostring(detail.created_on or ""))
+	local full_name = tostring(repo.full_name or "Repository")
+	local title = " " .. full_name
+	local workspace = tostring(repo.workspace or "unknown")
+	local timestamp_text = utils.relative_time_text(tostring(detail.created_on or ""))
+	local by_prefix = string.format("%s by @", icons.entity("author"))
+	local by_sep = " - "
+	local byline = by_prefix .. workspace .. by_sep .. timestamp_text
 
 	local lines = {
 		title,
@@ -123,62 +169,22 @@ function M.render_repo(repo, detail, width)
 		"",
 	}
 
-	local rows = {
-		{ icon = created_icon, text = string.format("created %s", created_on), icon_hl = "AtlasTextMuted" },
-		{
-			icon = updated_icon,
-			text = string.format("updated %s", utils.relative_time_text(updated_on)),
-			icon_hl = "AtlasTextMuted",
-		},
-	}
-
-	local table_lines, _, table_spans = table_view.render({
-		width = width or 60,
-		margin = 0,
-		column_gap = 1,
-		show_header = false,
-		fill = false,
-		columns = {
-			{ key = "icon", name = "", width = 2, can_grow = false },
-			{ key = "text", name = "", min_width = 20, can_grow = false },
-		},
-		rows = rows,
-		cell_hl = function(row, col)
-			if col.key == "icon" then
-				return row.icon_hl
-			end
-			if col.key == "text" then
-				return "AtlasTextMuted"
-			end
-			return nil
-		end,
-	})
-
-	local table_base = #lines
-	for _, line in ipairs(table_lines) do
-		table.insert(lines, line)
-	end
-
+	local repo_hl = helper.repo_hl(full_name)
+	local owner_hl = helper.author_hl(workspace)
 	local spans = {
-		{ line = 0, line_hl_group = "AtlasTabInactive" },
-		{ line = 1, line_hl_group = "AtlasTabInactive" },
-		{
-			line = 0,
-			start_col = 0,
-			end_col = #repo_icon,
-			hl_group = highlights.dynamic_for(full_name) or "AtlasBitbucketTheme",
-		},
-		{ line = 1, start_col = 0, end_col = #icons.entity("author"), hl_group = "AtlasTextWarning" },
+		{ line = 0, line_hl_group = "AtlasPanelHeaderBg" },
+		{ line = 1, line_hl_group = "AtlasPanelHeaderBg" },
 	}
 
-	for _, span in ipairs(table_spans or {}) do
-		table.insert(spans, {
-			line = table_base + span.line,
-			start_col = span.start_col,
-			end_col = span.end_col,
-			hl_group = span.hl_group,
-		})
-	end
+	add_span(spans, lines, 0, 1, 1 + #full_name, repo_hl)
+
+	local owner_start = #by_prefix - 1
+	local owner_end = owner_start + #("@" .. workspace)
+	add_span(spans, lines, 1, owner_start, owner_end, owner_hl)
+
+	local ts_start = owner_end + #by_sep
+	local ts_end = ts_start + #timestamp_text
+	add_span(spans, lines, 1, ts_start, ts_end, "AtlasTextMuted")
 
 	return lines, spans
 end

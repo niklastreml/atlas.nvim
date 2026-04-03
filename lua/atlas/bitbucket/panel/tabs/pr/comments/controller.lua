@@ -47,7 +47,8 @@ local function jump_next_comment(win, delta)
 	return false
 end
 
-local panel_spinner = spinner.create({
+local panel_spinner
+panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
 		if state.comments ~= "loading" then

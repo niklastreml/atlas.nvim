@@ -8,7 +8,8 @@ local footer = require("atlas.ui.components.footer")
 local diffstat_handle = nil
 local diff_handle = nil
 
-local panel_spinner = spinner.create({
+local panel_spinner
+panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
 		local diffstat_loading = state.diffstat == "loading"

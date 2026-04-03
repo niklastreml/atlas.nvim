@@ -7,7 +7,8 @@ local footer = require("atlas.ui.components.footer")
 
 local active_handle = nil
 
-local panel_spinner = spinner.create({
+local panel_spinner
+panel_spinner = spinner.create({
 	interval_ms = 120,
 	on_tick = function()
 		if state.commits ~= "loading" then
