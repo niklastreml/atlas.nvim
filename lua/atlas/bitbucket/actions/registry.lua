@@ -32,10 +32,7 @@ local function has_merge_link(ctx)
 	if not has_pr(ctx) or ctx.pr == nil then
 		return false
 	end
-	local merge_url = tostring((ctx.pr.links or {}).merge or "")
-	if merge_url == "" then
-		merge_url = tostring((((ctx.pr._raw or {}).links or {}).merge or {}).href or "")
-	end
+	local merge_url = tostring(ctx.pr.links.merge or "")
 	return merge_url ~= ""
 end
 
@@ -45,7 +42,8 @@ local function has_approve_link(ctx)
 	if not has_pr(ctx) or ctx.pr == nil then
 		return false
 	end
-	return tostring((ctx.pr.links or {}).approve or "") ~= ""
+	local link = tostring(ctx.pr.links.approve or "")
+	return link ~= ""
 end
 
 ---@param ctx BitbucketActionContext
@@ -265,7 +263,9 @@ function M.available(ctx)
 
 					if not ok then
 						custom_done(false, string.format("Custom action failed: %s", tostring(err)))
-						logger.logerror(string.format("Custom action '%s' execution error: %s", item.label, tostring(err)))
+						logger.logerror(
+							string.format("Custom action '%s' execution error: %s", item.label, tostring(err))
+						)
 					end
 				end,
 			})

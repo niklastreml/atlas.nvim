@@ -158,9 +158,8 @@ function M.resolve_repo_path_for_pr(pr, opts)
 		return nil, "no PR selected"
 	end
 
-	local repo = pr.repo or {}
-	local ws = tostring(repo.workspace or "")
-	local slug = tostring(repo.repo or "")
+	local ws = tostring(pr.workspace or "")
+	local slug = tostring(pr.repo or "")
 	if ws == "" or slug == "" then
 		return nil, "missing PR destination repository fields"
 	end
@@ -184,7 +183,7 @@ function M.checkout_pr(pr, on_done)
 		return
 	end
 
-	local src_branch = tostring(pr.source_branch or "")
+	local src_branch = tostring(pr.source.branch or "")
 	if src_branch == "" then
 		on_done(nil, "PR source branch is missing")
 		return

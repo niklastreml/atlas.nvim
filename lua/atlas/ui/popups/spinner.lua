@@ -119,7 +119,6 @@ function M.stop()
 	delete_buf()
 end
 
---- FIX: Too many VimResized commands in the project. Make it universal for all ?
 local resize_group = vim.api.nvim_create_augroup("AtlasSpinnerResize", { clear = true })
 vim.api.nvim_create_autocmd("VimResized", {
 	group = resize_group,

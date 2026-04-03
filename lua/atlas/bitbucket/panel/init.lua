@@ -178,7 +178,6 @@ local function register_panel_keys()
 			end
 
 			if result ~= nil and result.changed_pr then
-				bitbucket_service.clear_pullrequest_memory_cache(item)
 				bitbucket_controller.refresh_pr(item, function()
 					M.refresh()
 				end)
