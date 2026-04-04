@@ -206,6 +206,8 @@ return {
 #### Creating Issues
 
 - Press `c` in Jira view to open the Create Issue window.
+  
+<img width="1017" height="852" alt="CleanShot 2026-04-04 at 04 06 23" src="https://github.com/user-attachments/assets/76913fbf-1667-4f35-9962-d3c1b4619c7f" />
 
 #### Comments
 
