@@ -278,19 +278,65 @@ line_handlers.heading = {
 	end,
 }
 
+-- > [!NOTE]
+-- > panel content
+line_handlers.panel = {
+	match = function(line, ctx)
+		if not line:match("^>%s?%[!%u+%]%s*$") then
+			return false
+		end
+		return ctx.i + 1 <= #ctx.lines and ctx.lines[ctx.i + 1]:match("^>%s?") ~= nil
+	end,
+	parse = function(line, ctx)
+		local callout = line:match("^>%s?%[!(%u+)%]")
+		local reverse_map = {
+			NOTE = "info",
+			WARNING = "warning",
+			CAUTION = "error",
+			TIP = "success",
+		}
+		local panel_type = reverse_map[callout] or "info"
+
+		ctx.i = ctx.i + 1
+		local content_lines = {}
+		while ctx.i <= #ctx.lines and ctx.lines[ctx.i]:match("^>%s?") do
+			table.insert(content_lines, (ctx.lines[ctx.i]:gsub("^>%s?", "")))
+			ctx.i = ctx.i + 1
+		end
+		ctx.i = ctx.i - 1
+
+		return {
+			type = "panel",
+			attrs = { panelType = panel_type },
+			content = {
+				{
+					type = "paragraph",
+					content = parse_inline(table.concat(content_lines, "\n")),
+				},
+			},
+		}
+	end,
+}
+
 -- > quoted text
 line_handlers.blockquote = {
 	match = function(line)
 		return line:match("^>%s?") ~= nil
 	end,
-	parse = function(line)
-		local content = line:gsub("^>%s?", "")
+	parse = function(line, ctx)
+		local content_lines = {}
+		while ctx.i <= #ctx.lines and ctx.lines[ctx.i]:match("^>%s?") do
+			table.insert(content_lines, (ctx.lines[ctx.i]:gsub("^>%s?", "")))
+			ctx.i = ctx.i + 1
+		end
+		ctx.i = ctx.i - 1
+
 		return {
 			type = "blockquote",
 			content = {
 				{
 					type = "paragraph",
-					content = parse_inline(content),
+					content = parse_inline(table.concat(content_lines, "\n")),
 				},
 			},
 		}
@@ -444,6 +490,7 @@ line_handlers.paragraph = {
 local handler_order = {
 	"codeBlock",
 	"heading",
+	"panel",
 	"blockquote",
 	"bulletList",
 	"orderedList",

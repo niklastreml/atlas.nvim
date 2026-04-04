@@ -131,6 +131,60 @@ describe("markdown to adf", function()
 		end)
 	end)
 
+	describe("panel", function()
+		it("converts info panel", function()
+			assert.are.same(
+				doc({
+					{
+						type = "panel",
+						attrs = { panelType = "info" },
+						content = { p({ text("info text") }) },
+					},
+				}),
+				md.to_adf("> [!NOTE]\n> info text")
+			)
+		end)
+
+		it("converts warning panel", function()
+			assert.are.same(
+				doc({
+					{
+						type = "panel",
+						attrs = { panelType = "warning" },
+						content = { p({ text("warn") }) },
+					},
+				}),
+				md.to_adf("> [!WARNING]\n> warn")
+			)
+		end)
+
+		it("converts error panel", function()
+			assert.are.same(
+				doc({
+					{
+						type = "panel",
+						attrs = { panelType = "error" },
+						content = { p({ text("danger") }) },
+					},
+				}),
+				md.to_adf("> [!CAUTION]\n> danger")
+			)
+		end)
+
+		it("converts success panel", function()
+			assert.are.same(
+				doc({
+					{
+						type = "panel",
+						attrs = { panelType = "success" },
+						content = { p({ text("nice") }) },
+					},
+				}),
+				md.to_adf("> [!TIP]\n> nice")
+			)
+		end)
+	end)
+
 	describe("blockquote", function()
 		it("converts quoted line", function()
 			assert.are.same(
