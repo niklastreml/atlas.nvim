@@ -34,54 +34,36 @@ function M.get_myself(callback)
 	end)
 end
 
----@param issue_key string
+---@param opts { project: string|nil, issue_key: string|nil }
 ---@param query string|nil
 ---@param callback fun(users: JiraUser[]|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.get_assignable_users(issue_key, query, callback)
-	if type(issue_key) ~= "string" or issue_key == "" then
-		callback(nil, "Missing issue key")
+function M.get_assignable_users(opts, query, callback)
+	opts = opts or {}
+	local project = type(opts.project) == "string" and opts.project or ""
+	local issue_key = type(opts.issue_key) == "string" and opts.issue_key or ""
+
+	if project == "" and issue_key == "" then
+		callback(nil, "Missing project or issue key")
 		return nil
 	end
 
 	local q = tostring(query or "")
-	local endpoint = string.format("/user/assignable/search?issueKey=%s&query=%s", issue_key, vim.fn.escape(q, "&=?"))
-	logger.loginfo("Jira fetch assignable users", { issue_key = issue_key, query = q })
-
-	return service.request("GET", endpoint, nil, function(result, err)
-		if err ~= nil or type(result) ~= "table" then
-			callback(nil, err or "Empty response")
-			return
-		end
-
-		local users = {}
-		for _, raw in ipairs(result) do
-			if type(raw) == "table" then
-				table.insert(users, {
-					account_id = tostring(raw.accountId or ""),
-					display_name = tostring(raw.displayName or ""),
-					email = tostring(raw.emailAddress or ""),
-				})
-			end
-		end
-
-		callback(users, nil)
-	end)
-end
-
----@param project_key string
----@param query string|nil
----@param callback fun(users: JiraUser[]|nil, err: string|nil)
----@return { job_id: integer, cancel: fun() }|nil
-function M.get_assignable_users_for_project(project_key, query, callback)
-	if type(project_key) ~= "string" or project_key == "" then
-		callback(nil, "Missing project key")
-		return nil
+	local escaped_q = vim.fn.escape(q, "&=?")
+	local params = { "query=" .. escaped_q }
+	if issue_key ~= "" then
+		table.insert(params, "issueKey=" .. vim.fn.escape(issue_key, "&=?"))
 	end
+	if project ~= "" then
+		table.insert(params, "project=" .. vim.fn.escape(project, "&=?"))
+	end
+	local endpoint = "/user/assignable/search?" .. table.concat(params, "&")
 
-	local q = tostring(query or "")
-	local endpoint = string.format("/user/assignable/search?project=%s&query=%s", project_key, vim.fn.escape(q, "&=?"))
-	logger.loginfo("Jira fetch assignable users for project", { project_key = project_key, query = q })
+	logger.loginfo("Jira fetch assignable users", {
+		issue_key = issue_key,
+		project = project,
+		query = q,
+	})
 
 	return service.request("GET", endpoint, nil, function(result, err)
 		if err ~= nil or type(result) ~= "table" then

@@ -17,6 +17,7 @@ local spinner_popup = require("atlas.ui.popups.spinner")
 ---@field assignee JiraUser|nil
 ---@field reporter JiraUser
 ---@field project string
+---@field issue_key string|nil
 ---@field issue_type JiraIssueType|nil
 
 ---@class IssueWindows
@@ -61,6 +62,7 @@ local state = {
 		assignee = nil,
 		reporter = nil,
 		project = "",
+		issue_key = nil,
 		issue_type = nil,
 	},
 	assignees = nil,
@@ -190,6 +192,7 @@ local function close_ui()
 		assignee = nil,
 		reporter = nil,
 		project = "",
+		issue_key = nil,
 		issue_type = nil,
 	}
 	state.assignees = nil
@@ -410,8 +413,8 @@ function M.open(on_submit, opts)
 	update_meta_buffer(state.content_width)
 
 	if state.fields.project ~= "" then
-		state.assignees_handle = users_api.get_assignable_users_for_project(
-			state.fields.project,
+		state.assignees_handle = users_api.get_assignable_users(
+			{ project = state.fields.project, issue_key = state.fields.issue_key },
 			"",
 			function(users, err)
 				state.assignees_handle = nil
