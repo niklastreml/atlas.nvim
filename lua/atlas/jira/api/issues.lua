@@ -165,7 +165,53 @@ function M.get_issue_description(issue_key, on_done)
 	end)
 end
 
-function M.create_issue(fields, callback) end
+function M.create_issue(fields, callback)
+	if type(callback) ~= "function" then
+		return nil
+	end
+
+	if type(fields) ~= "table" then
+		callback(nil, "Missing fields")
+		return nil
+	end
+
+	if not fields.summary or fields.summary == "" then
+		callback(nil, "Missing summary")
+		return nil
+	end
+
+	if not fields.project then
+		callback(nil, "Missing project")
+		return nil
+	end
+
+	if not fields.issuetype then
+		callback(nil, "Missing issue type")
+		return nil
+	end
+
+	logger.loginfo("Jira create issue", { summary = fields.summary })
+
+	local payload = { fields = fields }
+
+	return service.request("POST", "/issue", payload, function(result, err)
+		if err ~= nil then
+			callback(nil, err)
+			return
+		end
+
+		if not result or not result.key then
+			callback(nil, "Invalid response")
+			return
+		end
+
+		callback({
+			key = result.key,
+			id = result.id,
+			self = result.self,
+		}, nil)
+	end)
+end
 
 ---@param issue_key string
 ---@param fields table
@@ -200,6 +246,66 @@ function M.update_issue(issue_key, fields, callback)
 	end)
 end
 
-function M.get_create_meta(project_key, callback) end
+---@class JiraCreateIssueType
+---@field id string
+---@field name string
+---@field description string
+---@field subtask boolean
+
+---@param project_key string
+---@param callback fun(issue_types: JiraCreateIssueType[]|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.get_create_meta(project_key, callback)
+	if type(project_key) ~= "string" or project_key == "" then
+		callback(nil, "Missing project key")
+		return nil
+	end
+
+	local escaped_key = vim.fn.escape(project_key, "&=?")
+	local endpoint = string.format("/issue/createmeta?projectKeys=%s&expand=projects.issuetypes", escaped_key)
+	logger.loginfo("Jira fetch create metadata", { project_key = project_key })
+
+	return service.request("GET", endpoint, nil, function(result, err)
+		if err ~= nil or type(result) ~= "table" then
+			callback(nil, err or "Empty response")
+			return
+		end
+
+		local projects = result.projects
+		if type(projects) ~= "table" then
+			callback({}, nil)
+			return
+		end
+
+		local matched_project = nil
+		for _, project in ipairs(projects) do
+			if type(project) == "table" and tostring(project.key or "") == project_key then
+				matched_project = project
+				break
+			end
+		end
+
+		local project = matched_project or projects[1]
+		local raw_types = type(project) == "table" and project.issuetypes or nil
+		if type(raw_types) ~= "table" then
+			callback({}, nil)
+			return
+		end
+
+		local issue_types = {}
+		for _, raw in ipairs(raw_types) do
+			if type(raw) == "table" then
+				table.insert(issue_types, {
+					id = tostring(raw.id or ""),
+					name = tostring(raw.name or ""),
+					description = tostring(raw.description or ""),
+					subtask = raw.subtask == true,
+				})
+			end
+		end
+
+		callback(issue_types, nil)
+	end)
+end
 
 return M

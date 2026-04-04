@@ -85,6 +85,18 @@ Accept: application/json
   }
 %}
 
+### Get create metadata (issue types)
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/createmeta?projectKeys={{jira_project_key}}&expand=projects.issuetypes
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Accept: application/json
+
+> {%
+  const firstIssueTypeId = response.body?.projects?.[0]?.issuetypes?.[0]?.id;
+  if (firstIssueTypeId) {
+    client.global.set("jira_issue_type_id", String(firstIssueTypeId));
+  }
+%}
+
 ### Assign issue
 PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/assignee
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
@@ -181,7 +193,7 @@ Accept: application/json
     },
     "summary": "New issue from atlas.nvim",
     "issuetype": {
-      "name": "Task"
+      "id": "{{jira_issue_type_id}}"
     }
   }
 }

@@ -1,4 +1,4 @@
-# Atlas.nvim
+    # Atlasmnvim
 
 A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your editor.
 
@@ -203,6 +203,10 @@ return {
 }
 ```
 
+#### Creating Issues
+
+- Press `c` in Jira view to open the Create Issue window.
+
 #### Comments
 
 - Create, reply, edit, and delete comments directly in the Jira panel.
@@ -228,6 +232,7 @@ return {
 - [x] Search issues
 - [ ] Add support for custom fields in issue details
 - [ ] Create issues
+- [ ] Create and edit issue templates
 
 ### Commands
 

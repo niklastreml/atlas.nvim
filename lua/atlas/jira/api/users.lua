@@ -69,6 +69,41 @@ function M.get_assignable_users(issue_key, query, callback)
 	end)
 end
 
+---@param project_key string
+---@param query string|nil
+---@param callback fun(users: JiraUser[]|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.get_assignable_users_for_project(project_key, query, callback)
+	if type(project_key) ~= "string" or project_key == "" then
+		callback(nil, "Missing project key")
+		return nil
+	end
+
+	local q = tostring(query or "")
+	local endpoint = string.format("/user/assignable/search?project=%s&query=%s", project_key, vim.fn.escape(q, "&=?"))
+	logger.loginfo("Jira fetch assignable users for project", { project_key = project_key, query = q })
+
+	return service.request("GET", endpoint, nil, function(result, err)
+		if err ~= nil or type(result) ~= "table" then
+			callback(nil, err or "Empty response")
+			return
+		end
+
+		local users = {}
+		for _, raw in ipairs(result) do
+			if type(raw) == "table" then
+				table.insert(users, {
+					account_id = tostring(raw.accountId or ""),
+					display_name = tostring(raw.displayName or ""),
+					email = tostring(raw.emailAddress or ""),
+				})
+			end
+		end
+
+		callback(users, nil)
+	end)
+end
+
 ---@param issue_key string
 ---@param account_id string|nil
 ---@param callback fun(ok: boolean, err: string|nil)

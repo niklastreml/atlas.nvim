@@ -31,6 +31,7 @@ local ICONS = {
 		tag = "󰓹",
 		author = "",
 		user = "",
+		project = "",
 	},
 	jira_type = {
 		epic = "󰛨",
@@ -54,7 +55,7 @@ function M.provider(name)
 	return ICONS.provider[name] or ICONS.fallback
 end
 
----@param name "repo"|"refresh"|"pr"|"comments"|"tasks"|"created"|"story_points"|"updated"|"commit"|"overview"|"files"|"activity"|"comment"|"reply"|"edit"|"delete"|"success"|"warning"|"info"|"error"|"pending"|"branch"|"tag"|"author"|"user"
+---@param name "repo"|"refresh"|"pr"|"comments"|"tasks"|"created"|"story_points"|"updated"|"commit"|"overview"|"files"|"activity"|"comment"|"reply"|"edit"|"delete"|"success"|"warning"|"info"|"error"|"pending"|"branch"|"tag"|"author"|"user"|"project"
 function M.entity(name)
 	return ICONS.entity[name] or ICONS.fallback
 end
