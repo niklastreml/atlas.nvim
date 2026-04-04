@@ -25,7 +25,7 @@ end
 function M.open(ctx, on_done)
 	local actions = registry.available(ctx)
 	if #actions == 0 then
-		on_done({ changed_issue = false, message = "No actions available" }, nil)
+		on_done({ changed_issue_key = nil, message = "No actions available" }, nil)
 		return
 	end
 
@@ -37,7 +37,7 @@ function M.open(ctx, on_done)
 		end,
 	}, function(action)
 		if action == nil then
-			on_done({ changed_issue = false, message = "Action cancelled" }, nil)
+			on_done({ changed_issue_key = nil, message = "Action cancelled" }, nil)
 			return
 		end
 

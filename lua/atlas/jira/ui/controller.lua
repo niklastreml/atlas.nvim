@@ -381,8 +381,8 @@ function M.open_actions()
 			footer.notify("info", result.message, 1200)
 		end
 
-		if result ~= nil and result.changed_issue then
-			M.refresh_issue(issue)
+		if result ~= nil and result.changed_issue_key ~= nil and result.changed_issue_key ~= "" then
+			M.refresh_issue(result.changed_issue_key)
 		end
 	end)
 end
@@ -400,12 +400,12 @@ function M.open_issue_search_popup()
 	end)
 end
 
----@param issue JiraIssue|nil
+---@param issue_key string|nil
 ---@param on_done fun()|nil
-function M.refresh_issue(issue, on_done)
+function M.refresh_issue(issue_key, on_done)
 	on_done = on_done or function() end
 
-	local issue_key = type(issue) == "table" and tostring(issue.key or "") or ""
+	issue_key = type(issue_key) == "string" and issue_key or ""
 	if issue_key == "" then
 		footer.notify("warn", "Issue key missing")
 		on_done()
@@ -483,7 +483,8 @@ function M.refresh_current_issue(on_done)
 	end
 
 	local issue = type(node._issue) == "table" and node._issue or nil
-	M.refresh_issue(issue, on_done)
+	local issue_key = type(issue) == "table" and tostring(issue.key or "") or ""
+	M.refresh_issue(issue_key, on_done)
 end
 
 return M

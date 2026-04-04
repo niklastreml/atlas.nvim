@@ -244,13 +244,12 @@ return {
 | Main UI   | `A`       | Open Issue/PR actions                   |
 | Main UI   | `gx`      | Open Issue/PR in browser                |
 | Main UI   | `y`       | Copy Issue/PR id                        |
-| Main      | `Y`       | Copy Issue/PR URL                       |
-| Main      | `/`       | Search repositories                     |
+| Main UI   | `Y`       | Copy Issue/PR URL                       |
+| Main UI   | `/`       | Search Issues/Repositories              |
 | Bitbucket | `o`       | Toggle repository panel                 |
 | Jira      | `K`       | Show issue details popup                |
 | Jira      | `c`       | Create issue                            |
 | Jira      | `m`       | Toggle Overview mode (markdown/raw ADF) |
-| Jira      | `e`       | Edit Overview description               |
 | Jira      | `a`       | Add comment (Comments tab)              |
 | Jira      | `c`       | Reply to comment (Comments tab)         |
 | Jira      | `d`       | Delete comment (Comments tab)           |

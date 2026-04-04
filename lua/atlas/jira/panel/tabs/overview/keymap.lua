@@ -26,15 +26,6 @@ function M.setup()
 		nowait = true,
 		desc = "Refresh overview",
 	})
-
-	vim.keymap.set("n", "e", function()
-		controller.edit_description()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Edit description",
-	})
 end
 
 function M.teardown()

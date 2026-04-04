@@ -15,7 +15,7 @@ local footer = require("atlas.ui.components.footer")
 ---@field description string|nil
 
 ---@class JiraActionResult
----@field changed_issue boolean
+---@field changed_issue_key string|nil
 ---@field message string|nil
 
 ---@class JiraActionDef
@@ -93,7 +93,7 @@ local ACTIONS = {
 				end
 				if #transitions == 0 then
 					footer.notify("info", "No transitions available", 1200)
-					done({ changed_issue = false, message = "No transitions available" }, nil)
+					done({ changed_issue_key = nil, message = "No transitions available" }, nil)
 					return
 				end
 
@@ -105,7 +105,7 @@ local ACTIONS = {
 					end,
 				}, function(selected)
 					if selected == nil then
-						done({ changed_issue = false, message = "Transition cancelled" }, nil)
+						done({ changed_issue_key = nil, message = "Transition cancelled" }, nil)
 						return
 					end
 
@@ -124,7 +124,7 @@ local ACTIONS = {
 						)
 
 						done({
-							changed_issue = true,
+							changed_issue_key = issue_key,
 							message = string.format("Transitioned to %s", selected.name or "status"),
 						}, nil)
 					end)
@@ -176,7 +176,7 @@ local ACTIONS = {
 
 					if #options == 0 then
 						footer.notify("info", "No assignee options", 1200)
-						done({ changed_issue = false, message = "No assignee options" }, nil)
+						done({ changed_issue_key = nil, message = "No assignee options" }, nil)
 						return
 					end
 
@@ -190,7 +190,7 @@ local ACTIONS = {
 						end,
 					}, function(selected)
 						if selected == nil then
-							done({ changed_issue = false, message = "Assign cancelled" }, nil)
+							done({ changed_issue_key = nil, message = "Assign cancelled" }, nil)
 							return
 						end
 
@@ -204,7 +204,7 @@ local ACTIONS = {
 
 							if selected.account_id == nil then
 								footer.notify("success", string.format("Unassigned %s", issue_key), 1200)
-								done({ changed_issue = true, message = "Unassigned" }, nil)
+								done({ changed_issue_key = issue_key, message = "Unassigned" }, nil)
 								return
 							end
 
@@ -214,7 +214,7 @@ local ACTIONS = {
 								1200
 							)
 							done({
-								changed_issue = true,
+								changed_issue_key = issue_key,
 								message = string.format("Assigned to %s", selected.display_name),
 							}, nil)
 						end)
@@ -256,7 +256,7 @@ local ACTIONS = {
 
 				if #options == 0 then
 					footer.notify("info", "No reporter found", 1200)
-					done({ changed_issue = false, message = "No reporter options" }, nil)
+					done({ changed_issue_key = nil, message = "No reporter options" }, nil)
 					return
 				end
 
@@ -270,7 +270,7 @@ local ACTIONS = {
 					end,
 				}, function(selected)
 					if selected == nil then
-						done({ changed_issue = false, message = "Reporter change cancelled" }, nil)
+						done({ changed_issue_key = nil, message = "Reporter change cancelled" }, nil)
 						return
 					end
 
@@ -288,7 +288,7 @@ local ACTIONS = {
 							1200
 						)
 						done({
-							changed_issue = true,
+							changed_issue_key = issue_key,
 							message = string.format("Reporter changed to %s", selected.display_name),
 						}, nil)
 					end)
@@ -344,7 +344,7 @@ local ACTIONS = {
 
 						footer.notify("success", string.format("Updated %s", issue_key), 1200)
 						submit_done(true, nil)
-						done({ changed_issue = true, message = "Issue updated" }, nil)
+						done({ changed_issue_key = issue_key, message = "Issue updated" }, nil)
 					end)
 				end)
 			end
@@ -384,13 +384,13 @@ local ACTIONS = {
 				prompt = "Search Jira issues (text or JQL): ",
 			}, function(input)
 				if input == nil then
-					done({ changed_issue = false, message = "Search cancelled" }, nil)
+					done({ changed_issue_key = nil, message = "Search cancelled" }, nil)
 					return
 				end
 
 				local query = vim.trim(tostring(input))
 				if query == "" then
-					done({ changed_issue = false, message = "Search query cannot be empty" }, nil)
+					done({ changed_issue_key = nil, message = "Search query cannot be empty" }, nil)
 					return
 				end
 
@@ -419,7 +419,7 @@ local ACTIONS = {
 				require("atlas.jira.ui.controller").switch_view(search_view, function()
 					require("atlas.ui.navigation").focus_first_item()
 				end)
-				done({ changed_issue = false, message = "Search view opened" }, nil)
+				done({ changed_issue_key = nil, message = "Search view opened" }, nil)
 			end)
 		end,
 	},
@@ -476,9 +476,11 @@ local ACTIONS = {
 
 						if result and result.key then
 							footer.notify("success", string.format("Created %s", result.key), 2000)
-							require("atlas.jira.ui.controller").refresh_current_view()
 							submit_done(true, nil)
-							done({ changed_issue = true, message = string.format("Created %s", result.key) }, nil)
+							done(
+								{ changed_issue_key = result.key, message = string.format("Created %s", result.key) },
+								nil
+							)
 							return
 						end
 
@@ -504,7 +506,7 @@ local ACTIONS = {
 				kind = "atlas_jira_projects",
 			}, function(selected)
 				if not selected then
-					done({ changed_issue = false, message = "Create issue cancelled" }, nil)
+					done({ changed_issue_key = nil, message = "Create issue cancelled" }, nil)
 					return
 				end
 

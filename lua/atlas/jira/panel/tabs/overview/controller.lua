@@ -134,40 +134,6 @@ function M.toggle_view_mode()
 	require("atlas.jira.panel.init").refresh()
 end
 
-function M.edit_description()
-	local issue = state.issue
-	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
-		footer.notify("warn", "No issue selected")
-		return
-	end
-
-	local description = state.md_description
-	if description == "loading" then
-		description = nil
-	end
-
-	jira_actions.run("edit_issue", {
-		issue = issue,
-		source = "panel",
-		description = description,
-	}, function(result, err)
-		if err ~= nil then
-			footer.notify("error", tostring(err))
-			return
-		end
-
-		if result ~= nil and result.message ~= nil and result.message ~= "" then
-			footer.notify("info", result.message, 1200)
-		end
-
-		if result ~= nil and result.changed_issue then
-			require("atlas.jira.ui.controller").refresh_issue(issue, function()
-				M.refresh()
-			end)
-		end
-	end)
-end
-
 ---@param delta integer
 function M.move(delta)
 	if panel_state.current_tab ~= "overview" then

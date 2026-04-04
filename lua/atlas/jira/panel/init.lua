@@ -131,8 +131,8 @@ local function register_panel_keys()
 				footer.notify("info", result.message, 1200)
 			end
 
-			if result ~= nil and result.changed_issue then
-				jira_controller.refresh_issue(issue, function()
+			if result ~= nil and result.changed_issue_key ~= nil and result.changed_issue_key ~= "" then
+				jira_controller.refresh_issue(result.changed_issue_key, function()
 					M.refresh()
 				end)
 			end
