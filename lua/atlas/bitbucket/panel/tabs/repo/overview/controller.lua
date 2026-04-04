@@ -117,8 +117,8 @@ function M.show(repo)
 			footer.notify("error", "Failed to load repo detail: " .. tostring(err))
 		else
 			state.detail = detail
-			local ref = (detail.mainbranch or {}) or "-"
-			local readme_path = tostring(repo.readme)
+			local ref = detail.mainbranch or "-"
+			local readme_path = repo.readme
 
 			tab_state.readme = "loading"
 			readme_handle = repositories.fetch_readme(

@@ -38,22 +38,22 @@ end
 
 local function check_repo_paths()
 	local bitbucket = (config.options and config.options.bitbucket) or {}
-	local repo_paths = bitbucket.repo_paths or {}
+	local repo_paths = ((bitbucket.repo_config or {}).paths) or {}
 
 	if vim.tbl_isempty(repo_paths) then
-		vim.health.warn("bitbucket.repo_paths is empty (local checkout/custom actions may not work)")
+		vim.health.warn("bitbucket.repo_config.paths is empty (local checkout/custom actions may not work)")
 		return
 	end
 
 	local ok, err = checkout.validate_repo_paths(repo_paths)
 	if not ok then
-		vim.health.error(string.format("bitbucket.repo_paths invalid: %s", tostring(err)))
+		vim.health.error(string.format("bitbucket.repo_config.paths invalid: %s", tostring(err)))
 		return
 	end
 
 	vim.health.ok(
 		string.format(
-			"bitbucket.repo_paths configured (%d mapping%s)",
+			"bitbucket.repo_config.paths configured (%d mapping%s)",
 			vim.tbl_count(repo_paths),
 			vim.tbl_count(repo_paths) == 1 and "" or "s"
 		)

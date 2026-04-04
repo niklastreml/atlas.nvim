@@ -62,7 +62,7 @@ local function has_repo_paths_configured(ctx)
 		return false
 	end
 	local cfg = require("atlas.config").options.bitbucket or {}
-	return not vim.tbl_isempty(cfg.repo_paths or {})
+	return not vim.tbl_isempty(((cfg.repo_config or {}).paths) or {})
 end
 
 ---@type BitbucketActionDef[]

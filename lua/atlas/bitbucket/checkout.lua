@@ -165,7 +165,7 @@ function M.resolve_repo_path_for_pr(pr, opts)
 	end
 
 	local repo_name = string.format("%s/%s", ws, slug)
-	local mapping = (config.options.bitbucket or {}).repo_paths or {}
+	local mapping = (((config.options.bitbucket or {}).repo_config or {}).paths) or {}
 	return M.resolve_repo_path(mapping, repo_name, opts)
 end
 

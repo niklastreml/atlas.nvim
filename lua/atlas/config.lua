@@ -13,15 +13,21 @@
 --- @field resolve_parent_issues boolean|nil
 
 --- Bitbucket ---
----@class BitbucketRepoConfig
+---@class BitbucketRepoRef
 ---@field workspace string
 ---@field repo string
+
+---@class BitbucketRepoSettings
 ---@field readme string|nil
+
+---@class BitbucketRepoConfig
+---@field settings table<string, BitbucketRepoSettings>|nil
+---@field paths table<string, string>|nil
 
 ---@class BitbucketViewConfig
 ---@field name string
 ---@field key string|nil
----@field repos BitbucketRepoConfig[]|nil
+---@field repos BitbucketRepoRef[]|nil
 ---@field layout "compact"|"plain"|nil
 ---@field filter? fun(pr: BitbucketPR, ctx: table): boolean
 
@@ -40,8 +46,8 @@
 --- @field token string
 --- @field cache_ttl number|nil
 --- @field views BitbucketViewConfig[]|nil
---- @field repo_paths table<string, string>|nil
----@field custom_actions BitbucketCustomAction[]|nil
+--- @field repo_config BitbucketRepoConfig|nil
+--- @field custom_actions BitbucketCustomAction[]|nil
 
 --- @class AtlasConfig
 --- @field jira JiraConfig
@@ -65,22 +71,13 @@ M.options = {
 		token = vim.env.BITBUCKET_TOKEN or "",
 		cache_ttl = 300,
 		views = nil,
-		repo_paths = {},
+		repo_config = {
+			settings = {},
+			paths = {},
+		},
 		custom_actions = {},
 	},
 }
-
-local function normalize_views()
-	if M.options.bitbucket.views and #M.options.bitbucket.views > 0 then
-		for _, view in ipairs(M.options.bitbucket.views) do
-			for _, repo in ipairs(view.repos or {}) do
-				if repo.readme == nil or repo.readme == "" then
-					repo.readme = "README.md"
-				end
-			end
-		end
-	end
-end
 
 local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasJira", nil)
@@ -103,7 +100,6 @@ end
 ---@param opts AtlasConfig|nil
 function M.setup(opts)
 	M.options = vim.tbl_deep_extend("force", M.options, opts or {})
-	normalize_views()
 	register_commands()
 end
 

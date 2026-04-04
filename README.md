@@ -59,10 +59,18 @@ return {
         user = os.getenv("BITBUCKET_USER") or "",
         token = os.getenv("BITBUCKET_TOKEN") or "",
         cache_ttl = 300,
-        -- Maps `workspace/repo` to local paths. Used for checkout and custom actions.
-        repo_paths = {
-          ["your-workspace/*"] = "~/code/repos/*",
-          ["your-workspace/atlas"] = "~/code/atlas",
+        repo_config = {
+          -- Maps `workspace/repo` to local paths. Used for checkout and custom actions.
+          paths = {
+            ["your-workspace/*"] = "~/code/repos/*",
+            ["your-workspace/atlas"] = "~/code/atlas",
+          },
+
+          settings = {
+            ["your-workspace/atlas"] = {
+              readme = "README.md", -- optional, defaults to README.md
+            },
+          },
         },
         custom_actions = {}, -- See Custom Actions below.
 
@@ -73,7 +81,7 @@ return {
             key = "M",
             layout = "compact", -- "compact" or "plain"
             repos = {
-              { workspace = "your-workspace", repo = "atlas", readme = "README.md" }, --- readme is optional, if provided it will be rendered in the PR details panel. Defaults to README.md
+				{ workspace = "your-workspace", repo = "atlas" },
             },
 
             ---@param pr BitbucketPR
@@ -115,8 +123,11 @@ Example:
 
 ```lua
 bitbucket = {
-  repo_paths = {
-    ["your-workspace/*"] = "~/code/repos/*",
+  repo_config = {
+    paths = {
+      ["your-workspace/*"] = "~/code/repos/*",
+    },
+    settings = {},
   },
   custom_actions = {
     {

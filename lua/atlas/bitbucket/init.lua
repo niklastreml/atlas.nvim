@@ -43,6 +43,10 @@ local function selected_repo()
 		local workspace = tostring(r.workspace or "")
 		local repo_slug = tostring(r.repo or "")
 		local full_name = tostring(r.name or "")
+		local repo_name = workspace ~= "" and repo_slug ~= "" and string.format("%s/%s", workspace, repo_slug) or ""
+		local repo_settings = repo_name ~= ""
+				and ((((config.options.bitbucket or {}).repo_config or {}).settings or {})[repo_name])
+			or nil
 		if full_name == "" and workspace ~= "" and repo_slug ~= "" then
 			full_name = string.format("%s/%s", workspace, repo_slug)
 		end
@@ -52,7 +56,7 @@ local function selected_repo()
 			workspace = workspace,
 			repo_slug = repo_slug,
 			full_name = full_name,
-			readme = "README.md", --TODO: Use config
+			readme = repo_settings and repo_settings.readme or nil,
 		}
 	end
 
