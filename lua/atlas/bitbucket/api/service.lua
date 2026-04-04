@@ -158,7 +158,24 @@ function M.request_text(method, url, headers, body, callback)
 		full_url = M.url(url)
 	end
 
-	return http.curl_text_request(method, full_url, request_headers, body, callback)
+	logger.loginfo("Bitbucket request", {
+		method = method,
+		url = full_url,
+	})
+
+	return http.curl_text_request(method, full_url, request_headers, body, function(text, err)
+		if err then
+			logger.logerror("Bitbucket request failed", {
+				method = method,
+				url = full_url,
+				error = err,
+			})
+			callback(nil, err)
+			return
+		end
+
+		callback(text, nil)
+	end)
 end
 
 return M
