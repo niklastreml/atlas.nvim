@@ -20,15 +20,16 @@ local function cell_hl(row, col, ctx)
 	if col.key == "name" then
 		local spans_for_cell = {}
 		local is_child = (tonumber(row._tv2_depth) or 0) > 0
+		local issue_type_name = type(issue) == "table" and type(issue.type) == "table" and issue.type.name or nil
 
 		if is_child and type(issue) == "table" then
-			local issue_icon = icons.jira_icon(issue.type)
+			local issue_icon = icons.jira_icon(issue_type_name)
 			local is, ie = ctx.text:find(issue_icon, 1, true)
 			if is and ie then
 				table.insert(spans_for_cell, {
 					start_col = is - 1,
 					end_col = ie,
-					hl_group = helper.issue_type_hl(issue.type),
+					hl_group = helper.issue_type_hl(issue_type_name),
 				})
 			end
 		end
@@ -91,14 +92,19 @@ local function cell_hl(row, col, ctx)
 	end
 
 	if col.key == "icon" then
-		local hl_group = type(issue) == "table" and helper.issue_type_hl(issue.type) or "AtlasTextMuted"
+		local issue_type_name = type(issue) == "table" and type(issue.type) == "table" and issue.type.name or nil
+		local hl_group = helper.issue_type_hl(issue_type_name)
 		return {
 			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
 		}
 	end
 
 	if col.key == "assignee" then
-		local hl_group = helper.person_hl(type(issue) == "table" and issue.assignee or nil)
+		local assignee_name = nil
+		if type(issue) == "table" and type(issue.assignee) == "table" then
+			assignee_name = issue.assignee.display_name
+		end
+		local hl_group = helper.person_hl(assignee_name)
 		return {
 			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
 		}
@@ -127,8 +133,9 @@ end
 ---@param is_child boolean|nil
 ---@return table
 local function issue_to_row(issue, is_child)
-	local icon = is_child and "" or icons.jira_icon(issue.type)
-	local title = is_child and (icons.jira_icon(issue.type) .. " " .. issue.key .. " " .. issue.summary)
+	local issue_type_name = type(issue.type) == "table" and issue.type.name or nil
+	local icon = is_child and "" or icons.jira_icon(issue_type_name)
+	local title = is_child and (icons.jira_icon(issue_type_name) .. " " .. issue.key .. " " .. issue.summary)
 		or (issue.key .. " " .. issue.summary)
 	local story_points = issue.story_points
 	local points = ""
@@ -150,7 +157,11 @@ local function issue_to_row(issue, is_child)
 		icon = icon,
 		name = name,
 		duedate = due_display,
-		assignee = string.format("%s %s", icons.entity("user"), issue.assignee or "Unassigned"),
+		assignee = string.format(
+			"%s %s",
+			icons.entity("user"),
+			(type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned"
+		),
 		reporter = string.format("%s %s", icons.entity("user"), issue.reporter or "Unknown"),
 		status = (function()
 			local issue_key = tostring(issue.key or "")
@@ -202,7 +213,7 @@ function M.issue_popup_content(issue)
 	local summary = issue.summary or ""
 	local title = string.format(" %s: %s", issue.key or "", summary)
 	local status_hl = helper.status_hl(issue.status_id)
-	local assignee_hl = helper.person_hl(issue.assignee)
+	local assignee_hl = helper.person_hl(type(issue.assignee) == "table" and issue.assignee.display_name or nil)
 	local reporter_hl = helper.person_hl(issue.reporter)
 	local priority_hl = helper.priority_hl(issue.priority)
 	local parent_key = type(issue.parent) == "table" and issue.parent.key or nil
@@ -211,10 +222,10 @@ function M.issue_popup_content(issue)
 	local lines = {
 		title,
 		"",
-		string.format(" Type:     %s", issue.type or "-"),
+		string.format(" Type:     %s", (type(issue.type) == "table" and issue.type.name) or "-"),
 		string.format(" Status:   %s", issue.status or "-"),
 		string.format(" Priority: %s", issue.priority or "-"),
-		string.format(" Assignee: %s", issue.assignee or "Unassigned"),
+		string.format(" Assignee: %s", (type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned"),
 		string.format(" Reporter: %s", issue.reporter or "Unknown"),
 		string.format(" Due:      %s", issue.duedate or "-"),
 	}
@@ -255,7 +266,12 @@ function M.issue_popup_content(issue)
 		{ row = row.assignee, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
 		{ row = row.reporter, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
 		{ row = row.due, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
-		{ row = row.type, col = 11, end_col = -1, hl_group = helper.issue_type_hl(issue.type) },
+		{
+			row = row.type,
+			col = 11,
+			end_col = -1,
+			hl_group = helper.issue_type_hl(type(issue.type) == "table" and issue.type.name or nil),
+		},
 		{ row = row.status, col = 11, end_col = -1, hl_group = status_hl },
 		{ row = row.priority, col = 11, end_col = -1, hl_group = priority_hl },
 		{ row = row.assignee, col = 11, end_col = -1, hl_group = assignee_hl },

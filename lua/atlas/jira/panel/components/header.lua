@@ -13,6 +13,16 @@ local function text_or(v, fallback)
 	return fallback
 end
 
+---@param user JiraUser|nil
+---@param fallback string
+---@return string
+local function user_name_or(user, fallback)
+	if type(user) == "table" and type(user.display_name) == "string" and user.display_name ~= "" then
+		return user.display_name
+	end
+	return fallback
+end
+
 local function approvers_value(v, user_icon)
 	if type(v) ~= "table" or #v == 0 then
 		return string.format("%s None", user_icon), {}
@@ -35,11 +45,11 @@ end
 ---@return string[]
 ---@return table[]
 function M.render(issue, width)
-	local issue_type = text_or(issue and issue.type, "Unknown")
+	local issue_type = text_or(type(issue and issue.type) == "table" and issue.type.name or nil, "Unknown")
 	local key = text_or(issue and issue.key, "")
 	local title = text_or(issue and issue.summary, "")
 	local status = text_or(issue and issue.status, "Unknown")
-	local assignee = text_or(issue and issue.assignee, "Unassigned")
+	local assignee = user_name_or(issue and issue.assignee, "Unassigned")
 	local reporter = text_or(issue and issue.reporter, "Unknown")
 	local story_points = issue and issue.story_points
 	local story_points_text = type(story_points) == "number" and tostring(story_points) or "-"
@@ -47,7 +57,7 @@ function M.render(issue, width)
 	local due_date_text = due_date ~= "" and due_date or "-"
 	local parent_key = type(issue and issue.parent) == "table" and text_or(issue.parent.key, "-") or "-"
 
-	local type_icon = icons.jira_icon(issue and issue.type)
+	local type_icon = icons.jira_icon(type(issue and issue.type) == "table" and issue.type.name or nil)
 	local user_icon = icons.entity("user")
 	local approvers, approver_names = approvers_value(issue and issue.approvers, user_icon)
 
@@ -67,7 +77,7 @@ function M.render(issue, width)
 		{
 			k1 = "Assignee:",
 			v1 = string.format("%s %s", user_icon, assignee),
-			v1_hl = helper.person_hl(issue and issue.assignee),
+			v1_hl = helper.person_hl(type(issue and issue.assignee) == "table" and issue.assignee.display_name or nil),
 			k2 = "Reporter:",
 			v2 = string.format("%s %s", user_icon, reporter),
 			v2_hl = helper.person_hl(issue and issue.reporter),
@@ -168,7 +178,7 @@ function M.render(issue, width)
 			line = 0,
 			start_col = 1,
 			end_col = #(string.format("%s %s", type_icon, issue_type)) + 1,
-			hl_group = helper.issue_type_hl(issue and issue.type),
+			hl_group = helper.issue_type_hl(type(issue and issue.type) == "table" and issue.type.name or nil),
 		},
 		{ line = 1, start_col = 1, end_col = #title_line, hl_group = helper.issue_title_hl(title) },
 	}

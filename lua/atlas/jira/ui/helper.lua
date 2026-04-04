@@ -64,9 +64,13 @@ function M.priority_hl(priority)
 	return "AtlasTextMuted"
 end
 
----@param name string|nil
+---@param name string|JiraUser|nil
 ---@return string
 function M.person_hl(name)
+	if type(name) == "table" then
+		name = name.display_name
+	end
+
 	if type(name) ~= "string" then
 		return "AtlasTextMutedItalic"
 	end

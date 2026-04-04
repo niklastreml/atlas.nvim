@@ -107,7 +107,7 @@ function M.open_layout(state)
 		mouse = false,
 		title = " Create Issue ",
 		title_pos = "center",
-		footer = " q/:q close | :w create | ga assignee | gt issue type | m toggle ADF preview ",
+		footer = " q/:q close | :w create | ga assignee | gr reporter | gt issue type | m toggle ADF preview ",
 		footer_pos = "center",
 	})
 	vim.api.nvim_set_option_value("wrap", false, { win = state.layout.container_win })
@@ -179,7 +179,7 @@ function M.open_layout(state)
 end
 
 ---@param state IssueState
----@param actions { confirm_close: fun(), toggle_preview: fun(), show_assignee_picker: fun(), show_issue_type_picker: fun() }
+---@param actions { confirm_close: fun(), toggle_preview: fun(), show_assignee_picker: fun(), show_reporter_picker: fun(), show_issue_type_picker: fun() }
 function M.setup_keymaps(state, actions)
 	local keymap_opts = { silent = true, nowait = true }
 
@@ -199,6 +199,12 @@ function M.setup_keymaps(state, actions)
 			"n",
 			"ga",
 			actions.show_assignee_picker,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf })
+		)
+		vim.keymap.set(
+			"n",
+			"gr",
+			actions.show_reporter_picker,
 			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf })
 		)
 		vim.keymap.set(
@@ -263,6 +269,12 @@ function M.setup_keymaps(state, actions)
 		)
 		vim.keymap.set(
 			"n",
+			"gr",
+			actions.show_reporter_picker,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf })
+		)
+		vim.keymap.set(
+			"n",
 			"gt",
 			actions.show_issue_type_picker,
 			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf })
@@ -307,6 +319,7 @@ end
 --- confirm_close: fun(),
 --- toggle_preview: fun(),
 --- show_assignee_picker: fun(),
+--- show_reporter_picker: fun(),
 --- show_issue_type_picker: fun(),
 --- create_issue: fun()
 ---}

@@ -4,6 +4,51 @@ local adf = require("atlas.jira.converted.adf")
 local STORY_POINTS_FIELD = "customfield_10016"
 local APPROVERS_FIELD = "customfield_10003"
 
+---@param raw_project table|nil
+---@return JiraProject|nil
+local function normalize_project(raw_project)
+	if type(raw_project) ~= "table" then
+		return nil
+	end
+
+	local id = raw_project.id and tostring(raw_project.id) or ""
+	local key = raw_project.key and tostring(raw_project.key) or ""
+	local name = raw_project.name and tostring(raw_project.name) or ""
+	local self = raw_project.self and tostring(raw_project.self) or ""
+	if id == "" or key == "" or name == "" or self == "" then
+		return nil
+	end
+
+	return {
+		id = id,
+		key = key,
+		name = name,
+		self = self,
+	}
+end
+
+---@param raw_type table|nil
+---@return JiraIssueType|nil
+function M.normalize_issue_type(raw_type)
+	if type(raw_type) ~= "table" then
+		return nil
+	end
+
+	local id = raw_type.id and tostring(raw_type.id) or ""
+	local name = raw_type.name and tostring(raw_type.name) or ""
+	if id == "" or name == "" then
+		return nil
+	end
+
+	return {
+		id = id,
+		name = name,
+		description = raw_type.description and tostring(raw_type.description) or nil,
+		subtask = raw_type.subtask == true,
+		entity_id = raw_type.entityId and tostring(raw_type.entityId) or nil,
+	}
+end
+
 ---@param value any
 ---@return boolean
 local function is_valid(value)
@@ -58,6 +103,26 @@ local function extract_status(raw_status)
 	return name, id, category, color
 end
 
+---@param raw_user table|nil
+---@return JiraUser|nil
+local function normalize_issue_user(raw_user)
+	if type(raw_user) ~= "table" then
+		return nil
+	end
+
+	local account_id = raw_user.accountId and tostring(raw_user.accountId) or ""
+	local display_name = raw_user.displayName and tostring(raw_user.displayName) or ""
+	if account_id == "" or display_name == "" then
+		return nil
+	end
+
+	return {
+		account_id = account_id,
+		display_name = display_name,
+		email = raw_user.emailAddress and tostring(raw_user.emailAddress) or "",
+	}
+end
+
 ---@param raw_parent table|nil
 ---@return JiraIssue|nil
 local function extract_parent(raw_parent)
@@ -71,18 +136,18 @@ local function extract_parent(raw_parent)
 	return {
 		key = tostring(raw_parent.key),
 		summary = tostring(pf.summary or ""),
+		project = normalize_project(safe_get(pf, "project")),
 		status = status,
 		status_id = status_id,
 		status_category = status_category,
 		status_color = status_color,
-		type = safe_get(pf, "issuetype", "name"),
+		type = M.normalize_issue_type(safe_get(pf, "issuetype")),
 		priority = safe_get(pf, "priority", "name"),
-		assignee = safe_get(pf, "assignee", "displayName"),
+		assignee = normalize_issue_user(safe_get(pf, "assignee")),
 		reporter = safe_get(pf, "reporter", "displayName"),
 		story_points = nil,
 		approvers = nil,
 		duedate = nil,
-		subtask = false,
 		parent = nil,
 	}
 end
@@ -141,18 +206,18 @@ function M.normalize_issue(raw)
 	return {
 		key = tostring(raw.key or ""),
 		summary = tostring(fields.summary or ""),
+		project = normalize_project(safe_get(fields, "project")),
 		status = status,
 		status_id = status_id,
 		status_category = status_category,
 		status_color = status_color,
-		type = safe_get(fields, "issuetype", "name"),
+		type = M.normalize_issue_type(safe_get(fields, "issuetype")),
 		priority = safe_get(fields, "priority", "name"),
-		assignee = safe_get(fields, "assignee", "displayName"),
+		assignee = normalize_issue_user(safe_get(fields, "assignee")),
 		reporter = safe_get(fields, "reporter", "displayName"),
 		story_points = extract_story_points(fields[STORY_POINTS_FIELD]),
 		approvers = extract_approvers(fields[APPROVERS_FIELD]),
 		duedate = fields.duedate,
-		subtask = safe_get(fields, "issuetype", "subtask") == true,
 		parent = extract_parent(safe_get(fields, "parent")),
 	}
 end
@@ -210,20 +275,6 @@ function M.build_issue_tree(issues)
 	return roots
 end
 
----@param raw_author table|nil
----@return JiraCommentAuthor|nil
-local function normalize_comment_author(raw_author)
-	if type(raw_author) ~= "table" then
-		return nil
-	end
-
-	return {
-		account_id = raw_author.accountId and tostring(raw_author.accountId) or nil,
-		display_name = raw_author.displayName and tostring(raw_author.displayName) or nil,
-		email = raw_author.emailAddress and tostring(raw_author.emailAddress) or nil,
-	}
-end
-
 ---@param raw_comment table|nil
 ---@return JiraComment|nil
 local function normalize_comment(raw_comment)
@@ -239,7 +290,7 @@ local function normalize_comment(raw_comment)
 	return {
 		id = tostring(raw_comment.id or ""),
 		self = raw_comment.self and tostring(raw_comment.self) or nil,
-		author = normalize_comment_author(raw_comment.author),
+		author = normalize_issue_user(raw_comment.author),
 		body = adf.to_markdown(type(raw_comment.body) == "table" and raw_comment.body or nil),
 		_body = type(raw_comment.body) == "table" and raw_comment.body or nil,
 		created = raw_comment.created and tostring(raw_comment.created) or nil,
@@ -292,7 +343,6 @@ function M.normalize_transitions(raw)
 		transitions = transitions,
 	}
 end
-function M.normalize_worklogs(raw) end
 
 ---@param raw table|nil
 ---@param fallback_start_at number|nil

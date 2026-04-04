@@ -1,4 +1,4 @@
-    # Atlasmnvim
+# Atlas.nvim
 
 A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your editor.
 
@@ -161,8 +161,6 @@ bitbucket = {
 - [ ] Bulk actions: approve/request changes on multiple PRs at once
 - [ ] PR files: fuzzy filter changed files by path
 
-<img width="2532" height="1366" alt="CleanShot 2026-03-31 at 02 51 32" src="https://github.com/user-attachments/assets/d08dde1f-8bae-446f-8db1-a9f53b118fad" />
-
 ## Jira
 
 > [!NOTE]
@@ -203,10 +201,11 @@ return {
 }
 ```
 
-#### Creating Issues
+#### Creating or Edit Issues (Experimental)
 
-- Press `c` in Jira view to open the Create Issue window.
-  
+- Edit or create issue description directly from Overview.
+- Supports markdown editing with markdown -> ADF conversion.
+
 <img width="1017" height="852" alt="CleanShot 2026-04-04 at 04 06 23" src="https://github.com/user-attachments/assets/76913fbf-1667-4f35-9962-d3c1b4619c7f" />
 
 #### Comments
@@ -215,17 +214,9 @@ return {
 
 <img width="1001" height="426" alt="CleanShot 2026-04-03 at 01 07 06" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
 
-#### Issue Editing (Experimental)
-
-- Edit issue description directly from Overview.
-- Supports markdown editing with markdown -> ADF conversion.
-- Supports raw ADF mode for direct document editing.
-
-<img width="2520" height="1373" alt="CleanShot 2026-04-03 at 01 11 10" src="https://github.com/user-attachments/assets/b46a4018-6adf-4b9f-b6fe-0b8bdbb5efaa" />
-
 #### Features
 
-- [x] Multiple Jira views
+- [x] Create issues
 - [x] Issue panel tabs: overview, comments, history
 - [x] Jira actions: transition, change assignee, change reporter, edit title
 - [x] Full comment workflows (create, reply, edit, delete)
@@ -233,7 +224,6 @@ return {
 - [x] View and edit issues as markdown
 - [x] Search issues
 - [ ] Add support for custom fields in issue details
-- [ ] Create issues
 - [ ] Create and edit issue templates
 
 ### Commands
@@ -244,51 +234,26 @@ return {
 
 ### Keymaps
 
-### Main UI
-
-| Key        | Action                    |
-| ---------- | ------------------------- |
-| `q`        | Close Atlas               |
-| `j` / `k`  | Move cursor               |
-| `gg` / `G` | First / last item         |
-| `[` / `]`  | Previous / next panel tab |
-| `p`        | Toggle detail panel       |
-
-### Bitbucket
-
-| Key  | Action                         |
-| ---- | ------------------------------ |
-| `R`  | Refresh current Bitbucket view |
-| `r`  | Refetch selected PR            |
-| `A`  | Open PR actions                |
-| `gx` | Open PR in browser             |
-| `y`  | Copy PR id                     |
-| `Y`  | Copy PR URL                    |
-| `/`  | Search repositories            |
-| `o`  | Toggle repository panel        |
-
-### Jira
-
-| Key  | Action                    |
-| ---- | ------------------------- |
-| `R`  | Refresh current Jira view |
-| `r`  | Reload selected issue     |
-| `K`  | Show issue details popup  |
-| `A`  | Open Jira actions         |
-| `c`  | Create issue              |
-| `gx` | Open issue in browser     |
-| `y`  | Copy issue key            |
-| `Y`  | Copy issue URL            |
-
-### Jira Panel
-
-| Key | Action                                  |
-| --- | --------------------------------------- |
-| `m` | Toggle Overview mode (markdown/raw ADF) |
-| `e` | Edit Overview description               |
-| `a` | Add comment (Comments tab)              |
-| `c` | Reply to comment (Comments tab)         |
-| `d` | Delete comment (Comments tab)           |
+| Context   | Key       | Action                                  |
+| --------- | --------- | --------------------------------------- |
+| Main UI   | `q`       | Close Atlas                             |
+| Main UI   | `[` / `]` | Previous / next panel tab               |
+| Main UI   | `p`       | Toggle detail panel                     |
+| Main UI   | `R`       | Refresh current view                    |
+| Main UI   | `r`       | Refetch selected Issue/PR               |
+| Main UI   | `A`       | Open Issue/PR actions                   |
+| Main UI   | `gx`      | Open Issue/PR in browser                |
+| Main UI   | `y`       | Copy Issue/PR id                        |
+| Main      | `Y`       | Copy Issue/PR URL                       |
+| Main      | `/`       | Search repositories                     |
+| Bitbucket | `o`       | Toggle repository panel                 |
+| Jira      | `K`       | Show issue details popup                |
+| Jira      | `c`       | Create issue                            |
+| Jira      | `m`       | Toggle Overview mode (markdown/raw ADF) |
+| Jira      | `e`       | Edit Overview description               |
+| Jira      | `a`       | Add comment (Comments tab)              |
+| Jira      | `c`       | Reply to comment (Comments tab)         |
+| Jira      | `d`       | Delete comment (Comments tab)           |
 
 ## License
 

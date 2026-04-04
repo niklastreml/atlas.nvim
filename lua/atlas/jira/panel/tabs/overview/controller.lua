@@ -1,13 +1,11 @@
 local M = {}
 local state = require("atlas.jira.panel.tabs.overview.state")
 local panel_state = require("atlas.jira.panel.state")
+local jira_actions = require("atlas.jira.actions")
 local issues = require("atlas.jira.api.issues")
 local adf = require("atlas.jira.converted.adf")
-local markdown = require("atlas.jira.converted.markdown")
-local markdown_editor = require("atlas.jira.ui.markdown_editor")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
-local utils = require("atlas.utils")
 
 local active_handle = nil
 
@@ -143,63 +141,31 @@ function M.edit_description()
 		return
 	end
 
-	if state.md_description == "loading" then
-		footer.notify("warn", "Description is still loading")
-		return
+	local description = state.md_description
+	if description == "loading" then
+		description = nil
 	end
 
-	local issue_key = issue.key
-	local is_raw_mode = state.view_mode == "raw"
-	local initial_text = ""
-	if is_raw_mode then
-		if type(state.adf_description) == "table" then
-			initial_text = utils.encode_pretty_json(state.adf_description)
+	jira_actions.run("edit_issue", {
+		issue = issue,
+		source = "panel",
+		description = description,
+	}, function(result, err)
+		if err ~= nil then
+			footer.notify("error", tostring(err))
+			return
 		end
-	else
-		initial_text = type(state.md_description) == "string" and state.md_description or ""
-	end
 
-	markdown_editor.open({
-		key = string.format("overview-%s-description", issue_key),
-		title = is_raw_mode and string.format("Edit %s Description (ADF)", issue_key)
-			or string.format("Edit %s Description (Markdown)", issue_key),
-		initial_text = initial_text,
-		width_ratio = 0.7,
-		height_ratio = 0.7,
-		on_save = function(body)
-			local text = tostring(body or "")
-			local description = vim.NIL
+		if result ~= nil and result.message ~= nil and result.message ~= "" then
+			footer.notify("info", result.message, 1200)
+		end
 
-			if vim.trim(text) ~= "" then
-				if is_raw_mode then
-					local ok, decoded = pcall(vim.fn.json_decode, text)
-					if not ok or type(decoded) ~= "table" then
-						footer.notify("error", "Invalid ADF JSON")
-						return
-					end
-					description = decoded
-				else
-					description = markdown.to_adf(text)
-				end
-			end
-
-			footer.notify("loading", string.format("Updating description for %s...", issue_key))
-			issues.update_issue(issue_key, { description = description }, function(ok, err)
-				if not ok then
-					footer.notify("error", err or "Failed to update description")
-					return
-				end
-
-				require("atlas.jira.ui.controller").refresh_issue(issue, function()
-					M.refresh()
-					footer.notify("success", string.format("Description updated for %s", issue_key), 1200)
-				end)
+		if result ~= nil and result.changed_issue then
+			require("atlas.jira.ui.controller").refresh_issue(issue, function()
+				M.refresh()
 			end)
-		end,
-		on_cancel = function()
-			footer.notify("info", "Edit cancelled")
-		end,
-	})
+		end
+	end)
 end
 
 ---@param delta integer

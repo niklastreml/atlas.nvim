@@ -8,6 +8,7 @@ local logger = require("atlas.core.logger")
 local SEARCH_FIELDS = {
 	"summary",
 	"status",
+	"project",
 	"assignee",
 	"reporter",
 	"parent",
@@ -246,14 +247,8 @@ function M.update_issue(issue_key, fields, callback)
 	end)
 end
 
----@class JiraIssueType
----@field id string
----@field name string
----@field description string
----@field subtask boolean
-
 ---@param project_key string
----@param callback fun(issue_types: JiraCreateIssueType[]|nil, err: string|nil)
+---@param callback fun(issue_types: JiraIssueType[]|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.get_create_meta(project_key, callback)
 	if type(project_key) ~= "string" or project_key == "" then
@@ -294,13 +289,9 @@ function M.get_create_meta(project_key, callback)
 
 		local issue_types = {}
 		for _, raw in ipairs(raw_types) do
-			if type(raw) == "table" then
-				table.insert(issue_types, {
-					id = tostring(raw.id or ""),
-					name = tostring(raw.name or ""),
-					description = tostring(raw.description or ""),
-					subtask = raw.subtask == true,
-				})
+			local issue_type = normalizer.normalize_issue_type(raw)
+			if issue_type ~= nil then
+				table.insert(issue_types, issue_type)
 			end
 		end
 

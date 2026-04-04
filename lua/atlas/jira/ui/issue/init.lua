@@ -13,7 +13,7 @@ local spinner_popup = require("atlas.ui.popups.spinner")
 
 ---@class IssueFields
 ---@field summary string
----@field description table|nil
+---@field description table|string|nil
 ---@field assignee JiraUser|nil
 ---@field reporter JiraUser
 ---@field project string
@@ -244,7 +244,7 @@ local function create_issue()
 		return
 	end
 
-	spinner_popup.start("Creating issue...")
+	spinner_popup.start("Saving issue...")
 
 	on_submit(fields, function(ok, err)
 		vim.schedule(function()
@@ -322,6 +322,33 @@ local function show_assignee_picker()
 		else
 			state.fields.assignee = selected
 		end
+		update_meta_buffer()
+	end)
+end
+
+local function show_reporter_picker()
+	if state.assignees == "loading" then
+		footer.notify("info", "Still loading users...")
+		return
+	end
+
+	if not state.assignees or #state.assignees == 0 then
+		footer.notify("warn", "No users available")
+		return
+	end
+
+	vim.ui.select(state.assignees, {
+		prompt = "Select Reporter",
+		kind = "atlas_jira_reporters",
+		format_item = function(item)
+			return tostring((item and item.display_name) or "")
+		end,
+	}, function(selected)
+		if selected == nil then
+			return
+		end
+
+		state.fields.reporter = selected
 		update_meta_buffer()
 	end)
 end
@@ -443,12 +470,12 @@ function M.open(on_submit, opts)
 		confirm_close = confirm_close,
 		toggle_preview = toggle_preview,
 		show_assignee_picker = show_assignee_picker,
+		show_reporter_picker = show_reporter_picker,
 		show_issue_type_picker = show_issue_type_picker,
 		create_issue = create_issue,
 	})
 
 	vim.api.nvim_set_current_win(state.layout.title_win)
-	vim.cmd("startinsert")
 
 	vim.api.nvim_create_autocmd("WinClosed", {
 		pattern = tostring(state.layout.container_win),

@@ -9,15 +9,10 @@
 --------------------------------------------------------------------------------
 -- Comments
 --------------------------------------------------------------------------------
----@class JiraCommentAuthor
----@field account_id string|nil
----@field display_name string|nil
----@field email string|nil
-
 ---@class JiraComment
 ---@field id string
 ---@field self string|nil
----@field author JiraCommentAuthor|nil
+---@field author JiraUser|nil
 ---@field body string
 ---@field _body table|nil -- raw adf
 ---@field created string|nil
@@ -34,21 +29,34 @@
 --------------------------------------------------------------------------------
 -- Issue
 --------------------------------------------------------------------------------
+---@class JiraIssueType
+---@field id string
+---@field name string
+---@field description string|nil
+---@field subtask boolean
+---@field entity_id string|nil
+
+---@class JiraProject
+---@field id string
+---@field key string
+---@field name string
+---@field self string
+
 ---@class JiraIssue
 ---@field key string
 ---@field summary string
+---@field project JiraProject|nil
 ---@field status string|nil
 ---@field status_id string|nil
 ---@field status_category string|nil
 ---@field status_color string|nil
----@field type string|nil
+---@field type JiraIssueType|nil
 ---@field priority string|nil
----@field assignee string|nil
+---@field assignee JiraUser|nil
 ---@field reporter string|nil
 ---@field story_points number|nil
 ---@field approvers string[]|nil
 ---@field duedate string|nil
----@field subtask boolean
 ---@field parent JiraIssue|nil
 ---@field children JiraIssue[]|nil
 
@@ -67,7 +75,7 @@
 ---@field transitions JiraIssueTransition[]
 
 --------------------------------------------------------------------------------
--- Issue History (Verlauf / Changelog)
+-- Issue History
 --------------------------------------------------------------------------------
 ---@alias JiraIssueHistoryField
 ---| "issuetype"

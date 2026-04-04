@@ -3,11 +3,15 @@ local M = {}
 local transitions_api = require("atlas.jira.api.transitions")
 local users_api = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
+local jira_state = require("atlas.jira.state")
+local issue_ui = require("atlas.jira.ui.issue")
+local adf = require("atlas.jira.converted.adf")
 local footer = require("atlas.ui.components.footer")
 
 ---@class JiraActionContext
 ---@field issue JiraIssue|nil
 ---@field source "panel"|"main"|nil
+---@field description string|nil
 
 ---@class JiraActionResult
 ---@field changed_issue boolean
@@ -111,7 +115,7 @@ local ACTIONS = {
 			end
 
 			local issue_key = issue.key
-			local current_assignee = tostring(issue.assignee or "")
+			local current_assignee = type(issue.assignee) == "table" and issue.assignee.display_name or ""
 
 			footer.notify("loading", string.format("Loading assignable users for %s...", issue_key))
 			users_api.get_assignable_users(issue_key, "", function(users, err)
@@ -218,7 +222,7 @@ local ACTIONS = {
 				end
 
 				if #options == 0 then
-					footer.notify("info", "No reporter options", 1200)
+					footer.notify("info", "No reporter found", 1200)
 					done({ changed_issue = false, message = "No reporter options" }, nil)
 					return
 				end
@@ -310,8 +314,8 @@ local ACTIONS = {
 		end,
 	},
 	{
-		id = "edit_title",
-		label = "Edit title",
+		id = "edit_issue",
+		label = "Edit Issue",
 		is_available = has_issue_key,
 		run = function(ctx, done)
 			local issue = ctx.issue
@@ -321,39 +325,69 @@ local ACTIONS = {
 			end
 
 			local issue_key = issue.key
-			local current_title = tostring(issue.summary or "")
 
-			vim.ui.input({
-				prompt = string.format("Title for %s: ", issue_key),
-				default = current_title,
-			}, function(input)
-				if input == nil then
-					done({ changed_issue = false, message = "Edit title cancelled" }, nil)
-					return
-				end
+			local function open_issue_editor(initial_description)
+				issue_ui.open(function(fields, submit_done)
+					submit_done = submit_done or function() end
 
-				local new_title = vim.trim(tostring(input))
-				if new_title == "" then
-					done({ changed_issue = false, message = "Title cannot be empty" }, nil)
-					return
-				end
+					local payload = {
+						summary = fields.summary,
+						description = fields.description or vim.NIL,
+					}
 
-				if new_title == current_title then
-					done({ changed_issue = false, message = "Title unchanged" }, nil)
-					return
-				end
-
-				footer.notify("loading", string.format("Updating title for %s...", issue_key))
-				issues_api.update_issue(issue_key, { summary = new_title }, function(ok, err)
-					if not ok then
-						footer.notify("error", err or "Failed to update title")
-						done(nil, err or "Failed to update title")
-						return
+					if fields.issue_type and fields.issue_type.id and fields.issue_type.id ~= "" then
+						payload.issuetype = { id = fields.issue_type.id }
 					end
 
-					footer.notify("success", string.format("Title updated for %s", issue_key), 1200)
-					done({ changed_issue = true, message = "Title updated" }, nil)
-				end)
+					if fields.assignee and fields.assignee.account_id then
+						payload.assignee = { id = fields.assignee.account_id }
+					else
+						payload.assignee = vim.NIL
+					end
+
+					footer.notify("loading", string.format("Updating issue %s...", issue_key))
+					issues_api.update_issue(issue_key, payload, function(ok, err)
+						if not ok then
+							submit_done(false, err or "Failed to update issue")
+							done(nil, err or "Failed to update issue")
+							return
+						end
+
+						footer.notify("success", string.format("Updated %s", issue_key), 1200)
+						submit_done(true, nil)
+						done({ changed_issue = true, message = "Issue updated" }, nil)
+					end)
+				end, {
+					summary = tostring(issue.summary or ""),
+					description = initial_description,
+					assignee = issue.assignee,
+					reporter = jira_state.current_user,
+					project = issue.project and issue.project.key or "",
+					issue_type = issue.type,
+				})
+			end
+
+			--- When editing from main we dont have the description yet, so we need to load it before.
+			if ctx.description ~= nil then
+				open_issue_editor(ctx.description)
+				return
+			end
+
+			footer.notify("loading", string.format("Loading description for %s...", issue_key))
+			issues_api.get_issue_description(issue_key, function(description, err)
+				if err ~= nil then
+					footer.notify("warn", string.format("Failed loading description for %s", issue_key), 1200)
+					open_issue_editor("")
+					return
+				end
+
+				footer.notify("success", string.format("Loaded description for %s...", issue_key), 1200)
+				if type(description) == "table" then
+					open_issue_editor(adf.to_markdown(description))
+					return
+				end
+
+				open_issue_editor("")
 			end)
 		end,
 	},
