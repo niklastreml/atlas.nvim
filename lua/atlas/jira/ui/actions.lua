@@ -2,6 +2,7 @@ local M = {}
 
 local config = require("atlas.config")
 local footer = require("atlas.ui.components.footer")
+local jira_state = require("atlas.jira.state")
 local issues_api = require("atlas.jira.api.issues")
 
 ---@param value string
@@ -116,7 +117,7 @@ local function open_create_issue_ui(project)
 		summary = "",
 		description = nil,
 		assignee = nil,
-		reporter = nil,
+		reporter = jira_state.current_user,
 		project = project,
 		issue_type = nil,
 	})
