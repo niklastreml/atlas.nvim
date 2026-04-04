@@ -69,7 +69,7 @@ local function get_unique_projects()
 end
 
 local function open_create_issue_ui(project)
-	require("atlas.jira.ui.create_issue").open(project, function(fields, done)
+	require("atlas.jira.ui.issue").open(function(fields, done)
 		done = done or function() end
 
 			local issue_type = fields.issue_type
@@ -112,7 +112,14 @@ local function open_create_issue_ui(project)
 
 			done(false, "Invalid response")
 		end)
-	end)
+	end, {
+		summary = "",
+		description = nil,
+		assignee = nil,
+		reporter = nil,
+		project = project,
+		issue_type = nil,
+	})
 end
 
 function M.create_issue()

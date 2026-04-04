@@ -4,27 +4,21 @@ local footer = require("atlas.ui.components.footer")
 local md_to_adf = require("atlas.jira.converted.markdown")
 local icons = require("atlas.ui.icons")
 local helper = require("atlas.jira.ui.helper")
-local jira_state = require("atlas.jira.state")
 local users_api = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
 local spinner = require("atlas.ui.components.spinner")
 local spinner_popup = require("atlas.ui.popups.spinner")
 local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
 
----@class CreateIssueFields
+---@class IssueFields
 ---@field summary string
 ---@field description table|nil
 ---@field assignee JiraUser|nil
+---@field reporter JiraUser|nil
 ---@field project string
----@field issue_type JiraCreateIssueType|nil
+---@field issue_type JiraIssueType|nil
 
----@class JiraCreateIssueType
----@field id string
----@field name string
----@field description string
----@field subtask boolean
-
----@class CreateIssueState
+---@class IssueWindows
 ---@field title_buf integer|nil
 ---@field title_win integer|nil
 ---@field meta_buf integer|nil
@@ -33,46 +27,52 @@ local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
 ---@field desc_win integer|nil
 ---@field container_win integer|nil
 ---@field container_buf integer|nil
+
+---@class IssueState
+---@field layout IssueWindows
 ---@field preview_mode boolean
 ---@field original_markdown string
+---@field fields IssueFields
 ---@field assignees JiraUser[]|nil
 ---@field assignees_loading boolean
----@field selected_assignee JiraUser|nil
----@field issue_types JiraCreateIssueType[]|nil
+---@field issue_types JiraIssueType[]|nil
 ---@field issue_types_loading boolean
----@field selected_issue_type JiraCreateIssueType|nil
 ---@field spinner SpinnerInstance|nil
 ---@field assignees_handle { job_id: integer, cancel: fun() }|nil
 ---@field issue_types_handle { job_id: integer, cancel: fun() }|nil
----@field submitting boolean
 ---@field content_width integer
----@field on_submit fun(fields: CreateIssueFields, done: fun(ok: boolean, err: string|nil))|nil
----@field project string|nil
+---@field on_submit fun(fields: IssueFields, done: fun(ok: boolean, err: string|nil))|nil
 
 local state = {
-	title_buf = nil,
-	title_win = nil,
-	meta_buf = nil,
-	meta_win = nil,
-	desc_buf = nil,
-	desc_win = nil,
-	container_win = nil,
-	container_buf = nil,
+	layout = {
+		title_buf = nil,
+		title_win = nil,
+		meta_buf = nil,
+		meta_win = nil,
+		desc_buf = nil,
+		desc_win = nil,
+		container_win = nil,
+		container_buf = nil,
+	},
 	preview_mode = false,
 	original_markdown = "",
+	fields = {
+		summary = "",
+		description = nil,
+		assignee = nil,
+		reporter = nil,
+		project = "",
+		issue_type = nil,
+	},
 	assignees = nil,
 	assignees_loading = false,
-	selected_assignee = nil,
 	issue_types = nil,
 	issue_types_loading = false,
-	selected_issue_type = nil,
 	spinner = nil,
 	assignees_handle = nil,
 	issue_types_handle = nil,
-	submitting = false,
 	content_width = 0,
 	on_submit = nil,
-	project = nil,
 }
 
 local ns = vim.api.nvim_create_namespace("atlas.jira.create_issue")
@@ -101,18 +101,18 @@ local function create_ui_buffer(opts)
 end
 
 local function get_title()
-	if not valid_buf(state.title_buf) then
+	if not valid_buf(state.layout.title_buf) then
 		return ""
 	end
-	local lines = vim.api.nvim_buf_get_lines(state.title_buf, 0, -1, false)
+	local lines = vim.api.nvim_buf_get_lines(state.layout.title_buf, 0, -1, false)
 	return table.concat(lines, " ")
 end
 
 local function get_description()
-	if not valid_buf(state.desc_buf) then
+	if not valid_buf(state.layout.desc_buf) then
 		return ""
 	end
-	local lines = vim.api.nvim_buf_get_lines(state.desc_buf, 0, -1, false)
+	local lines = vim.api.nvim_buf_get_lines(state.layout.desc_buf, 0, -1, false)
 	return table.concat(lines, "\n")
 end
 
@@ -122,21 +122,13 @@ local function is_modified()
 	return title ~= "" or desc ~= ""
 end
 
-local function get_reporter_name()
-	local user = jira_state.current_user
-	if user and user.display_name then
-		return user.display_name
-	end
-	return "Unknown"
-end
-
 local function get_assignee_display()
 	if state.assignees_loading then
 		local frame = state.spinner and state.spinner:current_frame() or "⠋"
 		return frame .. " Loading...", true
 	end
-	if state.selected_assignee then
-		return icons.entity("user") .. " " .. state.selected_assignee.display_name, false
+	if state.fields.assignee then
+		return icons.entity("user") .. " " .. state.fields.assignee.display_name, false
 	end
 	return icons.entity("user") .. " Unassigned", false
 end
@@ -147,21 +139,19 @@ local function get_issue_type_display()
 		return frame .. " Loading...", true
 	end
 
-	if state.selected_issue_type and state.selected_issue_type.name ~= "" then
-		local name = state.selected_issue_type.name
+	if state.fields.issue_type and state.fields.issue_type.name ~= "" then
+		local name = state.fields.issue_type.name
 		return string.format("%s %s", icons.jira_icon(name), name), false
 	end
 
 	return "None", false
 end
 
+---@param issue_types JiraIssueType[]
+---@return JiraIssueType|nil
 local function pick_default_issue_type(issue_types)
-	if type(issue_types) ~= "table" then
-		return nil
-	end
-
 	for _, issue_type in ipairs(issue_types) do
-		if type(issue_type) == "table" and tostring(issue_type.name or ""):lower() == "task" then
+		if tostring(issue_type.name or ""):lower() == "task" then
 			return issue_type
 		end
 	end
@@ -174,14 +164,14 @@ local function render_meta_lines(width)
 	local project_icon = icons.entity("project")
 	local assignee_text, is_loading = get_assignee_display()
 	local issue_type_text, issue_type_loading = get_issue_type_display()
-	local reporter_name = get_reporter_name()
-	local project_name = state.project or "Unknown"
+	local reporter_name = state.fields.reporter and state.fields.reporter.display_name or "Unknown"
+	local project_name = state.fields.project or "Unknown"
 
 	local assignee_hl
 	if is_loading then
 		assignee_hl = "AtlasTextMuted"
-	elseif state.selected_assignee then
-		assignee_hl = helper.person_hl(state.selected_assignee.display_name)
+	elseif state.fields.assignee then
+		assignee_hl = helper.person_hl(state.fields.assignee.display_name)
 	else
 		assignee_hl = helper.person_hl(nil)
 	end
@@ -201,7 +191,8 @@ local function render_meta_lines(width)
 			v1_hl = "AtlasProjectKey",
 			k2 = "Type:",
 			v2 = issue_type_text,
-			v2_hl = issue_type_loading and "AtlasTextMuted" or helper.issue_type_hl(state.selected_issue_type and state.selected_issue_type.name or nil),
+			v2_hl = issue_type_loading and "AtlasTextMuted"
+				or helper.issue_type_hl(state.fields.issue_type and state.fields.issue_type.name or nil),
 		},
 	}
 
@@ -249,19 +240,19 @@ local function render_meta_lines(width)
 end
 
 local function update_meta_buffer(width)
-	if not valid_buf(state.meta_buf) then
+	if not valid_buf(state.layout.meta_buf) then
 		return
 	end
 
 	local w = width or state.content_width
 	local lines, spans = render_meta_lines(w)
-	vim.api.nvim_set_option_value("modifiable", true, { buf = state.meta_buf })
-	vim.api.nvim_buf_set_lines(state.meta_buf, 0, -1, false, lines)
-	vim.api.nvim_set_option_value("modifiable", false, { buf = state.meta_buf })
+	vim.api.nvim_set_option_value("modifiable", true, { buf = state.layout.meta_buf })
+	vim.api.nvim_buf_set_lines(state.layout.meta_buf, 0, -1, false, lines)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = state.layout.meta_buf })
 
-	vim.api.nvim_buf_clear_namespace(state.meta_buf, ns, 0, -1)
+	vim.api.nvim_buf_clear_namespace(state.layout.meta_buf, ns, 0, -1)
 	for _, span in ipairs(spans) do
-		vim.api.nvim_buf_set_extmark(state.meta_buf, ns, span.line, span.start_col, {
+		vim.api.nvim_buf_set_extmark(state.layout.meta_buf, ns, span.line, span.start_col, {
 			end_col = span.end_col,
 			hl_group = span.hl_group,
 		})
@@ -302,61 +293,59 @@ local function close_ui()
 		state.spinner = nil
 	end
 
-	if valid_win(state.desc_win) then
-		vim.api.nvim_win_close(state.desc_win, true)
+	if valid_win(state.layout.desc_win) then
+		vim.api.nvim_win_close(state.layout.desc_win, true)
 	end
-	if valid_win(state.meta_win) then
-		vim.api.nvim_win_close(state.meta_win, true)
+	if valid_win(state.layout.meta_win) then
+		vim.api.nvim_win_close(state.layout.meta_win, true)
 	end
-	if valid_win(state.title_win) then
-		vim.api.nvim_win_close(state.title_win, true)
+	if valid_win(state.layout.title_win) then
+		vim.api.nvim_win_close(state.layout.title_win, true)
 	end
-	if valid_win(state.container_win) then
-		vim.api.nvim_win_close(state.container_win, true)
-	end
-
-	if valid_buf(state.desc_buf) then
-		vim.api.nvim_buf_delete(state.desc_buf, { force = true })
-	end
-	if valid_buf(state.meta_buf) then
-		vim.api.nvim_buf_delete(state.meta_buf, { force = true })
-	end
-	if valid_buf(state.title_buf) then
-		vim.api.nvim_buf_delete(state.title_buf, { force = true })
-	end
-	if valid_buf(state.container_buf) then
-		vim.api.nvim_buf_delete(state.container_buf, { force = true })
+	if valid_win(state.layout.container_win) then
+		vim.api.nvim_win_close(state.layout.container_win, true)
 	end
 
-	state.title_buf = nil
-	state.title_win = nil
-	state.meta_buf = nil
-	state.meta_win = nil
-	state.desc_buf = nil
-	state.desc_win = nil
-	state.container_win = nil
-	state.container_buf = nil
+	if valid_buf(state.layout.desc_buf) then
+		vim.api.nvim_buf_delete(state.layout.desc_buf, { force = true })
+	end
+	if valid_buf(state.layout.meta_buf) then
+		vim.api.nvim_buf_delete(state.layout.meta_buf, { force = true })
+	end
+	if valid_buf(state.layout.title_buf) then
+		vim.api.nvim_buf_delete(state.layout.title_buf, { force = true })
+	end
+	if valid_buf(state.layout.container_buf) then
+		vim.api.nvim_buf_delete(state.layout.container_buf, { force = true })
+	end
+
+	state.layout.title_buf = nil
+	state.layout.title_win = nil
+	state.layout.meta_buf = nil
+	state.layout.meta_win = nil
+	state.layout.desc_buf = nil
+	state.layout.desc_win = nil
+	state.layout.container_win = nil
+	state.layout.container_buf = nil
 	state.preview_mode = false
 	state.original_markdown = ""
+	state.fields.summary = ""
+	state.fields.description = nil
+	state.fields.assignee = nil
+	state.fields.reporter = nil
+	state.fields.project = ""
+	state.fields.issue_type = nil
 	state.assignees = nil
 	state.assignees_loading = false
-	state.selected_assignee = nil
 	state.issue_types = nil
 	state.issue_types_loading = false
-	state.selected_issue_type = nil
 	state.assignees_handle = nil
 	state.issue_types_handle = nil
-	state.submitting = false
 	state.content_width = 0
 	state.on_submit = nil
 end
 
 local function confirm_close()
-	if state.submitting then
-		footer.notify("info", "Issue creation in progress...")
-		return
-	end
-
 	if not is_modified() then
 		close_ui()
 		return
@@ -372,10 +361,6 @@ local function confirm_close()
 end
 
 local function create_issue()
-	if state.submitting then
-		return
-	end
-
 	local title = vim.trim(get_title())
 	local desc = get_description()
 
@@ -390,25 +375,19 @@ local function create_issue()
 		adf_description = md_to_adf.to_adf(markdown_content)
 	end
 
-	local fields = {
-		summary = title,
-		description = adf_description,
-		assignee = state.selected_assignee,
-		project = state.project,
-		issue_type = state.selected_issue_type,
-	}
+	local fields = vim.deepcopy(state.fields)
+	fields.summary = title
+	fields.description = adf_description
 
 	local on_submit = state.on_submit
 	if not on_submit then
 		return
 	end
 
-	state.submitting = true
 	spinner_popup.start("Creating issue...")
 
 	on_submit(fields, function(ok, err)
 		vim.schedule(function()
-			state.submitting = false
 			spinner_popup.stop()
 
 			if ok then
@@ -424,15 +403,15 @@ local function create_issue()
 end
 
 local function toggle_preview()
-	if not valid_buf(state.desc_buf) or not valid_win(state.desc_win) then
+	if not valid_buf(state.layout.desc_buf) or not valid_win(state.layout.desc_win) then
 		return
 	end
 
 	if state.preview_mode then
-		vim.api.nvim_set_option_value("modifiable", true, { buf = state.desc_buf })
+		vim.api.nvim_set_option_value("modifiable", true, { buf = state.layout.desc_buf })
 		local lines = vim.split(state.original_markdown, "\n", { plain = true })
-		vim.api.nvim_buf_set_lines(state.desc_buf, 0, -1, false, lines)
-		vim.api.nvim_set_option_value("filetype", "markdown", { buf = state.desc_buf })
+		vim.api.nvim_buf_set_lines(state.layout.desc_buf, 0, -1, false, lines)
+		vim.api.nvim_set_option_value("filetype", "markdown", { buf = state.layout.desc_buf })
 		state.preview_mode = false
 		footer.notify("info", "Editing markdown")
 	else
@@ -446,24 +425,24 @@ local function toggle_preview()
 			formatted = json_str
 		end
 		local lines = vim.split(formatted, "\n", { plain = true })
-		vim.api.nvim_set_option_value("modifiable", true, { buf = state.desc_buf })
-		vim.api.nvim_buf_set_lines(state.desc_buf, 0, -1, false, lines)
-		vim.api.nvim_set_option_value("modifiable", false, { buf = state.desc_buf })
-		vim.api.nvim_set_option_value("filetype", "json", { buf = state.desc_buf })
+		vim.api.nvim_set_option_value("modifiable", true, { buf = state.layout.desc_buf })
+		vim.api.nvim_buf_set_lines(state.layout.desc_buf, 0, -1, false, lines)
+		vim.api.nvim_set_option_value("modifiable", false, { buf = state.layout.desc_buf })
+		vim.api.nvim_set_option_value("filetype", "json", { buf = state.layout.desc_buf })
 		state.preview_mode = true
 		footer.notify("info", "ADF preview (read-only)")
 	end
 end
 
 local function focus_description()
-	if valid_win(state.desc_win) then
-		vim.api.nvim_set_current_win(state.desc_win)
+	if valid_win(state.layout.desc_win) then
+		vim.api.nvim_set_current_win(state.layout.desc_win)
 	end
 end
 
 local function focus_title()
-	if valid_win(state.title_win) then
-		vim.api.nvim_set_current_win(state.title_win)
+	if valid_win(state.layout.title_win) then
+		vim.api.nvim_set_current_win(state.layout.title_win)
 	end
 end
 
@@ -480,7 +459,7 @@ local function show_assignee_picker()
 
 	-- Build options: Unassign first if currently assigned, then all users
 	local options = {}
-	if state.selected_assignee then
+	if state.fields.assignee then
 		table.insert(options, { account_id = nil, display_name = "Unassign" })
 	end
 	for _, user in ipairs(state.assignees) do
@@ -499,9 +478,9 @@ local function show_assignee_picker()
 		end
 
 		if selected.account_id == nil then
-			state.selected_assignee = nil
+			state.fields.assignee = nil
 		else
-			state.selected_assignee = selected
+			state.fields.assignee = selected
 		end
 		update_meta_buffer()
 	end)
@@ -532,7 +511,7 @@ local function show_issue_type_picker()
 			return
 		end
 
-		state.selected_issue_type = selected
+		state.fields.issue_type = selected
 		update_meta_buffer()
 	end)
 end
@@ -540,43 +519,88 @@ end
 local function setup_keymaps()
 	local keymap_opts = { silent = true, nowait = true }
 
-	if valid_buf(state.title_buf) then
-		vim.keymap.set("n", "q", confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.title_buf }))
-		vim.keymap.set("n", "<CR>", focus_description, vim.tbl_extend("force", keymap_opts, { buffer = state.title_buf }))
-		vim.keymap.set("n", "<Tab>", focus_description, vim.tbl_extend("force", keymap_opts, { buffer = state.title_buf }))
-		vim.keymap.set("n", "ga", show_assignee_picker, vim.tbl_extend("force", keymap_opts, { buffer = state.title_buf }))
-		vim.keymap.set("n", "gt", show_issue_type_picker, vim.tbl_extend("force", keymap_opts, { buffer = state.title_buf }))
+	if valid_buf(state.layout.title_buf) then
+		vim.keymap.set("n", "q", confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
+		vim.keymap.set(
+			"n",
+			"<CR>",
+			focus_description,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf })
+		)
+		vim.keymap.set(
+			"n",
+			"<Tab>",
+			focus_description,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf })
+		)
+		vim.keymap.set(
+			"n",
+			"ga",
+			show_assignee_picker,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf })
+		)
+		vim.keymap.set(
+			"n",
+			"gt",
+			show_issue_type_picker,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf })
+		)
 		vim.keymap.set("i", "<CR>", function()
 			vim.cmd("stopinsert")
 			focus_description()
-		end, vim.tbl_extend("force", keymap_opts, { buffer = state.title_buf }))
+		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
 		vim.keymap.set("i", "<Tab>", function()
 			vim.cmd("stopinsert")
 			focus_description()
-		end, vim.tbl_extend("force", keymap_opts, { buffer = state.title_buf }))
-		vim.keymap.set("n", "m", toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.title_buf }))
+		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
+		vim.keymap.set("n", "m", toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
 	end
 
-	if valid_buf(state.meta_buf) then
-		vim.keymap.set("n", "q", confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.meta_buf }))
-		vim.keymap.set("n", "<CR>", show_assignee_picker, vim.tbl_extend("force", keymap_opts, { buffer = state.meta_buf }))
-		vim.keymap.set("n", "<Tab>", focus_description, vim.tbl_extend("force", keymap_opts, { buffer = state.meta_buf }))
-		vim.keymap.set("n", "<S-Tab>", focus_title, vim.tbl_extend("force", keymap_opts, { buffer = state.meta_buf }))
-		vim.keymap.set("n", "m", toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.meta_buf }))
+	if valid_buf(state.layout.meta_buf) then
+		vim.keymap.set("n", "q", confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf }))
+		vim.keymap.set(
+			"n",
+			"<CR>",
+			show_assignee_picker,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf })
+		)
+		vim.keymap.set(
+			"n",
+			"<Tab>",
+			focus_description,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf })
+		)
+		vim.keymap.set(
+			"n",
+			"<S-Tab>",
+			focus_title,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf })
+		)
+		vim.keymap.set("n", "m", toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf }))
 	end
 
-	if valid_buf(state.desc_buf) then
-		vim.keymap.set("n", "q", confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.desc_buf }))
-		vim.keymap.set("n", "<Tab>", focus_title, vim.tbl_extend("force", keymap_opts, { buffer = state.desc_buf }))
-		vim.keymap.set("n", "<S-Tab>", focus_title, vim.tbl_extend("force", keymap_opts, { buffer = state.desc_buf }))
-		vim.keymap.set("n", "ga", show_assignee_picker, vim.tbl_extend("force", keymap_opts, { buffer = state.desc_buf }))
-		vim.keymap.set("n", "gt", show_issue_type_picker, vim.tbl_extend("force", keymap_opts, { buffer = state.desc_buf }))
-		vim.keymap.set("n", "m", toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.desc_buf }))
+	if valid_buf(state.layout.desc_buf) then
+		vim.keymap.set("n", "q", confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
+		vim.keymap.set("n", "<Tab>", focus_title, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
+		vim.keymap.set("n", "<S-Tab>", focus_title, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
+		vim.keymap.set(
+			"n",
+			"ga",
+			show_assignee_picker,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf })
+		)
+		vim.keymap.set(
+			"n",
+			"gt",
+			show_issue_type_picker,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf })
+		)
+		vim.keymap.set("n", "m", toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
 	end
 end
 
 local function setup_autocmds()
-	local write_bufs = { state.title_buf, state.desc_buf }
+	local write_bufs = { state.layout.title_buf, state.layout.desc_buf }
 	for _, buf in ipairs(write_bufs) do
 		if valid_buf(buf) then
 			vim.api.nvim_create_autocmd("BufWriteCmd", {
@@ -588,7 +612,7 @@ local function setup_autocmds()
 		end
 	end
 
-	local all_bufs = { state.title_buf, state.meta_buf, state.desc_buf, state.container_buf }
+	local all_bufs = { state.layout.title_buf, state.layout.meta_buf, state.layout.desc_buf, state.layout.container_buf }
 	for _, buf in ipairs(all_bufs) do
 		if valid_buf(buf) then
 			vim.api.nvim_create_autocmd("QuitPre", {
@@ -605,16 +629,22 @@ local function setup_autocmds()
 	end
 end
 
----@param project string
----@param on_submit fun(fields: CreateIssueFields, done: fun(ok: boolean, err: string|nil))|nil
-function M.open(project, on_submit)
-	if valid_win(state.container_win) then
+---@param on_submit fun(fields: IssueFields, done: fun(ok: boolean, err: string|nil))|nil
+---@param opts IssueFields|nil
+function M.open(on_submit, opts)
+	if valid_win(state.layout.container_win) then
 		close_ui()
 	end
 
 	state.on_submit = on_submit
-	state.project = project
-	state.selected_issue_type = nil
+	state.fields = opts or {
+		summary = "",
+		description = nil,
+		assignee = nil,
+		reporter = nil,
+		project = "",
+		issue_type = nil,
+	}
 	state.issue_types = nil
 
 	local width = math.max(math.floor(vim.o.columns * 0.6), 60)
@@ -624,11 +654,11 @@ function M.open(project, on_submit)
 
 	local inner_width = width - 2
 
-	state.container_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_set_option_value("buftype", "nofile", { buf = state.container_buf })
-	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = state.container_buf })
+	state.layout.container_buf = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = state.layout.container_buf })
+	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = state.layout.container_buf })
 
-	state.container_win = vim.api.nvim_open_win(state.container_buf, true, {
+	state.layout.container_win = vim.api.nvim_open_win(state.layout.container_buf, true, {
 		relative = "editor",
 		width = width,
 		height = height,
@@ -643,37 +673,41 @@ function M.open(project, on_submit)
 		footer = " q/:q close | :w create | ga assignee | gt issue type | m toggle ADF preview ",
 		footer_pos = "center",
 	})
-	vim.api.nvim_set_option_value("wrap", false, { win = state.container_win })
+	vim.api.nvim_set_option_value("wrap", false, { win = state.layout.container_win })
 
-	state.title_buf = create_ui_buffer({
+	state.layout.title_buf = create_ui_buffer({
 		buftype = "acwrite",
 		modifiable = true,
 		name = "atlas://jira/create/title",
 	})
 
-	state.meta_buf = create_ui_buffer({
+	state.layout.meta_buf = create_ui_buffer({
 		buftype = "nofile",
 		modifiable = false,
 		name = "atlas://jira/create/meta",
 	})
 
-	state.desc_buf = create_ui_buffer({
+	state.layout.desc_buf = create_ui_buffer({
 		buftype = "acwrite",
 		modifiable = true,
 		name = "atlas://jira/create/description.md",
 		filetype = "markdown",
 	})
 
+	vim.api.nvim_buf_set_lines(state.layout.title_buf, 0, -1, false, { tostring(state.fields.summary or "") })
+	local initial_desc = type(state.fields.description) == "string" and state.fields.description or ""
+	vim.api.nvim_buf_set_lines(state.layout.desc_buf, 0, -1, false, vim.split(initial_desc, "\n", { plain = true }))
+
 	local content_width = inner_width - 4
 	local content_col = 2
 	state.content_width = content_width
 
 	local separator_line = string.rep("─", inner_width)
-	vim.api.nvim_buf_set_lines(state.container_buf, 0, -1, false, vim.fn["repeat"]({ "" }, height))
+	vim.api.nvim_buf_set_lines(state.layout.container_buf, 0, -1, false, vim.fn["repeat"]({ "" }, height))
 
-	state.title_win = vim.api.nvim_open_win(state.title_buf, true, {
+	state.layout.title_win = vim.api.nvim_open_win(state.layout.title_buf, true, {
 		relative = "win",
-		win = state.container_win,
+		win = state.layout.container_win,
 		width = content_width,
 		height = 2,
 		row = 0,
@@ -681,15 +715,15 @@ function M.open(project, on_submit)
 		style = "minimal",
 		border = "none",
 	})
-	vim.api.nvim_set_option_value("number", false, { win = state.title_win })
-	vim.api.nvim_set_option_value("relativenumber", false, { win = state.title_win })
-	vim.api.nvim_set_option_value("cursorline", false, { win = state.title_win })
-	vim.api.nvim_set_option_value("wrap", false, { win = state.title_win })
-	vim.api.nvim_set_option_value("winbar", "Summary", { win = state.title_win })
+	vim.api.nvim_set_option_value("number", false, { win = state.layout.title_win })
+	vim.api.nvim_set_option_value("relativenumber", false, { win = state.layout.title_win })
+	vim.api.nvim_set_option_value("cursorline", false, { win = state.layout.title_win })
+	vim.api.nvim_set_option_value("wrap", false, { win = state.layout.title_win })
+	vim.api.nvim_set_option_value("winbar", "Summary", { win = state.layout.title_win })
 
-	state.meta_win = vim.api.nvim_open_win(state.meta_buf, false, {
+	state.layout.meta_win = vim.api.nvim_open_win(state.layout.meta_buf, false, {
 		relative = "win",
-		win = state.container_win,
+		win = state.layout.container_win,
 		width = content_width,
 		height = 2,
 		row = 4,
@@ -698,14 +732,14 @@ function M.open(project, on_submit)
 		border = "none",
 		focusable = false,
 	})
-	vim.api.nvim_set_option_value("number", false, { win = state.meta_win })
-	vim.api.nvim_set_option_value("relativenumber", false, { win = state.meta_win })
-	vim.api.nvim_set_option_value("cursorline", false, { win = state.meta_win })
-	vim.api.nvim_set_option_value("wrap", false, { win = state.meta_win })
+	vim.api.nvim_set_option_value("number", false, { win = state.layout.meta_win })
+	vim.api.nvim_set_option_value("relativenumber", false, { win = state.layout.meta_win })
+	vim.api.nvim_set_option_value("cursorline", false, { win = state.layout.meta_win })
+	vim.api.nvim_set_option_value("wrap", false, { win = state.layout.meta_win })
 
-	state.desc_win = vim.api.nvim_open_win(state.desc_buf, false, {
+	state.layout.desc_win = vim.api.nvim_open_win(state.layout.desc_buf, false, {
 		relative = "win",
-		win = state.container_win,
+		win = state.layout.container_win,
 		width = content_width,
 		height = math.max(1, height - 8),
 		row = 7,
@@ -713,14 +747,14 @@ function M.open(project, on_submit)
 		style = "minimal",
 		border = "none",
 	})
-	vim.api.nvim_set_option_value("number", false, { win = state.desc_win })
-	vim.api.nvim_set_option_value("relativenumber", false, { win = state.desc_win })
-	vim.api.nvim_set_option_value("cursorline", false, { win = state.desc_win })
-	vim.api.nvim_set_option_value("wrap", true, { win = state.desc_win })
-	vim.api.nvim_set_option_value("winbar", "Description", { win = state.desc_win })
+	vim.api.nvim_set_option_value("number", false, { win = state.layout.desc_win })
+	vim.api.nvim_set_option_value("relativenumber", false, { win = state.layout.desc_win })
+	vim.api.nvim_set_option_value("cursorline", false, { win = state.layout.desc_win })
+	vim.api.nvim_set_option_value("wrap", true, { win = state.layout.desc_win })
+	vim.api.nvim_set_option_value("winbar", "Description", { win = state.layout.desc_win })
 
-	vim.api.nvim_buf_set_lines(state.container_buf, 3, 4, false, { separator_line })
-	vim.api.nvim_buf_set_lines(state.container_buf, 6, 7, false, { separator_line })
+	vim.api.nvim_buf_set_lines(state.layout.container_buf, 3, 4, false, { separator_line })
+	vim.api.nvim_buf_set_lines(state.layout.container_buf, 6, 7, false, { separator_line })
 
 	state.assignees_loading = true
 	state.issue_types_loading = true
@@ -735,25 +769,29 @@ function M.open(project, on_submit)
 
 	update_meta_buffer(content_width)
 
-	if state.project and state.project ~= "" then
-		state.assignees_handle = users_api.get_assignable_users_for_project(state.project, "", function(users, err)
-			state.assignees_handle = nil
-			state.assignees_loading = false
-			stop_loading_spinner_if_done()
+	if state.fields.project ~= "" then
+		state.assignees_handle = users_api.get_assignable_users_for_project(
+			state.fields.project,
+			"",
+			function(users, err)
+				state.assignees_handle = nil
+				state.assignees_loading = false
+				stop_loading_spinner_if_done()
 
-			if err then
-				footer.notify("warn", "Failed to load assignees: " .. err, 2000)
-				state.assignees = {}
-			else
-				state.assignees = users or {}
+				if err then
+					footer.notify("warn", "Failed to load assignees: " .. err, 2000)
+					state.assignees = {}
+				else
+					state.assignees = users or {}
+				end
+
+				vim.schedule(function()
+					update_meta_buffer()
+				end)
 			end
+		)
 
-			vim.schedule(function()
-				update_meta_buffer()
-			end)
-		end)
-
-		state.issue_types_handle = issues_api.get_create_meta(state.project, function(issue_types, err)
+		state.issue_types_handle = issues_api.get_create_meta(state.fields.project, function(issue_types, err)
 			state.issue_types_handle = nil
 			state.issue_types_loading = false
 			stop_loading_spinner_if_done()
@@ -761,7 +799,7 @@ function M.open(project, on_submit)
 			if err then
 				footer.notify("warn", "Failed to load issue types: " .. err, 2000)
 				state.issue_types = {}
-				state.selected_issue_type = nil
+				state.fields.issue_type = nil
 			else
 				local filtered_issue_types = {}
 				for _, issue_type in ipairs(issue_types or {}) do
@@ -771,7 +809,9 @@ function M.open(project, on_submit)
 					end
 				end
 				state.issue_types = filtered_issue_types
-				state.selected_issue_type = pick_default_issue_type(state.issue_types)
+				if not state.fields.issue_type then
+					state.fields.issue_type = pick_default_issue_type(state.issue_types)
+				end
 			end
 
 			vim.schedule(function()
@@ -784,18 +824,18 @@ function M.open(project, on_submit)
 		stop_loading_spinner_if_done()
 		state.assignees = {}
 		state.issue_types = {}
-		state.selected_issue_type = nil
+		state.fields.issue_type = nil
 		update_meta_buffer(content_width)
 	end
 
 	setup_keymaps()
 	setup_autocmds()
 
-	vim.api.nvim_set_current_win(state.title_win)
+	vim.api.nvim_set_current_win(state.layout.title_win)
 	vim.cmd("startinsert")
 
 	vim.api.nvim_create_autocmd("WinClosed", {
-		pattern = tostring(state.container_win),
+		pattern = tostring(state.layout.container_win),
 		once = true,
 		callback = function()
 			close_ui()

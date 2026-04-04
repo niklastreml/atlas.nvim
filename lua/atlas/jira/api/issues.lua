@@ -246,7 +246,7 @@ function M.update_issue(issue_key, fields, callback)
 	end)
 end
 
----@class JiraCreateIssueType
+---@class JiraIssueType
 ---@field id string
 ---@field name string
 ---@field description string
