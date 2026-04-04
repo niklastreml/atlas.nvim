@@ -261,42 +261,44 @@ function M.add_comment()
 		return
 	end
 
-	vim.ui.input({
-		prompt = "Add comment: ",
-	}, function(input)
-		if input == nil then
-			footer.notify("info", "Add comment cancelled")
-			return
-		end
-
-		local body = tostring(input)
-		if vim.trim(body) == "" then
-			footer.notify("warn", "Comment cannot be empty")
-			return
-		end
-
-		footer.notify("loading", "Adding comment...")
-		comments_api.add_comment(issue.key, body, function(comment, err)
-			if err ~= nil then
-				footer.notify("error", err)
+	markdown_editor.open({
+		key = string.format("comment-add-%s", issue.key),
+		title = string.format("Add Comment %s", issue.key),
+		initial_text = "",
+		width_ratio = 0.65,
+		height_ratio = 0.65,
+		on_save = function(body)
+			if vim.trim(body) == "" then
+				footer.notify("warn", "Comment cannot be empty")
 				return
 			end
 
-			if type(state.comments) ~= "table" then
-				state.comments = {}
-			end
+			footer.notify("loading", "Adding comment...")
+			comments_api.add_comment(issue.key, body, function(comment, err)
+				if err ~= nil then
+					footer.notify("error", err)
+					return
+				end
 
-			if type(comment) == "table" then
-				table.insert(state.comments, comment)
-			end
+				if type(state.comments) ~= "table" then
+					state.comments = {}
+				end
 
-			state.comments = helper.normalize_comments(state.comments)
+				if type(comment) == "table" then
+					table.insert(state.comments, comment)
+				end
 
-			require("atlas.jira.panel.init").refresh()
-			M.move(0)
-			footer.notify("success", "Comment added", 1200)
-		end)
-	end)
+				state.comments = helper.normalize_comments(state.comments)
+
+				require("atlas.jira.panel.init").refresh()
+				M.move(0)
+				footer.notify("success", "Comment added", 1200)
+			end)
+		end,
+		on_cancel = function()
+			footer.notify("info", "Add comment cancelled")
+		end,
+	})
 end
 
 function M.reply_to_comment()

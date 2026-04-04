@@ -1,11 +1,34 @@
 @jira_issue_key = KAN-2
 @jira_project_key = KAN
+@jira_project_id = 10000
 
 ### Get current user
 GET {{JIRA_BASE_URL}}/rest/api/3/myself
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 Content-Type: application/json
+
+### Search projects for current user
+GET {{JIRA_BASE_URL}}/rest/api/3/project/search?maxResults=50&status=live
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Accept: application/json
+
+### Check CREATE_ISSUES permission in bulk
+POST {{JIRA_BASE_URL}}/rest/api/3/permissions/check
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "projectPermissions": [
+    {
+      "permissions": [
+        "CREATE_ISSUES"
+      ],
+      "projects": ["{{jira_project_id}}"]
+    }
+  ]
+}
 
 ### Search issues
 POST {{JIRA_BASE_URL}}/rest/api/3/search/jql
@@ -15,37 +38,20 @@ Accept: application/json
 
 {
   "jql": "project = {{jira_project_key}} ORDER BY updated DESC",
-  "fields": ["summary", "status", "assignee", "reporter", "parent", "priority", "issuetype", "duedate", "customfield_10016", "customfield_10003"],
+  "fields": ["summary", "status", "project", "assignee", "reporter", "parent", "priority", "issuetype", "duedate", "customfield_10016", "customfield_10003"],
   "nextPageToken": "",
-  "maxResults": 10
+  "maxResults": 1
 }
 
-### Search specific issue
-POST {{JIRA_BASE_URL}}/rest/api/3/search/jql
+### Get issue details
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
-Content-Type: application/json
 Accept: application/json
 
-{
-  "jql": "key = {{jira_issue_key}}",
-  "fields": ["*all"],
-  "nextPageToken": "",
-  "maxResults": 10
-}
-
-### Get Description
-POST {{JIRA_BASE_URL}}/rest/api/3/search/jql
+### Get issue history
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/changelog?startAt=0&maxResults=100
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
-Content-Type: application/json
 Accept: application/json
-
-{
-  "jql": "key = {{jira_issue_key}}",
-  "fields": ["description"],
-  "nextPageToken": "",
-  "maxResults": 10
-}
-
 
 ### Get transitions
 GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/transitions
@@ -59,7 +65,6 @@ Accept: application/json
   }
 %}
 
-
 ### Transition issue
 POST {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/transitions
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
@@ -71,7 +76,6 @@ Accept: application/json
     "id": "{{jira_transition_id}}"
   }
 }
-
 
 ### Get assignable users
 GET {{JIRA_BASE_URL}}/rest/api/3/user/assignable/search?issueKey={{jira_issue_key}}&query=
@@ -85,18 +89,6 @@ Accept: application/json
   }
 %}
 
-### Get create metadata (issue types)
-GET {{JIRA_BASE_URL}}/rest/api/3/issue/createmeta?projectKeys={{jira_project_key}}&expand=projects.issuetypes
-Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
-Accept: application/json
-
-> {%
-  const firstIssueTypeId = response.body?.projects?.[0]?.issuetypes?.[0]?.id;
-  if (firstIssueTypeId) {
-    client.global.set("jira_issue_type_id", String(firstIssueTypeId));
-  }
-%}
-
 ### Assign issue
 PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/assignee
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
@@ -106,17 +98,6 @@ Accept: application/json
 {
   "accountId": "{{jira_account_id}}"
 }
-
-
-### Get issue details
-GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}
-Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
-Accept: application/json
-
-### Get issue history
-GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/changelog?startAt=0&maxResults=100
-Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
-Accept: application/json
 
 ### Get comments
 GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment
@@ -129,7 +110,6 @@ Accept: application/json
     client.global.set("jira_comment_id", String(firstCommentId));
   }
 %}
-
 
 ### Add comment
 POST {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment
@@ -155,7 +135,6 @@ Accept: application/json
   }
 }
 
-
 ### Edit comment
 PUT {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}/comment/{{jira_comment_id}}
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
@@ -180,6 +159,11 @@ Accept: application/json
   }
 }
 
+### Get create metadata (issue types)
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/createmeta?projectKeys={{jira_project_key}}&expand=projects.issuetypes
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Accept: application/json
+
 ### Create issue
 POST {{JIRA_BASE_URL}}/rest/api/3/issue
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
@@ -192,8 +176,5 @@ Accept: application/json
       "key": "{{jira_project_key}}"
     },
     "summary": "New issue from atlas.nvim",
-    "issuetype": {
-      "id": "{{jira_issue_type_id}}"
-    }
   }
 }

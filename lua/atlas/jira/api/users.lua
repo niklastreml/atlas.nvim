@@ -5,6 +5,14 @@ local service = require("atlas.jira.api.service")
 local cache = require("atlas.core.cache")
 local logger = require("atlas.core.logger")
 
+---@param str string
+---@return string
+local function url_encode(str)
+	return (str:gsub("([^%w%-_.~])", function(c)
+		return string.format("%%%02X", string.byte(c))
+	end))
+end
+
 ---@param callback fun(user: JiraUser|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.get_myself(callback)
@@ -49,13 +57,12 @@ function M.get_assignable_users(opts, query, callback)
 	end
 
 	local q = tostring(query or "")
-	local escaped_q = vim.fn.escape(q, "&=?")
-	local params = { "query=" .. escaped_q }
+	local params = { "query=" .. url_encode(q) }
 	if issue_key ~= "" then
-		table.insert(params, "issueKey=" .. vim.fn.escape(issue_key, "&=?"))
+		table.insert(params, "issueKey=" .. url_encode(issue_key))
 	end
 	if project ~= "" then
-		table.insert(params, "project=" .. vim.fn.escape(project, "&=?"))
+		table.insert(params, "project=" .. url_encode(project))
 	end
 	local endpoint = "/user/assignable/search?" .. table.concat(params, "&")
 
