@@ -1,3 +1,7 @@
+---@class JiraIssueGroup
+---@field issue JiraIssue
+---@field children JiraIssue[]
+
 ---@class JiraState
 ---@field active_view JiraViewConfig|nil
 ---@field current_view JiraViewConfig|nil
@@ -5,7 +9,7 @@
 ---@field error string|nil
 ---@field current_user JiraUser|nil
 ---@field issues JiraIssue[]|nil
----@field issue_tree table[]|nil
+---@field issue_tree JiraIssueGroup[]|nil
 ---@field line_map table<number, table>
 ---@field latest_request_tokens table<string, integer>
 ---@field request_seq integer

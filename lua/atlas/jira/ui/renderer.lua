@@ -82,8 +82,7 @@ local function cell_hl(row, col, ctx)
 
 	if col.key == "status" then
 		local issue_key = type(issue) == "table" and tostring(issue.key or "") or ""
-		local is_reloading = issue_key ~= ""
-			and (tonumber((state.reloading_issue_keys or {})[issue_key]) or 0) > 0
+		local is_reloading = issue_key ~= "" and (tonumber((state.reloading_issue_keys or {})[issue_key]) or 0) > 0
 		local hl_group = is_reloading and "AtlasTextMuted"
 			or helper.status_hl(type(issue) == "table" and issue.status_id or nil)
 		return {
@@ -165,8 +164,7 @@ local function issue_to_row(issue, is_child)
 		reporter = string.format("%s %s", icons.entity("user"), issue.reporter or "Unknown"),
 		status = (function()
 			local issue_key = tostring(issue.key or "")
-			local is_reloading = issue_key ~= ""
-				and (tonumber((state.reloading_issue_keys or {})[issue_key]) or 0) > 0
+			local is_reloading = issue_key ~= "" and (tonumber((state.reloading_issue_keys or {})[issue_key]) or 0) > 0
 			if is_reloading then
 				return string.format(" %s ", state.reload_spinner_frame or "⠋")
 			end
@@ -179,20 +177,21 @@ local function issue_to_row(issue, is_child)
 		children = {},
 	}
 
-	for _, child in ipairs(issue.children or {}) do
-		table.insert(row.children, issue_to_row(child, true))
-	end
-
 	return row
 end
 
----@param issues JiraIssue[]
+---@param issue_groups JiraIssueGroup[]
 ---@return table[]
-local function issues_to_rows(issues)
+local function issues_to_rows(issue_groups)
 	local rows = {}
-	for i, issue in ipairs(issues) do
-		table.insert(rows, issue_to_row(issue))
-		if i < #issues then
+	for i, group in ipairs(issue_groups) do
+		table.insert(rows, issue_to_row(group.issue))
+
+		for _, child in ipairs(group.children or {}) do
+			table.insert(rows, issue_to_row(child, true))
+		end
+
+		if i < #issue_groups then
 			table.insert(rows, {
 				kind = "separator",
 				icon = "",
@@ -225,7 +224,10 @@ function M.issue_popup_content(issue)
 		string.format(" Type:     %s", (type(issue.type) == "table" and issue.type.name) or "-"),
 		string.format(" Status:   %s", issue.status or "-"),
 		string.format(" Priority: %s", issue.priority or "-"),
-		string.format(" Assignee: %s", (type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned"),
+		string.format(
+			" Assignee: %s",
+			(type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned"
+		),
 		string.format(" Reporter: %s", issue.reporter or "Unknown"),
 		string.format(" Due:      %s", issue.duedate or "-"),
 	}
@@ -279,7 +281,7 @@ function M.issue_popup_content(issue)
 	}
 
 	if summary ~= "" then
-			table.insert(highlights, {
+		table.insert(highlights, {
 			row = 0,
 			col = 3 + #(issue.key or ""),
 			end_col = -1,
@@ -374,64 +376,82 @@ function M.render(opts)
 
 	if state.error then
 		table.insert(lines, "Error: " .. state.error)
-	elseif state.is_loading then
-		table.insert(lines, "Loading...")
-	elseif state.issue_tree == nil or #state.issue_tree == 0 then
-		table.insert(lines, "No issues found.")
 	else
-		local rows = issues_to_rows(state.issue_tree)
-
-		local tbl_lines, tbl_map, tbl_spans = table_tree_v2.render({
-			width = opts.width,
-			margin = 1,
-			columns = {
-				{ key = "icon", name = "", can_grow = false, align = "center" },
-				{ key = "name", name = "󰌷 Issue" },
-				{ key = "duedate", name = "", can_grow = false, align = "center", align_title = true },
-				{
-					key = "assignee",
-					name = string.format("%s Assignee", icons.entity("user")),
-					max_width = 22,
-					can_grow = false,
-				},
-				{
-					key = "reporter",
-					name = string.format("%s Reporter", icons.entity("user")),
-					max_width = 22,
-					can_grow = false,
-				},
-				{ key = "status", name = " Status", can_grow = false, align = "center" },
-			},
-			rows = rows,
-			tree = {
-				column_key = "icon",
-				children_key = "children",
-				expanded_field = "expanded",
-				default_expanded = true,
-				indent = "",
-				show_indicator = true,
-				leaf_prefix = "",
-			},
-			cell_hl = cell_hl,
-		})
-
-		local table_base = #lines
-		utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
-
-		for lnum, node in pairs(tbl_map) do
-			line_map[table_base + lnum] = node
+		local rows = issues_to_rows(state.issue_tree or {})
+		if state.is_loading then
+			table.insert(rows, {
+				icon = "",
+				name = "",
+				duedate = "",
+				assignee = "",
+				reporter = "",
+				status = "",
+			})
+			table.insert(rows, {
+				icon = state.reload_spinner_frame or "⠋",
+				name = "Loading...",
+				duedate = "",
+				assignee = "",
+				reporter = "",
+				status = "",
+			})
 		end
 
-		local issue_count = #(state.issues or {})
-		local user_name = (state.current_user and state.current_user.display_name) or ""
-		local footer_items = {
-			{ text = string.format("%d issues", issue_count), hl_group = "AtlasFooterText" },
-		}
-		if user_name ~= "" then
-			table.insert(footer_items, { text = "|", hl_group = "AtlasFooterText" })
-			table.insert(footer_items, { text = "@" .. user_name, hl_group = "AtlasFooterText" })
+		if state.is_loading ~= true and #rows == 0 then
+			table.insert(lines, "No issues found.")
+		else
+			local tbl_lines, tbl_map, tbl_spans = table_tree_v2.render({
+				width = opts.width,
+				margin = 1,
+				columns = {
+					{ key = "icon", name = "", can_grow = false, align = "center" },
+					{ key = "name", name = "󰌷 Issue" },
+					{ key = "duedate", name = "", can_grow = false, align = "center", align_title = true },
+					{
+						key = "assignee",
+						name = string.format("%s Assignee", icons.entity("user")),
+						max_width = 22,
+						can_grow = false,
+					},
+					{
+						key = "reporter",
+						name = string.format("%s Reporter", icons.entity("user")),
+						max_width = 22,
+						can_grow = false,
+					},
+					{ key = "status", name = " Status", can_grow = false, align = "center" },
+				},
+				rows = rows,
+				tree = {
+					column_key = "icon",
+					children_key = "children",
+					expanded_field = "expanded",
+					default_expanded = true,
+					indent = "",
+					show_indicator = true,
+					leaf_prefix = "",
+				},
+				cell_hl = cell_hl,
+			})
+
+			local table_base = #lines
+			utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+
+			for lnum, node in pairs(tbl_map) do
+				line_map[table_base + lnum] = node
+			end
+
+			local issue_count = #(state.issues or {})
+			local user_name = (state.current_user and state.current_user.display_name) or ""
+			local footer_items = {
+				{ text = string.format("%d issues", issue_count), hl_group = "AtlasFooterText" },
+			}
+			if user_name ~= "" then
+				table.insert(footer_items, { text = "|", hl_group = "AtlasFooterText" })
+				table.insert(footer_items, { text = "@" .. user_name, hl_group = "AtlasFooterText" })
+			end
+			footer.set_items(footer_items)
 		end
-		footer.set_items(footer_items)
 	end
 
 	return lines, spans, line_map

@@ -15,19 +15,26 @@ local SEARCH_FIELDS = {
 	"priority",
 	"issuetype",
 	"duedate",
+
 	-- TODO: Probably different in every board, need to make this configurable
 	"customfield_10016", --- story points
 	"customfield_10003", --- approvers
 }
 
+---@class JiraIssueSearchPage
+---@field issues JiraIssue[]
+---@field nextPageToken string|nil
+---@field isLast boolean
+
 ---@param jql string
----@param on_done fun(issues: JiraIssue[]|nil, err: string|nil)
----@param opts { force_load?: boolean }|nil
+---@param on_done fun(page: JiraIssueSearchPage|nil, err: string|nil)
+---@param opts { force_load?: boolean, next_page_token?: string|nil }|nil
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.search_issues(jql, on_done, opts)
 	opts = opts or {}
 	local ttl = service.cache_ttl()
-	local cache_key = "jira:search:" .. jql
+	local page_token = opts.next_page_token or ""
+	local cache_key = "jira:search:" .. jql .. ":page:" .. page_token
 
 	if not opts.force_load then
 		local cached = cache.get(cache_key)
@@ -40,40 +47,34 @@ function M.search_issues(jql, on_done, opts)
 
 	logger.loginfo("Jira search issues", { jql = jql })
 
-	local all_issues = {}
-	local function fetch_page(page_token)
-		local data = {
-			jql = jql,
-			fields = SEARCH_FIELDS,
-			nextPageToken = page_token or "",
-			maxResults = 100,
+	local data = {
+		jql = jql,
+		fields = SEARCH_FIELDS,
+		nextPageToken = page_token,
+		maxResults = 10,
+	}
+
+	return service.request("POST", "/search/jql", data, function(result, err)
+		if err or not result then
+			on_done(nil, err or "Empty response")
+			return
+		end
+
+		local page = {
+			issues = normalizer.normalize_issues(result.issues or {}),
+			nextPageToken = result.nextPageToken,
+			isLast = result.isLast == true,
 		}
 
-		return service.request("POST", "/search/jql", data, function(result, err)
-			if err or not result then
-				on_done(nil, err or "Empty response")
-				return
-			end
-
-			local raw_issues = result.issues or {}
-			local normalized = normalizer.normalize_issues(raw_issues)
-			for _, issue in ipairs(normalized) do
-				table.insert(all_issues, issue)
-			end
-
-			local next_token = result.nextPageToken
-			if next_token and next_token ~= "" and #raw_issues > 0 then
-				fetch_page(next_token)
-				return
-			end
-
-			cache.set(cache_key, all_issues, ttl)
-			logger.loginfo("Jira search complete", { jql = jql, count = #all_issues })
-			on_done(all_issues, nil)
-		end)
-	end
-
-	return fetch_page("")
+		cache.set(cache_key, page, ttl)
+		logger.loginfo("Jira search page complete", {
+			jql = jql,
+			count = #page.issues,
+			next_page_token = page.nextPageToken,
+			is_last = page.isLast,
+		})
+		on_done(page, nil)
+	end)
 end
 
 ---@param issue_key string

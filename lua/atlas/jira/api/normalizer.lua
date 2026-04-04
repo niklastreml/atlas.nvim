@@ -232,49 +232,6 @@ function M.normalize_issues(raw_issues)
 	return out
 end
 
----@param issues JiraIssue[]
----@return JiraIssue[]
-function M.build_issue_tree(issues)
-	local by_key = {}
-	for _, issue in ipairs(issues) do
-		issue.children = {}
-		by_key[issue.key] = issue
-	end
-
-	for _, issue in ipairs(issues) do
-		local parent = issue.parent
-		if parent and not by_key[parent.key] then
-			parent.children = {}
-			by_key[parent.key] = parent
-		end
-	end
-
-	local roots = {}
-	for _, issue in ipairs(issues) do
-		if issue.parent and by_key[issue.parent.key] then
-			table.insert(by_key[issue.parent.key].children, issue)
-		else
-			table.insert(roots, issue)
-		end
-	end
-
-	local seen_roots = {}
-	for _, r in ipairs(roots) do
-		seen_roots[r.key] = true
-	end
-	for _, issue in ipairs(issues) do
-		if issue.parent and by_key[issue.parent.key] then
-			local pkey = issue.parent.key
-			if not seen_roots[pkey] and by_key[pkey].children and #by_key[pkey].children > 0 then
-				table.insert(roots, by_key[pkey])
-				seen_roots[pkey] = true
-			end
-		end
-	end
-
-	return roots
-end
-
 ---@param raw_comment table|nil
 ---@return JiraComment|nil
 local function normalize_comment(raw_comment)

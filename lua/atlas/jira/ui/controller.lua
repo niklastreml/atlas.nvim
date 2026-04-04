@@ -9,6 +9,7 @@ local navigation = require("atlas.ui.navigation")
 local info_popup = require("atlas.ui.popups.info")
 local status_spinner = require("atlas.ui.components.spinner")
 local renderer = require("atlas.jira.ui.renderer")
+local jira_ui_helper = require("atlas.jira.ui.helper")
 local users = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
 local service = require("atlas.jira.api.service")
@@ -19,7 +20,7 @@ local active_user_handle = nil
 local active_issues_handle = nil
 local active_issue_reload_handles = {}
 
-local function render_main_if_jira_active()
+local function render_if_active()
 	if not layout.is_open() then
 		return
 	end
@@ -36,7 +37,7 @@ local refresh_status_spinner = status_spinner.create({
 	interval_ms = 120,
 	on_tick = function(frame)
 		state.reload_spinner_frame = frame
-		render_main_if_jira_active()
+		render_if_active()
 	end,
 })
 
@@ -74,7 +75,7 @@ local function begin_issue_reload(issue_key)
 	end
 
 	state.reload_spinner_frame = refresh_status_spinner:current_frame()
-	render_main_if_jira_active()
+	render_if_active()
 end
 
 ---@param issue_key string
@@ -92,7 +93,7 @@ local function end_issue_reload(issue_key)
 		state.reload_spinner_frame = "⠋"
 	end
 
-	render_main_if_jira_active()
+	render_if_active()
 end
 
 local function cancel_active_requests()
@@ -198,8 +199,15 @@ local function load_active_view(opts, on_done)
 
 	state.is_loading = true
 	state.error = nil
+	state.issues = nil
+	state.issue_tree = nil
+	state.line_map = {}
 	footer.notify("loading", "Loading issues...")
 	spinner.start("Loading issues...")
+	if not refresh_status_spinner:is_running() then
+		refresh_status_spinner:start()
+	end
+	state.reload_spinner_frame = refresh_status_spinner:current_frame()
 
 	if layout.is_open() then
 		require("atlas.ui.main.renderer").render("jira")
@@ -215,6 +223,9 @@ local function load_active_view(opts, on_done)
 
 		if user_err then
 			state.is_loading = false
+			if not has_reloading_issues() then
+				refresh_status_spinner:stop()
+			end
 			state.current_view = state.active_view
 			state.error = tostring(user_err)
 			state.issues = nil
@@ -231,39 +242,84 @@ local function load_active_view(opts, on_done)
 		local jql = build_jql(target_view)
 		logger.loginfo("Jira loading view", { view = target_view_id, jql = jql })
 
-		active_issues_handle = issues_api.search_issues(jql, function(issues, err)
-			active_issues_handle = nil
+		local all_issues = {}
+		local function fetch_page(next_page_token)
+			active_issues_handle = issues_api.search_issues(jql, function(page, err)
+				active_issues_handle = nil
 
-			if not same_view(state.active_view, target_view) then
-				return
-			end
-			if state.latest_request_tokens[target_view_id] ~= token then
-				return
-			end
+				if not same_view(state.active_view, target_view) then
+					return
+				end
 
-			state.is_loading = false
-			state.current_view = state.active_view
+				if state.latest_request_tokens[target_view_id] ~= token then
+					return
+				end
 
-			if err then
-				state.error = tostring(err)
-				state.issues = nil
-				state.issue_tree = nil
-				footer.notify("error", string.format("Failed to fetch issues: %s", tostring(err)))
-			else
+				if err or not page then
+					state.is_loading = false
+					if not has_reloading_issues() then
+						refresh_status_spinner:stop()
+					end
+					state.current_view = state.active_view
+					if #all_issues > 0 then
+						state.error = nil
+						state.issues = all_issues
+						state.issue_tree = jira_ui_helper.build_issue_tree(all_issues)
+						footer.notify("warn", string.format("Stopped at %d issues: %s", #all_issues, tostring(err)))
+					else
+						state.error = tostring(err)
+						state.issues = nil
+						state.issue_tree = nil
+						footer.notify("error", string.format("Failed to fetch issues: %s", tostring(err)))
+					end
+
+					spinner.stop()
+					if layout.is_open() then
+						require("atlas.ui.main.renderer").render("jira")
+					end
+
+					on_done()
+					return
+				end
+
+				for _, issue in ipairs((page and page.issues) or {}) do
+					table.insert(all_issues, issue)
+				end
+
+				state.current_view = state.active_view
 				state.error = nil
-				state.issues = issues or {}
-				state.issue_tree = require("atlas.jira.api.normalizer").build_issue_tree(state.issues)
-				footer.notify("success", string.format("Loaded %d issues", #(issues or {})), 1200)
-			end
+				state.issues = all_issues
+				state.issue_tree = jira_ui_helper.build_issue_tree(all_issues)
 
-			spinner.stop()
+				if layout.is_open() then
+					require("atlas.ui.main.renderer").render("jira")
+				end
 
-			if layout.is_open() then
-				require("atlas.ui.main.renderer").render("jira")
-			end
+				local nextToken = page.nextPageToken
+				if page.isLast == false and nextToken ~= nil and nextToken ~= "" then
+					fetch_page(page.nextPageToken)
+					return
+				end
 
-			on_done()
-		end, { force_load = opts.force_load == true })
+				state.is_loading = false
+				if not has_reloading_issues() then
+					refresh_status_spinner:stop()
+				end
+				footer.notify("success", string.format("Loaded %d issues", #all_issues), 1200)
+
+				spinner.stop()
+				if layout.is_open() then
+					require("atlas.ui.main.renderer").render("jira")
+				end
+
+				on_done()
+			end, {
+				force_load = opts.force_load == true,
+				next_page_token = next_page_token,
+			})
+		end
+
+		fetch_page(nil)
 	end)
 end
 
@@ -389,7 +445,7 @@ function M.refresh_issue(issue, on_done)
 		end
 
 		state.issues = issues
-		state.issue_tree = require("atlas.jira.api.normalizer").build_issue_tree(issues)
+		state.issue_tree = jira_ui_helper.build_issue_tree(issues)
 		end_issue_reload(issue_key)
 
 		require("atlas.ui.main.renderer").render("jira")

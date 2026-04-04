@@ -58,7 +58,6 @@
 ---@field approvers string[]|nil
 ---@field duedate string|nil
 ---@field parent JiraIssue|nil
----@field children JiraIssue[]|nil
 
 --------------------------------------------------------------------------------
 -- Issue Transitions

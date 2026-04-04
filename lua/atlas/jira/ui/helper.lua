@@ -83,4 +83,45 @@ function M.person_hl(name)
 	return highlights.dynamic_for(lower) or "AtlasTextMuted"
 end
 
+---@param issues JiraIssue[]
+---@return JiraIssueGroup[]
+function M.build_issue_tree(issues)
+	local by_key = {}
+	for _, issue in ipairs(issues or {}) do
+		if type(issue) == "table" and type(issue.key) == "string" and issue.key ~= "" then
+			by_key[issue.key] = {
+				issue = issue,
+				children = {},
+			}
+		end
+	end
+
+	for _, issue in ipairs(issues or {}) do
+		if type(issue) == "table" and type(issue.parent) == "table" then
+			local parent_key = tostring(issue.parent.key or "")
+			local parent_group = by_key[parent_key]
+			if parent_group then
+				table.insert(parent_group.children, issue)
+			end
+		end
+	end
+
+	local roots = {}
+	for _, issue in ipairs(issues or {}) do
+		if type(issue) == "table" then
+			local has_parent = type(issue.parent) == "table"
+			local parent_key = has_parent and tostring(issue.parent.key or "") or ""
+			local parent_group = parent_key ~= "" and by_key[parent_key] or nil
+			if not parent_group then
+				local group = by_key[tostring(issue.key or "")]
+				if group then
+					table.insert(roots, group)
+				end
+			end
+		end
+	end
+
+	return roots
+end
+
 return M
