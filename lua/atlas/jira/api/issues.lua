@@ -248,6 +248,32 @@ function M.update_issue(issue_key, fields, callback)
 	end)
 end
 
+---@param issue_key string
+---@param callback fun(ok: boolean, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.delete_issue(issue_key, callback)
+	if type(callback) ~= "function" then
+		return nil
+	end
+
+	if type(issue_key) ~= "string" or issue_key == "" then
+		callback(false, "Missing issue key")
+		return nil
+	end
+
+	logger.loginfo("Jira delete issue", { issue_key = issue_key })
+	local endpoint = string.format("/issue/%s", issue_key)
+
+	return service.request("DELETE", endpoint, nil, function(_, err)
+		if err ~= nil then
+			callback(false, err)
+			return
+		end
+
+		callback(true, nil)
+	end)
+end
+
 ---@param project_key string
 ---@param callback fun(issue_types: JiraIssueType[]|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil

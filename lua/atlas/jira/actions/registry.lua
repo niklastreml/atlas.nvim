@@ -54,6 +54,7 @@ local ACTIONS = {
 			end
 
 			local issue_key = issue.key
+			local issue_project_key = issue.project and issue.project.key or nil
 			local current_status = tostring(issue.status or "")
 
 			---@type AsyncPickerItem[]|nil
@@ -213,7 +214,7 @@ local ACTIONS = {
 					initial_items = to_picker_items({}),
 					debounce_ms = 250,
 					cache_ttl_ms = 60000,
-					identifier = "jira_users:" .. (issue.project and issue.project.key or ""),
+					identifier = "jira_users:" .. (issue_project_key or ""),
 					format_item = function(item)
 						if item.id == "__unassign__" then
 							return item.label
@@ -222,7 +223,7 @@ local ACTIONS = {
 					end,
 					fetch = function(fetch_ctx, fetch_done)
 						users_api.get_assignable_users(
-							{ issue_key = issue_key, project = issue.project.key },
+							{ issue_key = issue_key, project = issue_project_key },
 							fetch_ctx.query,
 							function(users, err)
 								if err then
@@ -350,6 +351,49 @@ local ACTIONS = {
 			end
 
 			open_reporter_picker()
+		end,
+	},
+	{
+		id = "delete_issue",
+		label = "Delete Issue",
+		is_available = has_issue_key,
+		run = function(ctx, done)
+			local issue = ctx.issue
+			if not has_issue_key(ctx) or issue == nil then
+				done(nil, "No issue selected")
+				return
+			end
+
+			local issue_key = issue.key
+			vim.ui.input({
+				prompt = string.format("Delete issue %s? [y/N]: ", issue_key),
+			}, function(input)
+				if input == nil then
+					done({ changed_issue_key = nil, message = "Delete cancelled" }, nil)
+					return
+				end
+
+				local normalized = vim.trim(tostring(input)):lower()
+				if normalized ~= "y" and normalized ~= "yes" then
+					done({ changed_issue_key = nil, message = "Delete cancelled" }, nil)
+					return
+				end
+
+				footer.notify("loading", string.format("Deleting %s...", issue_key))
+				issues_api.delete_issue(issue_key, function(ok, err)
+					if not ok then
+						footer.notify("error", err or "Delete failed")
+						done(nil, err or "Delete failed")
+						return
+					end
+
+					footer.notify("success", string.format("Deleted %s", issue_key), 1200)
+					--- After deletion for now simply refresh the whole current view
+					require("atlas.jira.ui.controller").refresh_current_view(function()
+						done({ changed_issue_key = nil, message = string.format("Deleted %s", issue_key) }, nil)
+					end)
+				end)
+			end)
 		end,
 	},
 	{
@@ -558,7 +602,13 @@ local ACTIONS = {
 					local project = item.value
 					local category_name = project.category and project.category.name or ""
 					if category_name ~= "" then
-						return string.format("%s %s - %s (%s)", icons.entity("project"), item.label, project.name, category_name)
+						return string.format(
+							"%s %s - %s (%s)",
+							icons.entity("project"),
+							item.label,
+							project.name,
+							category_name
+						)
 					end
 					return string.format("%s %s - %s", icons.entity("project"), item.label, project.name)
 				end,
@@ -573,7 +623,13 @@ local ACTIONS = {
 						local filtered = {}
 						for _, item in ipairs(all_items) do
 							local project = item.value
-							local haystack = (item.label .. " " .. (project.name or "") .. " " .. (project.category and project.category.name or "")):lower()
+							local haystack = (
+								item.label
+								.. " "
+								.. (project.name or "")
+								.. " "
+								.. (project.category and project.category.name or "")
+							):lower()
 							if haystack:find(query, 1, true) then
 								table.insert(filtered, item)
 							end
