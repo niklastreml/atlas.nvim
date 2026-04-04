@@ -80,14 +80,16 @@ end
 
 ---@param state IssueState
 function M.open_layout(state)
-	local width = math.max(math.floor(vim.o.columns * 0.6), 60)
-	local height = math.max(math.floor(vim.o.lines * 0.6), 20)
+	local width = math.max(math.floor(vim.o.columns * 0.75), 80)
+	local height = math.max(math.floor(vim.o.lines * 0.75), 24)
 	local row = math.floor((vim.o.lines - height) / 2)
 	local col = math.floor((vim.o.columns - width) / 2)
 
 	local inner_width = width - 2
 	local content_width = inner_width - 4
 	local content_col = 2
+	local is_edit = type(state.fields.issue_key) == "string" and state.fields.issue_key ~= ""
+	local popup_title = is_edit and " Edit Issue " or " Create Issue "
 
 	state.content_width = content_width
 
@@ -105,7 +107,7 @@ function M.open_layout(state)
 		border = "rounded",
 		focusable = false,
 		mouse = false,
-		title = " Create Issue ",
+		title = popup_title,
 		title_pos = "center",
 		footer = " q/:q close | :w create | ga assignee | gr reporter | gt issue type | m toggle ADF preview ",
 		footer_pos = "center",

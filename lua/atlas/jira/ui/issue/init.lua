@@ -248,7 +248,8 @@ local function create_issue()
 		return
 	end
 
-	spinner_popup.start("Saving issue...")
+	local is_edit = type(state.fields.issue_key) == "string" and state.fields.issue_key ~= ""
+	spinner_popup.start(is_edit and "Saving issue..." or "Creating issue...")
 
 	on_submit(fields, function(ok, err)
 		vim.schedule(function()
