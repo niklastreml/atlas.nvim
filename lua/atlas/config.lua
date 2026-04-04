@@ -10,6 +10,7 @@
 --- @field token string
 --- @field cache_ttl number|nil
 --- @field views JiraViewConfig[]|nil
+--- @field resolve_parent_issues boolean|nil
 
 --- Bitbucket ---
 ---@class BitbucketRepoConfig
@@ -55,6 +56,7 @@ M.options = {
 		email = vim.env.JIRA_EMAIL or "",
 		token = vim.env.JIRA_TOKEN or "",
 		cache_ttl = 300,
+		resolve_parent_issues = true,
 		views = nil,
 	},
 

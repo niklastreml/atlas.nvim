@@ -14,7 +14,6 @@ local users = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
 local service = require("atlas.jira.api.service")
 local jira_actions = require("atlas.jira.actions")
-local logger = require("atlas.core.logger")
 
 local active_user_handle = nil
 local active_issues_handle = nil
@@ -137,6 +136,74 @@ end
 local function next_request_token()
 	state.request_seq = (state.request_seq or 0) + 1
 	return state.request_seq
+end
+
+---@param issues JiraIssue[]
+---@param force_load boolean
+---@param done fun(enriched_issues: JiraIssue[], parent_fetch_failures: integer)
+local function enrich_missing_parents(issues, force_load, done)
+	local jira_config = config.options.jira or {}
+	local resolve_parent_issues = jira_config.resolve_parent_issues ~= false
+	if not resolve_parent_issues then
+		done(issues, 0)
+		return
+	end
+
+	local existing_by_key = {}
+	local pending_parent_keys = {}
+	for _, issue in ipairs(issues or {}) do
+		if type(issue) == "table" and type(issue.key) == "string" and issue.key ~= "" then
+			existing_by_key[issue.key] = true
+		end
+	end
+
+	local missing_parent_keys = {}
+	for _, issue in ipairs(issues or {}) do
+		if type(issue) == "table" and type(issue.parent) == "table" then
+			local parent_key = tostring(issue.parent.key or "")
+			if parent_key ~= "" and not existing_by_key[parent_key] and not pending_parent_keys[parent_key] then
+				pending_parent_keys[parent_key] = true
+				table.insert(missing_parent_keys, parent_key)
+			end
+		end
+	end
+
+	if #missing_parent_keys == 0 then
+		done(issues, 0)
+		return
+	end
+
+	local escaped_parent_keys = {}
+	for _, parent_key in ipairs(missing_parent_keys) do
+		table.insert(escaped_parent_keys, string.format('"%s"', parent_key:gsub('"', '\\"')))
+	end
+
+	local parent_jql = "key in (" .. table.concat(escaped_parent_keys, ",") .. ")"
+	issues_api.search_issues(parent_jql, function(parent_page, err)
+		if err ~= nil or parent_page == nil then
+			done(issues, #missing_parent_keys)
+			return
+		end
+
+		for _, parent_issue in ipairs(parent_page.issues or {}) do
+			if type(parent_issue) == "table" then
+				local parent_key = tostring(parent_issue.key or "")
+				if parent_key ~= "" and not existing_by_key[parent_key] then
+					existing_by_key[parent_key] = true
+					table.insert(issues, parent_issue)
+				end
+			end
+		end
+
+		local failures = 0
+		for _, parent_key in ipairs(missing_parent_keys) do
+			if not existing_by_key[parent_key] then
+				failures = failures + 1
+			end
+		end
+
+		done(issues, failures)
+	end, { force_load = force_load == true })
 end
 
 ---@param on_done fun(err: string|nil)
@@ -293,18 +360,49 @@ local function load_active_view(opts, on_done)
 					return
 				end
 
-				state.is_loading = false
-				if not has_reloading_issues() then
-					refresh_status_spinner:stop()
-				end
-				footer.notify("success", string.format("Loaded %d issues", #all_issues), 1200)
+				enrich_missing_parents(
+					all_issues,
+					opts.force_load == true,
+					function(enriched_issues, parent_fetch_failures)
+						if not same_view(state.active_view, target_view) then
+							return
+						end
 
-				spinner.stop()
-				if layout.is_open() then
-					require("atlas.ui.main.renderer").render("jira")
-				end
+						if state.latest_request_tokens[target_view_id] ~= token then
+							return
+						end
 
-				on_done()
+						state.current_view = state.active_view
+						state.error = nil
+						state.issues = enriched_issues
+						state.issue_tree = jira_ui_helper.build_issue_tree(enriched_issues)
+						state.is_loading = false
+						if not has_reloading_issues() then
+							refresh_status_spinner:stop()
+						end
+
+						if parent_fetch_failures > 0 then
+							footer.notify(
+								"warn",
+								string.format(
+									"Loaded %d issues (%d parent(s) unavailable)",
+									#enriched_issues,
+									parent_fetch_failures
+								),
+								1500
+							)
+						else
+							footer.notify("success", string.format("Loaded %d issues", #enriched_issues), 1200)
+						end
+
+						spinner.stop()
+						if layout.is_open() then
+							require("atlas.ui.main.renderer").render("jira")
+						end
+
+						on_done()
+					end
+				)
 			end, {
 				force_load = opts.force_load == true,
 				next_page_token = next_page_token,

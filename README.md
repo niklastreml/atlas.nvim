@@ -179,6 +179,7 @@ return {
         email = os.getenv("JIRA_EMAIL") or "",
         token = os.getenv("JIRA_TOKEN") or "",
         cache_ttl = 300,
+        resolve_parent_issues = true,
 
         ---@type JiraViewConfig[]
         views = {
