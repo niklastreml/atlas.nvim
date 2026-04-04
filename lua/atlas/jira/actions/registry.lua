@@ -8,7 +8,8 @@ local jira_state = require("atlas.jira.state")
 local issue_editor = require("atlas.jira.ui.issue")
 local adf = require("atlas.jira.converted.adf")
 local footer = require("atlas.ui.components.footer")
-local spinner_popup = require("atlas.ui.popups.spinner")
+local async_picker = require("atlas.ui.components.async_picker")
+local icons = require("atlas.ui.icons")
 
 ---@class JiraActionContext
 ---@field issue JiraIssue|nil
@@ -55,41 +56,65 @@ local ACTIONS = {
 			local issue_key = issue.key
 			local current_status = tostring(issue.status or "")
 
-			footer.notify("loading", string.format("Loading transitions for %s...", issue_key))
-			transitions_api.get_transitions(issue_key, function(page, err)
-				if err ~= nil or page == nil then
-					footer.notify("error", err or "Failed to load transitions")
-					done(nil, err or "Failed to load transitions")
-					return
-				end
+			---@type AsyncPickerItem[]|nil
+			local all_items = nil
 
-				footer.notify("success", string.format("Loaded transitions for %s...", issue_key))
+			local status_category_icons = {
+				new = icons.entity("pending"),
+				indeterminate = icons.entity("info"),
+				done = icons.entity("success"),
+			}
 
-				local transitions = {}
-				for _, transition in ipairs(page.transitions or {}) do
-					local to_status = tostring((transition and transition.to_status_name) or "")
-					if current_status == "" or to_status == "" or to_status ~= current_status then
-						table.insert(transitions, transition)
-					end
-				end
-				if #transitions == 0 then
-					footer.notify("info", "No transitions available", 1200)
-					done({ changed_issue_key = nil, message = "No transitions available" }, nil)
-					return
-				end
-
-				vim.ui.select(transitions, {
-					prompt = string.format("Transition %s", issue_key),
-					kind = "atlas_jira_transitions",
-					format_item = function(item)
-						return tostring((item and item.name) or "")
-					end,
-				}, function(selected)
-					if selected == nil then
-						done({ changed_issue_key = nil, message = "Transition cancelled" }, nil)
+			async_picker.open({
+				title = string.format("Transition %s", issue_key),
+				prompt = "Filter transitions",
+				debounce_ms = 0,
+				identifier = "jira_transitions:" .. issue_key,
+				format_item = function(item)
+					local transition = item.value
+					local category = type(transition) == "table" and transition.to_status_category or nil
+					local icon = category and status_category_icons[category] or icons.fallback()
+					return string.format("%s %s", icon, item.label)
+				end,
+				fetch = function(fetch_ctx, fetch_done)
+					if all_items then
+						local query = vim.trim(fetch_ctx.query):lower()
+						if query == "" then
+							fetch_done(all_items, nil)
+							return
+						end
+						local filtered = {}
+						for _, item in ipairs(all_items) do
+							if item.label:lower():find(query, 1, true) then
+								table.insert(filtered, item)
+							end
+						end
+						fetch_done(filtered, nil)
 						return
 					end
 
+					transitions_api.get_transitions(issue_key, function(page, err)
+						if err ~= nil or page == nil then
+							fetch_done(nil, err or "Failed to load transitions")
+							return
+						end
+
+						all_items = {}
+						for _, transition in ipairs(page.transitions or {}) do
+							local to_status = tostring((transition and transition.to_status_name) or "")
+							if current_status == "" or to_status == "" or to_status ~= current_status then
+								table.insert(all_items, {
+									id = tostring(transition.id or ""),
+									label = tostring(transition.name or ""),
+									value = transition,
+								})
+							end
+						end
+						fetch_done(all_items, nil)
+					end)
+				end,
+				on_select = function(item)
+					local selected = item.value
 					footer.notify("loading", string.format("Transitioning %s...", issue_key))
 					transitions_api.transition_issue(issue_key, selected.id, function(ok, transition_err)
 						if not ok then
@@ -109,8 +134,11 @@ local ACTIONS = {
 							message = string.format("Transitioned to %s", selected.name or "status"),
 						}, nil)
 					end)
-				end)
-			end)
+				end,
+				on_cancel = function()
+					done({ changed_issue_key = nil, message = "Transition cancelled" }, nil)
+				end,
+			})
 		end,
 	},
 	{
@@ -126,55 +154,87 @@ local ACTIONS = {
 
 			local issue_key = issue.key
 			local current_assignee = type(issue.assignee) == "table" and issue.assignee.display_name or ""
+			local current_assignee_key = vim.trim(current_assignee):lower()
 
-			footer.notify("loading", string.format("Loading assignable users for %s...", issue_key))
-			users_api.get_assignable_users(
-				{ issue_key = issue_key, project = issue.project.key },
-				"",
-				function(users, err)
-					if err ~= nil or users == nil then
-						footer.notify("error", err or "Failed loading assignable users")
-						done(nil, err or "Failed loading assignable users")
-						return
-					end
+			local function to_picker_items(users)
+				local items = {}
+				local current_user_account_id = jira_state.current_user and jira_state.current_user.account_id or nil
+				local seen_current_user = false
+				local current_user_item = nil
+				if
+					current_assignee_key ~= ""
+					and current_assignee_key ~= "unassigned"
+					and current_assignee_key ~= "none"
+				then
+					table.insert(items, {
+						id = "__unassign__",
+						label = "Unassign",
+						value = { account_id = nil, display_name = "Unassign" },
+					})
+				end
 
-					local current_assignee_key = vim.trim(current_assignee):lower()
-					local options = {}
-					if
-						current_assignee_key ~= ""
-						and current_assignee_key ~= "unassigned"
-						and current_assignee_key ~= "none"
-					then
-						table.insert(options, { account_id = nil, display_name = "Unassign" })
-					end
-
-					for _, user in ipairs(users) do
-						local user_name = tostring((user and user.display_name) or "")
-						if vim.trim(user_name):lower() ~= current_assignee_key then
-							table.insert(options, user)
+				for _, user in ipairs(users or {}) do
+					local user_name = tostring((user and user.display_name) or "")
+					local user_account_id = type(user) == "table" and user.account_id or nil
+					if vim.trim(user_name):lower() ~= current_assignee_key then
+						local item = {
+							id = user.account_id or "",
+							label = user.display_name or "",
+							value = user,
+						}
+						if current_user_account_id and user_account_id == current_user_account_id then
+							seen_current_user = true
+							current_user_item = item
+						else
+							table.insert(items, item)
 						end
 					end
+				end
 
-					if #options == 0 then
-						footer.notify("info", "No assignee options", 1200)
-						done({ changed_issue_key = nil, message = "No assignee options" }, nil)
-						return
+				if current_user_account_id then
+					if not seen_current_user then
+						current_user_item = {
+							id = current_user_account_id,
+							label = jira_state.current_user.display_name,
+							value = jira_state.current_user,
+						}
 					end
+					if current_user_item then
+						table.insert(items, 1, current_user_item)
+					end
+				end
+				return items
+			end
 
-					footer.notify("success", string.format("Loaded assignable users for %s", issue_key), 800)
-
-					vim.ui.select(options, {
-						prompt = string.format("Assign %s", issue_key),
-						kind = "atlas_jira_assignees",
-						format_item = function(item)
-							return tostring((item and item.display_name) or "")
-						end,
-					}, function(selected)
-						if selected == nil then
-							done({ changed_issue_key = nil, message = "Assign cancelled" }, nil)
-							return
+			local function open_assign_picker()
+				async_picker.open({
+					title = string.format("Assign %s", issue_key),
+					prompt = "Search users",
+					initial_items = to_picker_items({}),
+					debounce_ms = 250,
+					cache_ttl_ms = 60000,
+					identifier = "jira_users:" .. (issue.project and issue.project.key or ""),
+					format_item = function(item)
+						if item.id == "__unassign__" then
+							return item.label
 						end
-
+						return string.format("%s %s", icons.entity("user"), item.label or "")
+					end,
+					fetch = function(fetch_ctx, fetch_done)
+						users_api.get_assignable_users(
+							{ issue_key = issue_key, project = issue.project.key },
+							fetch_ctx.query,
+							function(users, err)
+								if err then
+									fetch_done(nil, err)
+									return
+								end
+								fetch_done(to_picker_items(users), nil)
+							end
+						)
+					end,
+					on_select = function(item)
+						local selected = item.value
 						footer.notify("loading", string.format("Assigning %s...", issue_key))
 						users_api.assign_issue(issue_key, selected.account_id, function(ok, assign_err)
 							if not ok then
@@ -199,9 +259,14 @@ local ACTIONS = {
 								message = string.format("Assigned to %s", selected.display_name),
 							}, nil)
 						end)
-					end)
-				end
-			)
+					end,
+					on_cancel = function()
+						done({ changed_issue_key = nil, message = "Assign cancelled" }, nil)
+					end,
+				})
+			end
+
+			open_assign_picker()
 		end,
 	},
 	{
@@ -216,65 +281,75 @@ local ACTIONS = {
 			end
 
 			local issue_key = issue.key
-			local current_reporter = tostring(issue.reporter or "")
+			local current_reporter = type(issue.reporter) == "string" and issue.reporter or ""
+			local current_reporter_key = vim.trim(current_reporter):lower()
 
-			footer.notify("loading", string.format("Loading users for reporter on %s...", issue_key))
-			users_api.get_assignable_users({ issue_key = issue_key, project = nil }, "", function(users, err)
-				if err ~= nil or users == nil then
-					footer.notify("error", err or "Failed loading users")
-					done(nil, err or "Failed loading users")
-					return
-				end
-
-				local current_reporter_key = vim.trim(current_reporter):lower()
-				local options = {}
-				for _, user in ipairs(users) do
+			local function to_picker_items(users)
+				local items = {}
+				for _, user in ipairs(users or {}) do
 					local user_name = tostring((user and user.display_name) or "")
 					if vim.trim(user_name):lower() ~= current_reporter_key then
-						table.insert(options, user)
+						table.insert(items, {
+							id = user.account_id or "",
+							label = user.display_name or "",
+							value = user,
+						})
 					end
 				end
+				return items
+			end
 
-				if #options == 0 then
-					footer.notify("info", "No reporter found", 1200)
-					done({ changed_issue_key = nil, message = "No reporter options" }, nil)
-					return
-				end
-
-				footer.notify("success", string.format("Loaded users for %s", issue_key), 800)
-
-				vim.ui.select(options, {
-					prompt = string.format("Reporter for %s", issue_key),
-					kind = "atlas_jira_reporters",
+			local function open_reporter_picker()
+				async_picker.open({
+					title = string.format("Reporter for %s", issue_key),
+					prompt = "Search users",
+					initial_items = {},
+					debounce_ms = 250,
+					cache_ttl_ms = 60000,
 					format_item = function(item)
-						return tostring((item and item.display_name) or "")
+						return string.format("%s %s", icons.entity("user"), item.label or "")
 					end,
-				}, function(selected)
-					if selected == nil then
-						done({ changed_issue_key = nil, message = "Reporter change cancelled" }, nil)
-						return
-					end
-
-					footer.notify("loading", string.format("Changing reporter for %s...", issue_key))
-					users_api.change_reporter(issue_key, selected.account_id, function(ok, reporter_err)
-						if not ok then
-							footer.notify("error", reporter_err or "Reporter change failed")
-							done(nil, reporter_err or "Reporter change failed")
-							return
-						end
-
-						footer.notify(
-							"success",
-							string.format("Reporter for %s changed to %s", issue_key, selected.display_name),
-							1200
+					fetch = function(fetch_ctx, fetch_done)
+						users_api.get_assignable_users(
+							{ issue_key = issue_key, project = nil },
+							fetch_ctx.query,
+							function(users, err)
+								if err then
+									fetch_done(nil, err)
+									return
+								end
+								fetch_done(to_picker_items(users), nil)
+							end
 						)
-						done({
-							changed_issue_key = issue_key,
-							message = string.format("Reporter changed to %s", selected.display_name),
-						}, nil)
-					end)
-				end)
-			end)
+					end,
+					on_select = function(item)
+						local selected = item.value
+						footer.notify("loading", string.format("Changing reporter for %s...", issue_key))
+						users_api.change_reporter(issue_key, selected.account_id, function(ok, reporter_err)
+							if not ok then
+								footer.notify("error", reporter_err or "Reporter change failed")
+								done(nil, reporter_err or "Reporter change failed")
+								return
+							end
+
+							footer.notify(
+								"success",
+								string.format("Reporter for %s changed to %s", issue_key, selected.display_name),
+								1200
+							)
+							done({
+								changed_issue_key = issue_key,
+								message = string.format("Reporter changed to %s", selected.display_name),
+							}, nil)
+						end)
+					end,
+					on_cancel = function()
+						done({ changed_issue_key = nil, message = "Reporter change cancelled" }, nil)
+					end,
+				})
+			end
+
+			open_reporter_picker()
 		end,
 	},
 	{
@@ -471,86 +546,105 @@ local ACTIONS = {
 				end)
 			end
 
-			footer.notify("loading", "Loading projects...")
-			spinner_popup.start("Loading projects...")
-			projects_api.get_projects({ maxResults = 50, total = 2, status = "live" }, function(groups, err)
-				if err ~= nil or groups == nil then
-					spinner_popup.stop()
-					footer.notify("error", err or "Failed to load projects")
-					done(nil, err or "Failed to load projects")
-					return
-				end
+			---@type AsyncPickerItem[]|nil
+			local all_items = nil
 
-				---@type JiraProject[]
-				local projects = {}
-				for _, group in ipairs(groups) do
-					for _, project in ipairs(group.projects or {}) do
-						table.insert(projects, project)
+			async_picker.open({
+				title = "Create Issue",
+				prompt = "Select project",
+				debounce_ms = 0,
+				identifier = "jira_creatable_projects",
+				format_item = function(item)
+					local project = item.value
+					local category_name = project.category and project.category.name or ""
+					if category_name ~= "" then
+						return string.format("%s %s - %s (%s)", icons.entity("project"), item.label, project.name, category_name)
 					end
-				end
-
-				local project_ids = {}
-				for _, project in ipairs(projects) do
-					local project_id = tonumber(project.id)
-					if project_id ~= nil then
-						table.insert(project_ids, project_id)
-					end
-				end
-
-				users_api.get_permissions_bulk({
-					permissions = { "CREATE_ISSUES" },
-					project_ids = project_ids,
-				}, function(permission_map, permission_err)
-					if permission_err ~= nil or permission_map == nil then
-						spinner_popup.stop()
-						done(nil, permission_err or "Failed to load project permissions")
-						return
-					end
-
-					local allowed_map = permission_map.CREATE_ISSUES or {}
-					local creatable_projects = {}
-					for _, project in ipairs(projects) do
-						local project_id = tonumber(project.id)
-						if project_id ~= nil and allowed_map[project_id] == true then
-							table.insert(creatable_projects, project)
+					return string.format("%s %s - %s", icons.entity("project"), item.label, project.name)
+				end,
+				fetch = function(fetch_ctx, fetch_done)
+					-- Already loaded — filter locally
+					if all_items then
+						local query = vim.trim(fetch_ctx.query):lower()
+						if query == "" then
+							fetch_done(all_items, nil)
+							return
 						end
-					end
-
-					if #creatable_projects == 0 then
-						spinner_popup.stop()
-						done(nil, "No projects available")
-						return
-					end
-
-					spinner_popup.stop()
-					footer.notify("success", string.format("Loaded %d projects", #creatable_projects), 1200)
-					if #creatable_projects == 1 then
-						run_create_issue(creatable_projects[1].key)
-						return
-					end
-
-					vim.ui.select(creatable_projects, {
-						prompt = "Select project",
-						kind = "atlas_jira_projects",
-						format_item = function(item)
-							local category_name = item.category and item.category.name or ""
-							if category_name ~= "" then
-								return string.format("%s - %s (%s)", item.key, item.name, category_name)
+						local filtered = {}
+						for _, item in ipairs(all_items) do
+							local project = item.value
+							local haystack = (item.label .. " " .. (project.name or "") .. " " .. (project.category and project.category.name or "")):lower()
+							if haystack:find(query, 1, true) then
+								table.insert(filtered, item)
 							end
+						end
+						fetch_done(filtered, nil)
+						return
+					end
 
-							return string.format("%s - %s", item.key, item.name)
-						end,
-					}, function(selected)
-						if not selected then
-							footer.notify("info", "Create issue cancelled", 1200)
-							done({ changed_issue_key = nil, message = "Create issue cancelled" }, nil)
+					-- First call: fetch projects + permissions
+					projects_api.get_projects({ maxResults = 50, total = 2, status = "live" }, function(groups, err)
+						if fetch_ctx.signal.cancelled then
+							return
+						end
+						if err ~= nil or groups == nil then
+							fetch_done(nil, err or "Failed to load projects")
 							return
 						end
 
-						run_create_issue(selected.key)
+						---@type JiraProject[]
+						local projects = {}
+						for _, group in ipairs(groups) do
+							for _, project in ipairs(group.projects or {}) do
+								table.insert(projects, project)
+							end
+						end
+
+						local project_ids = {}
+						for _, project in ipairs(projects) do
+							local project_id = tonumber(project.id)
+							if project_id ~= nil then
+								table.insert(project_ids, project_id)
+							end
+						end
+
+						users_api.get_permissions_bulk({
+							permissions = { "CREATE_ISSUES" },
+							project_ids = project_ids,
+						}, function(permission_map, permission_err)
+							if fetch_ctx.signal.cancelled then
+								return
+							end
+							if permission_err ~= nil or permission_map == nil then
+								fetch_done(nil, permission_err or "Failed to load project permissions")
+								return
+							end
+
+							local allowed_map = permission_map.CREATE_ISSUES or {}
+							all_items = {}
+							for _, project in ipairs(projects) do
+								local project_id = tonumber(project.id)
+								if project_id ~= nil and allowed_map[project_id] == true then
+									table.insert(all_items, {
+										id = tostring(project.id or ""),
+										label = tostring(project.key or ""),
+										value = project,
+									})
+								end
+							end
+
+							fetch_done(all_items, nil)
+						end)
 					end)
-				end)
-			end)
+				end,
+				on_select = function(item)
+					run_create_issue(item.value.key)
+				end,
+				on_cancel = function()
+					footer.notify("info", "Create issue cancelled", 1200)
+					done({ changed_issue_key = nil, message = "Create issue cancelled" }, nil)
+				end,
+			})
 		end,
 	},
 }
