@@ -185,14 +185,12 @@ return {
           {
             name = "My Board",
             key = "M",
-            project = "KAN",
-            -- project is optional
             jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
           },
           {
             name = "Team Board",
             key = "T",
-            project = "KAN",
+            jql = "project = KAN ORDER BY updated DESC",
           },
         },
       },

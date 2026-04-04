@@ -157,19 +157,6 @@ local function get_current_user(on_done)
 	end)
 end
 
----@param view JiraViewConfig
----@return string
-local function build_jql(view)
-	local jql = view.jql
-	if jql and jql ~= "" then
-		if jql:find("%%s") then
-			return string.format(jql, view.project)
-		end
-		return jql
-	end
-	return string.format("project = '%s' ORDER BY updated DESC", view.project)
-end
-
 ---@param opts { force_load: boolean }|nil
 ---@param on_done fun()|nil
 local function load_active_view(opts, on_done)
@@ -182,9 +169,16 @@ local function load_active_view(opts, on_done)
 	end
 
 	local target_view = state.active_view
-	if target_view == nil then
+	local jql = target_view and target_view.jql or nil
+	if target_view == nil or type(jql) ~= "string" or jql == "" then
 		state.is_loading = false
-		state.error = "No Jira views configured"
+		if target_view == nil then
+			state.error = "No Jira views configured"
+		else
+			state.error = "Missing JQL in Jira view"
+		end
+		footer.notify("error", state.error)
+
 		if layout.is_open() then
 			require("atlas.ui.main.renderer").render("jira")
 		end
@@ -239,10 +233,8 @@ local function load_active_view(opts, on_done)
 			return
 		end
 
-		local jql = build_jql(target_view)
-		logger.loginfo("Jira loading view", { view = target_view_id, jql = jql })
-
 		local all_issues = {}
+
 		local function fetch_page(next_page_token)
 			active_issues_handle = issues_api.search_issues(jql, function(page, err)
 				active_issues_handle = nil

@@ -6,7 +6,7 @@ local APPROVERS_FIELD = "customfield_10003"
 
 ---@param raw_project table|nil
 ---@return JiraProject|nil
-local function normalize_project(raw_project)
+function M.normalize_project(raw_project)
 	if type(raw_project) ~= "table" then
 		return nil
 	end
@@ -19,11 +19,27 @@ local function normalize_project(raw_project)
 		return nil
 	end
 
+	local raw_category = raw_project.projectCategory
+	local category = nil
+	if type(raw_category) == "table" then
+		local category_id = raw_category.id and tostring(raw_category.id) or ""
+		local category_name = raw_category.name and tostring(raw_category.name) or ""
+		if category_id ~= "" and category_name ~= "" then
+			category = {
+				id = category_id,
+				name = category_name,
+				self = raw_category.self and tostring(raw_category.self) or nil,
+				description = raw_category.description and tostring(raw_category.description) or nil,
+			}
+		end
+	end
+
 	return {
 		id = id,
 		key = key,
 		name = name,
 		self = self,
+		category = category,
 	}
 end
 
@@ -136,7 +152,7 @@ local function extract_parent(raw_parent)
 	return {
 		key = tostring(raw_parent.key),
 		summary = tostring(pf.summary or ""),
-		project = normalize_project(safe_get(pf, "project")),
+		project = M.normalize_project(safe_get(pf, "project")),
 		status = status,
 		status_id = status_id,
 		status_category = status_category,
@@ -206,7 +222,7 @@ function M.normalize_issue(raw)
 	return {
 		key = tostring(raw.key or ""),
 		summary = tostring(fields.summary or ""),
-		project = normalize_project(safe_get(fields, "project")),
+		project = M.normalize_project(safe_get(fields, "project")),
 		status = status,
 		status_id = status_id,
 		status_category = status_category,

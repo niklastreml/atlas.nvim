@@ -35,12 +35,19 @@
 ---@field description string|nil
 ---@field subtask boolean
 ---@field entity_id string|nil
+---
+---@class JiraProjectCategory
+---@field id string
+---@field name string
+---@field self string|nil
+---@field description string|nil
 
 ---@class JiraProject
 ---@field id string
 ---@field key string
 ---@field name string
 ---@field self string
+---@field category JiraProjectCategory|nil
 
 ---@class JiraIssue
 ---@field key string

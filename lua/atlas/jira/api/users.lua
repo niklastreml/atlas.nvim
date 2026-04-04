@@ -86,6 +86,89 @@ function M.get_assignable_users(opts, query, callback)
 	end)
 end
 
+---@param opts { permissions?: string[]|nil, project_ids?: integer[]|nil, issue_ids?: integer[]|nil, account_id?: string|nil }
+---@param callback fun(permissions: table<string, table<number, boolean>>|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.get_permissions_bulk(opts, callback)
+	opts = opts or {}
+
+	local permissions_list = {}
+	for _, key in ipairs(opts.permissions or {}) do
+		if type(key) == "string" then
+			local value = vim.trim(key)
+			if value ~= "" then
+				table.insert(permissions_list, value)
+			end
+		end
+	end
+
+	if #permissions_list == 0 then
+		callback(nil, "Missing permissions")
+		return nil
+	end
+
+	local project_ids = {}
+	for _, id in ipairs(opts.project_ids or {}) do
+		local project_id = tonumber(id)
+		if project_id ~= nil then
+			table.insert(project_ids, project_id)
+		end
+	end
+
+	local issue_ids = {}
+	for _, id in ipairs(opts.issue_ids or {}) do
+		local issue_id = tonumber(id)
+		if issue_id ~= nil then
+			table.insert(issue_ids, issue_id)
+		end
+	end
+
+	local payload = {
+		projectPermissions = {
+			{
+				permissions = permissions_list,
+				projects = project_ids,
+				issues = issue_ids,
+			},
+		},
+	}
+
+	if type(opts.account_id) == "string" and opts.account_id ~= "" then
+		payload.accountId = opts.account_id
+	end
+
+	logger.loginfo("Jira fetch bulk permissions", {
+		permissions = permissions_list,
+		project_count = #project_ids,
+		issue_count = #issue_ids,
+		account_id = opts.account_id,
+	})
+
+	return service.request("POST", "/permissions/check", payload, function(result, err)
+		if err ~= nil or type(result) ~= "table" then
+			callback(nil, err or "Empty response")
+			return
+		end
+
+		---@type table<string, table<number, boolean>>
+		local permissions = {}
+		for _, entry in ipairs(result.projectPermissions or {}) do
+			local permission_key = type(entry.permission) == "string" and entry.permission or ""
+			if permission_key ~= "" then
+				permissions[permission_key] = permissions[permission_key] or {}
+				for _, project_id in ipairs(entry.projects or {}) do
+					local id_num = tonumber(project_id)
+					if id_num ~= nil then
+						permissions[permission_key][id_num] = true
+					end
+				end
+			end
+		end
+
+		callback(permissions, nil)
+	end)
+end
+
 ---@param issue_key string
 ---@param account_id string|nil
 ---@param callback fun(ok: boolean, err: string|nil)

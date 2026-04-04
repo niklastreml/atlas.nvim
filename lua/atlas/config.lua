@@ -1,9 +1,8 @@
 --- Jira ---
 ---@class JiraViewConfig
----@field project string
 ---@field name string
 ---@field key string|nil
----@field jql string|nil
+---@field jql string
 
 --- @class JiraConfig
 --- @field base_url string

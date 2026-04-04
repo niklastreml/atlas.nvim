@@ -3,11 +3,12 @@ local M = {}
 local transitions_api = require("atlas.jira.api.transitions")
 local users_api = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
+local projects_api = require("atlas.jira.api.projects")
 local jira_state = require("atlas.jira.state")
-local config = require("atlas.config")
 local issue_editor = require("atlas.jira.ui.issue")
 local adf = require("atlas.jira.converted.adf")
 local footer = require("atlas.ui.components.footer")
+local spinner_popup = require("atlas.ui.popups.spinner")
 
 ---@class JiraActionContext
 ---@field issue JiraIssue|nil
@@ -28,26 +29,6 @@ local footer = require("atlas.ui.components.footer")
 ---@return boolean
 local function has_issue_key(ctx)
 	return ctx.issue ~= nil and ctx.issue.key ~= ""
-end
-
----@return string[]
-local function get_unique_projects()
-	local jira = config.options and config.options.jira
-	local views = jira and jira.views
-	if not views or #views == 0 then
-		return {}
-	end
-
-	local seen = {}
-	local projects = {}
-	for _, view in ipairs(views) do
-		local p = view.project
-		if p and p ~= "" and not seen[p] then
-			seen[p] = true
-			table.insert(projects, p)
-		end
-	end
-	return projects
 end
 
 ---@param opts IssueFields
@@ -490,27 +471,85 @@ local ACTIONS = {
 				end)
 			end
 
-			local projects = get_unique_projects()
-			if #projects == 0 then
-				done(nil, "No projects configured in views")
-				return
-			end
-
-			if #projects == 1 then
-				run_create_issue(projects[1])
-				return
-			end
-
-			vim.ui.select(projects, {
-				prompt = "Select project",
-				kind = "atlas_jira_projects",
-			}, function(selected)
-				if not selected then
-					done({ changed_issue_key = nil, message = "Create issue cancelled" }, nil)
+			footer.notify("loading", "Loading projects...")
+			spinner_popup.start("Loading projects...")
+			projects_api.get_projects({ maxResults = 50, total = 2, status = "live" }, function(groups, err)
+				if err ~= nil or groups == nil then
+					spinner_popup.stop()
+					footer.notify("error", err or "Failed to load projects")
+					done(nil, err or "Failed to load projects")
 					return
 				end
 
-				run_create_issue(selected)
+				---@type JiraProject[]
+				local projects = {}
+				for _, group in ipairs(groups) do
+					for _, project in ipairs(group.projects or {}) do
+						table.insert(projects, project)
+					end
+				end
+
+				local project_ids = {}
+				for _, project in ipairs(projects) do
+					local project_id = tonumber(project.id)
+					if project_id ~= nil then
+						table.insert(project_ids, project_id)
+					end
+				end
+
+				users_api.get_permissions_bulk({
+					permissions = { "CREATE_ISSUES" },
+					project_ids = project_ids,
+				}, function(permission_map, permission_err)
+					if permission_err ~= nil or permission_map == nil then
+						spinner_popup.stop()
+						done(nil, permission_err or "Failed to load project permissions")
+						return
+					end
+
+					local allowed_map = permission_map.CREATE_ISSUES or {}
+					local creatable_projects = {}
+					for _, project in ipairs(projects) do
+						local project_id = tonumber(project.id)
+						if project_id ~= nil and allowed_map[project_id] == true then
+							table.insert(creatable_projects, project)
+						end
+					end
+
+					if #creatable_projects == 0 then
+						spinner_popup.stop()
+						done(nil, "No projects available")
+						return
+					end
+
+					spinner_popup.stop()
+					footer.notify("success", string.format("Loaded %d projects", #creatable_projects), 1200)
+					if #creatable_projects == 1 then
+						run_create_issue(creatable_projects[1].key)
+						return
+					end
+
+					vim.ui.select(creatable_projects, {
+						prompt = "Select project",
+						kind = "atlas_jira_projects",
+						format_item = function(item)
+							local category_name = item.category and item.category.name or ""
+							if category_name ~= "" then
+								return string.format("%s - %s (%s)", item.key, item.name, category_name)
+							end
+
+							return string.format("%s - %s", item.key, item.name)
+						end,
+					}, function(selected)
+						if not selected then
+							footer.notify("info", "Create issue cancelled", 1200)
+							done({ changed_issue_key = nil, message = "Create issue cancelled" }, nil)
+							return
+						end
+
+						run_create_issue(selected.key)
+					end)
+				end)
 			end)
 		end,
 	},
