@@ -184,7 +184,12 @@ function M.setup_keymaps(state, actions)
 	local keymap_opts = { silent = true, nowait = true }
 
 	if valid_buf(state.layout.title_buf) then
-		vim.keymap.set("n", "q", actions.confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
+		vim.keymap.set(
+			"n",
+			"q",
+			actions.confirm_close,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf })
+		)
 		vim.keymap.set("n", "<CR>", function()
 			if valid_win(state.layout.desc_win) then
 				vim.api.nvim_set_current_win(state.layout.desc_win)
@@ -225,11 +230,30 @@ function M.setup_keymaps(state, actions)
 				vim.api.nvim_set_current_win(state.layout.desc_win)
 			end
 		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
-		vim.keymap.set("n", "m", actions.toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
+		vim.keymap.set(
+			"n",
+			"m",
+			actions.toggle_preview,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf })
+		)
+		vim.keymap.set({ "n", "i" }, "<C-j>", function()
+			vim.cmd("stopinsert")
+			if valid_win(state.layout.desc_win) then
+				vim.api.nvim_set_current_win(state.layout.desc_win)
+			end
+		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
+		vim.keymap.set({ "n", "i" }, "<C-k>", function()
+			vim.cmd("stopinsert")
+		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
 	end
 
 	if valid_buf(state.layout.meta_buf) then
-		vim.keymap.set("n", "q", actions.confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf }))
+		vim.keymap.set(
+			"n",
+			"q",
+			actions.confirm_close,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf })
+		)
 		vim.keymap.set(
 			"n",
 			"<CR>",
@@ -246,11 +270,21 @@ function M.setup_keymaps(state, actions)
 				vim.api.nvim_set_current_win(state.layout.title_win)
 			end
 		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf }))
-		vim.keymap.set("n", "m", actions.toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf }))
+		vim.keymap.set(
+			"n",
+			"m",
+			actions.toggle_preview,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.meta_buf })
+		)
 	end
 
 	if valid_buf(state.layout.desc_buf) then
-		vim.keymap.set("n", "q", actions.confirm_close, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
+		vim.keymap.set(
+			"n",
+			"q",
+			actions.confirm_close,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf })
+		)
 		vim.keymap.set("n", "<Tab>", function()
 			if valid_win(state.layout.title_win) then
 				vim.api.nvim_set_current_win(state.layout.title_win)
@@ -279,7 +313,22 @@ function M.setup_keymaps(state, actions)
 			actions.show_issue_type_picker,
 			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf })
 		)
-		vim.keymap.set("n", "m", actions.toggle_preview, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
+		vim.keymap.set(
+			"n",
+			"m",
+			actions.toggle_preview,
+			vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf })
+		)
+		vim.keymap.set({ "n", "i" }, "<C-k>", function()
+			vim.cmd("stopinsert")
+			if valid_win(state.layout.title_win) then
+				vim.api.nvim_set_current_win(state.layout.title_win)
+			end
+		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
+
+		vim.keymap.set({ "n", "i" }, "<C-j>", function()
+			vim.cmd("stopinsert")
+		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
 	end
 end
 
@@ -298,7 +347,8 @@ function M.setup_autocmds(state, actions)
 		end
 	end
 
-	local all_bufs = { state.layout.title_buf, state.layout.meta_buf, state.layout.desc_buf, state.layout.container_buf }
+	local all_bufs =
+		{ state.layout.title_buf, state.layout.meta_buf, state.layout.desc_buf, state.layout.container_buf }
 	for _, buf in ipairs(all_bufs) do
 		if valid_buf(buf) then
 			vim.api.nvim_create_autocmd("QuitPre", {

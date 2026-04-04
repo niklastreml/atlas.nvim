@@ -10,6 +10,7 @@ local users_api = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
 local spinner = require("atlas.ui.components.spinner")
 local spinner_popup = require("atlas.ui.popups.spinner")
+local async_picker = require("atlas.ui.components.async_picker")
 
 ---@class IssueFields
 ---@field summary string
@@ -292,97 +293,201 @@ local function toggle_preview()
 end
 
 local function show_assignee_picker()
-	if state.assignees == "loading" then
-		footer.notify("info", "Still loading assignees...")
-		return
+	---@type AsyncPickerItem[]
+	local initial_items = {}
+
+	table.insert(initial_items, {
+		id = "__unassign__",
+		label = "Unassign",
+		value = { account_id = nil, display_name = "Unassign" },
+	})
+
+	if state.assignees and state.assignees ~= "loading" then
+		for _, user in ipairs(state.assignees) do
+			table.insert(initial_items, {
+				id = user.account_id or "",
+				label = user.display_name or "",
+				value = user,
+			})
+		end
 	end
 
-	if not state.assignees or #state.assignees == 0 then
-		footer.notify("warn", "No assignees available")
-		return
-	end
-
-	local options = {}
-	table.insert(options, { account_id = nil, display_name = "Unassign" })
-
-	for _, user in ipairs(state.assignees) do
-		table.insert(options, user)
-	end
-
-	vim.ui.select(options, {
-		prompt = "Select Assignee",
-		kind = "atlas_jira_assignees",
+	async_picker.open({
+		title = "Select Assignee",
+		prompt = "Search users",
+		initial_items = initial_items,
+		fetch_on_open = not (state.assignees and state.assignees ~= "loading" and #state.assignees > 0),
+		debounce_ms = 250,
+		cache_ttl_ms = 60000,
+		identifier = "jira_users:" .. (state.fields.project or ""),
 		format_item = function(item)
-			return tostring((item and item.display_name) or "")
+			if item.id == "__unassign__" then
+				return item.label
+			end
+			return string.format("%s %s", icons.entity("user"), item.label or "")
 		end,
-	}, function(selected)
-		if selected == nil then
-			return
-		end
-
-		if selected.account_id == nil then
-			state.fields.assignee = nil
-		else
-			state.fields.assignee = selected
-		end
-		update_meta_buffer()
-	end)
+		fetch = function(ctx, done)
+			users_api.get_assignable_users(
+				{ project = state.fields.project, issue_key = state.fields.issue_key },
+				ctx.query,
+				function(users, err)
+					if err then
+						done(nil, err)
+						return
+					end
+					local items = {}
+					table.insert(items, {
+						id = "__unassign__",
+						label = "Unassign",
+						value = { account_id = nil, display_name = "Unassign" },
+					})
+					for _, u in ipairs(users or {}) do
+						table.insert(items, {
+							id = u.account_id or "",
+							label = u.display_name or "",
+							value = u,
+						})
+					end
+					done(items, nil)
+				end
+			)
+		end,
+		on_select = function(item)
+			if item.id == "__unassign__" then
+				state.fields.assignee = nil
+			else
+				state.fields.assignee = item.value
+			end
+			update_meta_buffer()
+		end,
+	})
 end
 
 local function show_reporter_picker()
-	if state.assignees == "loading" then
-		footer.notify("info", "Still loading users...")
-		return
-	end
+	---@type AsyncPickerItem[]
+	local initial_items = {}
 
-	if not state.assignees or #state.assignees == 0 then
-		footer.notify("warn", "No users available")
-		return
-	end
-
-	vim.ui.select(state.assignees, {
-		prompt = "Select Reporter",
-		kind = "atlas_jira_reporters",
-		format_item = function(item)
-			return tostring((item and item.display_name) or "")
-		end,
-	}, function(selected)
-		if selected == nil then
-			return
+	if state.assignees and state.assignees ~= "loading" then
+		for _, user in ipairs(state.assignees) do
+			table.insert(initial_items, {
+				id = user.account_id or "",
+				label = user.display_name or "",
+				value = user,
+			})
 		end
+	end
 
-		state.fields.reporter = selected
-		update_meta_buffer()
-	end)
+	async_picker.open({
+		title = "Select Reporter",
+		prompt = "Search users",
+		initial_items = initial_items,
+		fetch_on_open = not (state.assignees and state.assignees ~= "loading" and #state.assignees > 0),
+		debounce_ms = 250,
+		cache_ttl_ms = 60000,
+		identifier = "jira_users:" .. (state.fields.project or ""),
+		format_item = function(item)
+			return string.format("%s %s", icons.entity("user"), item.label or "")
+		end,
+		fetch = function(ctx, done)
+			users_api.get_assignable_users(
+				{ project = state.fields.project, issue_key = state.fields.issue_key },
+				ctx.query,
+				function(users, err)
+					if err then
+						done(nil, err)
+						return
+					end
+					local items = {}
+					for _, u in ipairs(users or {}) do
+						table.insert(items, {
+							id = u.account_id or "",
+							label = u.display_name or "",
+							value = u,
+						})
+					end
+					done(items, nil)
+				end
+			)
+		end,
+		on_select = function(item)
+			state.fields.reporter = item.value
+			update_meta_buffer()
+		end,
+	})
 end
 
 local function show_issue_type_picker()
-	if state.issue_types == "loading" then
-		return
-	end
+	---@type AsyncPickerItem[]
+	local initial_items = {}
 
-	if not state.issue_types or #state.issue_types == 0 then
-		footer.notify("warn", "No issue types available")
-		return
-	end
-
-	vim.ui.select(state.issue_types, {
-		prompt = "Select Issue Type",
-		kind = "atlas_jira_issue_types",
-		format_item = function(item)
-			if type(item) ~= "table" then
-				return ""
+	if state.issue_types and state.issue_types ~= "loading" then
+		for _, issue_type in ipairs(state.issue_types) do
+			if type(issue_type) == "table" then
+				table.insert(initial_items, {
+					id = tostring(issue_type.id or ""),
+					label = tostring(issue_type.name or ""),
+					value = issue_type,
+				})
 			end
-			return string.format("%s %s", icons.jira_icon(item.name), tostring(item.name or ""))
-		end,
-	}, function(selected)
-		if selected == nil then
-			return
 		end
+	end
 
-		state.fields.issue_type = selected
-		update_meta_buffer()
-	end)
+	async_picker.open({
+		title = "Select Issue Type",
+		prompt = "Filter types",
+		initial_items = initial_items,
+		fetch_on_open = not (state.issue_types and state.issue_types ~= "loading" and #state.issue_types > 0),
+		debounce_ms = 0,
+		identifier = "jira_issue_types:" .. (state.fields.project or ""),
+		format_item = function(item)
+			return string.format("%s %s", icons.jira_icon(item.label), item.label)
+		end,
+		fetch = function(ctx, fetch_done)
+			local function do_filter()
+				if ctx.signal.cancelled then
+					return
+				end
+
+				-- Still loading — poll until ready
+				if state.issue_types == "loading" then
+					vim.defer_fn(do_filter, 100)
+					return
+				end
+
+				-- Rebuild initial_items if we had to wait
+				if #initial_items == 0 and state.issue_types then
+					for _, issue_type in ipairs(state.issue_types) do
+						if type(issue_type) == "table" then
+							table.insert(initial_items, {
+								id = tostring(issue_type.id or ""),
+								label = tostring(issue_type.name or ""),
+								value = issue_type,
+							})
+						end
+					end
+				end
+
+				local query = vim.trim(ctx.query):lower()
+				if query == "" then
+					fetch_done(initial_items, nil)
+					return
+				end
+				local filtered = {}
+				for _, item in ipairs(initial_items) do
+					if item.label:lower():find(query, 1, true) then
+						table.insert(filtered, item)
+					end
+				end
+				fetch_done(filtered, nil)
+			end
+
+			do_filter()
+		end,
+		on_select = function(item)
+			state.fields.issue_type = item.value
+			update_meta_buffer()
+		end,
+	})
 end
 
 ---@param on_submit fun(fields: IssueFields, done: fun(ok: boolean, err: string|nil))|nil
