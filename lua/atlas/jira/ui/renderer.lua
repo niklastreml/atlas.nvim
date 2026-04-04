@@ -141,21 +141,28 @@ local function issue_to_row(issue, is_child)
 	if type(story_points) == "number" then
 		points = (story_points % 1 == 0) and tostring(math.floor(story_points)) or tostring(story_points)
 	end
-	local name = points ~= "" and (title .. "  " .. icons.entity("story_points") .. " " .. points) or title
+	local due_display = utils.format_date(issue.duedate)
+	local points_due = ""
+	if points ~= "" then
+		local points_text = icons.entity("story_points") .. " " .. points
+		points_due = points_text
+	end
+	if due_display ~= "" then
+		local due_text = icons.entity("created") .. " " .. due_display
+		if points_due ~= "" then
+			points_due = points_due .. "  " .. due_text
+		else
+			points_due = due_text
+		end
+	end
+	local name = points_due ~= "" and (title .. "  " .. points_due) or title
 	if is_child then
 		name = "  " .. name
-	end
-	local due_display = utils.format_date(issue.duedate)
-	if due_display ~= "" then
-		due_display = string.format("%s %s", icons.entity("created"), due_display)
-	else
-		due_display = ""
 	end
 
 	local row = {
 		icon = icon,
 		name = name,
-		duedate = due_display,
 		assignee = string.format(
 			"%s %s",
 			icons.entity("user"),
@@ -196,7 +203,6 @@ local function issues_to_rows(issue_groups)
 				kind = "separator",
 				icon = "",
 				name = "",
-				duedate = "",
 				assignee = "",
 				reporter = "",
 				status = "",
@@ -382,7 +388,6 @@ function M.render(opts)
 			table.insert(rows, {
 				icon = "",
 				name = "",
-				duedate = "",
 				assignee = "",
 				reporter = "",
 				status = "",
@@ -390,7 +395,6 @@ function M.render(opts)
 			table.insert(rows, {
 				icon = state.reload_spinner_frame or "⠋",
 				name = "Loading...",
-				duedate = "",
 				assignee = "",
 				reporter = "",
 				status = "",
@@ -406,7 +410,6 @@ function M.render(opts)
 				columns = {
 					{ key = "icon", name = "", can_grow = false, align = "center" },
 					{ key = "name", name = "󰌷 Issue" },
-					{ key = "duedate", name = "", can_grow = false, align = "center", align_title = true },
 					{
 						key = "assignee",
 						name = string.format("%s Assignee", icons.entity("user")),

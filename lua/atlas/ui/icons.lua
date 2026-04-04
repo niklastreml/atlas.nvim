@@ -34,7 +34,7 @@ local ICONS = {
 		project = "",
 	},
 	jira_type = {
-		epic = "󰛨",
+		epic = "",
 		story = "󰃀",
 		task = "",
 		bug = "",
