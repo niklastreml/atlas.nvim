@@ -27,7 +27,7 @@ if _G.vim == nil then
 	}
 end
 
-local checkout = require("atlas.bitbucketv2.checkout")
+local checkout = require("atlas.bitbucket.checkout")
 
 describe("repo_paths", function()
 	describe("validate", function()

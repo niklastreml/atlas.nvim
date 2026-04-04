@@ -1,7 +1,5 @@
 local M = {}
 
----FIX: TBH mostly ai generated but works for basic cases, needs more work to handle all edge cases and more complex ADF structures but its a good start...
-
 local function text_node(text, marks)
 	return {
 		type = "text",
@@ -69,18 +67,18 @@ local function parse_inline(text)
 		local rest = text:sub(icon_size + 1)
 		local leading_ws, status_text, trailing_ws = rest:match("^(%s+)([^%s].-)(%s*)$")
 		if leading_ws ~= nil and status_text ~= nil then
-		table.insert(nodes, {
-			type = "status",
-			attrs = {
-				text = status_text,
-				color = status_color,
-				style = "",
-			},
-		})
-		if trailing_ws ~= nil and trailing_ws ~= "" then
-			append_text(nodes, trailing_ws)
-		end
-		return nodes
+			table.insert(nodes, {
+				type = "status",
+				attrs = {
+					text = status_text,
+					color = status_color,
+					style = "",
+				},
+			})
+			if trailing_ws ~= nil and trailing_ws ~= "" then
+				append_text(nodes, trailing_ws)
+			end
+			return nodes
 		end
 	end
 
@@ -102,75 +100,75 @@ local function parse_inline(text)
 			})
 			i = me + 1
 		else
-		local s, e, label, url = text:find("%[(.-)%]%((.-)%)", i)
-		if s == i then
-			local date_timestamp = url:match("^atlas%-date:(.+)$")
-			if date_timestamp ~= nil and date_timestamp ~= "" then
-				table.insert(nodes, {
-					type = "date",
-					attrs = {
-						timestamp = date_timestamp,
-					},
-				})
-			else
-				table.insert(nodes, {
-					type = "text",
-					text = label,
-					marks = {
-						{ type = "link", attrs = { href = url } },
-					},
-				})
-			end
-			i = e + 1
-		elseif text:sub(i, i + 1) == "**" then
-			local close = text:find("%*%*", i + 2)
-			if close then
-				local content = text:sub(i + 2, close - 1)
-				append_text(nodes, content, { { type = "strong" } })
-				i = close + 2
+			local s, e, label, url = text:find("%[(.-)%]%((.-)%)", i)
+			if s == i then
+				local date_timestamp = url:match("^atlas%-date:(.+)$")
+				if date_timestamp ~= nil and date_timestamp ~= "" then
+					table.insert(nodes, {
+						type = "date",
+						attrs = {
+							timestamp = date_timestamp,
+						},
+					})
+				else
+					table.insert(nodes, {
+						type = "text",
+						text = label,
+						marks = {
+							{ type = "link", attrs = { href = url } },
+						},
+					})
+				end
+				i = e + 1
+			elseif text:sub(i, i + 1) == "**" then
+				local close = text:find("%*%*", i + 2)
+				if close then
+					local content = text:sub(i + 2, close - 1)
+					append_text(nodes, content, { { type = "strong" } })
+					i = close + 2
+				else
+					local ch, size = utf8_char_at(text, i)
+					append_text(nodes, ch)
+					i = i + size
+				end
+			elseif text:sub(i, i + 1) == "~~" then
+				local close = text:find("~~", i + 2)
+				if close then
+					local content = text:sub(i + 2, close - 1)
+					append_text(nodes, content, { { type = "strike" } })
+					i = close + 2
+				else
+					local ch, size = utf8_char_at(text, i)
+					append_text(nodes, ch)
+					i = i + size
+				end
+			elseif text:sub(i, i) == "*" then
+				local close = text:find("%*", i + 1)
+				if close then
+					local content = text:sub(i + 1, close - 1)
+					append_text(nodes, content, { { type = "em" } })
+					i = close + 1
+				else
+					local ch, size = utf8_char_at(text, i)
+					append_text(nodes, ch)
+					i = i + size
+				end
+			elseif text:sub(i, i) == "`" then
+				local close = text:find("`", i + 1)
+				if close then
+					local content = text:sub(i + 1, close - 1)
+					append_text(nodes, content, { { type = "code" } })
+					i = close + 1
+				else
+					local ch, size = utf8_char_at(text, i)
+					append_text(nodes, ch)
+					i = i + size
+				end
 			else
 				local ch, size = utf8_char_at(text, i)
 				append_text(nodes, ch)
 				i = i + size
 			end
-		elseif text:sub(i, i + 1) == "~~" then
-			local close = text:find("~~", i + 2)
-			if close then
-				local content = text:sub(i + 2, close - 1)
-				append_text(nodes, content, { { type = "strike" } })
-				i = close + 2
-			else
-				local ch, size = utf8_char_at(text, i)
-				append_text(nodes, ch)
-				i = i + size
-			end
-		elseif text:sub(i, i) == "*" then
-			local close = text:find("%*", i + 1)
-			if close then
-				local content = text:sub(i + 1, close - 1)
-				append_text(nodes, content, { { type = "em" } })
-				i = close + 1
-			else
-				local ch, size = utf8_char_at(text, i)
-				append_text(nodes, ch)
-				i = i + size
-			end
-		elseif text:sub(i, i) == "`" then
-			local close = text:find("`", i + 1)
-			if close then
-				local content = text:sub(i + 1, close - 1)
-				append_text(nodes, content, { { type = "code" } })
-				i = close + 1
-			else
-				local ch, size = utf8_char_at(text, i)
-				append_text(nodes, ch)
-				i = i + size
-			end
-		else
-			local ch, size = utf8_char_at(text, i)
-			append_text(nodes, ch)
-			i = i + size
-		end
 		end
 	end
 
@@ -228,6 +226,232 @@ local function is_table_separator(line)
 	return true
 end
 
+---@class MdLineContext
+---@field lines string[]
+---@field i integer
+
+local line_handlers = {}
+
+-- ```lang
+-- code here
+-- ```
+line_handlers.codeBlock = {
+	match = function(line)
+		return line:match("^```") ~= nil
+	end,
+	parse = function(line, ctx)
+		local lang = line:match("^```(.*)")
+		local code_lines = {}
+		ctx.i = ctx.i + 1
+
+		while ctx.i <= #ctx.lines and not ctx.lines[ctx.i]:match("^```") do
+			table.insert(code_lines, ctx.lines[ctx.i])
+			ctx.i = ctx.i + 1
+		end
+
+		local node = {
+			type = "codeBlock",
+			content = {
+				{ type = "text", text = table.concat(code_lines, "\n") },
+			},
+		}
+		if lang ~= nil and lang ~= "" then
+			node.attrs = { language = lang }
+		end
+
+		return node
+	end,
+}
+
+-- ## Heading text
+line_handlers.heading = {
+	match = function(line)
+		return line:match("^#+%s") ~= nil
+	end,
+	parse = function(line)
+		local hashes, content = line:match("^(#+)%s+(.*)")
+		return {
+			type = "heading",
+			attrs = { level = #hashes },
+			content = parse_inline(content),
+		}
+	end,
+}
+
+-- > quoted text
+line_handlers.blockquote = {
+	match = function(line)
+		return line:match("^>%s?") ~= nil
+	end,
+	parse = function(line)
+		local content = line:gsub("^>%s?", "")
+		return {
+			type = "blockquote",
+			content = {
+				{
+					type = "paragraph",
+					content = parse_inline(content),
+				},
+			},
+		}
+	end,
+}
+
+-- * bullet item
+line_handlers.bulletList = {
+	match = function(line)
+		return line:match("^%*%s+") ~= nil
+	end,
+	parse = function(line, ctx)
+		local items = {}
+
+		while ctx.i <= #ctx.lines and ctx.lines[ctx.i]:match("^%*%s+") do
+			local item = ctx.lines[ctx.i]:gsub("^%*%s+", "")
+			table.insert(items, {
+				type = "listItem",
+				content = {
+					{
+						type = "paragraph",
+						content = parse_inline(item),
+					},
+				},
+			})
+			ctx.i = ctx.i + 1
+		end
+
+		ctx.i = ctx.i - 1
+
+		return {
+			type = "bulletList",
+			content = items,
+		}
+	end,
+}
+
+-- 1. ordered item
+line_handlers.orderedList = {
+	match = function(line)
+		return line:match("^%d+%.%s+") ~= nil
+	end,
+	parse = function(_, ctx)
+		local items = {}
+
+		while ctx.i <= #ctx.lines and ctx.lines[ctx.i]:match("^%d+%.%s+") do
+			local item = ctx.lines[ctx.i]:gsub("^%d+%.%s+", "")
+			table.insert(items, {
+				type = "listItem",
+				content = {
+					{
+						type = "paragraph",
+						content = parse_inline(item),
+					},
+				},
+			})
+			ctx.i = ctx.i + 1
+		end
+
+		ctx.i = ctx.i - 1
+
+		return {
+			type = "orderedList",
+			content = items,
+		}
+	end,
+}
+
+-- ---
+line_handlers.rule = {
+	match = function(line)
+		return line == "---"
+	end,
+	parse = function()
+		return { type = "rule" }
+	end,
+}
+
+-- | col1 | col2 |
+-- | --- | --- |
+-- | val1 | val2 |
+line_handlers.table = {
+	match = function(line, ctx)
+		return ctx.i + 1 <= #ctx.lines and is_table_row(line) and is_table_separator(ctx.lines[ctx.i + 1])
+	end,
+	parse = function(line, ctx)
+		local headers = parse_table_cells(line)
+		local table_node = {
+			type = "table",
+			content = {},
+		}
+
+		local header_row = {
+			type = "tableRow",
+			content = {},
+		}
+		for _, cell in ipairs(headers) do
+			table.insert(header_row.content, {
+				type = "tableHeader",
+				content = {
+					{
+						type = "paragraph",
+						content = parse_inline(cell),
+					},
+				},
+			})
+		end
+		table.insert(table_node.content, header_row)
+
+		ctx.i = ctx.i + 2
+		while ctx.i <= #ctx.lines and is_table_row(ctx.lines[ctx.i]) do
+			local cells = parse_table_cells(ctx.lines[ctx.i])
+			local body_row = {
+				type = "tableRow",
+				content = {},
+			}
+			for _, cell in ipairs(cells) do
+				table.insert(body_row.content, {
+					type = "tableCell",
+					content = {
+						{
+							type = "paragraph",
+							content = parse_inline(cell),
+						},
+					},
+				})
+			end
+			table.insert(table_node.content, body_row)
+			ctx.i = ctx.i + 1
+		end
+
+		ctx.i = ctx.i - 1
+		return table_node
+	end,
+}
+
+-- plain paragraph text
+line_handlers.paragraph = {
+	match = function(line)
+		return line ~= ""
+	end,
+	parse = function(line)
+		return {
+			type = "paragraph",
+			content = parse_inline(line),
+		}
+	end,
+}
+
+-- Order matters: checked top to bottom, paragraph must be last
+local handler_order = {
+	"codeBlock",
+	"heading",
+	"blockquote",
+	"bulletList",
+	"orderedList",
+	"rule",
+	"table",
+	"paragraph",
+}
+
 ---@param text string
 ---@return table
 function M.to_adf(text)
@@ -238,155 +462,32 @@ function M.to_adf(text)
 		content = {},
 	}
 
-	local i = 1
-	while i <= #lines do
-		local line = lines[i]
+	local ctx = { lines = lines, i = 1 }
 
-		if line:match("^```") then
-			local lang = line:match("^```(.*)")
-			local code_lines = {}
-			i = i + 1
+	while ctx.i <= #lines do
+		local line = lines[ctx.i]
 
-			while i <= #lines and not lines[i]:match("^```") do
-				table.insert(code_lines, lines[i])
-				i = i + 1
-			end
-
-			local node = {
-				type = "codeBlock",
-				content = {
-					{ type = "text", text = table.concat(code_lines, "\n") },
-				},
-			}
-			if lang ~= nil and lang ~= "" then
-				node.attrs = { language = lang }
-			end
-
-			table.insert(doc.content, node)
-		elseif line:match("^#+%s") then
-			local hashes, content = line:match("^(#+)%s+(.*)")
-			table.insert(doc.content, {
-				type = "heading",
-				attrs = { level = #hashes },
-				content = parse_inline(content),
-			})
-		elseif line:match("^>%s?") then
-			local content = line:gsub("^>%s?", "")
-			table.insert(doc.content, {
-				type = "blockquote",
-				content = {
-					{
-						type = "paragraph",
-						content = parse_inline(content),
-					},
-				},
-			})
-		elseif line:match("^%*%s+") then
-			local items = {}
-
-			while i <= #lines and lines[i]:match("^%*%s+") do
-				local item = lines[i]:gsub("^%*%s+", "")
-				table.insert(items, {
-					type = "listItem",
-					content = {
-						{
-							type = "paragraph",
-							content = parse_inline(item),
-						},
-					},
-				})
-				i = i + 1
-			end
-
-			i = i - 1
-
-			table.insert(doc.content, {
-				type = "bulletList",
-				content = items,
-			})
-		elseif line:match("^%d+%.%s+") then
-			local items = {}
-
-			while i <= #lines and lines[i]:match("^%d+%.%s+") do
-				local item = lines[i]:gsub("^%d+%.%s+", "")
-				table.insert(items, {
-					type = "listItem",
-					content = {
-						{
-							type = "paragraph",
-							content = parse_inline(item),
-						},
-					},
-				})
-				i = i + 1
-			end
-
-			i = i - 1
-
-			table.insert(doc.content, {
-				type = "orderedList",
-				content = items,
-			})
-		elseif line == "---" then
-			table.insert(doc.content, { type = "rule" })
-		elseif i + 1 <= #lines and is_table_row(line) and is_table_separator(lines[i + 1]) then
-			local headers = parse_table_cells(line)
-			local table_node = {
-				type = "table",
-				content = {},
-			}
-
-			local header_row = {
-				type = "tableRow",
-				content = {},
-			}
-			for _, cell in ipairs(headers) do
-				table.insert(header_row.content, {
-					type = "tableHeader",
-					content = {
-						{
-							type = "paragraph",
-							content = parse_inline(cell),
-						},
-					},
-				})
-			end
-			table.insert(table_node.content, header_row)
-
-			i = i + 2
-			while i <= #lines and is_table_row(lines[i]) do
-				local cells = parse_table_cells(lines[i])
-				local body_row = {
-					type = "tableRow",
-					content = {},
-				}
-				for _, cell in ipairs(cells) do
-					table.insert(body_row.content, {
-						type = "tableCell",
-						content = {
-							{
-								type = "paragraph",
-								content = parse_inline(cell),
-							},
-						},
-					})
-				end
-				table.insert(table_node.content, body_row)
-				i = i + 1
-			end
-
-			i = i - 1
-			table.insert(doc.content, table_node)
-		elseif line == "" then
-			-- skip
+		if line == "" then
+			ctx.i = ctx.i + 1
 		else
-			table.insert(doc.content, {
-				type = "paragraph",
-				content = parse_inline(line),
-			})
-		end
+			local handled = false
+			for _, name in ipairs(handler_order) do
+				local handler = line_handlers[name]
+				if handler.match(line, ctx) then
+					local node = handler.parse(line, ctx)
+					if node then
+						table.insert(doc.content, node)
+					end
+					ctx.i = ctx.i + 1
+					handled = true
+					break
+				end
+			end
 
-		i = i + 1
+			if not handled then
+				ctx.i = ctx.i + 1
+			end
+		end
 	end
 
 	return doc
