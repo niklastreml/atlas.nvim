@@ -54,6 +54,18 @@ local function cell_hl(row, col, ctx)
 			end
 		end
 
+		if type(issue) == "table" and type(issue.priority) == "string" and issue.priority ~= "" then
+			local priority_icon = icons.jira_icon(issue.priority)
+			local ps, pe = ctx.text:find(priority_icon, 1, true)
+			if ps and pe then
+				table.insert(spans_for_cell, {
+					start_col = ps - 1,
+					end_col = pe,
+					hl_group = helper.priority_hl(issue.priority),
+				})
+			end
+		end
+
 		local story_points_icon = icons.entity("story_points")
 		local ss, se = ctx.text:find(story_points_icon, 1, true)
 		if ss and se then
@@ -142,10 +154,18 @@ local function issue_to_row(issue, is_child)
 		points = (story_points % 1 == 0) and tostring(math.floor(story_points)) or tostring(story_points)
 	end
 	local due_display = utils.format_date(issue.duedate)
+	local priority_icon = icons.jira_icon(issue.priority)
 	local points_due = ""
+	if priority_icon ~= "" then
+		points_due = priority_icon
+	end
 	if points ~= "" then
 		local points_text = icons.entity("story_points") .. " " .. points
-		points_due = points_text
+		if points_due ~= "" then
+			points_due = points_due .. "  " .. points_text
+		else
+			points_due = points_text
+		end
 	end
 	if due_display ~= "" then
 		local due_text = icons.entity("created") .. " " .. due_display
