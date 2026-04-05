@@ -2,7 +2,6 @@ local M = {}
 local adf = require("atlas.jira.converted.adf")
 
 local STORY_POINTS_FIELD = "customfield_10016"
-local APPROVERS_FIELD = "customfield_10003"
 
 ---@param raw_project table|nil
 ---@return JiraProject|nil
@@ -162,7 +161,6 @@ local function extract_parent(raw_parent)
 		assignee = normalize_issue_user(safe_get(pf, "assignee")),
 		reporter = safe_get(pf, "reporter", "displayName"),
 		story_points = nil,
-		approvers = nil,
 		duedate = nil,
 		parent = nil,
 	}
@@ -189,30 +187,6 @@ local function extract_story_points(value)
 	return nil
 end
 
----@param raw_approvers any
----@return string[]|nil
-local function extract_approvers(raw_approvers)
-	if type(raw_approvers) ~= "table" then
-		return nil
-	end
-
-	local out = {}
-	for _, approver in ipairs(raw_approvers) do
-		if type(approver) == "table" then
-			local name = approver.displayName
-			if type(name) == "string" and name ~= "" then
-				table.insert(out, name)
-			end
-		end
-	end
-
-	if #out == 0 then
-		return nil
-	end
-
-	return out
-end
-
 ---@param raw table
 ---@return JiraIssue
 function M.normalize_issue(raw)
@@ -232,7 +206,6 @@ function M.normalize_issue(raw)
 		assignee = normalize_issue_user(safe_get(fields, "assignee")),
 		reporter = safe_get(fields, "reporter", "displayName"),
 		story_points = extract_story_points(fields[STORY_POINTS_FIELD]),
-		approvers = extract_approvers(fields[APPROVERS_FIELD]),
 		duedate = fields.duedate,
 		parent = extract_parent(safe_get(fields, "parent")),
 	}

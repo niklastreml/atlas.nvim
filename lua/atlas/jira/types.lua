@@ -62,7 +62,6 @@
 ---@field assignee JiraUser|nil
 ---@field reporter string|nil
 ---@field story_points number|nil
----@field approvers string[]|nil
 ---@field duedate string|nil
 ---@field parent JiraIssue|nil
 

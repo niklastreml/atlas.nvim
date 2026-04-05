@@ -192,6 +192,23 @@ return {
         cache_ttl = 300,
         resolve_parent_issues = true,
 
+        project_config = {
+          KAN = {
+            customfield_10003 = {
+              name = "Approvers",
+              format = function(value)
+                if type(value) ~= "table" or #value == 0 then
+                  return nil -- nil hides the field
+                end
+
+                return table.concat(value, ", ")
+              end,
+              hl_group = "AtlasChipActive",
+              display = "chip", -- "chip" (default) or "table"
+            },
+          },
+        },
+
         ---@type JiraViewConfig[]
         views = {
           {
@@ -233,7 +250,7 @@ return {
 - [x] Markdown -> ADF conversion for issue descriptions (experimental)
 - [x] View and edit issues as markdown
 - [x] Search issues
-- [ ] Add support for custom fields in issue details
+- [x] Add support for custom fields in issue details
 - [ ] Create and edit issue templates
 
 ### Commands

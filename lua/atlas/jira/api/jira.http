@@ -38,7 +38,7 @@ Accept: application/json
 
 {
   "jql": "project = {{jira_project_key}} ORDER BY updated DESC",
-  "fields": ["summary", "status", "project", "assignee", "reporter", "parent", "priority", "issuetype", "duedate", "customfield_10016", "customfield_10003"],
+  "fields": ["summary", "status", "project", "assignee", "reporter", "parent", "priority", "issuetype", "duedate", "customfield_10016"],
   "nextPageToken": "",
   "maxResults": 1
 }

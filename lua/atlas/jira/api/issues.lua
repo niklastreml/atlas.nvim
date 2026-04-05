@@ -18,7 +18,6 @@ local SEARCH_FIELDS = {
 
 	-- TODO: Probably different in every board, need to make this configurable
 	"customfield_10016", --- story points
-	"customfield_10003", --- approvers
 }
 
 ---@class JiraIssueSearchPage
@@ -131,25 +130,37 @@ function M.get_issue_history_page(issue_key, start_at, max_results, on_done)
 	end)
 end
 
+---@class JiraIssueDetailResult
+---@field description any
+---@field custom_fields table<string, any>|nil
+
 ---@param issue_key string
----@param on_done fun(description: any, err: string|nil)
+---@param on_done fun(detail: JiraIssueDetailResult|nil, err: string|nil)
+---@param opts { extra_fields?: string[] }|nil
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.get_issue_description(issue_key, on_done)
+function M.get_issue_detail(issue_key, on_done, opts)
 	if type(issue_key) ~= "string" or issue_key == "" then
 		on_done(nil, "Missing issue key")
 		return nil
 	end
 
-	logger.loginfo("Jira fetch issue description", { issue_key = issue_key })
+	opts = opts or {}
+	local fields = { "description" }
+	local extra = opts.extra_fields or {}
+	for _, f in ipairs(extra) do
+		table.insert(fields, f)
+	end
+
+	logger.loginfo("Jira fetch issue detail", { issue_key = issue_key, fields = fields })
 	local data = {
 		jql = "key = " .. issue_key,
-		fields = { "description" },
+		fields = fields,
 		maxResults = 1,
 	}
 
 	return service.request("POST", "/search/jql", data, function(result, err)
 		if err or not result then
-			logger.logerror("Jira description fetch failed", {
+			logger.logerror("Jira detail fetch failed", {
 				issue_key = issue_key,
 				error = err or "Empty response",
 			})
@@ -158,12 +169,39 @@ function M.get_issue_description(issue_key, on_done)
 		end
 
 		local first_issue = (result.issues or {})[1]
-		local description = first_issue and first_issue.fields and first_issue.fields.description or nil
-		logger.loginfo("Jira description fetch complete", {
+		local raw_fields = first_issue and first_issue.fields or {}
+
+		local custom_fields = nil
+		if #extra > 0 then
+			custom_fields = {}
+			for _, field_id in ipairs(extra) do
+				custom_fields[field_id] = raw_fields[field_id]
+			end
+		end
+
+		logger.loginfo("Jira detail fetch complete", {
 			issue_key = issue_key,
-			has_description = description ~= nil,
+			has_description = raw_fields.description ~= nil,
+			custom_field_count = custom_fields and #extra or 0,
 		})
-		on_done(description, nil)
+
+		on_done({
+			description = raw_fields.description,
+			custom_fields = custom_fields,
+		}, nil)
+	end)
+end
+
+---@param issue_key string
+---@param on_done fun(description: any, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.get_issue_description(issue_key, on_done)
+	return M.get_issue_detail(issue_key, function(detail, err)
+		if err or not detail then
+			on_done(nil, err)
+			return
+		end
+		on_done(detail.description, nil)
 	end)
 end
 

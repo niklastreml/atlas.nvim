@@ -23,34 +23,21 @@ local function user_name_or(user, fallback)
 	return fallback
 end
 
-local function approvers_value(v, user_icon)
-	if type(v) ~= "table" or #v == 0 then
-		return string.format("%s None", user_icon), {}
-	end
-
-	local chunks = {}
-	for i, name in ipairs(v) do
-		if i == 1 then
-			table.insert(chunks, string.format("%s %s", user_icon, name))
-		else
-			table.insert(chunks, name)
-		end
-	end
-
-	return table.concat(chunks, ", "), v
-end
-
 ---@param issue JiraIssue
 ---@param width integer
+---@param opts { custom_fields?: JiraCustomFieldValue[], table_fields?: JiraCustomFieldValue[] }|nil
 ---@return string[]
 ---@return table[]
-function M.render(issue, width)
+function M.render(issue, width, opts)
+	opts = opts or {}
 	local issue_type = text_or(type(issue and issue.type) == "table" and issue.type.name or nil, "Unknown")
 	local key = text_or(issue and issue.key, "")
 	local title = text_or(issue and issue.summary, "")
 	local status = text_or(issue and issue.status, "Unknown")
 	local assignee = user_name_or(issue and issue.assignee, "Unassigned")
 	local reporter = text_or(issue and issue.reporter, "Unknown")
+	local priority = text_or(issue and issue.priority, "-")
+	local priority_icon = icons.jira_icon(priority)
 	local story_points = issue and issue.story_points
 	local story_points_text = type(story_points) == "number" and tostring(story_points) or "-"
 	local due_date = utils.format_date(issue and issue.duedate)
@@ -59,7 +46,7 @@ function M.render(issue, width)
 
 	local type_icon = icons.jira_icon(type(issue and issue.type) == "table" and issue.type.name or nil)
 	local user_icon = icons.entity("user")
-	local approvers, approver_names = approvers_value(issue and issue.approvers, user_icon)
+	local priority_text = string.format("%s %s", priority_icon, priority)
 
 	local type_key_line = string.format(" %s %s %s", type_icon, issue_type, key)
 	local title_line = " " .. title
@@ -69,10 +56,9 @@ function M.render(issue, width)
 			k1 = "Status:",
 			v1 = status,
 			v1_hl = helper.status_hl(issue and issue.status_id),
-			k2 = "Approvers:",
-			v2 = approvers,
-			approver_names = approver_names,
-			v2_hl = "AtlasTextMutedItalic",
+			k2 = "Priority:",
+			v2 = priority_text,
+			v2_hl = helper.priority_hl(issue and issue.priority),
 		},
 		{
 			k1 = "Assignee:",
@@ -83,6 +69,19 @@ function M.render(issue, width)
 			v2_hl = helper.person_hl(issue and issue.reporter),
 		},
 	}
+
+	if type(opts.table_fields) == "table" then
+		for _, field in ipairs(opts.table_fields) do
+			table.insert(rows, {
+				k1 = string.format("%s:", field.name),
+				v1 = field.formatted,
+				v1_hl = field.hl_group,
+				k2 = "",
+				v2 = "",
+				v2_hl = nil,
+			})
+		end
+	end
 
 	local table_lines, _, table_spans = table_tree_v2.render({
 		columns = {
@@ -120,35 +119,6 @@ function M.render(issue, width)
 			end
 
 			if col.key == "v2" then
-				if row.k2 == "Approvers:" and type(row.approver_names) == "table" and #row.approver_names > 0 then
-					local parts = {}
-					local offset = 0
-					for i, name in ipairs(row.approver_names) do
-						local chunk
-						if i == 1 then
-							chunk = string.format("%s %s", user_icon, name)
-						else
-							chunk = name
-						end
-						local chunk_len = #chunk
-						table.insert(parts, {
-							start_col = offset,
-							end_col = offset + chunk_len,
-							hl_group = helper.person_hl(name),
-						})
-						offset = offset + chunk_len
-						if i < #row.approver_names then
-							table.insert(parts, {
-								start_col = offset,
-								end_col = offset + 2,
-								hl_group = "AtlasTextMuted",
-							})
-							offset = offset + 2
-						end
-					end
-					return parts
-				end
-
 				return {
 					{
 						start_col = 0,
@@ -204,7 +174,7 @@ function M.render(issue, width)
 		})
 	end
 
-	local chip_line, chip_spans = chips.render({
+	local chip_items = {
 		{
 			text = string.format("%s %s", icons.entity("branch"), parent_key),
 			hl_group = parent_key ~= "-" and "AtlasJiraChipParent" or "AtlasTextMuted",
@@ -220,7 +190,19 @@ function M.render(issue, width)
 			hl_group = due_date ~= "" and "AtlasJiraChipDueDate" or "AtlasTextMuted",
 			active = true,
 		},
-	}, width, 1)
+	}
+
+	if type(opts.custom_fields) == "table" then
+		for _, field in ipairs(opts.custom_fields) do
+			table.insert(chip_items, {
+				text = field.formatted,
+				hl_group = field.hl_group or "AtlasChipActive",
+				active = true,
+			})
+		end
+	end
+
+	local chip_line, chip_spans = chips.render(chip_items, width, 1)
 
 	if chip_line ~= "" then
 		table.insert(lines, chip_line)

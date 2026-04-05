@@ -4,6 +4,7 @@ local panel_state = require("atlas.jira.panel.state")
 local jira_actions = require("atlas.jira.actions")
 local issues = require("atlas.jira.api.issues")
 local adf = require("atlas.jira.converted.adf")
+local config = require("atlas.config")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 
@@ -78,6 +79,7 @@ function M.show(issue)
 	if issue == nil or issue.key == "" then
 		state.adf_description = nil
 		state.md_description = nil
+		state.custom_fields = nil
 		return
 	end
 
@@ -88,11 +90,25 @@ function M.show(issue)
 	local issue_key = issue.key
 	state.adf_description = "loading"
 	state.md_description = "loading"
+	state.custom_fields = nil
 	start_spinner()
 	footer.notify("loading", string.format("Loading description for %s...", issue_key))
 	require("atlas.jira.panel.init").refresh()
 
-	active_handle = issues.get_issue_description(issue_key, function(description, err)
+	local project_key = issue.project and issue.project.key or nil
+	local project_cfg = project_key
+			and type(config.options.jira.project_config) == "table"
+			and config.options.jira.project_config[project_key]
+		or nil
+
+	local extra_fields = {}
+	if type(project_cfg) == "table" then
+		for field_id, _ in pairs(project_cfg) do
+			table.insert(extra_fields, field_id)
+		end
+	end
+
+	active_handle = issues.get_issue_detail(issue_key, function(detail, err)
 		active_handle = nil
 		if state.issue == nil or state.issue.key ~= issue_key then
 			return
@@ -101,8 +117,10 @@ function M.show(issue)
 		if err ~= nil then
 			state.adf_description = nil
 			state.md_description = nil
+			state.custom_fields = nil
 			footer.notify("error", string.format("Failed loading description for %s", issue_key))
 		else
+			local description = detail and detail.description or nil
 			if type(description) == "table" then
 				state.adf_description = description
 				local markdown = adf.to_markdown(description)
@@ -114,12 +132,42 @@ function M.show(issue)
 				state.adf_description = nil
 				state.md_description = ""
 			end
+
+			if type(project_cfg) == "table" and detail and detail.custom_fields then
+				local fields = {}
+				for field_id, field_cfg in pairs(project_cfg) do
+					local raw_value = detail.custom_fields[field_id]
+					if raw_value == vim.NIL then
+						raw_value = nil
+					end
+					local formatted = nil
+					if type(field_cfg.format) == "function" then
+						local ok, result = pcall(field_cfg.format, raw_value)
+						if result == vim.NIL then
+							result = nil
+						end
+						if ok and (type(result) == "string" or result == nil) then
+							formatted = result
+						end
+					end
+					if type(formatted) == "string" and formatted ~= "" then
+						table.insert(fields, {
+						name = field_cfg.name or field_id,
+						formatted = formatted,
+						hl_group = field_cfg.hl_group,
+						display = field_cfg.display == "table" and "table" or "chip",
+					})
+					end
+				end
+				state.custom_fields = #fields > 0 and fields or nil
+			end
+
 			footer.notify("success", string.format("Description loaded for %s", issue_key), 1200)
 		end
 
 		stop_spinner()
 		require("atlas.jira.panel.init").refresh()
-	end)
+	end, { extra_fields = #extra_fields > 0 and extra_fields or nil })
 end
 
 function M.toggle_view_mode()
@@ -173,6 +221,7 @@ function M.refresh()
 	stop_spinner()
 	state.adf_description = nil
 	state.md_description = nil
+	state.custom_fields = nil
 	M.show(state.issue)
 end
 

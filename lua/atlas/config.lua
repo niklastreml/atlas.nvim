@@ -4,6 +4,12 @@
 ---@field key string|nil
 ---@field jql string
 
+---@class JiraCustomFieldConfig
+---@field name string
+---@field format fun(value: any): string|nil
+---@field hl_group string|nil
+---@field display "table"|"chip"|nil
+
 --- @class JiraConfig
 --- @field base_url string
 --- @field email string
@@ -11,6 +17,7 @@
 --- @field cache_ttl number|nil
 --- @field views JiraViewConfig[]|nil
 --- @field resolve_parent_issues boolean|nil
+--- @field project_config table<string, table<string, JiraCustomFieldConfig>>|nil
 
 --- Bitbucket ---
 ---@class BitbucketRepoRef
@@ -64,6 +71,7 @@ M.options = {
 		cache_ttl = 300,
 		resolve_parent_issues = true,
 		views = nil,
+		project_config = {},
 	},
 
 	bitbucket = {

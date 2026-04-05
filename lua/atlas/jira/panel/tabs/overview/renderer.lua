@@ -20,7 +20,22 @@ function M.render(width)
 	local lines, spans = {}, {}
 
 	--- Header
-	local header_lines, header_spans = header.render(issue, width)
+	local custom_chip_fields = {}
+	local custom_table_fields = {}
+	if state.custom_fields and #state.custom_fields > 0 then
+		for _, field in ipairs(state.custom_fields) do
+			if field.display == "chip" then
+				table.insert(custom_chip_fields, field)
+			elseif field.display == "table" then
+				table.insert(custom_table_fields, field)
+			end
+		end
+	end
+
+	local header_lines, header_spans = header.render(issue, width, {
+		custom_fields = custom_chip_fields,
+		table_fields = custom_table_fields,
+	})
 	utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
 
