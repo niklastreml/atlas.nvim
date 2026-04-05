@@ -157,7 +157,7 @@ local function segments_for()
 			align = "right",
 		},
 		{ text = string.format("atlas (%s)", utils.get_version()), hl_group = "AtlasTextMuted", align = "right" },
-		{ text = "? help", hl_group = "AtlasTextMuted", align = "right" },
+		{ text = "? help", hl_group = "AtlasTextWarning", align = "right" },
 	}
 
 	for _, seg in ipairs(right) do

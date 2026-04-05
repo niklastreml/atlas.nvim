@@ -174,7 +174,7 @@ function M.build_footer_items(repos, current_user)
 	local items = {
 		{
 			text = string.format("%s %d PR%s", icons.entity("pr"), pr_count, pr_count == 1 and "" or "s"),
-			hl_group = "AtlasBitbucketTheme",
+			hl_group = "AtlasLogInfo",
 		},
 	}
 

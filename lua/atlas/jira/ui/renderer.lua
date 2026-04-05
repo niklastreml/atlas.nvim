@@ -467,7 +467,7 @@ function M.render(opts)
 			local issue_count = #(state.issues or {})
 			local user_name = (state.current_user and state.current_user.display_name) or ""
 			local footer_items = {
-				{ text = string.format("%d issues", issue_count), hl_group = "AtlasFooterText" },
+				{ text = string.format("%d issues", issue_count), hl_group = "AtlasJiraKey" },
 			}
 			if user_name ~= "" then
 				table.insert(footer_items, { text = "|", hl_group = "AtlasFooterText" })
