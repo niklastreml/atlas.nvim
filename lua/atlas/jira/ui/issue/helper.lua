@@ -2,7 +2,7 @@ local M = {}
 
 local icons = require("atlas.ui.icons")
 local ui_helper = require("atlas.jira.ui.helper")
-local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
+local table_tree = require("atlas.ui.components.table_tree")
 
 ---@param fields IssueFields
 ---@param assignees JiraUser[]|"loading"|nil
@@ -85,7 +85,7 @@ function M.render_meta_lines(width, fields, assignees, issue_types, spinner_inst
 		},
 	}
 
-	local lines, _, spans = table_tree_v2.render({
+	local lines, _, spans = table_tree.render({
 		columns = {
 			{ key = "k1", name = "", can_grow = false },
 			{ key = "v1", name = "", can_grow = true },

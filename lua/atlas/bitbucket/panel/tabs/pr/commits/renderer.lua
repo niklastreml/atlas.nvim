@@ -7,7 +7,7 @@ local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local icons = require("atlas.ui.icons")
-local table_view = require("atlas.ui.components.table")
+local table_view = require("atlas.ui.components.table_tree")
 local spinner = require("atlas.ui.components.spinner")
 local highlights = require("atlas.ui.highlights")
 

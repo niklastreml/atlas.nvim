@@ -1,4 +1,3 @@
--- Tbh ai generated stuff but it works and i couldnt be bother to rewrite it, so here we are
 local M = {}
 
 local function display_width(text)
@@ -61,7 +60,7 @@ local function truncate(text, width)
 	return out .. "…"
 end
 
----@class TableTreeV2TreeOpts
+---@class TableTreeTreeOpts
 ---@field column_key string Column key that receives tree indent + branch/leaf glyphs.
 ---@field children_key? string Default "children".
 ---@field expanded_field? string Default "expanded".
@@ -72,8 +71,8 @@ end
 ---@field separator? string If set, inserts a full-width separator line between root siblings.
 ---@field is_expanded? fun(row:table):boolean Overrides expanded_field when set.
 
----@param tree TableTreeV2TreeOpts|nil
----@return TableTreeV2TreeOpts|nil
+---@param tree TableTreeTreeOpts|nil
+---@return TableTreeTreeOpts|nil
 local function resolve_tree(tree)
 	if type(tree) ~= "table" or tree.column_key == nil or tree.column_key == "" then
 		return nil
@@ -94,7 +93,7 @@ end
 
 ---@param row table
 ---@param has_children boolean
----@param tree TableTreeV2TreeOpts
+---@param tree TableTreeTreeOpts
 ---@return boolean
 local function row_is_expanded(row, has_children, tree)
 	if not has_children then
@@ -110,7 +109,6 @@ local function row_is_expanded(row, has_children, tree)
 end
 
 ---@param row table
----@param tree TableTreeV2TreeOpts|nil
 ---@return boolean
 local function is_pass_through_row(row)
 	if row == nil then
@@ -126,7 +124,7 @@ local function is_pass_through_row(row)
 end
 
 ---@param rows table[]
----@param tree TableTreeV2TreeOpts|nil
+---@param tree TableTreeTreeOpts|nil
 ---@return table[]
 local function flatten(rows, tree)
 	if tree == nil then
@@ -190,7 +188,7 @@ local function flatten(rows, tree)
 end
 
 ---@param row table
----@param tree TableTreeV2TreeOpts
+---@param tree TableTreeTreeOpts
 ---@return string
 local function tree_glyphs_for_row(row, tree)
 	local level = row._tv2_depth or 0
@@ -216,7 +214,7 @@ end
 
 ---@param row table
 ---@param column table
----@param tree TableTreeV2TreeOpts|nil
+---@param tree TableTreeTreeOpts|nil
 ---@return string
 local function cell_text(row, column, tree)
 	local raw = tostring(row[column.key] or "")
@@ -228,7 +226,7 @@ end
 
 ---@param column table
 ---@param rows table[]
----@param tree TableTreeV2TreeOpts|nil
+---@param tree TableTreeTreeOpts|nil
 local function natural_width(column, rows, tree)
 	if column.width then
 		return column.width
@@ -252,7 +250,7 @@ end
 ---@param rows table[]
 ---@param available_width number
 ---@param gap_after fun(index:number):number
----@param tree TableTreeV2TreeOpts|nil
+---@param tree TableTreeTreeOpts|nil
 ---@param fill boolean|nil
 local function compute_widths(columns, rows, available_width, gap_after, tree, fill)
 	local widths = {}
@@ -324,7 +322,7 @@ local function compute_widths(columns, rows, available_width, gap_after, tree, f
 	end
 end
 
----@class TableTreeV2RenderOpts
+---@class TableTreeRenderOpts
 ---@field columns table[]
 ---@field rows table[]
 ---@field width? integer
@@ -332,11 +330,11 @@ end
 ---@field show_header? boolean
 ---@field column_gap? integer
 ---@field fill? boolean
----@field tree? TableTreeV2TreeOpts
+---@field tree? TableTreeTreeOpts
 ---@field cell_hl? fun(row:table, col:table, ctx:{text:string, padded:string, width:integer}):table[]|nil
 ---@field align_title? boolean If true and header_align is nil, header uses column align.
 
----@param opts TableTreeV2RenderOpts
+---@param opts TableTreeRenderOpts
 ---@return string[] lines
 ---@return table<integer, table> line_map
 ---@return table[] spans
@@ -437,7 +435,14 @@ function M.render(opts)
 					})
 				end
 
-				if type(cell_spans) == "table" then
+				if type(cell_spans) == "string" then
+					table.insert(spans, {
+						line = #lines,
+						start_col = col_start,
+						end_col = col_start + #padded,
+						hl_group = cell_spans,
+					})
+				elseif type(cell_spans) == "table" then
 					for _, span in ipairs(cell_spans) do
 						if type(span) == "table" and type(span.hl_group) == "string" then
 							local rel_start = math.max(0, tonumber(span.start_col) or 0)
@@ -486,7 +491,7 @@ end
 
 ---Expose flatten for tests or custom pipelines.
 ---@param rows table[]
----@param tree TableTreeV2TreeOpts|nil
+---@param tree TableTreeTreeOpts|nil
 ---@return table[]
 function M.flatten(rows, tree)
 	return flatten(rows, resolve_tree(tree))

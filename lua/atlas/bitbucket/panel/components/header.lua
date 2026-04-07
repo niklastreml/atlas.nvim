@@ -1,7 +1,7 @@
 local M = {}
 
 local icons = require("atlas.ui.icons")
-local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
+local table_tree = require("atlas.ui.components.table_tree")
 local utils = require("atlas.utils")
 local helper = require("atlas.bitbucket.ui.helper")
 
@@ -80,7 +80,7 @@ function M.render(pr, width)
 		},
 	}
 
-	local table_lines, _, table_spans = table_tree_v2.render({
+	local table_lines, _, table_spans = table_tree.render({
 		columns = {
 			{ key = "k1", name = "", can_grow = false },
 			{ key = "v1", name = "", can_grow = true },

@@ -5,7 +5,7 @@ local icons = require("atlas.ui.icons")
 local state = require("atlas.jira.state")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
-local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
+local table_tree = require("atlas.ui.components.table_tree")
 local utils = require("atlas.utils")
 local footer = require("atlas.ui.components.footer")
 local helper = require("atlas.jira.ui.helper")
@@ -424,7 +424,7 @@ function M.render(opts)
 		if state.is_loading ~= true and #rows == 0 then
 			table.insert(lines, "No issues found.")
 		else
-			local tbl_lines, tbl_map, tbl_spans = table_tree_v2.render({
+			local tbl_lines, tbl_map, tbl_spans = table_tree.render({
 				width = opts.width,
 				margin = 1,
 				columns = {

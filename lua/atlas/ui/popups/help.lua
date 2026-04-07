@@ -1,7 +1,7 @@
 ---FIX: Pretty ugly view but it works for now. Please make it nicer looking..
 local M = {}
 
-local table_renderer = require("atlas.ui.components.table")
+local table_renderer = require("atlas.ui.components.table_tree")
 
 local ns = vim.api.nvim_create_namespace("atlas.help")
 local resize_group = vim.api.nvim_create_augroup("AtlasHelp2Resize", { clear = true })

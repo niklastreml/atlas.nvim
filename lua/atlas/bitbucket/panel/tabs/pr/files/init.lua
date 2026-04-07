@@ -21,7 +21,6 @@ function M.move_cursor(delta)
 	controller.move(delta)
 end
 
-
 ---@param width integer
 ---@return string[], table[], table|nil
 function M.render(width)

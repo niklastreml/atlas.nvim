@@ -2,7 +2,7 @@ local M = {}
 
 local helper = require("atlas.jira.ui.helper")
 local icons = require("atlas.ui.icons")
-local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
+local table_tree = require("atlas.ui.components.table_tree")
 local chips = require("atlas.jira.panel.components.chips")
 local utils = require("atlas.utils")
 
@@ -83,7 +83,7 @@ function M.render(issue, width, opts)
 		end
 	end
 
-	local table_lines, _, table_spans = table_tree_v2.render({
+	local table_lines, _, table_spans = table_tree.render({
 		columns = {
 			{ key = "k1", name = "", can_grow = false },
 			{ key = "v1", name = "", can_grow = true },

@@ -6,7 +6,7 @@ local state = require("atlas.bitbucket.state")
 local helper = require("atlas.bitbucket.ui.helper")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
-local table_tree_v2 = require("atlas.ui.components.table_tree_v2")
+local table_tree = require("atlas.ui.components.table_tree")
 local utils = require("atlas.utils")
 local footer = require("atlas.ui.components.footer")
 
@@ -40,7 +40,7 @@ end
 ---@return table<number, table>
 local function build_plain_content(opts, repos)
 	local table_data = helper.build_compact_table(repos)
-	local tbl_lines, tbl_map, tbl_spans = table_tree_v2.render({
+	local tbl_lines, tbl_map, tbl_spans = table_tree.render({
 		width = opts.width,
 		margin = 1,
 		columns = table_data.columns,
@@ -63,7 +63,7 @@ end
 local function build_plain_singleline_content(opts, repos)
 	local table_data = helper.build_plain_tree_table(repos)
 
-	local tbl_lines, tbl_map, tbl_spans = table_tree_v2.render({
+	local tbl_lines, tbl_map, tbl_spans = table_tree.render({
 		width = opts.width,
 		margin = 1,
 		columns = table_data.columns,
