@@ -169,6 +169,26 @@ function M.resolve_repo_path_for_pr(pr, opts)
 	return M.resolve_repo_path(mapping, repo_name, opts)
 end
 
+---@param pr BitbucketPR
+---@param repo_path string
+---@param on_done fun(err: string|nil)
+function M.fetch_pr_branches(pr, repo_path, on_done)
+	local src_branch = tostring((pr.source or {}).branch or "")
+	local dst_branch = tostring((pr.destination or {}).branch or "")
+
+	run({ "git", "fetch", "origin", src_branch, dst_branch }, repo_path, vim.schedule_wrap(function(res)
+		if res.code ~= 0 then
+			local ferr = trim(res.stderr)
+			if ferr == "" then
+				ferr = string.format("git fetch failed with code %d", res.code)
+			end
+			on_done(ferr)
+		else
+			on_done(nil)
+		end
+	end))
+end
+
 ---@class BitbucketCheckoutResult
 ---@field repo_path string
 ---@field local_branch string

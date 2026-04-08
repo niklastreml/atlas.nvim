@@ -7,7 +7,6 @@ local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local icons = require("atlas.ui.icons")
-local table_view = require("atlas.ui.components.table_tree")
 local spinner = require("atlas.ui.components.spinner")
 
 local CONTENT_PADDING = 1
@@ -16,6 +15,22 @@ local CONTENT_PADDING = 1
 ---@return string
 local function with_content_padding(text)
 	return string.rep(" ", CONTENT_PADDING) .. tostring(text or "")
+end
+
+---@param lines string[]
+---@param spans table[]
+---@param text string
+---@param hl_group string|nil
+local function push(lines, spans, text, hl_group)
+	table.insert(lines, with_content_padding(text))
+	if hl_group then
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = CONTENT_PADDING,
+			end_col = CONTENT_PADDING + #text,
+			hl_group = hl_group,
+		})
+	end
 end
 
 ---@param decision string
@@ -42,18 +57,6 @@ local function decision_hl(decision)
 	return "AtlasTextMuted"
 end
 
----@param decision string
----@return integer
-local function decision_rank(decision)
-	if decision == "approved" then
-		return 1
-	end
-	if decision == "changes_requested" then
-		return 2
-	end
-	return 3
-end
-
 ---@param width integer
 ---@return string[] lines
 ---@return table[] spans
@@ -65,6 +68,7 @@ function M.render(width)
 
 	local pr = state.pr
 	local detail = state.detail
+	local diffstat = state.diffstat
 
 	if pr == nil then
 		return { "", "  No PR selected..." }, {}, nil
@@ -106,22 +110,6 @@ function M.render(width)
 			end_col = span.end_col,
 			hl_group = span.hl_group,
 		})
-	end
-	table.insert(lines, "")
-
-	-- Description
-	local description_text = pr.description or ""
-	local description = utils.sanitize_lines(description_text)
-	local description_header = "Description"
-	table.insert(lines, with_content_padding(description_header))
-	table.insert(spans, {
-		line = #lines - 1,
-		start_col = CONTENT_PADDING,
-		end_col = CONTENT_PADDING + #description_header,
-		hl_group = "AtlasColumnHeader",
-	})
-	for _, line in ipairs(description) do
-		table.insert(lines, with_content_padding(line))
 	end
 	table.insert(lines, "")
 
@@ -170,82 +158,130 @@ function M.render(width)
 
 	if is_loading then
 		local loading_line = spinner.with_text("Loading reviewers...")
-		table.insert(lines, with_content_padding(loading_line))
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = CONTENT_PADDING,
-			end_col = CONTENT_PADDING + #loading_line,
-			hl_group = "AtlasTextMuted",
-		})
-		state.line_map = line_map
-		return lines, spans, line_map
-	end
+		push(lines, spans, loading_line, "AtlasTextMuted")
+	elseif #decisions == 0 then
+		push(lines, spans, "no reviewers yet", nil)
+	else
+		local groups = { "approved", "changes_requested", "pending" }
+		local grouped = { approved = {}, changes_requested = {}, pending = {} }
 
-	if #decisions == 0 then
-		table.insert(lines, with_content_padding("no reviewers yet"))
-		state.line_map = line_map
-		return lines, spans, line_map
-	end
-
-	local sorted_decisions = {}
-	for _, d in ipairs(decisions) do
-		table.insert(sorted_decisions, d)
-	end
-	table.sort(sorted_decisions, function(a, b)
-		local ar = decision_rank(tostring(a.decision or ""))
-		local br = decision_rank(tostring(b.decision or ""))
-		if ar ~= br then
-			return ar < br
-		end
-
-		local an = tostring(a.name or a.nickname or "")
-		local bn = tostring(b.name or b.nickname or "")
-		return an < bn
-	end)
-
-	local rows = {}
-	for _, d in ipairs(sorted_decisions) do
-		local name = d.name
-		if name == nil or name == "" then
-			name = (d.nickname and d.nickname ~= "") and d.nickname or "Unknown"
-		end
-		table.insert(rows, {
-			status = decision_icon(d.decision),
-			name = name,
-			decision = d.decision,
-		})
-	end
-
-	local table_lines, _, table_spans = table_view.render({
-		width = width or 60,
-		margin = 0,
-		column_gap = 1,
-		show_header = false,
-		fill = false,
-		columns = {
-			{ key = "status", name = "", width = 2, can_grow = false },
-			{ key = "name", name = "", min_width = 20, can_grow = false },
-		},
-		rows = rows,
-		cell_hl = function(row, col)
-			if col.key == "status" then
-				return decision_hl(row.decision)
+		for _, d in ipairs(decisions) do
+			local status = tostring(d.decision or "pending")
+			if grouped[status] == nil then
+				status = "pending"
 			end
-			return nil
-		end,
-	})
+			local name = (d.name and d.name ~= "") and d.name
+				or (d.nickname and d.nickname ~= "") and d.nickname
+				or "Unknown"
+			table.insert(grouped[status], name)
+		end
 
-	local base = #lines
-	for _, line in ipairs(table_lines) do
+		for _, status in ipairs(groups) do
+			local names = grouped[status]
+			if #names > 0 then
+				table.sort(names)
+				local icon = decision_icon(status)
+				local label = table.concat(names, ", ")
+				local line_text = icon .. " " .. label
+				table.insert(lines, with_content_padding(line_text))
+				table.insert(spans, {
+					line = #lines - 1,
+					start_col = CONTENT_PADDING,
+					end_col = CONTENT_PADDING + #icon,
+					hl_group = decision_hl(status),
+				})
+			end
+		end
+	end
+	table.insert(lines, "")
+
+	-- Description
+	local description_text = pr.description or ""
+	local description = utils.sanitize_lines(description_text)
+	local description_header = "Description"
+	table.insert(lines, with_content_padding(description_header))
+	table.insert(spans, {
+		line = #lines - 1,
+		start_col = CONTENT_PADDING,
+		end_col = CONTENT_PADDING + #description_header,
+		hl_group = "AtlasColumnHeader",
+	})
+	for _, line in ipairs(description) do
 		table.insert(lines, with_content_padding(line))
 	end
-	for _, span in ipairs(table_spans or {}) do
+	table.insert(lines, "")
+
+	-- Diffstat
+	local diffstat_header = "Files"
+	table.insert(lines, with_content_padding(diffstat_header))
+	table.insert(spans, {
+		line = #lines - 1,
+		start_col = CONTENT_PADDING,
+		end_col = CONTENT_PADDING + #diffstat_header,
+		hl_group = "AtlasColumnHeader",
+	})
+
+	if diffstat == "loading" then
+		local loading_line = spinner.with_text("Loading file changes...")
+		push(lines, spans, loading_line, "AtlasTextMuted")
+	elseif diffstat == nil then
+		push(lines, spans, "No file info available.", nil)
+	else
+		local entries = (type(diffstat) == "table" and diffstat.entries) or {}
+
+		local added_count, removed_count = 0, 0
+		for _, e in ipairs(entries) do
+			added_count = added_count + (tonumber(e.lines_added) or 0)
+			removed_count = removed_count + (tonumber(e.lines_removed) or 0)
+		end
+
+		local added_text = string.format("+%d added", added_count)
+		local removed_text = string.format("-%d removed", removed_count)
+		local stats_line = added_text .. "  " .. removed_text
+		local stats_idx = #lines
+		table.insert(lines, with_content_padding(stats_line))
 		table.insert(spans, {
-			line = base + span.line,
-			start_col = CONTENT_PADDING + span.start_col,
-			end_col = CONTENT_PADDING + span.end_col,
-			hl_group = span.hl_group,
+			line = stats_idx,
+			start_col = CONTENT_PADDING,
+			end_col = CONTENT_PADDING + #added_text,
+			hl_group = "AtlasTextPositive",
 		})
+		table.insert(spans, {
+			line = stats_idx,
+			start_col = CONTENT_PADDING + #added_text + 2,
+			end_col = CONTENT_PADDING + #stats_line,
+			hl_group = "AtlasTextWarning",
+		})
+		table.insert(lines, "")
+
+		if #entries == 0 then
+			push(lines, spans, "No files changed.", nil)
+		else
+			for _, entry in ipairs(entries) do
+				local status = tostring(entry.status or ""):lower()
+				local old_path = (type(entry.old_file) == "table" and tostring(entry.old_file.path or "")) or ""
+				local new_path = (type(entry.new_file) == "table" and tostring(entry.new_file.path or "")) or ""
+
+				local marker, hl, path = "~", "AtlasTextMuted", (new_path ~= "" and new_path) or old_path
+				if status == "added" then
+					marker, hl, path = "+", "AtlasTextPositive", (new_path ~= "" and new_path) or old_path
+				elseif status == "removed" or status == "deleted" then
+					marker, hl, path = "-", "AtlasTextWarning", (old_path ~= "" and old_path) or new_path
+				elseif status == "renamed" then
+					marker, hl = "R", "AtlasTextMuted"
+					if old_path ~= "" and new_path ~= "" then
+						path = old_path .. " -> " .. new_path
+					end
+				end
+
+				local file_line = marker .. " " .. (path ~= "" and path or "(unknown file)")
+				table.insert(lines, with_content_padding(file_line))
+				table.insert(
+					spans,
+					{ line = #lines - 1, start_col = CONTENT_PADDING, end_col = CONTENT_PADDING + 1, hl_group = hl }
+				)
+			end
+		end
 	end
 
 	state.line_map = line_map

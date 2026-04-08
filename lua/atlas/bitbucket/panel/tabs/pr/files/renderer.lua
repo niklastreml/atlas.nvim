@@ -5,15 +5,30 @@ local panel_state = require("atlas.bitbucket.panel.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
-local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 
 local CONTENT_PADDING = 1
 
 ---@param text string
 ---@return string
-local function with_content_padding(text)
+local function pad(text)
 	return string.rep(" ", CONTENT_PADDING) .. tostring(text or "")
+end
+
+---@param lines string[]
+---@param spans table[]
+---@param text string
+---@param hl_group string|nil
+local function push(lines, spans, text, hl_group)
+	table.insert(lines, pad(text))
+	if hl_group then
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = CONTENT_PADDING,
+			end_col = CONTENT_PADDING + #text,
+			hl_group = hl_group,
+		})
+	end
 end
 
 ---@param width integer
@@ -26,7 +41,6 @@ function M.render(width)
 	local line_map = {}
 
 	local pr = state.pr
-	local diffstat = state.diffstat
 	local diff = state.diff
 
 	if pr == nil then

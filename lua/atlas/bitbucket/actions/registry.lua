@@ -2,7 +2,7 @@ local M = {}
 
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local footer = require("atlas.ui.components.footer")
-local checkout = require("atlas.bitbucket.checkout")
+local checkout = require("atlas.core.git.checkout")
 local logger = require("atlas.core.logger")
 
 ---@class BitbucketActionContext

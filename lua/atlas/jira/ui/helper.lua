@@ -21,14 +21,10 @@ function M.issue_type_hl(issue_type)
 	return "AtlasTextMuted"
 end
 
----@param title string|nil
+---@param _title string|nil
 ---@return string
-function M.issue_title_hl(title)
-	if type(title) ~= "string" or vim.trim(title) == "" then
-		return "Comment"
-	end
-
-	return "AtlasJiraTitle"
+function M.issue_title_hl(_title)
+	return "Normal"
 end
 
 ---@param key string|nil

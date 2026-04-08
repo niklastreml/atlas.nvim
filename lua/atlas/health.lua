@@ -1,7 +1,7 @@
 local M = {}
 
 local config = require("atlas.config")
-local checkout = require("atlas.bitbucket.checkout")
+local checkout = require("atlas.core.git.checkout")
 
 ---@param section string
 ---@param user_key string
