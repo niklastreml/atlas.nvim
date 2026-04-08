@@ -3,47 +3,11 @@ local M = {}
 local panel_state = require("atlas.bitbucket.panel.state")
 local bitbucket_actions = require("atlas.bitbucket.actions")
 local bitbucket_controller = require("atlas.bitbucket.ui.controller")
-local bitbucket_service = require("atlas.bitbucket.api.service")
 local checkout = require("atlas.bitbucket.checkout")
 local layout = require("atlas.ui.layout")
 local footer = require("atlas.ui.components.footer")
 local ns = vim.api.nvim_create_namespace("atlas.bitbucket.panel")
 local mapped_buf = nil
-
---- Sync render-markdown plugin for the detail buffer (if installed)
---- FIX: Does not work great...
-local function sync_render_markdown()
-	local buf = layout.buf_id("detail")
-	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-
-	local ok, render_markdown = pcall(require, "render-markdown")
-	if not ok or type(render_markdown.set_buf) ~= "function" then
-		return
-	end
-
-	pcall(vim.api.nvim_buf_call, buf, function()
-		render_markdown.set_buf(true)
-	end)
-
-	--FIX: Re-apply tab navigation keys after render-markdown attaches. This is bad and should be refactored
-	vim.keymap.set("n", "[", function()
-		M.prev_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "]", function()
-		M.next_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "<S-Tab>", function()
-		M.prev_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "<Tab>", function()
-		M.next_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-end
 
 -- Tab registries for each panel type
 local PR_TABS = {
@@ -324,7 +288,6 @@ function M.render()
 		end
 	end
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-	sync_render_markdown()
 end
 
 function M.refresh()
