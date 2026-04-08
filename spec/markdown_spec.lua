@@ -85,6 +85,13 @@ describe("markdown to adf", function()
 		it("converts mention with id", function()
 			assert.are.same(
 				doc({ p({ { type = "mention", attrs = { id = "abc", text = "@user", accessLevel = "" } } }) }),
+				md.to_adf("[@user](atlas-mention:abc)")
+			)
+		end)
+
+		it("keeps backward compatibility for mention brace syntax", function()
+			assert.are.same(
+				doc({ p({ { type = "mention", attrs = { id = "abc", text = "@user", accessLevel = "" } } }) }),
 				md.to_adf("[@user]{mention:abc}")
 			)
 		end)

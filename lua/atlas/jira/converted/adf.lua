@@ -91,7 +91,7 @@ node_handlers.mention = function(node)
 	end
 
 	if mention_id ~= "" then
-		return string.format("[%s]{mention:%s}", mention_text, mention_id)
+		return string.format("[%s](atlas-mention:%s)", mention_text, mention_id)
 	end
 
 	return mention_text

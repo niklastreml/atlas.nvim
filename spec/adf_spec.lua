@@ -322,7 +322,7 @@ describe("adf to markdown", function()
 					},
 				},
 			}
-			assert.equals("[@user]{mention:abc}", adf.to_markdown(doc))
+			assert.equals("[@user](atlas-mention:abc)", adf.to_markdown(doc))
 		end)
 
 		it("converts without id", function()

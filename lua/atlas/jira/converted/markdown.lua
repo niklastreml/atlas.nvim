@@ -72,6 +72,7 @@ end
 local function parse_inline(text)
 	local nodes = {}
 	local i = 1
+
 	local status_icon, icon_size = utf8_char_at(text, 1)
 	local status_color = status_emoji_to_color[status_icon]
 	if status_color ~= nil then
@@ -94,7 +95,7 @@ local function parse_inline(text)
 	end
 
 	while i <= #text do
-		local icon, icon_size = utf8_char_at(text, i)
+		local icon, size = utf8_char_at(text, i)
 		local emoji_short_name = nerd_icon_to_emoji_shortname[icon]
 		if emoji_short_name ~= nil then
 			table.insert(nodes, {
@@ -104,7 +105,7 @@ local function parse_inline(text)
 					text = emoji_short_name,
 				},
 			})
-			i = i + icon_size
+			i = i + size
 		else
 			local es, ee, emoji_code = text:find(":([%w_+-]+):", i)
 			if es == i then
@@ -124,7 +125,6 @@ local function parse_inline(text)
 					if mention_text ~= "" and mention_text:sub(1, 1) ~= "@" then
 						mention_text = "@" .. mention_text
 					end
-
 					table.insert(nodes, {
 						type = "mention",
 						attrs = {
@@ -138,7 +138,9 @@ local function parse_inline(text)
 					local s, e, label, url = text:find("%[(.-)%]%((.-)%)", i)
 					if s == i then
 						local date_timestamp = url:match("^atlas%-date:(.+)$")
-						local emoji_short_name = url:match("^atlas%-emoji:(.+)$")
+						local parsed_mention_id = url:match("^atlas%-mention:(.+)$")
+						local parsed_emoji_short_name = url:match("^atlas%-emoji:(.+)$")
+
 						if date_timestamp ~= nil and date_timestamp ~= "" then
 							table.insert(nodes, {
 								type = "date",
@@ -146,12 +148,25 @@ local function parse_inline(text)
 									timestamp = date_timestamp,
 								},
 							})
-						elseif emoji_short_name ~= nil and emoji_short_name ~= "" then
+						elseif parsed_mention_id ~= nil and parsed_mention_id ~= "" then
+							local mention_text = label
+							if mention_text ~= "" and mention_text:sub(1, 1) ~= "@" then
+								mention_text = "@" .. mention_text
+							end
+							table.insert(nodes, {
+								type = "mention",
+								attrs = {
+									id = parsed_mention_id,
+									text = mention_text,
+									accessLevel = "",
+								},
+							})
+						elseif parsed_emoji_short_name ~= nil and parsed_emoji_short_name ~= "" then
 							table.insert(nodes, {
 								type = "emoji",
 								attrs = {
-									shortName = emoji_short_name,
-									text = emoji_short_name,
+									shortName = parsed_emoji_short_name,
+									text = parsed_emoji_short_name,
 								},
 							})
 						else
@@ -171,9 +186,9 @@ local function parse_inline(text)
 							append_text(nodes, content, { { type = "strong" } })
 							i = close + 2
 						else
-							local ch, size = utf8_char_at(text, i)
+							local ch, n = utf8_char_at(text, i)
 							append_text(nodes, ch)
-							i = i + size
+							i = i + n
 						end
 					elseif text:sub(i, i + 1) == "~~" then
 						local close = text:find("~~", i + 2)
@@ -182,9 +197,9 @@ local function parse_inline(text)
 							append_text(nodes, content, { { type = "strike" } })
 							i = close + 2
 						else
-							local ch, size = utf8_char_at(text, i)
+							local ch, n = utf8_char_at(text, i)
 							append_text(nodes, ch)
-							i = i + size
+							i = i + n
 						end
 					elseif text:sub(i, i) == "*" then
 						local close = text:find("%*", i + 1)
@@ -193,9 +208,9 @@ local function parse_inline(text)
 							append_text(nodes, content, { { type = "em" } })
 							i = close + 1
 						else
-							local ch, size = utf8_char_at(text, i)
+							local ch, n = utf8_char_at(text, i)
 							append_text(nodes, ch)
-							i = i + size
+							i = i + n
 						end
 					elseif text:sub(i, i) == "`" then
 						local close = text:find("`", i + 1)
@@ -204,14 +219,14 @@ local function parse_inline(text)
 							append_text(nodes, content, { { type = "code" } })
 							i = close + 1
 						else
-							local ch, size = utf8_char_at(text, i)
+							local ch, n = utf8_char_at(text, i)
 							append_text(nodes, ch)
-							i = i + size
+							i = i + n
 						end
 					else
-						local ch, size = utf8_char_at(text, i)
+						local ch, n = utf8_char_at(text, i)
 						append_text(nodes, ch)
-						i = i + size
+						i = i + n
 					end
 				end
 			end
