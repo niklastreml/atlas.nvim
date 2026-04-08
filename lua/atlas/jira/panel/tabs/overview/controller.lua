@@ -1,7 +1,6 @@
 local M = {}
 local state = require("atlas.jira.panel.tabs.overview.state")
 local panel_state = require("atlas.jira.panel.state")
-local jira_actions = require("atlas.jira.actions")
 local issues = require("atlas.jira.api.issues")
 local adf = require("atlas.jira.converted.adf")
 local config = require("atlas.config")

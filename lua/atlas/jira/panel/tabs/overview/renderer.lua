@@ -98,6 +98,9 @@ function M.render(width)
 		end
 	end
 
+	--- Add some spacing
+	utils.append_block(lines, spans, { lines = { "", "" }, highlights = {} })
+
 	state.line_map = {
 		[1] = { kind = "issue", issue = issue },
 		[#lines] = { kind = "overview" },

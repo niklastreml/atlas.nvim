@@ -32,6 +32,9 @@ local function apply_main_win_opts(win)
 	vim.api.nvim_set_option_value("foldcolumn", "0", { win = win })
 	vim.api.nvim_set_option_value("wrap", false, { win = win })
 	vim.api.nvim_set_option_value("cursorline", true, { win = win })
+	vim.api.nvim_set_option_value("scrollbind", false, { win = win })
+	vim.api.nvim_set_option_value("cursorbind", false, { win = win })
+	vim.api.nvim_set_option_value("diff", false, { win = win })
 	vim.api.nvim_set_option_value("winbar", " ", { win = win })
 	vim.api.nvim_set_option_value("statusline", "", { win = win })
 	vim.api.nvim_set_option_value(
@@ -62,6 +65,9 @@ local function apply_detail_win_opts(win)
 	vim.api.nvim_set_option_value("foldcolumn", "0", { win = win })
 	vim.api.nvim_set_option_value("wrap", true, { win = win })
 	vim.api.nvim_set_option_value("cursorline", false, { win = win })
+	vim.api.nvim_set_option_value("scrollbind", false, { win = win })
+	vim.api.nvim_set_option_value("cursorbind", false, { win = win })
+	vim.api.nvim_set_option_value("diff", false, { win = win })
 	vim.api.nvim_set_option_value("winbar", " ", { win = win })
 	vim.api.nvim_set_option_value("statusline", "", { win = win })
 	vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
@@ -75,10 +81,8 @@ local function create_buf(name, filetype)
 	vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
 	vim.api.nvim_set_option_value("bufhidden", "hide", { buf = buf })
 	vim.api.nvim_set_option_value("filetype", filetype, { buf = buf })
-	if filetype ~= "markdown" then
-		vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
-		pcall(vim.treesitter.stop, buf)
-	end
+	vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
+	pcall(vim.treesitter.stop, buf)
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 	return buf
 end
@@ -216,8 +220,7 @@ function M.toggle_detail()
 		return
 	end
 
-	state.detail_buf = ensure_buf("detail_buf", "AtlasDetail", "markdown")
-	vim.api.nvim_set_option_value("filetype", "markdown", { buf = state.detail_buf })
+	state.detail_buf = ensure_buf("detail_buf", "AtlasDetail", "")
 	state.detail_win = create_window(state.main_win, "rightbelow vsplit", state.detail_buf, apply_detail_win_opts)
 	pcall(vim.api.nvim_win_set_width, state.detail_win, math.max(math.floor(vim.o.columns * 0.40), 40))
 end
@@ -284,6 +287,22 @@ function M.close()
 	end
 	state.prev_win = nil
 end
+
+--- When scrolling in the panel window the main view kinda break and this helps. I dont know why tho..
+vim.api.nvim_create_autocmd("WinScrolled", {
+	group = resize_group,
+	callback = function()
+		if not M.is_open() then
+			return
+		end
+		if vim.api.nvim_get_current_tabpage() ~= state.tab_id then
+			return
+		end
+		if state.detail_win ~= nil and vim.v.event[tostring(state.detail_win)] ~= nil then
+			vim.cmd("redraw!")
+		end
+	end,
+})
 
 vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
 	group = resize_group,

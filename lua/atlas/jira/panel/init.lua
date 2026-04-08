@@ -8,39 +8,6 @@ local jira_controller = require("atlas.jira.ui.controller")
 local ns = vim.api.nvim_create_namespace("atlas.jira.panel")
 local mapped_buf = nil
 
-local function sync_render_markdown()
-	local buf = layout.buf_id("detail")
-	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-
-	local ok, render_markdown = pcall(require, "render-markdown")
-	if not ok or type(render_markdown.set_buf) ~= "function" then
-		return
-	end
-
-	pcall(vim.api.nvim_buf_call, buf, function()
-		render_markdown.set_buf(true)
-	end)
-
-	--FIX: Re-apply tab navigation keys after render-markdown attaches. This is bad and should be refactored
-	vim.keymap.set("n", "[", function()
-		M.prev_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "]", function()
-		M.next_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "<S-Tab>", function()
-		M.prev_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "<Tab>", function()
-		M.next_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-end
-
 local TABS = {
 	{ key = "overview", label = "Overview", mod = "atlas.jira.panel.tabs.overview" },
 	{ key = "comments", label = "Comments", mod = "atlas.jira.panel.tabs.comments" },
@@ -264,8 +231,6 @@ function M.render()
 		end
 	end
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-	--- FIX: Does not work great...
-	sync_render_markdown()
 end
 
 function M.refresh()

@@ -5,7 +5,6 @@ local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threads")
-local highlights = require("atlas.ui.highlights")
 local icons = require("atlas.ui.icons")
 local jira_ui_helper = require("atlas.jira.ui.helper")
 local PADDING_X = 2
@@ -113,7 +112,7 @@ local function item_content(item)
 
 	if field == "assignee" then
 		local from = item.from_string or item.from or "Unassigned"
-		local to = item.to_string or item.to or ""
+		local to = item.to_string or item.to or "Unassigned"
 		return string.format("%s %s -> %s %s", icons.entity("user"), tostring(from), icons.entity("user"), tostring(to))
 	end
 
@@ -167,12 +166,7 @@ local function header_content_hl(item, _text)
 		return nil
 	end
 
-	local field = history_item.field
-	if field == "timeoriginalestimate" or field == "timeestimate" or field == "timespent" then
-		return highlights.dynamic_for("time")
-	end
-
-	return highlights.dynamic_for(field:lower())
+	return "AtlasTextMuted"
 end
 
 ---@param item AtlasThreadedItem
@@ -192,7 +186,6 @@ local function content_hl(item, row, row_index)
 		local from = type(from_value) == "string" and vim.trim(from_value:gsub("%s+", " ")) or ""
 		local to = type(to_value) == "string" and vim.trim(to_value:gsub("%s+", " ")) or ""
 		local has_from = from ~= ""
-		local has_to = to ~= ""
 		local old_line_count = has_from and 1 or 0
 
 		if has_from and row_index <= old_line_count then
@@ -204,7 +197,13 @@ local function content_hl(item, row, row_index)
 		return nil
 	end
 
-	if field == "assignee" or field == "priority" or field == "issuetype" or field == "status" or field == "IssueParentAssociation" then
+	if
+		field == "assignee"
+		or field == "priority"
+		or field == "issuetype"
+		or field == "status"
+		or field == "IssueParentAssociation"
+	then
 		local s, e = row:find(" -> ", 1, true)
 		if s == nil or e == nil then
 			return nil
