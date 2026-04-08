@@ -3,7 +3,6 @@
 ---@field diff ParsedDiffFile[]|"loading"|nil
 ---@field line_map table<number, table>
 ---@field collapsed_hunks table<number, boolean>
----@field hunk_headers {hunk_idx: number, buf_line: number}[]
 
 ---@class BitbucketPRFilesTabState
 local M = {
@@ -11,7 +10,6 @@ local M = {
 	diff = nil,
 	line_map = {},
 	collapsed_hunks = {},
-	hunk_headers = {},
 }
 
 function M.reset()
@@ -19,7 +17,6 @@ function M.reset()
 	M.diff = nil
 	M.line_map = {}
 	M.collapsed_hunks = {}
-	M.hunk_headers = {}
 end
 
 return M

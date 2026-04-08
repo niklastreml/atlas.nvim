@@ -96,6 +96,9 @@ function M.render(width)
 		for _, line in ipairs(readme_lines) do
 			table.insert(lines, line)
 		end
+		--- Some spacing
+		table.insert(lines, "")
+		table.insert(lines, "")
 	else
 		table.insert(lines, "No readme available.")
 	end

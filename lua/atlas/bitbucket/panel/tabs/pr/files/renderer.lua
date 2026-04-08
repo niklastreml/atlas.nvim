@@ -102,7 +102,6 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	local hunk_headers = {}
 	local hunk_counter = 0
 
 	for _, file in ipairs(files) do
@@ -132,7 +131,6 @@ function M.render(width)
 				hl_group = "AtlasTextMuted",
 			})
 			line_map[buf_line] = { type = "hunk_header", hunk_idx = hunk_idx }
-			table.insert(hunk_headers, { hunk_idx = hunk_idx, buf_line = buf_line })
 
 			-- Body lines
 			if not is_collapsed then
@@ -153,7 +151,6 @@ function M.render(width)
 		table.insert(lines, "")
 	end
 
-	state.hunk_headers = hunk_headers
 	state.line_map = line_map
 	return lines, spans, line_map
 end

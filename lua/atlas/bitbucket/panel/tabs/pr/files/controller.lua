@@ -53,7 +53,6 @@ function M.show(pr)
 	if not same_pr then
 		cancel_handles()
 		state.collapsed_hunks = {}
-		state.hunk_headers = {}
 	end
 
 	if same_pr and state.diff == "loading" then
@@ -161,12 +160,28 @@ function M.toggle_fold()
 		return
 	end
 
+	local line_map = state.line_map or {}
 	local lnum = vim.api.nvim_win_get_cursor(win)[1]
-	local entry = (state.line_map or {})[lnum]
+	local entry = line_map[lnum]
+	local header_lnum = lnum
+
+	-- If not on a header, walk up to find the enclosing hunk header
+	if type(entry) ~= "table" or entry.type ~= "hunk_header" then
+		for l = lnum - 1, 1, -1 do
+			local e = line_map[l]
+			if type(e) == "table" and e.type == "hunk_header" then
+				entry = e
+				header_lnum = l
+				break
+			end
+		end
+	end
+
 	if type(entry) ~= "table" or entry.type ~= "hunk_header" then
 		return
 	end
 
+	vim.api.nvim_win_set_cursor(win, { header_lnum, 0 })
 	local hunk_idx = entry.hunk_idx
 	if state.collapsed_hunks[hunk_idx] then
 		state.collapsed_hunks[hunk_idx] = nil
