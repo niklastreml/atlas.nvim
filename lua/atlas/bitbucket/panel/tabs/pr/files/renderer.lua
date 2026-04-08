@@ -86,123 +86,74 @@ function M.render(width)
 	end
 	table.insert(lines, "")
 
-	-- Files content
-	local diffstat_loading = diffstat == "loading"
-	local diff_loading = diff == "loading"
-
-	if diffstat_loading or diff_loading then
+	-- Loading state
+	if diff == "loading" then
 		local loading_line = spinner.with_text("Loading file changes...")
-		table.insert(lines, with_content_padding(loading_line))
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = CONTENT_PADDING,
-			end_col = CONTENT_PADDING + #loading_line,
-			hl_group = "AtlasTextMuted",
-		})
+		push(lines, spans, loading_line, "AtlasTextMuted")
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
 
-	local entries = (type(diffstat) == "table" and diffstat.entries) or {}
-	local file_header = "Files"
-	table.insert(lines, with_content_padding(file_header))
-	table.insert(spans, {
-		line = #lines - 1,
-		start_col = CONTENT_PADDING,
-		end_col = CONTENT_PADDING + #file_header,
-		hl_group = "AtlasColumnHeader",
-	})
-
-	local added = 0
-	local removed = 0
-	for _, e in ipairs(entries) do
-		added = added + (tonumber(e.lines_added) or 0)
-		removed = removed + (tonumber(e.lines_removed) or 0)
+	-- Diff hunks (structured data from diff_parser)
+	local files = type(diff) == "table" and diff or {}
+	if #files == 0 then
+		push(lines, spans, "No diff available.", nil)
+		state.line_map = line_map
+		return lines, spans, line_map
 	end
 
-	local added_text = string.format("+%d added", added)
-	local removed_text = string.format("-%d removed", removed)
-	local stats_line = string.format("%s  %s", added_text, removed_text)
-	local stats_line_index = #lines
-	table.insert(lines, with_content_padding(stats_line))
-	table.insert(spans, {
-		line = stats_line_index,
-		start_col = CONTENT_PADDING,
-		end_col = CONTENT_PADDING + #added_text,
-		hl_group = "AtlasTextPositive",
-	})
-	table.insert(spans, {
-		line = stats_line_index,
-		start_col = CONTENT_PADDING + #added_text + 2,
-		end_col = CONTENT_PADDING + #stats_line,
-		hl_group = "AtlasTextWarning",
-	})
-	table.insert(lines, "")
+	local hunk_headers = {}
+	local hunk_counter = 0
 
-	if #entries == 0 then
-		table.insert(lines, with_content_padding("No files changed."))
-	else
-		for _, entry in ipairs(entries) do
-			local status = tostring(entry.status or ""):lower()
-			local old_path = (type(entry.old_file) == "table" and tostring(entry.old_file.path or "")) or ""
-			local new_path = (type(entry.new_file) == "table" and tostring(entry.new_file.path or "")) or ""
+	for _, file in ipairs(files) do
+		-- File path separator
+		local path_label = file.path
+		if file.status == "renamed" and file.old_path then
+			path_label = file.old_path .. " -> " .. file.path
+		end
+		push(lines, spans, path_label, "AtlasColumnHeader")
 
-			local marker = "~"
-			local hl_group = "AtlasTextMuted"
-			local path = (new_path ~= "" and new_path) or old_path
+		for _, hunk in ipairs(file.hunks) do
+			hunk_counter = hunk_counter + 1
+			local hunk_idx = hunk_counter
+			local is_collapsed = state.collapsed_hunks[hunk_idx] == true
+			local body_count = #hunk.lines
 
-			if status == "added" then
-				marker = "+"
-				hl_group = "AtlasTextPositive"
-				path = (new_path ~= "" and new_path) or old_path
-			elseif status == "removed" or status == "deleted" then
-				marker = "-"
-				hl_group = "AtlasTextWarning"
-				path = (old_path ~= "" and old_path) or new_path
-			elseif status == "renamed" then
-				marker = "R"
-				hl_group = "AtlasTextMuted"
-				if old_path ~= "" and new_path ~= "" then
-					path = string.format("%s -> %s", old_path, new_path)
+			-- @@ header line
+			local display_header = is_collapsed
+				and (hunk.header .. "  [+" .. body_count .. " lines]")
+				or hunk.header
+			table.insert(lines, pad(display_header))
+			local buf_line = #lines
+			table.insert(spans, {
+				line = buf_line - 1,
+				start_col = CONTENT_PADDING,
+				end_col = CONTENT_PADDING + #display_header,
+				hl_group = "AtlasTextMuted",
+			})
+			line_map[buf_line] = { type = "hunk_header", hunk_idx = hunk_idx }
+			table.insert(hunk_headers, { hunk_idx = hunk_idx, buf_line = buf_line })
+
+			-- Body lines
+			if not is_collapsed then
+				for _, dl in ipairs(hunk.lines) do
+					local hl = nil
+					if dl.kind == "add" then
+						hl = "AtlasTextPositive"
+					elseif dl.kind == "remove" then
+						hl = "AtlasTextWarning"
+					elseif dl.kind == "meta" then
+						hl = "AtlasTextMuted"
+					end
+					push(lines, spans, dl.text, hl)
 				end
 			end
-
-			if path == "" then
-				path = "(unknown file)"
-			end
-
-			local file_line = string.format("%s %s", marker, path)
-			table.insert(lines, with_content_padding(file_line))
-			table.insert(spans, {
-				line = #lines - 1,
-				start_col = CONTENT_PADDING,
-				end_col = CONTENT_PADDING + 1,
-				hl_group = hl_group,
-			})
 		end
-	end
-	table.insert(lines, "")
 
-	local diff_text = type(diff) == "string" and diff or ""
-	if diff_text == "" then
-		table.insert(lines, with_content_padding("No diff available."))
-		state.line_map = line_map
-		return lines, spans, line_map
+		table.insert(lines, "")
 	end
 
-	local diff_lines = utils.sanitize_lines(diff_text)
-	for _, line in ipairs(diff_lines) do
-		table.insert(lines, with_content_padding(line))
-		local idx = #lines - 1
-		if line:match("^%+") and not line:match("^%+%+%+") then
-			table.insert(spans, { line = idx, start_col = CONTENT_PADDING, end_col = CONTENT_PADDING + #line, hl_group = "AtlasTextPositive" })
-		elseif line:match("^%-") and not line:match("^%-%-%-") then
-			table.insert(spans, { line = idx, start_col = CONTENT_PADDING, end_col = CONTENT_PADDING + #line, hl_group = "AtlasTextWarning" })
-		elseif line:match("^@@") then
-			table.insert(spans, { line = idx, start_col = CONTENT_PADDING, end_col = CONTENT_PADDING + #line, hl_group = "AtlasTextMuted" })
-		end
-	end
-
+	state.hunk_headers = hunk_headers
 	state.line_map = line_map
 	return lines, spans, line_map
 end

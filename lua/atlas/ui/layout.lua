@@ -316,4 +316,19 @@ vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
 	end,
 })
 
+vim.api.nvim_create_autocmd("TabEnter", {
+	group = resize_group,
+	callback = function()
+		if not M.is_open() then
+			return
+		end
+		if vim.api.nvim_get_current_tabpage() ~= state.tab_id then
+			return
+		end
+		M.reflow()
+		require("atlas.ui.main.renderer").render(ui_state.current_view)
+		require("atlas.ui.panel.init").refresh()
+	end,
+})
+
 return M

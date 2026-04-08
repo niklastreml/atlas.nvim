@@ -23,12 +23,52 @@ function M.setup()
 		desc = "Refresh files",
 	})
 
+	vim.keymap.set("n", "za", function()
+		controller.toggle_fold()
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Toggle hunk fold",
+	})
+
+	vim.keymap.set("n", "]h", function()
+		controller.jump_hunk(1)
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Next hunk",
+	})
+
+	vim.keymap.set("n", "[h", function()
+		controller.jump_hunk(-1)
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Previous hunk",
+	})
+
+	vim.keymap.set("n", "gd", function()
+		controller.open_diffview()
+	end, {
+		buffer = buf,
+		silent = true,
+		nowait = true,
+		desc = "Open in diffview",
+	})
+
 	mapped_buf = buf
 end
 
 function M.teardown()
 	if mapped_buf ~= nil and vim.api.nvim_buf_is_valid(mapped_buf) then
 		pcall(vim.keymap.del, "n", "r", { buffer = mapped_buf })
+		pcall(vim.keymap.del, "n", "za", { buffer = mapped_buf })
+		pcall(vim.keymap.del, "n", "]h", { buffer = mapped_buf })
+		pcall(vim.keymap.del, "n", "[h", { buffer = mapped_buf })
+		pcall(vim.keymap.del, "n", "gd", { buffer = mapped_buf })
 	end
 	mapped_buf = nil
 end
