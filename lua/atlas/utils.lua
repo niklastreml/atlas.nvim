@@ -31,16 +31,16 @@ function M.get_version()
 
 	local ok, version = pcall(function()
 		return vim.fn.system(
-			"git -C " .. vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":h:h") .. " describe --tags --abrev=0"
+			"git -C " .. vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":h:h") .. " describe --tags --abbrev=0"
 		)
 	end)
 
-	if ok then
-		version = version:gsub("%s+", "")
-		_cached_version = version
+	if ok and type(version) == "string" and version ~= "" then
+		_cached_version = version:gsub("%s+", "")
+	else
+		_cached_version = "dev"
 	end
 
-	_cached_version = "dev"
 	return _cached_version
 end
 
