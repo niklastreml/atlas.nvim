@@ -3,6 +3,7 @@ local M = {}
 local config = require("atlas.config")
 local controller = require("atlas.jira.ui.controller")
 local actions = require("atlas.jira.ui.actions")
+local jira_actions = require("atlas.jira.actions")
 local help = require("atlas.ui.popups.help")
 local navigation = require("atlas.ui.navigation")
 local layout = require("atlas.ui.layout")
@@ -20,6 +21,31 @@ local function selected_issue()
 	end
 
 	return nil
+end
+
+---@param action_id string
+---@param message_prefix string
+local function run_selected_issue_action(action_id, message_prefix)
+	local issue = selected_issue()
+	if issue == nil then
+		footer.notify("warn", "No issue selected")
+		return
+	end
+
+	jira_actions.run(action_id, { issue = issue, source = "main" }, function(result, err)
+		if err ~= nil then
+			footer.notify("error", tostring(err))
+			return
+		end
+
+		if result ~= nil and result.message ~= nil and result.message ~= "" then
+			footer.notify("info", string.format("%s: %s", message_prefix, result.message), 1200)
+		end
+
+		if result ~= nil and result.changed_issue_key ~= nil and result.changed_issue_key ~= "" then
+			controller.refresh_issue(result.changed_issue_key)
+		end
+	end)
 end
 
 local function register_dynamic_keys(buf, views)
@@ -52,6 +78,27 @@ local function register_dynamic_keys(buf, views)
 			desc = "Open Jira actions",
 			callback = function()
 				controller.open_actions()
+			end,
+		},
+		{
+			key = "ge",
+			desc = "Edit issue",
+			callback = function()
+				run_selected_issue_action("edit_issue", "Edit issue")
+			end,
+		},
+		{
+			key = "gs",
+			desc = "Transition issue",
+			callback = function()
+				run_selected_issue_action("transition", "Transition")
+			end,
+		},
+		{
+			key = "ga",
+			desc = "Change assignee",
+			callback = function()
+				run_selected_issue_action("assign", "Change assignee")
 			end,
 		},
 		{
