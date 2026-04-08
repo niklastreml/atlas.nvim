@@ -90,6 +90,35 @@ describe("markdown to adf", function()
 		end)
 	end)
 
+	describe("emoji", function()
+		it("converts nerd icon to emoji node", function()
+			assert.are.same(
+				doc({ p({ { type = "emoji", attrs = { shortName = ":check_mark:", text = ":check_mark:" } } }) }),
+				md.to_adf("")
+			)
+		end)
+
+		it("keeps surrounding text when converting nerd icon", function()
+			assert.are.same(
+				doc({
+					p({
+						text("Done "),
+						{ type = "emoji", attrs = { shortName = ":check_mark:", text = ":check_mark:" } },
+						text(" now"),
+					}),
+				}),
+				md.to_adf("Done  now")
+			)
+		end)
+
+		it("converts emoji shortcode back to emoji node", function()
+			assert.are.same(
+				doc({ p({ { type = "emoji", attrs = { shortName = ":party_parrot:", text = ":party_parrot:" } } }) }),
+				md.to_adf(":party_parrot:")
+			)
+		end)
+	end)
+
 	describe("date", function()
 		it("converts date link", function()
 			assert.are.same(

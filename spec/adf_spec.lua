@@ -352,7 +352,45 @@ describe("adf to markdown", function()
 					},
 				},
 			}
-			assert.equals(":smile:", adf.to_markdown(doc))
+			assert.equals("", adf.to_markdown(doc))
+		end)
+
+		it("uses shortName and ignores text attrs", function()
+			local doc = {
+				type = "doc",
+				version = 1,
+				content = {
+					{
+						type = "paragraph",
+						content = {
+							{
+								type = "emoji",
+								attrs = {
+									id = "atlassian-check_mark",
+									shortName = ":check_mark:",
+									text = ":x:",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			assert.equals("", adf.to_markdown(doc))
+		end)
+
+		it("renders unknown shortName as reversible token", function()
+			local doc = {
+				type = "doc",
+				version = 1,
+				content = {
+					{
+						type = "paragraph",
+						content = { { type = "emoji", attrs = { shortName = ":party_parrot:" } } },
+					},
+				},
+			}
+			assert.equals(":party_parrot:", adf.to_markdown(doc))
 		end)
 	end)
 
@@ -483,6 +521,7 @@ describe("adf to markdown", function()
 			local result = adf.to_markdown(doc)
 			assert.equals("| A | B |\n| --- | --- |\n| 1 | 2 |", result)
 		end)
+
 	end)
 
 	describe("unknown nodes", function()

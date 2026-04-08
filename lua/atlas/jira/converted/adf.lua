@@ -99,7 +99,32 @@ end
 
 -- { "type": "emoji", "attrs": { "shortName": ":smile:" } }
 node_handlers.emoji = function(node)
-	return node.attrs and node.attrs.shortName or ""
+	local emoji_shortname_map = {
+		[":check_mark:"] = "",
+		[":white_check_mark:"] = "",
+		[":x:"] = "",
+		[":warning:"] = "",
+		[":information_source:"] = "",
+		[":hourglass_flowing_sand:"] = "",
+		[":rocket:"] = "",
+		[":smile:"] = "",
+	}
+
+	---@param short_name string
+	---@return string
+	local function emoji_from_shortname(short_name)
+		local mapped = emoji_shortname_map[short_name]
+		if mapped ~= nil then
+			return mapped
+		end
+		return short_name
+	end
+
+	local attrs = type(node.attrs) == "table" and node.attrs or {}
+	if type(attrs.shortName) == "string" and attrs.shortName ~= "" then
+		return emoji_from_shortname(attrs.shortName)
+	end
+	return ""
 end
 
 -- { "type": "inlineCard", "attrs": { "url": "https://jira.example.com/browse/PROJ-123" } }
