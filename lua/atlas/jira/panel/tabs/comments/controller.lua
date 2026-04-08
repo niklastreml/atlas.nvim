@@ -56,6 +56,34 @@ local function current_comment_under_cursor()
 	return item.comment
 end
 
+---@param comment_id string
+---@return JiraComment|nil
+local function find_comment_by_id(comment_id)
+	if comment_id == "" or type(state.comments) ~= "table" then
+		return nil
+	end
+
+	for _, comment in ipairs(state.comments) do
+		if tostring((comment or {}).id or "") == comment_id then
+			return comment
+		end
+	end
+
+	return nil
+end
+
+---@param user JiraUser|nil
+---@return string
+local function mention_prefix_for_user(user)
+	local account_id = tostring((user or {}).account_id or "")
+	local display_name = tostring((user or {}).display_name or "")
+	if account_id == "" or display_name == "" then
+		return ""
+	end
+
+	return string.format("[@%s]{mention:%s} ", display_name, account_id)
+end
+
 ---@param win integer
 ---@param delta integer
 ---@return boolean
@@ -265,7 +293,7 @@ function M.add_comment()
 		key = string.format("comment-add-%s", issue.key),
 		title = string.format("Add Comment %s", issue.key),
 		initial_text = "",
-		width_ratio = 0.65,
+
 		height_ratio = 0.65,
 		on_save = function(body)
 			if vim.trim(body) == "" then
@@ -314,18 +342,30 @@ function M.reply_to_comment()
 		return
 	end
 
+	--- We cant reply to a subcomment, so we need to find the top level parent comment to reply to. Jira API only supports one level of nesting, so all replies are added as children of the top level comment.
 	local parent_id = tostring(parent.id or "")
+	if type(parent.parent_id) == "string" or type(parent.parent_id) == "number" then
+		local maybe_parent = tostring(parent.parent_id)
+		if maybe_parent ~= "" then
+			parent_id = maybe_parent
+		end
+	end
 	if parent_id == "" then
 		footer.notify("warn", "Invalid parent comment")
 		return
 	end
 
-	local parent_label = ((parent.author or {}).display_name and tostring((parent.author or {}).display_name) ~= "")
-			and tostring((parent.author or {}).display_name)
+	local reply_target = find_comment_by_id(parent_id) or parent
+	local parent_label = (
+		(reply_target.author or {}).display_name and tostring((reply_target.author or {}).display_name) ~= ""
+	)
+			and tostring((reply_target.author or {}).display_name)
 		or "unknown user"
+	local initial_text = mention_prefix_for_user(reply_target.author)
 
 	vim.ui.input({
 		prompt = string.format("Reply to %s: ", parent_label),
+		default = initial_text,
 	}, function(input)
 		if input == nil then
 			footer.notify("info", "Reply cancelled")

@@ -5,7 +5,7 @@ local users = require("atlas.bitbucket.api.users")
 local actions = require("atlas.bitbucket.actions")
 local navigation = require("atlas.ui.navigation")
 local footer = require("atlas.ui.components.footer")
-local checkout = require("atlas.bitbucket.checkout")
+local checkout = require("atlas.core.git.checkout")
 
 ---@param value string
 ---@param label string

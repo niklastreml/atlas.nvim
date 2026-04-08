@@ -1,9 +1,10 @@
 local M = {}
 
+local highlights = require("atlas.ui.highlights")
 local icons = require("atlas.ui.icons")
 local utils = require("atlas.utils")
-local highlights = require("atlas.ui.highlights")
 
+---@param name string|nil
 ---@param name string|nil
 ---@return string
 function M.author_hl(name)
@@ -278,8 +279,8 @@ local function append_compact_group_rows(rows, group)
 	for _, pr in ipairs(group.prs or {}) do
 		local author_name = tostring((pr.author and pr.author.name) or "Unknown")
 		local repo_name = full_name
-		local source_branch = tostring((((pr.source or {}).branch) or "?"))
-		local target_branch = tostring((((pr.destination or {}).branch) or "?"))
+		local source_branch = tostring(((pr.source or {}).branch or "?"))
+		local target_branch = tostring(((pr.destination or {}).branch or "?"))
 		table.insert(rows, {
 			kind = "pr",
 			pr_icon = icons.entity("pr"),
@@ -359,8 +360,8 @@ function M.build_plain_tree_table(repo_groups)
 
 		for _, pr in ipairs(group.prs or {}) do
 			local author_name = tostring((pr.author and pr.author.name) or "Unknown")
-			local source_branch = tostring((((pr.source or {}).branch) or "?"))
-			local target_branch = tostring((((pr.destination or {}).branch) or "?"))
+			local source_branch = tostring(((pr.source or {}).branch or "?"))
+			local target_branch = tostring(((pr.destination or {}).branch or "?"))
 			table.insert(repo_row.children, {
 				kind = "pr",
 				name = string.format("%s #%s %s", icons.entity("pr"), tostring(pr.id), pr.title or ""),
