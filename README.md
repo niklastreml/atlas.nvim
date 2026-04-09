@@ -87,7 +87,7 @@ use {
 - [x] Support for custom fields
 - [ ] Create and edit issue templates
 
-> [!ATTENTION]]
+> [!ATTENTION]
 > The markdown editor for issue descriptions and comments is still experimental and may not work perfectly in all cases. You can toggle between markdown and ADF view in the overview tab to see the raw ADF content and how it translates to markdown. If you encounter any issues with the markdown editor, please open an issue with details.
 
 <div>
@@ -168,6 +168,8 @@ Examples:
 - [x] PR actions: merge, approve, request changes
 - [x] Add custom actions to PRs
 - [x] Resolve and checkout PR branches locally
+- [x] Open Diff of a pull request in Diffview.nvim
+- [x] View Repository details like branches, tags, commits
 - [ ] Pagination for API results (PRs, comments, commits, files, activity)
 - [ ] Switch between open, merged and superseded PRs
 - [ ] Bulk actions: approve/request changes on multiple PRs at once
