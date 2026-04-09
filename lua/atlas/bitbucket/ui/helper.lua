@@ -5,7 +5,6 @@ local icons = require("atlas.ui.icons")
 local utils = require("atlas.utils")
 
 ---@param name string|nil
----@param name string|nil
 ---@return string
 function M.author_hl(name)
 	if type(name) ~= "string" then
@@ -65,16 +64,13 @@ function M.group_prs_by_repo(prs)
 		local workspace = tostring(pr.workspace or "")
 		local repo = tostring(pr.repo_slug or pr.repo or "")
 		local full_name = tostring(pr.repo_full_name or "")
-		if full_name == "" and workspace ~= "" and repo ~= "" then
-			full_name = string.format("%s/%s", workspace, repo)
-		end
-
-		local key = full_name ~= "" and full_name or (workspace .. "/" .. repo)
+		local fallback_full_name = (workspace ~= "" and repo ~= "") and (workspace .. "/" .. repo) or repo
+		local key = full_name ~= "" and full_name or fallback_full_name
 		if grouped[key] == nil then
 			grouped[key] = {
 				workspace = workspace,
 				repo = repo,
-				full_name = full_name,
+				full_name = key,
 				prs = {},
 			}
 			table.insert(order, key)
@@ -277,8 +273,8 @@ local function append_compact_group_rows(rows, group)
 	local workspace = tostring(group.workspace or "")
 	local repo = tostring(group.repo or "")
 	local full_name = tostring(group.full_name or "")
-	if full_name == "" and workspace ~= "" and repo ~= "" then
-		full_name = string.format("%s/%s", workspace, repo)
+	if full_name == "" then
+		full_name = repo
 	end
 
 	local repo_ctx = {
@@ -351,8 +347,8 @@ function M.build_plain_tree_table(repo_groups)
 		local workspace = tostring(group.workspace or "")
 		local repo = tostring(group.repo or "")
 		local full_name = tostring(group.full_name or "")
-		if full_name == "" and workspace ~= "" and repo ~= "" then
-			full_name = string.format("%s/%s", workspace, repo)
+		if full_name == "" then
+			full_name = repo
 		end
 		local repo_row = {
 			kind = "repo",

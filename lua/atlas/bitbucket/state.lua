@@ -1,6 +1,7 @@
 ---@class BitbucketPRViewGroup
 ---@field workspace string
 ---@field repo string
+---@field full_name string
 ---@field prs BitbucketPR[]
 
 ---@class BitbucketState

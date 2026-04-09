@@ -9,6 +9,9 @@ local service = require("atlas.bitbucket.api.service")
 local users = require("atlas.bitbucket.api.users")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local helper = require("atlas.bitbucket.ui.helper")
+local navigation = require("atlas.ui.navigation")
+local renderer = require("atlas.bitbucket.ui.renderer")
+local info_popup = require("atlas.ui.popups.info")
 
 local active_user_handle = nil
 local active_pullrequests_handle = nil
@@ -77,6 +80,7 @@ local function apply_filter(groups, view)
 			table.insert(filtered_groups, {
 				workspace = group.workspace,
 				repo = group.repo,
+				full_name = group.full_name,
 				prs = prs,
 			})
 		end
@@ -288,6 +292,28 @@ end
 function M.switch_view(view, on_done)
 	state.active_view = view
 	load_active_view({ force_load = false }, on_done)
+end
+
+---@param source_buf integer|nil
+function M.show_pr_details(source_buf)
+	local node = navigation.current_item()
+	if type(node) ~= "table" or node.kind ~= "pr" then
+		footer.notify("warn", "No PR selected")
+		return
+	end
+
+	local pr = type(node.pr) == "table" and node.pr or node
+	if type(pr) ~= "table" or pr.id == nil then
+		footer.notify("warn", "PR payload missing on line")
+		return
+	end
+
+	local lines, highlights = renderer.pr_popup_content(pr)
+	info_popup.show({
+		lines = lines,
+		highlights = highlights,
+		source_buf = source_buf,
+	})
 end
 
 return M

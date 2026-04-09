@@ -114,6 +114,13 @@ local function register_dynamic_keys(buf, views)
 			end,
 		},
 		{
+			key = "K",
+			desc = "Show PR details popup",
+			callback = function()
+				controller.show_pr_details(buf)
+			end,
+		},
+		{
 			key = "y",
 			desc = "Copy PR id",
 			callback = function()
