@@ -79,6 +79,15 @@ function M.open(opts)
 		end
 	end, { buffer = buf, silent = true, nowait = true })
 
+	vim.keymap.set("n", "<Esc>", function()
+		if type(opts.on_cancel) == "function" then
+			opts.on_cancel()
+		end
+		if vim.api.nvim_win_is_valid(win) then
+			vim.api.nvim_win_close(win, true)
+		end
+	end, { buffer = buf, silent = true, nowait = true })
+
 	local function save_and_close()
 		local body = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
 

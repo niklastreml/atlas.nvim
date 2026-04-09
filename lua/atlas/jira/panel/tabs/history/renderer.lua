@@ -4,8 +4,9 @@ local header = require("atlas.jira.panel.components.header")
 local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
-local threads = require("atlas.ui.components.threads")
+local threads = require("atlas.ui.components.threadsv2")
 local icons = require("atlas.ui.icons")
+local highlights = require("atlas.ui.highlights")
 local jira_ui_helper = require("atlas.jira.ui.helper")
 local PADDING_X = 2
 
@@ -22,6 +23,14 @@ local function format_estimate_value(value)
 	end
 
 	return utils.human_duration(n)
+end
+
+local function normalize_and_truncate(value, max_len)
+	local text = value ~= nil and vim.trim(value:gsub("%s+", " ")) or ""
+	if vim.fn.strchars(text) > max_len then
+		text = vim.fn.strcharpart(text, 0, max_len - 3) .. "..."
+	end
+	return text
 end
 
 ---@param item JiraIssueHistoryItem
@@ -90,8 +99,8 @@ local function item_content(item)
 	if field == "description" then
 		local from_value = item.from_string or item.from
 		local to_value = item.to_string or item.to
-		local from = from_value ~= nil and vim.trim(from_value:gsub("%s+", " ")) or ""
-		local to = to_value ~= nil and vim.trim(to_value:gsub("%s+", " ")) or ""
+		local from = normalize_and_truncate(from_value, 200)
+		local to = normalize_and_truncate(to_value, 200)
 		local has_from = from ~= ""
 		local has_to = to ~= ""
 
@@ -157,7 +166,7 @@ local function item_footer(item)
 	return nil
 end
 
----@param item AtlasThreadedItem
+---@param item AtlasThreadV2Item
 ---@param _text string
 ---@return string|nil
 local function header_content_hl(item, _text)
@@ -168,7 +177,7 @@ local function header_content_hl(item, _text)
 	return "AtlasTextMuted"
 end
 
----@param item AtlasThreadedItem
+---@param item AtlasThreadV2Item
 ---@param row string
 ---@param row_index integer
 ---@return table[]|nil
@@ -275,7 +284,7 @@ local function content_hl(item, row, row_index)
 end
 
 ---@param entries JiraIssueHistoryEntry[]|nil
----@return AtlasThreadedItem[]
+---@return AtlasThreadV2Item[]
 local function to_thread_items(entries)
 	local out = {}
 	for _, entry in ipairs(entries or {}) do
@@ -284,9 +293,10 @@ local function to_thread_items(entries)
 
 		for _, item in ipairs(entry.items or {}) do
 			table.insert(out, {
+				icon = icons.entity("user"),
 				author = tostring(author),
-				timestamp = tostring(timestamp),
-				header_content = item_header(item),
+				right_text = tostring(timestamp),
+				additional = item_header(item),
 				content = item_content(item),
 				footer_items = item_footer(item),
 				line_map = {
@@ -327,8 +337,12 @@ function M.render(width)
 		local items = to_thread_items(state.history_items)
 		local item_lines, item_spans, item_map = threads.render(items, width, {
 			padding_x = PADDING_X,
-			header_content_hl = header_content_hl,
+			additional_hl = header_content_hl,
 			content_hl = content_hl,
+			icon_hl_fn = function(item)
+				local author = vim.trim(tostring(item.author or "")):lower()
+				return highlights.dynamic_for(author) or "AtlasTextMuted"
+			end,
 		})
 
 		local offset = #lines

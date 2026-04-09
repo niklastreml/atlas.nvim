@@ -7,7 +7,8 @@ local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local comments_helper = require("atlas.jira.panel.tabs.comments.helper")
 local icons = require("atlas.ui.icons")
-local threads = require("atlas.ui.components.threads")
+local threads = require("atlas.ui.components.threadsv2")
+local highlights = require("atlas.ui.highlights")
 local PADDING_X = 2
 
 ---@param comments JiraComment[]
@@ -30,7 +31,7 @@ local function root_comments(comments)
 end
 
 ---@param comment JiraComment
----@return AtlasThreadedItem
+---@return AtlasThreadV2Item
 local function to_thread_item(comment)
 	local author = (comment.author ~= nil and comment.author.display_name) or "Unknown"
 	local when = utils.relative_time_text(comment.created)
@@ -51,8 +52,9 @@ local function to_thread_item(comment)
 	end
 
 	return {
+		icon = icons.entity("user"),
 		author = tostring(author),
-		timestamp = tostring(when),
+		right_text = tostring(when),
 		content = body,
 		footer_items = footer_items,
 		children = children,
@@ -108,6 +110,10 @@ function M.render(width)
 
 		local item_lines, item_spans, item_map = threads.render(items, width, {
 			padding_x = PADDING_X,
+			icon_hl_fn = function(item)
+				local author = vim.trim(tostring(item.author or "")):lower()
+				return highlights.dynamic_for(author) or "AtlasTextMuted"
+			end,
 			content_hl = function(item, row)
 				local meta = item.meta or {}
 				if meta.is_deleted then
