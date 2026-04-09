@@ -247,8 +247,9 @@ local strchars = vim.fn.strchars
 ---@param from_start? boolean
 ---@return string
 function M.truncate(str, max_dw, from_start)
+	local ellipsis = "…"
 	if max_dw < 1 then
-		return ".."
+		return ellipsis
 	end
 	if strwidth(str) <= max_dw then
 		return str
@@ -259,19 +260,19 @@ function M.truncate(str, max_dw, from_start)
 		for i = 1, nchars do
 			local tail = strcharpart(str, i)
 			if strwidth(tail) <= max_dw - 1 then
-				return ".." .. tail
+				return ellipsis .. tail
 			end
 		end
-		return ".."
+		return ellipsis
 	end
 
 	for i = nchars - 1, 0, -1 do
 		local head = strcharpart(str, 0, i)
 		if strwidth(head) <= max_dw - 1 then
-			return head .. ".."
+			return head .. ellipsis
 		end
 	end
-	return ".."
+	return ellipsis
 end
 
 ---@param text string

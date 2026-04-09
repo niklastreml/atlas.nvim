@@ -33,50 +33,33 @@ local function push(lines, spans, text, hl_group)
 	end
 end
 
----@param diffstat BitbucketPRDiffstat|"loading"|nil
----@param width integer
----@return string[] lines
----@return table[] spans
-local strwidth = vim.api.nvim_strwidth
+local table_view = require("atlas.ui.components.table_tree")
 
-local function right_align(left_text, right_text, total_w, pad)
-	local gap = math.max(2, total_w - strwidth(left_text) - strwidth(right_text))
-	return string.rep(" ", pad) .. left_text .. string.rep(" ", gap) .. right_text
-end
+local STATUS_MAP = {
+	added = { "+", "AtlasTextPositive" },
+	removed = { "-", "AtlasLogError" },
+	deleted = { "-", "AtlasLogError" },
+	renamed = { "R", "AtlasLogWarn" },
+}
 
-local function diffstat_entry_info(entry)
+local function diffstat_path(entry)
 	local status = tostring(entry.status or ""):lower()
 	local old = entry.old_file ~= nil and entry.old_file.path or ""
 	local new = entry.new_file ~= nil and entry.new_file.path or ""
 
-	local markers = {
-		added = { "+", "AtlasTextPositive" },
-		removed = { "-", "AtlasLogError" },
-		deleted = { "-", "AtlasLogError" },
-		renamed = { "R", "AtlasLogWarn" },
-	}
-	local m = markers[status] or { "~", "AtlasTextMuted" }
-	local marker, marker_hl = m[1], m[2]
-
-	local path
 	if status == "renamed" and old ~= "" and new ~= "" then
-		path = old .. " → " .. new
+		return old .. " → " .. new
 	elseif status == "added" then
-		path = new ~= "" and new or old
+		return new ~= "" and new or old
 	elseif status == "removed" or status == "deleted" then
-		path = old ~= "" and old or new
-	else
-		path = new ~= "" and new or old
+		return old ~= "" and old or new
 	end
-	if path == "" then path = "(unknown file)" end
-
-	return marker, marker_hl, path
+	return (new ~= "" and new or old) ~= "" and (new ~= "" and new or old) or "(unknown file)"
 end
 
 local function render_diffstat(diffstat, width)
 	local L, S = {}, {}
 	local pad = CONTENT_PADDING
-	local inner_w = math.max(8, width - pad * 2)
 
 	if diffstat == "loading" or diffstat == nil then
 		local hdr = "Files changed"
@@ -89,65 +72,60 @@ local function render_diffstat(diffstat, width)
 	end
 
 	local entries = diffstat.entries or {}
-	local total_add, total_rm = 0, 0
-	for _, e in ipairs(entries) do
-		total_add = total_add + (tonumber(e.lines_added) or 0)
-		total_rm = total_rm + (tonumber(e.lines_removed) or 0)
-	end
 
-	local left = string.format("Files changed (%d)", #entries)
-	local r_add, r_rm = string.format("+%d", total_add), string.format("-%d", total_rm)
-	local right = r_add .. "  " .. r_rm
-	local hdr_line = right_align(left, right, inner_w, pad)
-	table.insert(L, hdr_line)
-
-	local li = #L - 1
-	table.insert(S, { line = li, start_col = pad, end_col = pad + #left, hl_group = "AtlasColumnHeader" })
-	local paren = string.format("(%d)", #entries)
-	table.insert(S, { line = li, start_col = pad + #left - #paren, end_col = pad + #left, hl_group = "AtlasTextMuted" })
-	local rs = #hdr_line - #right
-	table.insert(S, { line = li, start_col = rs, end_col = rs + #r_add, hl_group = "AtlasTextPositive" })
-	table.insert(S, { line = li, start_col = rs + #r_add + 2, end_col = rs + #r_add + 2 + #r_rm, hl_group = "AtlasLogError" })
+	-- Header
+	local hdr = string.format("Files changed (%d)", #entries)
+	table.insert(L, with_content_padding(hdr))
+	table.insert(S, { line = #L - 1, start_col = pad, end_col = pad + #hdr, hl_group = "AtlasColumnHeader" })
 
 	if #entries == 0 then
 		table.insert(L, with_content_padding("No files changed."))
 		return L, S
 	end
 
+	local rows = {}
 	for _, entry in ipairs(entries) do
-		local marker, marker_hl, path = diffstat_entry_info(entry)
-
-		local dir, name = path:match("^(.+/)([^/]+)$")
-		if not dir then dir, name = "", path end
-
-		local f_add = string.format("+%d", tonumber(entry.lines_added) or 0)
-		local f_rm = string.format("-%d", tonumber(entry.lines_removed) or 0)
-		local stats = f_add .. "  " .. f_rm
-		local max_path = math.max(4, inner_w - strwidth(marker) - 1 - strwidth(stats) - 2)
-
-		if strwidth(dir .. name) > max_path then
-			local name_dw = strwidth(name)
-			if name_dw > max_path then
-				dir, name = "", utils.truncate(name, max_path)
-			else
-				dir = utils.truncate(dir, max_path - name_dw, true)
-			end
-		end
-
-		local left_part = marker .. " " .. dir .. name
-		local fl = right_align(left_part, stats, inner_w, pad)
-		table.insert(L, fl)
-		li = #L - 1
-
-		table.insert(S, { line = li, start_col = pad, end_col = pad + #marker, hl_group = marker_hl })
-		if dir ~= "" then
-			local ps = pad + #marker + 1
-			table.insert(S, { line = li, start_col = ps, end_col = ps + #dir, hl_group = "AtlasTextMuted" })
-		end
-		local sb = #fl - #stats
-		table.insert(S, { line = li, start_col = sb, end_col = sb + #f_add, hl_group = "AtlasTextPositive" })
-		table.insert(S, { line = li, start_col = sb + #f_add + 2, end_col = sb + #f_add + 2 + #f_rm, hl_group = "AtlasLogError" })
+		local status = tostring(entry.status or ""):lower()
+		local m = STATUS_MAP[status] or { "~", "AtlasTextMuted" }
+		table.insert(rows, {
+			marker = m[1],
+			marker_hl = m[2],
+			path = diffstat_path(entry),
+			added = string.format("+%d", tonumber(entry.lines_added) or 0),
+			removed = string.format("-%d", tonumber(entry.lines_removed) or 0),
+		})
 	end
+
+	local tbl_lines, _, tbl_spans = table_view.render({
+		width = width,
+		margin = pad,
+		column_gap = 1,
+		show_header = false,
+		fill = true,
+		columns = {
+			{ key = "marker", can_grow = false, max_width = 1 },
+			{ key = "path", can_grow = true, truncate_from = "start" },
+			{ key = "added", can_grow = false },
+			{ key = "removed", can_grow = false },
+		},
+		rows = rows,
+		cell_hl = function(row, col)
+			if col.key == "marker" then
+				return row.marker_hl
+			end
+			if col.key == "path" then
+				return "AtlasTextMuted"
+			end
+			if col.key == "added" then
+				return "AtlasTextPositive"
+			end
+			if col.key == "removed" then
+				return "AtlasLogError"
+			end
+		end,
+	})
+
+	utils.append_block(L, S, { lines = tbl_lines, highlights = tbl_spans })
 
 	return L, S
 end

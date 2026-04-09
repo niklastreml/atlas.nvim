@@ -1,5 +1,7 @@
 local M = {}
 
+local utils = require("atlas.utils")
+
 local function display_width(text)
 	return vim.fn.strdisplaywidth(text or "")
 end
@@ -36,28 +38,8 @@ local function pad_aligned(text, width, align)
 	return pad_right(text, width)
 end
 
-local function truncate(text, width)
-	text = tostring(text or "")
-
-	if width <= 1 then
-		return vim.fn.strcharpart(text, 0, width)
-	end
-
-	if display_width(text) <= width then
-		return text
-	end
-
-	local out = ""
-	local char_count = vim.fn.strchars(text)
-	for i = 0, char_count - 1 do
-		local ch = vim.fn.strcharpart(text, i, 1)
-		if display_width(out .. ch .. "…") > width then
-			break
-		end
-		out = out .. ch
-	end
-
-	return out .. "…"
+local function truncate(text, width, from_start)
+	return utils.truncate(tostring(text or ""), width, from_start)
 end
 
 ---@class TableTreeTreeOpts
@@ -422,7 +404,7 @@ function M.render(opts)
 			local line_parts = {}
 			col_start = margin
 			for i, c in ipairs(columns) do
-				local cell = truncate(cell_text(row, c, tree), c._computed)
+				local cell = truncate(cell_text(row, c, tree), c._computed, c.truncate_from == "start")
 				local padded = pad_aligned(cell, c._computed, c.align)
 				table.insert(line_parts, padded)
 
