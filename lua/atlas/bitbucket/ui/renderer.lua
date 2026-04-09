@@ -163,7 +163,13 @@ function M.render(opts)
 
 	if state.error then
 		local error_text = tostring(state.error or ""):gsub("[\r\n]+", " | ")
-		table.insert(lines, "Error loading pull requests: " .. error_text)
+		local err_line = "Error: " .. error_text
+		utils.append_block(lines, spans, {
+			lines = { err_line },
+			highlights = {
+				{ line = 0, start_col = 0, end_col = #err_line, hl_group = "AtlasLogError" },
+			},
+		})
 	elseif state.is_loading then
 		table.insert(lines, "Loading...")
 	else

@@ -66,25 +66,6 @@ local function cell_hl(row, col, ctx)
 			end
 		end
 
-		local story_points_icon = icons.entity("story_points")
-		local ss, se = ctx.text:find(story_points_icon, 1, true)
-		if ss and se then
-			table.insert(spans_for_cell, {
-				start_col = ss - 1,
-				end_col = se,
-				hl_group = "AtlasJiraStoryPoints",
-			})
-
-			local ns, ne = ctx.text:find("%d+%.?%d*", se + 1)
-			if ns and ne then
-				table.insert(spans_for_cell, {
-					start_col = ns - 1,
-					end_col = ne,
-					hl_group = "AtlasJiraStoryPoints",
-				})
-			end
-		end
-
 		return #spans_for_cell > 0 and spans_for_cell or nil
 	end
 
@@ -148,24 +129,11 @@ local function issue_to_row(issue, is_child)
 	local icon = is_child and "" or icons.jira_icon(issue_type_name)
 	local title = is_child and (icons.jira_icon(issue_type_name) .. " " .. issue.key .. " " .. issue.summary)
 		or (issue.key .. " " .. issue.summary)
-	local story_points = issue.story_points
-	local points = ""
-	if type(story_points) == "number" then
-		points = (story_points % 1 == 0) and tostring(math.floor(story_points)) or tostring(story_points)
-	end
 	local due_display = utils.format_date(issue.duedate)
 	local priority_icon = icons.jira_icon(issue.priority)
 	local points_due = ""
 	if priority_icon ~= "" then
 		points_due = priority_icon
-	end
-	if points ~= "" then
-		local points_text = icons.entity("story_points") .. " " .. points
-		if points_due ~= "" then
-			points_due = points_due .. "  " .. points_text
-		else
-			points_due = points_text
-		end
 	end
 	if due_display ~= "" then
 		local due_text = icons.entity("created") .. " " .. due_display
@@ -401,7 +369,13 @@ function M.render(opts)
 	table.insert(lines, "")
 
 	if state.error then
-		table.insert(lines, "Error: " .. state.error)
+		local err_text = "Error: " .. state.error
+		utils.append_block(lines, spans, {
+			lines = { err_text },
+			highlights = {
+				{ line = 0, start_col = 0, end_col = #err_text, hl_group = "AtlasLogError" },
+			},
+		})
 	else
 		local rows = issues_to_rows(state.issue_tree or {})
 		if state.is_loading then
@@ -442,7 +416,7 @@ function M.render(opts)
 						max_width = 22,
 						can_grow = false,
 					},
-					{ key = "status", name = " Status", can_grow = false, align = "center" },
+					{ key = "status", name = " Status", can_grow = false },
 				},
 				rows = rows,
 				tree = {

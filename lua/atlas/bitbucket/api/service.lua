@@ -7,6 +7,12 @@ local memory_cache = require("atlas.core.memory_cache")
 
 local API_BASE = "https://api.bitbucket.org/2.0"
 
+---@param err any
+---@return string
+local function sanitize_error(err)
+	return tostring(err or ""):gsub("[\r\n]+", " | ")
+end
+
 ---@return string, string, string|nil
 function M.get_auth()
 	local bb = (config.options and config.options.bitbucket) or {}
@@ -79,7 +85,7 @@ end
 function M.request(method, url, headers, body, callback)
 	local user, token, auth_err = M.get_auth()
 	if auth_err then
-		callback(nil, auth_err)
+		callback(nil, sanitize_error(auth_err))
 		return nil
 	end
 
@@ -103,12 +109,13 @@ function M.request(method, url, headers, body, callback)
 
 	return http.curl_request(method, full_url, request_headers, body, function(result, err)
 		if err then
+			local safe_err = sanitize_error(err)
 			logger.logerror("Bitbucket request failed", {
 				method = method,
 				url = full_url,
-				error = err,
+				error = safe_err,
 			})
-			callback(nil, err)
+			callback(nil, safe_err)
 			return
 		end
 
@@ -119,6 +126,7 @@ function M.request(method, url, headers, body, callback)
 
 		local api_err = M.api_error_message(result)
 		if api_err then
+			api_err = sanitize_error(api_err)
 			logger.logerror("Bitbucket API error", {
 				method = method,
 				url = full_url,
@@ -141,7 +149,7 @@ end
 function M.request_text(method, url, headers, body, callback)
 	local user, token, auth_err = M.get_auth()
 	if auth_err then
-		callback(nil, auth_err)
+		callback(nil, sanitize_error(auth_err))
 		return nil
 	end
 
@@ -165,12 +173,13 @@ function M.request_text(method, url, headers, body, callback)
 
 	return http.curl_text_request(method, full_url, request_headers, body, function(text, err)
 		if err then
+			local safe_err = sanitize_error(err)
 			logger.logerror("Bitbucket request failed", {
 				method = method,
 				url = full_url,
-				error = err,
+				error = safe_err,
 			})
-			callback(nil, err)
+			callback(nil, safe_err)
 			return
 		end
 

@@ -1,5 +1,11 @@
 local M = {}
 
+---@param value any
+---@return string
+local function one_line(value)
+	return tostring(value or ""):gsub("[\r\n]+", " | ")
+end
+
 ---@param method string
 ---@param url string
 ---@param headers table<string, string>
@@ -50,7 +56,7 @@ local function curl_fetch(method, url, headers, data, callback)
 				if code ~= 0 then
 					local err = "curl exited with code " .. tostring(code)
 					if stderr_text ~= "" then
-						err = err .. ": " .. stderr_text
+						err = err .. ": " .. one_line(stderr_text)
 					end
 					callback(nil, nil, err)
 					return
@@ -106,16 +112,25 @@ function M.curl_request(method, url, headers, data, callback)
 			return
 		end
 
+		if http_status ~= nil and (http_status < 200 or http_status >= 300) then
+			local response_text = one_line(body)
+			if response_text == "" then
+				callback(nil, string.format("HTTP %d", http_status))
+			else
+				callback(nil, string.format("HTTP %d: %s", http_status, response_text))
+			end
+			return
+		end
+
 		local ok, result = pcall(vim.json.decode, body)
 		if not ok then
 			callback(
 				nil,
-				"Failed to parse JSON: "
-					.. tostring(result)
-					.. "\nStatus: "
-					.. tostring(http_status or "?")
-					.. "\nRaw: "
-					.. body
+				string.format(
+					"Failed to parse JSON response (HTTP %s): %s",
+					tostring(http_status or "?"),
+					one_line(result)
+				)
 			)
 			return
 		end
