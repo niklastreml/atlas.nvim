@@ -172,6 +172,36 @@ function M.register_command(group, items, opts)
 	end
 end
 
+---@param group string The name of the group
+---@param items { key: string|string[], mode?: string|string[] }[]
+---@param opts AtlasHelpGroupOpts
+function M.remove(group, items, opts)
+	local bufnr = require_buffer(opts, "help.remove")
+	local bstate = state.buffers[bufnr]
+	if not bstate or not bstate.keys[group] then
+		return
+	end
+
+	for _, item in ipairs(items) do
+		local mode = item.mode or "n"
+		local keys = normalize_keys(item.key)
+
+		for _, key in ipairs(keys) do
+			pcall(vim.keymap.del, mode, key, { buffer = bufnr })
+		end
+
+		local display_key = table.concat(keys, KEY_SEPARATOR)
+		remove_existing_entry(bstate.keys[group], "key", display_key)
+	end
+
+	if #bstate.keys[group] == 0 then
+		bstate.keys[group] = nil
+		if not bstate.commands[group] then
+			bstate.group_opts[group] = nil
+		end
+	end
+end
+
 ---@param bstate table
 ---@param group_name string
 ---@return number

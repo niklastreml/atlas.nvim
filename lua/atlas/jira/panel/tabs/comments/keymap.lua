@@ -1,6 +1,7 @@
 local M = {}
 local layout = require("atlas.ui.layout")
 local controller = require("atlas.jira.panel.tabs.comments.controller")
+local help = require("atlas.ui.popups.help")
 
 function M.setup()
 	local buf = layout.buf_id("detail")
@@ -8,50 +9,40 @@ function M.setup()
 		return
 	end
 
-	vim.keymap.set("n", "c", function()
-		controller.reply_to_comment()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Reply to comment",
-	})
-
-	vim.keymap.set("n", "e", function()
-		controller.edit_comment()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Edit comment",
-	})
-
-	vim.keymap.set("n", "d", function()
-		controller.delete_comment()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Delete comment",
-	})
-
-	vim.keymap.set("n", "a", function()
-		controller.add_comment()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Add comment",
-	})
-
-	vim.keymap.set("n", "r", function()
-		controller.refresh()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Refresh comments",
-	})
+	help.register("Jira", {
+		{
+			key = "c",
+			desc = "Reply to comment",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.reply_to_comment()
+			end,
+		},
+		{
+			key = "e",
+			desc = "Edit comment",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.edit_comment()
+			end,
+		},
+		{
+			key = "d",
+			desc = "Delete comment",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.delete_comment()
+			end,
+		},
+		{
+			key = "a",
+			desc = "Add comment",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.add_comment()
+			end,
+		},
+	}, { index = 220, buffer = buf })
 end
 
 function M.teardown()
@@ -60,11 +51,12 @@ function M.teardown()
 		return
 	end
 
-	pcall(vim.keymap.del, "n", "c", { buffer = buf })
-	pcall(vim.keymap.del, "n", "e", { buffer = buf })
-	pcall(vim.keymap.del, "n", "d", { buffer = buf })
-	pcall(vim.keymap.del, "n", "a", { buffer = buf })
-	pcall(vim.keymap.del, "n", "r", { buffer = buf })
+	help.remove("Jira", {
+		{ key = "c" },
+		{ key = "e" },
+		{ key = "d" },
+		{ key = "a" },
+	}, { buffer = buf })
 end
 
 return M

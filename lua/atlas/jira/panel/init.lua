@@ -34,12 +34,12 @@ local function register_panel_keys()
 	end
 
 	local help = require("atlas.ui.popups.help")
-	help.register("Jira", {
+	help.register("Navigation", {
 		{
 			key = "j",
 			desc = "Next item in tab",
 			opts = { silent = true, nowait = true },
-      hidden = true,
+			hidden = true,
 			callback = function()
 				local tab = get_tab_module(panel_state.current_tab)
 				if tab ~= nil and type(tab.move_cursor) == "function" then
@@ -51,7 +51,7 @@ local function register_panel_keys()
 			key = "k",
 			desc = "Previous item in tab",
 			opts = { silent = true, nowait = true },
-      hidden = true,
+			hidden = true,
 			callback = function()
 				local tab = get_tab_module(panel_state.current_tab)
 				if tab ~= nil and type(tab.move_cursor) == "function" then
@@ -63,7 +63,7 @@ local function register_panel_keys()
 			key = "gg",
 			desc = "First item in tab",
 			opts = { silent = true, nowait = true },
-      hidden = true,
+			hidden = true,
 			callback = function()
 				local tab = get_tab_module(panel_state.current_tab)
 				if tab ~= nil and type(tab.move_cursor) == "function" then
@@ -75,11 +75,25 @@ local function register_panel_keys()
 			key = "G",
 			desc = "Last item in tab",
 			opts = { silent = true, nowait = true },
-      hidden = true,
+			hidden = true,
 			callback = function()
 				local tab = get_tab_module(panel_state.current_tab)
 				if tab ~= nil and type(tab.move_cursor) == "function" then
 					tab.move_cursor(math.huge)
+				end
+			end,
+		},
+	}, { index = 999, buffer = buf })
+
+	help.register("Jira", {
+		{
+			key = "r",
+			desc = "Refresh current tab",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.refresh) == "function" then
+					tab.refresh()
 				end
 			end,
 		},

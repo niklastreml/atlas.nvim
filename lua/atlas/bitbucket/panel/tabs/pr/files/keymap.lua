@@ -2,6 +2,7 @@ local M = {}
 
 local layout = require("atlas.ui.layout")
 local controller = require("atlas.bitbucket.panel.tabs.pr.files.controller")
+local help = require("atlas.ui.popups.help")
 
 local mapped_buf = nil
 
@@ -14,61 +15,52 @@ function M.setup()
 		return
 	end
 
-	vim.keymap.set("n", "r", function()
-		controller.refresh()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Refresh files",
-	})
-
-	vim.keymap.set("n", "za", function()
-		controller.toggle_fold()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Toggle hunk fold",
-	})
-
-	vim.keymap.set("n", "]h", function()
-		controller.jump_hunk(1)
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Next hunk",
-	})
-
-	vim.keymap.set("n", "[h", function()
-		controller.jump_hunk(-1)
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Previous hunk",
-	})
-
-	vim.keymap.set("n", "gd", function()
-		controller.open_diffview()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Open in diffview",
-	})
+	help.register("Bitbucket", {
+		{
+			key = "za",
+			desc = "Toggle hunk fold",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.toggle_fold()
+			end,
+		},
+		{
+			key = "]h",
+			desc = "Next hunk",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.jump_hunk(1)
+			end,
+		},
+		{
+			key = "[h",
+			desc = "Previous hunk",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.jump_hunk(-1)
+			end,
+		},
+		{
+			key = "gd",
+			desc = "Open in diffview",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.open_diffview()
+			end,
+		},
+	}, { index = 220, buffer = buf })
 
 	mapped_buf = buf
 end
 
 function M.teardown()
 	if mapped_buf ~= nil and vim.api.nvim_buf_is_valid(mapped_buf) then
-		pcall(vim.keymap.del, "n", "r", { buffer = mapped_buf })
-		pcall(vim.keymap.del, "n", "za", { buffer = mapped_buf })
-		pcall(vim.keymap.del, "n", "]h", { buffer = mapped_buf })
-		pcall(vim.keymap.del, "n", "[h", { buffer = mapped_buf })
-		pcall(vim.keymap.del, "n", "gd", { buffer = mapped_buf })
+		help.remove("Bitbucket", {
+			{ key = "za" },
+			{ key = "]h" },
+			{ key = "[h" },
+			{ key = "gd" },
+		}, { buffer = mapped_buf })
 	end
 	mapped_buf = nil
 end

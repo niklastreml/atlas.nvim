@@ -2,6 +2,7 @@ local M = {}
 
 local layout = require("atlas.ui.layout")
 local controller = require("atlas.jira.panel.tabs.overview.controller")
+local help = require("atlas.ui.popups.help")
 
 function M.setup()
 	local buf = layout.buf_id("detail")
@@ -9,23 +10,16 @@ function M.setup()
 		return
 	end
 
-	vim.keymap.set("n", "m", function()
-		controller.toggle_view_mode()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Toggle adf/markdown",
-	})
-
-	vim.keymap.set("n", "r", function()
-		controller.refresh()
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Refresh overview",
-	})
+	help.register("Jira", {
+		{
+			key = "m",
+			desc = "Toggle adf/markdown",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.toggle_view_mode()
+			end,
+		},
+	}, { index = 220, buffer = buf })
 end
 
 function M.teardown()
@@ -34,9 +28,9 @@ function M.teardown()
 		return
 	end
 
-	pcall(vim.keymap.del, "n", "m", { buffer = buf })
-	pcall(vim.keymap.del, "n", "r", { buffer = buf })
-	pcall(vim.keymap.del, "n", "e", { buffer = buf })
+	help.remove("Jira", {
+		{ key = "m" },
+	}, { buffer = buf })
 end
 
 return M

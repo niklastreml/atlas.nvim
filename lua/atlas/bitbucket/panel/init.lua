@@ -83,100 +83,114 @@ local function register_panel_keys()
 		return
 	end
 
-	vim.keymap.set("n", "j", function()
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab ~= nil and type(tab.move_cursor) == "function" then
-			tab.move_cursor(1)
-		end
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Next item in tab",
-	})
+	local help = require("atlas.ui.popups.help")
+	help.register("Bitbucket", {
+		{
+			key = "j",
+			desc = "Next item in tab",
+			opts = { silent = true, nowait = true },
+			hidden = true,
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.move_cursor) == "function" then
+					tab.move_cursor(1)
+				end
+			end,
+		},
+		{
+			key = "k",
+			desc = "Previous item in tab",
+			opts = { silent = true, nowait = true },
+			hidden = true,
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.move_cursor) == "function" then
+					tab.move_cursor(-1)
+				end
+			end,
+		},
+		{
+			key = "gg",
+			desc = "First item in tab",
+			opts = { silent = true, nowait = true },
+			hidden = true,
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.move_cursor) == "function" then
+					tab.move_cursor(0)
+				end
+			end,
+		},
+		{
+			key = "G",
+			desc = "Last item in tab",
+			opts = { silent = true, nowait = true },
+			hidden = true,
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.move_cursor) == "function" then
+					tab.move_cursor(math.huge)
+				end
+			end,
+		},
+		{
+			key = "r",
+			desc = "Refresh current tab",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.refresh) == "function" then
+					tab.refresh()
+				end
+			end,
+		},
+		{
+			key = "A",
+			desc = "Open context actions",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				local item = panel_state.current_item
+				if type(item) ~= "table" then
+					footer.notify("warn", "No item selected")
+					return
+				end
 
-	vim.keymap.set("n", "k", function()
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab ~= nil and type(tab.move_cursor) == "function" then
-			tab.move_cursor(-1)
-		end
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Previous item in tab",
-	})
+				if panel_state.panel_type ~= "pr" then
+					footer.notify("warn", "Actions are only available for PR panel")
+					return
+				end
 
-	vim.keymap.set("n", "gg", function()
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab ~= nil and type(tab.move_cursor) == "function" then
-			tab.move_cursor(0)
-		end
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "First item in tab",
-	})
+				local repo_path = checkout.resolve_repo_path_for_pr(item, {
+					require_git = false,
+					require_existing = false,
+				})
 
-	vim.keymap.set("n", "G", function()
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab ~= nil and type(tab.move_cursor) == "function" then
-			tab.move_cursor(math.huge)
-		end
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Last item in tab",
-	})
+				---@type BitbucketActionContext
+				local ctx = {
+					pr = item,
+					source = "panel",
+					repo_path = repo_path,
+				}
 
-	vim.keymap.set("n", "A", function()
-		local item = panel_state.current_item
-		if type(item) ~= "table" then
-			footer.notify("warn", "No item selected")
-			return
-		end
+				bitbucket_actions.open(ctx, function(result, err)
+					if err ~= nil then
+						footer.notify("error", tostring(err))
+						return
+					end
 
-		if panel_state.panel_type ~= "pr" then
-			footer.notify("warn", "Actions are only available for PR panel")
-			return
-		end
+					if result ~= nil and result.message ~= nil and result.message ~= "" then
+						footer.notify("info", result.message, 1200)
+					end
 
-		local repo_path = checkout.resolve_repo_path_for_pr(item, {
-			require_git = false,
-			require_existing = false,
-		})
-
-		---@type BitbucketActionContext
-		local ctx = {
-			pr = item,
-			source = "panel",
-			repo_path = repo_path,
-		}
-
-		bitbucket_actions.open(ctx, function(result, err)
-			if err ~= nil then
-				footer.notify("error", tostring(err))
-				return
-			end
-
-			if result ~= nil and result.message ~= nil and result.message ~= "" then
-				footer.notify("info", result.message, 1200)
-			end
-
-			if result ~= nil and result.changed_pr then
-				bitbucket_controller.refresh_pr(item, function()
-					M.refresh()
+					if result ~= nil and result.changed_pr then
+						bitbucket_controller.refresh_pr(item, function()
+							M.refresh()
+						end)
+					end
 				end)
-			end
-		end)
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Open context actions",
-	})
+			end,
+		},
+	}, { index = 220, buffer = buf })
 
 	mapped_buf = buf
 end
