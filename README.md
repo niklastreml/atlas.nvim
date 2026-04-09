@@ -11,10 +11,17 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 > **Still in early development, will have breaking changes!**
 
 <div>
-  
   <img src="https://github.com/user-attachments/assets/3da6e584-47a1-411e-91f6-110dbdc75293" width="49%" />
   <img src="https://github.com/user-attachments/assets/80eeb59a-4a04-40e0-90fb-92ac5d4da249" width="49%" />
 </div>
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Jira](#jira)
+- [Bitbucket](#bitbucket)
+
+## Installation
 
 ### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
@@ -22,7 +29,8 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 {
   "emrearmagan/atlas.nvim",
   dependencies = {
-    "MeanderingProgrammer/render-markdown.nvim", -- optional but recommended
+    "MeanderingProgrammer/render-markdown.nvim", -- optional but recommended (Jira)
+    "sindrets/diffview.nvim", -- optional but recommended (Bitbucket)
   },
   config = function()
     require("atlas").setup({
@@ -50,7 +58,117 @@ use {
 > [!tip]
 > It's a good idea to run `:checkhealth atlas` to see if everything is set up correctly.
 
+## Requirements
+
+- Neovim: `0.10+`
+- Jira: Jira Cloud REST API v3 (`*.atlassian.net`)
+- Bitbucket: Bitbucket Cloud REST API 2.0 (`api.bitbucket.org`)
+
+> [!NOTE]
+> I have only tested this with my personal and work accounts. If you encounter any issues, please feel free to open an issue.
+> See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
+
+## Commands
+
+- `:AtlasJira` - Open Jira issue picker
+- `:AtlasJqlSearch {query}` - Search Jira issues with JQL
+- `:AtlasBitbucket` - Open Bitbucket PR picker
+- `:AtlasLogs` - Toggle Atlas logs
+
+## Jira
+
+- [x] Create and Edit issues
+- [x] View and edit issues as markdown -> ADF conversion for issue descriptions (experimental)
+- [x] Issue panel tabs: overview, comments, history
+- [x] Jira actions: transition, change assignee, change reporter, edit title
+- [x] Comment workflows (create, reply, edit, delete)
+- [x] Search issues
+- [x] JQL support and completion
+- [x] Support for custom fields
+- [ ] Create and edit issue templates
+
+<div>
+    <img width = "49%" alt="Edit/Create Issue" src="https://github.com/user-attachments/assets/76913fbf-1667-4f35-9962-d3c1b4619c7f" />
+    <img width = "49%"alt="Jira Panel" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
+</div>
+
+### Configuration
+
+```lua
+return {
+  "emrearmagan/atlas.nvim",
+  config = function()
+    require("atlas").setup({
+      ---@type JiraConfig
+      jira = {
+        base_url = "https://your-site.atlassian.net",
+        email = "you@example.com",
+        --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
+        token = "your_jira_api_token",
+        cache_ttl = 300,
+        max_result = 100,
+        resolve_parent_issues = true,
+
+        project_config = {
+          KAN = {
+            customfield_10003 = {
+              name = "Approvers",
+              format = function(value)
+                if type(value) ~= "table" or #value == 0 then
+                  return nil -- nil hides the field
+                end
+
+                return table.concat(value, ", ")
+              end,
+              hl_group = "AtlasChipActive",
+              display = "chip", -- "chip" (default) or "table"
+            },
+          },
+        },
+
+        ---@type JiraViewConfig[]
+        views = {
+          {
+            name = "My Board",
+            key = "M",
+            jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
+          },
+          {
+            name = "Team Board",
+            key = "T",
+            jql = "project = KAN ORDER BY updated DESC",
+          },
+        },
+      },
+    })
+  end,
+}
+```
+
+### JQL Search Command
+
+Use `:AtlasJqlSearch` to run JQL directly from command mode. It also supports command-line completion while typing the query.
+
+Examples:
+
+```vim
+:AtlasJqlSearch project = KAN AND assignee = currentUser() ORDER BY updated DESC
+:AtlasJqlSearch summary ~ "login bug"
+```
+
 ## Bitbucket
+
+#### Features
+
+- [x] Multiple Bitbucket views
+- [x] PR tabs: overview, activity, comments, commits, files
+- [x] PR actions: merge, approve, request changes
+- [x] Add custom actions to PRs
+- [x] Resolve and checkout PR branches locally
+- [ ] Pagination for API results (PRs, comments, commits, files, activity)
+- [ ] Switch between open, merged and superseded PRs
+- [ ] Bulk actions: approve/request changes on multiple PRs at once
+- [ ] PR files: fuzzy filter changed files by path
 
 ### Configuration
 
@@ -164,107 +282,6 @@ bitbucket = {
 ```
 
 ![CleanShot2026-03-31at20 08 06-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/a8ca355b-09e2-428c-b3fb-3280fd161110)
-
-#### Features
-
-- [x] Multiple Bitbucket views
-- [x] PR tabs: overview, activity, comments, commits, files
-- [x] PR actions: merge, approve, request changes
-- [x] Add custom actions to PRs
-- [x] Resolve and checkout PR branches locally
-- [ ] Pagination for API results (PRs, comments, commits, files, activity)
-- [ ] Switch between open, merged and superseded PRs
-- [ ] Bulk actions: approve/request changes on multiple PRs at once
-- [ ] PR files: fuzzy filter changed files by path
-
-## Jira
-
-> [!NOTE]
-> Inspired by [jira.nvim](https://github.com/letieu/jira.nvim) since it fitted nicely in this here. I highly recommend checking out the original project for a more general-purpose solution.
-
-### Configuration
-
-```lua
-return {
-  "emrearmagan/atlas.nvim",
-  config = function()
-    require("atlas").setup({
-      ---@type JiraConfig
-      jira = {
-        base_url = "https://your-site.atlassian.net",
-        email = "you@example.com",
-        --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
-        token = "your_jira_api_token",
-        cache_ttl = 300,
-        max_result = 100,
-        resolve_parent_issues = true,
-
-        project_config = {
-          KAN = {
-            customfield_10003 = {
-              name = "Approvers",
-              format = function(value)
-                if type(value) ~= "table" or #value == 0 then
-                  return nil -- nil hides the field
-                end
-
-                return table.concat(value, ", ")
-              end,
-              hl_group = "AtlasChipActive",
-              display = "chip", -- "chip" (default) or "table"
-            },
-          },
-        },
-
-        ---@type JiraViewConfig[]
-        views = {
-          {
-            name = "My Board",
-            key = "M",
-            jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
-          },
-          {
-            name = "Team Board",
-            key = "T",
-            jql = "project = KAN ORDER BY updated DESC",
-          },
-        },
-      },
-    })
-  end,
-}
-```
-
-#### Creating or Edit Issues (Experimental)
-
-- Edit or create issue description directly from Overview.
-- Supports markdown editing with markdown -> ADF conversion.
-
-<img width="1017" height="852" alt="CleanShot 2026-04-04 at 04 06 23" src="https://github.com/user-attachments/assets/76913fbf-1667-4f35-9962-d3c1b4619c7f" />
-
-#### Comments
-
-- Create, reply, edit, and delete comments directly in the Jira panel.
-
-<img width="1001" height="426" alt="CleanShot 2026-04-03 at 01 07 06" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
-
-#### Features
-
-- [x] Create issues
-- [x] Issue panel tabs: overview, comments, history
-- [x] Jira actions: transition, change assignee, change reporter, edit title
-- [x] Full comment workflows (create, reply, edit, delete)
-- [x] Markdown -> ADF conversion for issue descriptions (experimental)
-- [x] View and edit issues as markdown
-- [x] Search issues
-- [x] Add support for custom fields in issue details
-- [ ] Create and edit issue templates
-
-### Commands
-
-- `:AtlasJira` - Open Jira issue picker
-- `:AtlasBitbucket` - Open Bitbucket PR picker
-- `:AtlasLogs` - Toggle Atlas logs
 
 ### Keymaps
 
