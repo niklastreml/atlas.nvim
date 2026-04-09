@@ -2,6 +2,24 @@ local M = {}
 
 local registry = require("atlas.bitbucket.actions.registry")
 
+---@param id string
+---@param ctx BitbucketActionContext
+---@param on_done fun(result: BitbucketActionResult|nil, err: string|nil)
+function M.run(id, ctx, on_done)
+	local action = registry.find(id)
+	if action == nil then
+		on_done(nil, string.format("Unknown action: %s", tostring(id)))
+		return
+	end
+
+	if not action.is_available(ctx) then
+		on_done(nil, string.format("Action is not available: %s", tostring(id)))
+		return
+	end
+
+	action.run(ctx, on_done)
+end
+
 ---@param ctx BitbucketActionContext
 ---@param on_done fun(result: BitbucketActionResult|nil, err: string|nil)
 function M.open(ctx, on_done)

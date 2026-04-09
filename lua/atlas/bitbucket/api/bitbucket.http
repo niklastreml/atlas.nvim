@@ -111,44 +111,43 @@ Accept: application/json
   client.global.set("bitbucket_diff_url", diffUrl);
 %}
 
-### Branches (dynamic URL from repository detail)
+### Branches
 GET {{bitbucket_branches_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
-### Tags (dynamic URL from repository detail)
+### Tags
 GET {{bitbucket_tags_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
-### Pull request comments (dynamic URL)
+### Pull request comments
 GET {{bitbucket_comments_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
-### Pull request activity (dynamic URL)
+### Pull request activity
 GET {{bitbucket_activity_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
-### Pull request commits (dynamic URL)
+### Pull request commits
 GET {{bitbucket_commits_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
-
-### Diff stats (dynamic from PR)
+### Diff stats
 GET {{bitbucket_diffstat_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json
 
-### Diff (dynamic from PR)
+### Diff 
 GET {{bitbucket_diff_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json

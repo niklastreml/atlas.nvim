@@ -6,6 +6,7 @@ local bitbucket_controller = require("atlas.bitbucket.ui.controller")
 local checkout = require("atlas.core.git.checkout")
 local layout = require("atlas.ui.layout")
 local footer = require("atlas.ui.components.footer")
+local help = require("atlas.ui.popups.help")
 local ns = vim.api.nvim_create_namespace("atlas.bitbucket.panel")
 local mapped_buf = nil
 
@@ -74,16 +75,79 @@ local function get_tab_module_for(panel_type, tab_key)
 	return nil
 end
 
+---@return BitbucketPR|nil
+local function selected_pr()
+	local item = panel_state.current_item
+	if type(item) ~= "table" then
+		footer.notify("warn", "No item selected")
+		return nil
+	end
+
+	if panel_state.panel_type ~= "pr" then
+		return nil
+	end
+
+	return item
+end
+
+---@param buf integer
+local function sync_pr_shortcuts(buf)
+	if panel_state.panel_type == "pr" then
+		help.register("Bitbucket", {
+			{
+				key = "gc",
+				desc = "Checkout selected PR",
+				opts = { silent = true, nowait = true },
+				callback = function()
+					local pr = selected_pr()
+					if pr == nil then
+						return
+					end
+
+					bitbucket_actions.run("checkout", {
+						pr = pr,
+						source = "panel",
+						repo_path = nil,
+					}, function() end)
+				end,
+			},
+			{
+				key = "gd",
+				desc = "Open selected PR in Diffview",
+				opts = { silent = true, nowait = true },
+				callback = function()
+					local pr = selected_pr()
+					if pr == nil then
+						return
+					end
+
+					bitbucket_actions.run("open_diffview", {
+						pr = pr,
+						source = "panel",
+						repo_path = nil,
+					}, function() end)
+				end,
+			},
+		}, { index = 220, buffer = buf })
+		return
+	end
+
+	help.remove("Bitbucket", {
+		{ key = "gc" },
+		{ key = "gd" },
+	}, { buffer = buf })
+end
+
 local function register_panel_keys()
 	local buf = layout.buf_id("detail")
 	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
 		return
 	end
 	if mapped_buf == buf then
+		sync_pr_shortcuts(buf)
 		return
 	end
 
-	local help = require("atlas.ui.popups.help")
 	help.register("Bitbucket", {
 		{
 			key = "j",
@@ -146,17 +210,11 @@ local function register_panel_keys()
 		},
 		{
 			key = "A",
-			desc = "Open context actions",
+			desc = "Open PR actions",
 			opts = { silent = true, nowait = true },
 			callback = function()
-				local item = panel_state.current_item
-				if type(item) ~= "table" then
-					footer.notify("warn", "No item selected")
-					return
-				end
-
-				if panel_state.panel_type ~= "pr" then
-					footer.notify("warn", "Actions are only available for PR panel")
+				local item = selected_pr()
+				if item == nil then
 					return
 				end
 
@@ -193,6 +251,7 @@ local function register_panel_keys()
 	}, { index = 220, buffer = buf })
 
 	mapped_buf = buf
+	sync_pr_shortcuts(buf)
 end
 
 ---@param panel_type "pr"|"repo"

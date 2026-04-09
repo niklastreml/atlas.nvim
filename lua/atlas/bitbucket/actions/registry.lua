@@ -57,12 +57,21 @@ end
 
 ---@param ctx BitbucketActionContext
 ---@return boolean
+local function has_diffview(ctx)
+	if not has_pr(ctx) then
+		return false
+	end
+	return pcall(require, "diffview")
+end
+
+---@param ctx BitbucketActionContext
+---@return boolean
 local function has_repo_paths_configured(ctx)
 	if not has_pr(ctx) then
 		return false
 	end
 	local cfg = require("atlas.config").options.bitbucket or {}
-	return not vim.tbl_isempty(((cfg.repo_config or {}).paths) or {})
+	return not vim.tbl_isempty((cfg.repo_config or {}).paths or {})
 end
 
 ---@type BitbucketActionDef[]
@@ -76,6 +85,7 @@ local ACTIONS = {
 		run = function(ctx, done)
 			local pr = ctx.pr
 			if pr == nil then
+				footer.notify("warn", "No PR selected")
 				done(nil, "No PR selected")
 				return
 			end
@@ -92,6 +102,71 @@ local ACTIONS = {
 					footer.notify("success", string.format("Checked out PR #%s", tostring(pr.id or "")))
 					done({ changed_pr = false, message = "Checked out" }, nil)
 				end)
+			end)
+		end,
+	},
+	{
+		id = "open_diffview",
+		label = "Open Diffview",
+		is_available = function(ctx)
+			if not has_diffview(ctx) or not has_pr(ctx) or ctx.pr == nil then
+				return false
+			end
+
+			local src = tostring((ctx.pr.source or {}).branch or "")
+			local dst = tostring((ctx.pr.destination or {}).branch or "")
+			return src ~= "" and dst ~= ""
+		end,
+		run = function(ctx, done)
+			local pr = ctx.pr
+			if pr == nil then
+				done(nil, "No PR selected")
+				return
+			end
+
+			local repo_path = ctx.repo_path
+			if repo_path == nil or repo_path == "" then
+				repo_path = checkout.resolve_repo_path_for_pr(pr, { require_git = true, require_existing = true })
+			end
+			if repo_path == nil or repo_path == "" then
+				footer.notify("warn", "Local repo not found")
+				done(nil, "Local repo not found")
+				return
+			end
+
+			local src = tostring((pr.source or {}).branch or "")
+			local dst = tostring((pr.destination or {}).branch or "")
+			if src == "" or dst == "" then
+				footer.notify("warn", "PR branch refs are missing")
+				done(nil, "PR branch refs are missing")
+				return
+			end
+
+			footer.notify("loading", "Fetching remote branches...")
+			checkout.fetch_pr_branches(pr, repo_path, function(fetch_err)
+				if fetch_err ~= nil then
+					local message = "Fetch failed: " .. tostring(fetch_err)
+					footer.notify("error", message)
+					done(nil, message)
+					return
+				end
+
+				local range = "origin/" .. dst .. "...origin/" .. src
+				local prev_cwd = vim.fn.chdir(repo_path)
+				local open_ok, open_err = pcall(function()
+					vim.cmd("DiffviewOpen " .. range)
+				end)
+				vim.fn.chdir(prev_cwd)
+
+				if not open_ok then
+					local message = "DiffviewOpen failed: " .. tostring(open_err)
+					footer.notify("error", message)
+					done(nil, message)
+					return
+				end
+
+				footer.notify("success", "Opened Diffview", 1200)
+				done({ changed_pr = false, message = "Opened diffview" }, nil)
 			end)
 		end,
 	},

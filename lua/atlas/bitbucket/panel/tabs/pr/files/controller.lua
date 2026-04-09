@@ -2,10 +2,10 @@ local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.files.state")
 local panel_state = require("atlas.bitbucket.panel.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
+local actions = require("atlas.bitbucket.actions")
 local diff_parser = require("atlas.core.git.diff_parser")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
-local checkout = require("atlas.core.git.checkout")
 
 local diff_handle = nil
 
@@ -261,44 +261,11 @@ function M.open_diffview()
 		return
 	end
 
-	if not pcall(require, "diffview") then
-		footer.notify("warn", "diffview.nvim is not installed")
-		return
-	end
-
-	local repo_path, err = checkout.resolve_repo_path_for_pr(pr, { require_git = true, require_existing = true })
-	if repo_path == nil then
-		footer.notify("warn", "Local repo not found: " .. tostring(err))
-		return
-	end
-
-	local src = tostring((pr.source or {}).branch or "")
-	local dst = tostring((pr.destination or {}).branch or "")
-	if src == "" or dst == "" then
-		footer.notify("warn", "PR branch refs are missing")
-		return
-	end
-
-	footer.notify("loading", "Fetching remote branches...")
-
-	checkout.fetch_pr_branches(pr, repo_path, function(fetch_err)
-		if fetch_err ~= nil then
-			footer.notify("error", "Fetch failed: " .. fetch_err)
-			return
-		end
-
-		-- Three-dot range: what changed in src relative to the merge base with dst.
-		local range = "origin/" .. dst .. "...origin/" .. src
-		local prev_cwd = vim.fn.chdir(repo_path)
-		local open_ok, open_err = pcall(function()
-			vim.cmd("DiffviewOpen " .. range)
-		end)
-		vim.fn.chdir(prev_cwd)
-
-		if not open_ok then
-			footer.notify("error", "DiffviewOpen failed: " .. tostring(open_err))
-		end
-	end)
+	actions.run("open_diffview", {
+		pr = pr,
+		source = "panel",
+		repo_path = nil,
+	}, function() end)
 end
 
 function M.deactivate()

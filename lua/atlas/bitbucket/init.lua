@@ -3,6 +3,7 @@ local M = {}
 local config = require("atlas.config")
 local controller = require("atlas.bitbucket.ui.controller")
 local actions = require("atlas.bitbucket.ui.actions")
+local bitbucket_actions = require("atlas.bitbucket.actions")
 local help = require("atlas.ui.popups.help")
 local navigation = require("atlas.ui.navigation")
 local layout = require("atlas.ui.layout")
@@ -21,6 +22,21 @@ local function selected_pr()
 		return node
 	end
 	return nil
+end
+
+---@param action_id string
+local function run_main_pr_action(action_id)
+	local pr = selected_pr()
+	if pr == nil then
+		footer.notify("warn", "No PR selected")
+		return
+	end
+
+	bitbucket_actions.run(action_id, {
+		pr = pr,
+		source = "main",
+		repo_path = nil,
+	}, function() end)
 end
 
 ---@param workspace string
@@ -138,6 +154,22 @@ local function register_dynamic_keys(buf, views)
 			end,
 			index = 3,
 		},
+		{
+			key = "gc",
+			desc = "Checkout PR",
+			callback = function()
+				run_main_pr_action("checkout")
+			end,
+			index = 4,
+		},
+		{
+			key = "gd",
+			desc = "Open PR in Diffview",
+			callback = function()
+				run_main_pr_action("open_diffview")
+			end,
+			index = 5,
+		},
 
 		{
 			key = "gx",
@@ -177,7 +209,7 @@ local function register_dynamic_keys(buf, views)
 		},
 		{
 			key = "K",
-			desc = "Show PR details popup",
+			desc = "Show PR details",
 			callback = function()
 				controller.show_pr_details(buf)
 			end,

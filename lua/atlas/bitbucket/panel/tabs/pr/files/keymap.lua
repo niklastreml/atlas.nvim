@@ -40,14 +40,6 @@ function M.setup()
 				controller.jump_hunk(-1)
 			end,
 		},
-		{
-			key = "gd",
-			desc = "Open in diffview",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				controller.open_diffview()
-			end,
-		},
 	}, { index = 220, buffer = buf })
 
 	mapped_buf = buf
@@ -59,7 +51,6 @@ function M.teardown()
 			{ key = "za" },
 			{ key = "]h" },
 			{ key = "[h" },
-			{ key = "gd" },
 		}, { buffer = mapped_buf })
 	end
 	mapped_buf = nil
