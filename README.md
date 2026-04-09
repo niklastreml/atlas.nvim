@@ -191,10 +191,12 @@ return {
     require("atlas").setup({
       ---@type JiraConfig
       jira = {
-        base_url = os.getenv("JIRA_BASE_URL") or "",
-        email = os.getenv("JIRA_EMAIL") or "",
-        token = os.getenv("JIRA_TOKEN") or "",
+        base_url = "https://your-site.atlassian.net",
+        email = "you@example.com",
+        --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
+        token = "your_jira_api_token",
         cache_ttl = 300,
+        max_result = 100,
         resolve_parent_issues = true,
 
         project_config = {

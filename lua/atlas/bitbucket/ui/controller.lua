@@ -115,26 +115,65 @@ local function load_active_view(opts, on_done)
 		require("atlas.ui.main.renderer").render("bitbucket")
 	end
 
-	get_current_user(function(user_err)
+	local function is_stale_request()
 		if not helper.same_view(state.active_view, target_view) then
-			return
+			return true
 		end
 
 		if state.latest_request_tokens[target_view_id] ~= token then
+			return true
+		end
+
+		return false
+	end
+
+	local function finalize_fetch(prs, err)
+		if is_stale_request() then
 			return
 		end
 
-		if user_err then
-			state.is_loading = false
-			state.current_view = state.active_view
-			state.error = tostring(user_err)
-			state.repos = {}
-			footer.notify("error", string.format("Failed to fetch current user: %s", tostring(user_err)))
-			spinner.stop()
-			if layout.is_open() then
-				require("atlas.ui.main.renderer").render("bitbucket")
+		state.is_loading = false
+		state.current_view = state.active_view
+
+		local first_err = nil
+		if type(err) == "table" then
+			first_err = err[1]
+		elseif err ~= nil then
+			first_err = err
+		end
+
+		local grouped_prs = helper.group_prs_by_repo(prs)
+		local filtered_groups = apply_filter(grouped_prs, target_view)
+		local has_groups = #filtered_groups > 0
+
+		if first_err ~= nil then
+			if has_groups then
+				state.error = nil
+				state.repos = filtered_groups
+				footer.notify("warn", string.format("Some repositories failed: %s", tostring(first_err)))
+			else
+				state.error = tostring(first_err)
+				state.repos = {}
+				footer.notify("error", string.format("Failed to fetch pull requests: %s", tostring(first_err)))
 			end
-			on_done()
+		else
+			state.error = nil
+			state.repos = filtered_groups
+			footer.notify("success", "Pull requests loaded", 1200)
+		end
+
+		footer.set_items(helper.build_footer_items(state.repos, state.current_user))
+		spinner.stop()
+
+		if layout.is_open() then
+			require("atlas.ui.main.renderer").render("bitbucket")
+		end
+
+		on_done()
+	end
+
+	local function fetch_pull_requests()
+		if is_stale_request() then
 			return
 		end
 
@@ -142,55 +181,29 @@ local function load_active_view(opts, on_done)
 			force_load = opts.force_load == true,
 		}, function(prs, err)
 			active_pullrequests_handle = nil
+			finalize_fetch(prs, err)
+		end)
+	end
 
-			if not helper.same_view(state.active_view, target_view) then
+	if state.current_user == nil then
+		get_current_user(function(user_err)
+			if is_stale_request() then
 				return
 			end
 
-			if state.latest_request_tokens[target_view_id] ~= token then
+			if user_err then
+				footer.notify("warn", string.format("Failed to fetch current user: %s", tostring(user_err)))
 				return
 			end
 
-			state.is_loading = false
-			state.current_view = state.active_view
-			local first_err = nil
-			if type(err) == "table" then
-				first_err = err[1]
-			elseif err ~= nil then
-				first_err = err
-			end
-
-			local grouped_prs = helper.group_prs_by_repo(prs)
-			local filtered_groups = apply_filter(grouped_prs, target_view)
-			local has_groups = #filtered_groups > 0
-
-			if first_err ~= nil then
-				if has_groups then
-					state.error = nil
-					state.repos = filtered_groups
-					footer.notify("warn", string.format("Some repositories failed: %s", tostring(first_err)))
-				else
-					state.error = tostring(first_err)
-					state.repos = {}
-					footer.notify("error", string.format("Failed to fetch pull requests: %s", tostring(first_err)))
-				end
-			else
-				state.error = nil
-				state.repos = filtered_groups
-				footer.notify("success", "Pull requests loaded", 1200)
-			end
-
-			footer.set_items(helper.build_footer_items(state.repos, state.current_user))
-
-			spinner.stop()
-
+			footer.set_items(helper.build_footer_items(state.repos or {}, state.current_user))
 			if layout.is_open() then
 				require("atlas.ui.main.renderer").render("bitbucket")
 			end
-
-			on_done()
 		end)
-	end)
+	end
+
+	fetch_pull_requests()
 end
 
 ---@param on_done fun()|nil

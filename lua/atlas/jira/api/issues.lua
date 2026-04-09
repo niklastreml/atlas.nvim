@@ -27,13 +27,14 @@ local SEARCH_FIELDS = {
 
 ---@param jql string
 ---@param on_done fun(page: JiraIssueSearchPage|nil, err: string|nil)
----@param opts { force_load?: boolean, next_page_token?: string|nil }|nil
+---@param opts { force_load?: boolean, next_page_token?: string|nil, max_results?: number|nil }|nil
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.search_issues(jql, on_done, opts)
 	opts = opts or {}
 	local ttl = service.cache_ttl()
 	local page_token = opts.next_page_token or ""
-	local cache_key = "jira:search:" .. jql .. ":page:" .. page_token
+	local page_size = math.max(1, tonumber(opts.max_results) or 50)
+	local cache_key = "jira:search:" .. jql .. ":page:" .. page_token .. ":size:" .. tostring(page_size)
 
 	if not opts.force_load then
 		local cached = cache.get(cache_key)
@@ -50,7 +51,7 @@ function M.search_issues(jql, on_done, opts)
 		jql = jql,
 		fields = SEARCH_FIELDS,
 		nextPageToken = page_token,
-		maxResults = 10,
+		maxResults = page_size,
 	}
 
 	return service.request("POST", "/search/jql", data, function(result, err)

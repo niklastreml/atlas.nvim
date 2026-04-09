@@ -15,6 +15,7 @@
 --- @field email string
 --- @field token string
 --- @field cache_ttl number|nil
+--- @field max_result number|nil
 --- @field views JiraViewConfig[]|nil
 --- @field resolve_parent_issues boolean|nil
 --- @field project_config table<string, table<string, JiraCustomFieldConfig>>|nil
@@ -69,7 +70,8 @@ M.options = {
 		email = vim.env.JIRA_EMAIL or "",
 		token = vim.env.JIRA_TOKEN or "",
 		cache_ttl = 300,
-		resolve_parent_issues = true,
+		max_result = 100,
+		resolve_parent_issues = false,
 		views = nil,
 		project_config = {},
 	},

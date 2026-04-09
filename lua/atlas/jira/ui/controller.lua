@@ -274,143 +274,144 @@ local function load_active_view(opts, on_done)
 		require("atlas.ui.main.renderer").render("jira")
 	end
 
-	get_current_user(function(user_err)
+	local function is_stale_request()
 		if not same_view(state.active_view, target_view) then
-			return
+			return true
 		end
+
 		if state.latest_request_tokens[target_view_id] ~= token then
+			return true
+		end
+
+		return false
+	end
+
+	local function finish_loading()
+		state.is_loading = false
+		if not has_reloading_issues() then
+			refresh_status_spinner:stop()
+		end
+		spinner.stop()
+	end
+
+	local function finalize_fetch_failure(err, issues)
+		if is_stale_request() then
 			return
 		end
 
-		if user_err then
-			state.is_loading = false
-			if not has_reloading_issues() then
-				refresh_status_spinner:stop()
-			end
-			state.current_view = state.active_view
-			state.error = tostring(user_err)
+		finish_loading()
+		state.current_view = state.active_view
+
+		if #issues > 0 then
+			state.error = nil
+			state.issues = issues
+			state.issue_tree = jira_ui_helper.build_issue_tree(issues)
+			footer.notify("warn", string.format("Stopped at %d issues: %s", #issues, tostring(err)))
+		else
+			state.error = tostring(err)
 			state.issues = nil
 			state.issue_tree = nil
-			footer.notify("error", string.format("Failed to fetch current user: %s", tostring(user_err)))
-			spinner.stop()
+			footer.notify("error", string.format("Failed to fetch issues: %s", tostring(err)))
+		end
+
+		if layout.is_open() then
+			require("atlas.ui.main.renderer").render("jira")
+		end
+
+		on_done()
+	end
+
+	local function finalize_fetch_success(enriched_issues, parent_fetch_failures)
+		if is_stale_request() then
+			return
+		end
+
+		state.current_view = state.active_view
+		state.error = nil
+		state.issues = enriched_issues
+		state.issue_tree = jira_ui_helper.build_issue_tree(enriched_issues)
+		finish_loading()
+
+		if parent_fetch_failures > 0 then
+			footer.notify(
+				"warn",
+				string.format("Loaded %d issues (%d parent(s) unavailable)", #enriched_issues, parent_fetch_failures),
+				1500
+			)
+		else
+			footer.notify("success", string.format("Loaded %d issues", #enriched_issues), 1200)
+		end
+
+		if layout.is_open() then
+			require("atlas.ui.main.renderer").render("jira")
+		end
+
+		on_done()
+	end
+
+	local function fetch_page(next_page_token, issues)
+		if is_stale_request() then
+			return
+		end
+
+		issues = issues or {}
+
+		active_issues_handle = issues_api.search_issues(jql, function(page, err)
+			active_issues_handle = nil
+
+			if is_stale_request() then
+				return
+			end
+
+			if err or not page then
+				finalize_fetch_failure(err, issues)
+				return
+			end
+
+			for _, issue in ipairs((page and page.issues) or {}) do
+				table.insert(issues, issue)
+			end
+
+			state.current_view = state.active_view
+			state.error = nil
+			state.issues = issues
+			state.issue_tree = jira_ui_helper.build_issue_tree(issues)
+
 			if layout.is_open() then
 				require("atlas.ui.main.renderer").render("jira")
 			end
-			on_done()
-			return
-		end
 
-		local all_issues = {}
+			local nextToken = page.nextPageToken
+			if page.isLast == false and nextToken ~= nil and nextToken ~= "" then
+				fetch_page(page.nextPageToken, issues)
+				return
+			end
 
-		local function fetch_page(next_page_token)
-			active_issues_handle = issues_api.search_issues(jql, function(page, err)
-				active_issues_handle = nil
+			enrich_missing_parents(issues, opts.force_load == true, function(enriched_issues, parent_fetch_failures)
+				finalize_fetch_success(enriched_issues, parent_fetch_failures)
+			end)
+		end, {
+			force_load = opts.force_load == true,
+			next_page_token = next_page_token,
+		})
+	end
 
-				if not same_view(state.active_view, target_view) then
-					return
-				end
+	if state.current_user == nil then
+		get_current_user(function(user_err)
+			if is_stale_request() then
+				return
+			end
 
-				if state.latest_request_tokens[target_view_id] ~= token then
-					return
-				end
+			if user_err then
+				footer.notify("warn", string.format("Failed to fetch current user: %s", tostring(user_err)))
+				return
+			end
 
-				if err or not page then
-					state.is_loading = false
-					if not has_reloading_issues() then
-						refresh_status_spinner:stop()
-					end
-					state.current_view = state.active_view
-					if #all_issues > 0 then
-						state.error = nil
-						state.issues = all_issues
-						state.issue_tree = jira_ui_helper.build_issue_tree(all_issues)
-						footer.notify("warn", string.format("Stopped at %d issues: %s", #all_issues, tostring(err)))
-					else
-						state.error = tostring(err)
-						state.issues = nil
-						state.issue_tree = nil
-						footer.notify("error", string.format("Failed to fetch issues: %s", tostring(err)))
-					end
+			render_if_active()
+		end)
+	end
 
-					spinner.stop()
-					if layout.is_open() then
-						require("atlas.ui.main.renderer").render("jira")
-					end
-
-					on_done()
-					return
-				end
-
-				for _, issue in ipairs((page and page.issues) or {}) do
-					table.insert(all_issues, issue)
-				end
-
-				state.current_view = state.active_view
-				state.error = nil
-				state.issues = all_issues
-				state.issue_tree = jira_ui_helper.build_issue_tree(all_issues)
-
-				if layout.is_open() then
-					require("atlas.ui.main.renderer").render("jira")
-				end
-
-				local nextToken = page.nextPageToken
-				if page.isLast == false and nextToken ~= nil and nextToken ~= "" then
-					fetch_page(page.nextPageToken)
-					return
-				end
-
-				enrich_missing_parents(
-					all_issues,
-					opts.force_load == true,
-					function(enriched_issues, parent_fetch_failures)
-						if not same_view(state.active_view, target_view) then
-							return
-						end
-
-						if state.latest_request_tokens[target_view_id] ~= token then
-							return
-						end
-
-						state.current_view = state.active_view
-						state.error = nil
-						state.issues = enriched_issues
-						state.issue_tree = jira_ui_helper.build_issue_tree(enriched_issues)
-						state.is_loading = false
-						if not has_reloading_issues() then
-							refresh_status_spinner:stop()
-						end
-
-						if parent_fetch_failures > 0 then
-							footer.notify(
-								"warn",
-								string.format(
-									"Loaded %d issues (%d parent(s) unavailable)",
-									#enriched_issues,
-									parent_fetch_failures
-								),
-								1500
-							)
-						else
-							footer.notify("success", string.format("Loaded %d issues", #enriched_issues), 1200)
-						end
-
-						spinner.stop()
-						if layout.is_open() then
-							require("atlas.ui.main.renderer").render("jira")
-						end
-
-						on_done()
-					end
-				)
-			end, {
-				force_load = opts.force_load == true,
-				next_page_token = next_page_token,
-			})
-		end
-
-		fetch_page(nil)
-	end)
+	fetch_page(nil, {})
 end
 
 ---@param on_done fun()|nil
