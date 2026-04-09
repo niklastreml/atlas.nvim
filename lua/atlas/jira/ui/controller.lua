@@ -502,7 +502,7 @@ function M.open_actions()
 end
 
 function M.open_issue_search_popup()
-	jira_actions.run("search_issues", { issue = nil, source = "main" }, function(result, err)
+	jira_actions.run("search_query_issue", { issue = nil, source = "main" }, function(result, err)
 		if err ~= nil then
 			footer.notify("error", tostring(err))
 			return

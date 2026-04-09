@@ -87,6 +87,9 @@ use {
 - [x] Support for custom fields
 - [ ] Create and edit issue templates
 
+> [!ATTENTION]]
+> The markdown editor for issue descriptions and comments is still experimental and may not work perfectly in all cases. You can toggle between markdown and ADF view in the overview tab to see the raw ADF content and how it translates to markdown. If you encounter any issues with the markdown editor, please open an issue with details.
+
 <div>
     <img width = "49%" alt="Edit/Create Issue" src="https://github.com/user-attachments/assets/76913fbf-1667-4f35-9962-d3c1b4619c7f" />
     <img width = "49%"alt="Jira Panel" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
@@ -285,25 +288,47 @@ bitbucket = {
 
 ### Keymaps
 
-| Context   | Key       | Action                                  |
-| --------- | --------- | --------------------------------------- |
-| Main UI   | `q`       | Close Atlas                             |
-| Main UI   | `[` / `]` | Previous / next panel tab               |
-| Main UI   | `p`       | Toggle detail panel                     |
-| Main UI   | `R`       | Refresh current view                    |
-| Main UI   | `r`       | Refetch selected Issue/PR               |
-| Main UI   | `A`       | Open Issue/PR actions                   |
-| Main UI   | `gx`      | Open Issue/PR in browser                |
-| Main UI   | `y`       | Copy Issue/PR id                        |
-| Main UI   | `Y`       | Copy Issue/PR URL                       |
-| Main UI   | `/`       | Search Issues/Repositories              |
-| Bitbucket | `o`       | Toggle repository panel                 |
-| Jira      | `K`       | Show issue details popup                |
-| Jira      | `c`       | Create issue                            |
-| Jira      | `m`       | Toggle Overview mode (markdown/raw ADF) |
-| Jira      | `a`       | Add comment (Comments tab)              |
-| Jira      | `c`       | Reply to comment (Comments tab)         |
-| Jira      | `d`       | Delete comment (Comments tab)           |
+#### General
+
+| Context | Key             | Action                    |
+| ------- | --------------- | ------------------------- |
+| Atlas   | `q`             | Close Atlas               |
+| Atlas   | `?`             | Toggle help popup         |
+| Atlas   | `p`             | Toggle detail pane        |
+| Atlas   | `[` / `<S-Tab>` | Previous panel tab        |
+| Atlas   | `]` / `<Tab>`   | Next panel tab            |
+| Atlas   | `K`             | Show issue/pr details     |
+| Atlas   | R`              | Refresh current view      |
+| Atlas   | `r`             | Refresh selected issue/pr |
+| Atlas   | `gx`            | Open issue/pr in browser  |
+
+#### Jira
+
+| Context         | Key                   | Action                              |
+| --------------- | --------------------- | ----------------------------------- |
+| Jira            | `A`                   | Open Jira actions                   |
+| Jira            | `/`                   | Search issues                       |
+| Jira            | `ge`                  | Edit Issue                          |
+| Jira            | `gs`                  | Transition Issue                    |
+| Jira            | `ga` / `gr`           | Change Assignee and reporter        |
+| Jira            | `gt`                  | Change issue type                   |
+| Jira            | `c`                   | Create issue                        |
+| Jira            | `y` / `Y`             | Copy issue key / URL                |
+| Jira            | `m`                   | Toggle ADF / markdown view          |
+| Jira (Comments) | `a` / `c` / `e` / `d` | Add / reply / edit / delete comment |
+
+#### Bitbucket
+
+| Context                   | Key         | Action                       |
+| ------------------------- | ----------- | ---------------------------- |
+| Bitbucket                 | `A`         | Open PR actions              |
+| Bitbucket                 | `/`         | Search repositories          |
+| Bitbucket                 | `o`         | Toggle repository panel      |
+| Bitbucket                 | `gc`        | Checkout selected PR         |
+| Bitbucket                 | gd`         | Open selected PR in Diffview |
+| Bitbucket                 | `y` / `Y`   | Copy PR id / URL             |
+| Bitbucket (Files changes) | `za`        | Toggle hunk fold             |
+| Bitbucket (File changes)  | `]h` / `[h` | Next / previous hunk         |
 
 ## License
 
