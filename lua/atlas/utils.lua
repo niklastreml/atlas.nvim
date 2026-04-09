@@ -238,4 +238,86 @@ function M.sanitize_lines(text)
 	return out
 end
 
+local strwidth = vim.api.nvim_strwidth
+local strcharpart = vim.fn.strcharpart
+local strchars = vim.fn.strchars
+
+---@param str string
+---@param max_dw integer
+---@param from_start? boolean
+---@return string
+function M.truncate(str, max_dw, from_start)
+	if max_dw < 1 then
+		return ".."
+	end
+	if strwidth(str) <= max_dw then
+		return str
+	end
+
+	local nchars = strchars(str)
+	if from_start then
+		for i = 1, nchars do
+			local tail = strcharpart(str, i)
+			if strwidth(tail) <= max_dw - 1 then
+				return ".." .. tail
+			end
+		end
+		return ".."
+	end
+
+	for i = nchars - 1, 0, -1 do
+		local head = strcharpart(str, 0, i)
+		if strwidth(head) <= max_dw - 1 then
+			return head .. ".."
+		end
+	end
+	return ".."
+end
+
+---@param text string
+---@param max_dw integer
+---@return string[]
+function M.wrap_line(text, max_dw)
+	if max_dw < 2 or strwidth(text) <= max_dw then
+		return { text }
+	end
+
+	local result = {}
+	local remaining = text
+	while remaining ~= "" do
+		if strwidth(remaining) <= max_dw then
+			result[#result + 1] = remaining
+			break
+		end
+
+		local nchars = strchars(remaining)
+		local cut = nchars
+		for i = nchars - 1, 1, -1 do
+			if strwidth(strcharpart(remaining, 0, i)) <= max_dw then
+				cut = i
+				break
+			end
+		end
+
+		local last_space = nil
+		local half = math.floor(cut * 0.5)
+		for i = cut, half, -1 do
+			if strcharpart(remaining, i - 1, 1) == " " then
+				last_space = i
+				break
+			end
+		end
+
+		if last_space then
+			result[#result + 1] = strcharpart(remaining, 0, last_space - 1)
+			remaining = strcharpart(remaining, last_space)
+		else
+			result[#result + 1] = strcharpart(remaining, 0, cut)
+			remaining = strcharpart(remaining, cut)
+		end
+	end
+
+	return result
+end
+
 return M

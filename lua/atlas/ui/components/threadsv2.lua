@@ -262,7 +262,7 @@ end
 ---@param depth integer
 ---@param pfx ThreadV2Prefixes
 ---@param opts AtlasThreadV2RenderOpts
-local function render_content(lines, spans, line_map, item, depth, pfx, opts)
+local function render_content(lines, spans, line_map, item, depth, pfx, opts, width)
 	if item.content == nil then
 		return
 	end
@@ -274,20 +274,34 @@ local function render_content(lines, spans, line_map, item, depth, pfx, opts)
 
 	local visible_count = truncated and max or #content_lines
 
-	for row_index = 1, visible_count do
-		local row = content_lines[row_index]
-		local full_line = pfx.body_prefix .. row
-		lines[#lines + 1] = full_line
-		map_line(line_map, #lines, make_line_map(item, "content", depth))
+	-- Available width for content text (after prefix)
+	local prefix_dw = vim.api.nvim_strwidth(pfx.body_prefix)
+	local padding_x = tonumber(opts.padding_x) or 2
+	local content_max_dw = width - prefix_dw - padding_x
+	if content_max_dw < 10 then
+		content_max_dw = 10
+	end
 
-		if #pfx.body_prefix > 0 then
-			span(spans, #lines - 1, 0, #pfx.body_prefix, "AtlasTextMuted")
-		end
+	local row_index = 0
+	for src_index = 1, visible_count do
+		local row = content_lines[src_index]
+		-- Soft-wrap long lines to fit within the available width
+		local wrapped = utils.wrap_line(row, content_max_dw)
+		for _, wrap_row in ipairs(wrapped) do
+			row_index = row_index + 1
+			local full_line = pfx.body_prefix .. wrap_row
+			lines[#lines + 1] = full_line
+			map_line(line_map, #lines, make_line_map(item, "content", depth))
 
-		local segments = opts.content_hl(item, row, row_index)
-		if segments then
-			for _, seg in ipairs(segments) do
-				span(spans, #lines - 1, #pfx.body_prefix + seg.start_col, #pfx.body_prefix + seg.end_col, seg.hl_group)
+			if #pfx.body_prefix > 0 then
+				span(spans, #lines - 1, 0, #pfx.body_prefix, "AtlasTextMuted")
+			end
+
+			local segments = opts.content_hl(item, wrap_row, row_index)
+			if segments then
+				for _, seg in ipairs(segments) do
+					span(spans, #lines - 1, #pfx.body_prefix + seg.start_col, #pfx.body_prefix + seg.end_col, seg.hl_group)
+				end
 			end
 		end
 	end
@@ -375,7 +389,7 @@ local function render_tree(lines, spans, line_map, item, depth, branch_prefix, i
 	local pfx = compute_prefixes(depth, branch_prefix, is_last, padding_x)
 
 	render_header(lines, spans, line_map, item, depth, pfx, opts, width)
-	render_content(lines, spans, line_map, item, depth, pfx, opts)
+	render_content(lines, spans, line_map, item, depth, pfx, opts, width)
 
 	local children = item.children or {}
 	render_footer(lines, spans, line_map, item, depth, pfx, #children > 0)
@@ -429,7 +443,7 @@ local function render_linked(lines, spans, line_map, item, depth, branch_prefix,
 	end
 
 	render_header(lines, spans, line_map, item, depth, pfx, opts, width)
-	render_content(lines, spans, line_map, item, depth, pfx, opts)
+	render_content(lines, spans, line_map, item, depth, pfx, opts, width)
 
 	local children = item.children or {}
 	render_footer(lines, spans, line_map, item, depth, pfx, #children > 0)
