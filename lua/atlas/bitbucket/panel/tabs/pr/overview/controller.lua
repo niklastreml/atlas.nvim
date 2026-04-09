@@ -79,9 +79,9 @@ function M.show(pr)
 		return
 	end
 
-	local workspace = tostring(pr.workspace or "")
-	local repo_slug = tostring(pr.repo or "")
-	local pr_id = tostring(pr.id or "")
+	local workspace = pr.workspace
+	local repo_slug = pr.repo
+	local pr_id = tostring(pr.id)
 
 	if workspace == "" or repo_slug == "" or pr_id == "" then
 		state.detail = nil
@@ -128,8 +128,8 @@ function M.show(pr)
 	end
 
 	if needs_diffstat then
-		local diffstat_url = (pr.links or {}).diffstat
-		if type(diffstat_url) == "string" and diffstat_url ~= "" then
+		local diffstat_url = pr.links.diffstat
+		if diffstat_url ~= "" then
 			state.diffstat = "loading"
 
 			diffstat_handle = pullrequests.fetch_diffstat(diffstat_url, {}, function(diffstat, err)
@@ -164,9 +164,9 @@ function M.refresh()
 		return
 	end
 
-	local workspace = tostring(pr.workspace or "")
-	local repo_slug = tostring(pr.repo or "")
-	local pr_id = tostring(pr.id or "")
+	local workspace = pr.workspace
+	local repo_slug = pr.repo
+	local pr_id = tostring(pr.id)
 
 	if workspace == "" or repo_slug == "" or pr_id == "" then
 		return
@@ -200,8 +200,8 @@ function M.refresh()
 		require("atlas.bitbucket.panel.init").refresh()
 	end)
 
-	local diffstat_url = (pr.links or {}).diffstat
-	if type(diffstat_url) == "string" and diffstat_url ~= "" then
+	local diffstat_url = pr.links.diffstat
+	if diffstat_url ~= "" then
 		diffstat_handle = pullrequests.fetch_diffstat(diffstat_url, { force_load = true }, function(diffstat, err)
 			diffstat_handle = nil
 

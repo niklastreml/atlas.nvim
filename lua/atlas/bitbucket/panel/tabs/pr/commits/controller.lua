@@ -73,8 +73,8 @@ function M.show(pr)
 		return
 	end
 
-	local commits_url = (pr.links or {}).commits
-	if type(commits_url) ~= "string" or commits_url == "" then
+	local commits_url = pr.links.commits
+	if commits_url == "" then
 		state.commits = nil
 		footer.notify("error", "Missing commits URL")
 		return
@@ -111,8 +111,8 @@ function M.refresh()
 		return
 	end
 
-	local commits_url = (pr.links or {}).commits
-	if type(commits_url) ~= "string" or commits_url == "" then
+	local commits_url = pr.links.commits
+	if commits_url == "" then
 		return
 	end
 

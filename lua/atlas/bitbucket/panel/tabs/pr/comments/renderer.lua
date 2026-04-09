@@ -21,13 +21,13 @@ end
 ---@param author BitbucketPRAuthor|nil
 ---@return string
 local function author_name(author)
-	if type(author) ~= "table" then
+	if author == nil then
 		return "Unknown"
 	end
-	if type(author.nickname) == "string" and author.nickname ~= "" then
+	if author.nickname ~= "" then
 		return author.nickname
 	end
-	if type(author.name) == "string" and author.name ~= "" then
+	if author.name ~= "" then
 		return author.name
 	end
 	return "Unknown"
@@ -36,15 +36,15 @@ end
 ---@param inline BitbucketPRCommentInline|nil
 ---@return string
 local function file_label(inline)
-	if type(inline) ~= "table" then
+	if inline == nil then
 		return "PR"
 	end
-	local path = tostring(inline.path or "")
+	local path = inline.path
 	local line = inline["to"] or inline["from"]
 	if path == "" then
 		return "PR"
 	end
-	if type(line) == "number" then
+	if line ~= nil then
 		return string.format("%s:%d", path, line)
 	end
 	return path
@@ -55,7 +55,7 @@ end
 ---@return AtlasThreadedItem
 local function to_thread_item(node, file)
 	local comment = node.comment
-	local text = first_line((comment.content or {}).raw)
+	local text = first_line(comment.content.raw)
 	if text == "" then
 		text = "(empty comment)"
 	end
@@ -147,15 +147,15 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	local comment_nodes = type(comments) == "table" and comments or {}
-	if type(comment_nodes) ~= "table" or #comment_nodes == 0 then
+	local comment_nodes = comments or {}
+	if #comment_nodes == 0 then
 		table.insert(lines, "No comments yet.")
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
 
 	for idx, node in ipairs(comment_nodes) do
-		local file = file_label((node.comment or {}).inline)
+		local file = file_label(node.comment.inline)
 		local file_line = string.rep(" ", PADDING_X) .. file
 		table.insert(lines, file_line)
 		table.insert(spans, {

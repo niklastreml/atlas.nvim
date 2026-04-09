@@ -76,8 +76,8 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	local entries = (type(activity) == "table" and activity.entries) or {}
-	if type(entries) ~= "table" or #entries == 0 then
+	local entries = (activity ~= nil and activity.entries) or {}
+	if #entries == 0 then
 		table.insert(lines, "No activity yet.")
 		state.line_map = line_map
 		return lines, spans, line_map
@@ -89,20 +89,20 @@ function M.render(width)
 	end
 
 	local function actor_name(actor)
-		if type(actor) ~= "table" then
+		if actor == nil then
 			return "Unknown"
 		end
-		if type(actor.nickname) == "string" and actor.nickname ~= "" then
+		if actor.nickname ~= "" then
 			return actor.nickname
 		end
-		if type(actor.name) == "string" and actor.name ~= "" then
+		if actor.name ~= "" then
 			return actor.name
 		end
 		return "Unknown"
 	end
 
 	local function update_detail(entry)
-		local changes = type(entry.changes) == "table" and entry.changes or {}
+		local changes = entry.changes or {}
 		local keys = {}
 		for key, _ in pairs(changes) do
 			table.insert(keys, tostring(key))
@@ -124,7 +124,7 @@ function M.render(width)
 	---@param entry BitbucketPRActivityEntry
 	---@return string
 	local function entry_header(entry)
-		local kind = tostring((entry or {}).kind or "")
+		local kind = entry.kind
 		if kind == "approval" then
 			return "approved this pull request"
 		end
@@ -137,7 +137,7 @@ function M.render(width)
 	---@param entry BitbucketPRActivityEntry
 	---@return string|nil
 	local function entry_content(entry)
-		local kind = tostring((entry or {}).kind or "")
+		local kind = entry.kind
 		if kind == "approval" then
 			return "approval"
 		end
@@ -157,7 +157,7 @@ function M.render(width)
 	---@param entry BitbucketPRActivityEntry
 	---@return string[]|nil
 	local function entry_footer(entry)
-		if tostring((entry or {}).kind or "") ~= "comment" then
+		if entry.kind ~= "comment" then
 			return nil
 		end
 
@@ -176,11 +176,11 @@ function M.render(width)
 	---@param author string
 	---@return string|nil
 	local function author_hl(item, author)
-		if type(author) ~= "string" or author == "" then
+		if author == "" then
 			return "AtlasTextMutedItalic"
 		end
-		local actor = ((item or {}).line_map or {}).activity_actor
-		local key = type(actor) == "table" and (actor.nickname or actor.name) or author
+		local actor = item.line_map and item.line_map.activity_actor
+		local key = actor ~= nil and (actor.nickname or actor.name) or author
 		return highlights.dynamic_for(key)
 	end
 
@@ -188,7 +188,8 @@ function M.render(width)
 	---@param _text string
 	---@return string|nil
 	local function header_content_hl(item, _text)
-		local kind = tostring((((item or {}).line_map or {}).activity_entry or {}).kind or "")
+		local entry = item.line_map and item.line_map.activity_entry
+		local kind = entry ~= nil and entry.kind or ""
 		if kind == "approval" then
 			return "AtlasTextPositive"
 		end
@@ -203,8 +204,8 @@ function M.render(width)
 	---@param _row_index integer
 	---@return table[]|nil
 	local function content_hl(item, row, _row_index)
-		local entry = ((item or {}).line_map or {}).activity_entry
-		if type(entry) ~= "table" then
+		local entry = item.line_map and item.line_map.activity_entry
+		if entry == nil then
 			return nil
 		end
 

@@ -15,14 +15,12 @@ local PADDING_X = 2
 local function root_comments(comments)
 	local by_id = {}
 	for _, comment in ipairs(comments or {}) do
-		if type(comment) == "table" then
-			by_id[tostring(comment.id or "")] = true
-		end
+		by_id[comment.id] = true
 	end
 
 	local roots = {}
 	for _, comment in ipairs(comments or {}) do
-		local pid = comment and comment.parent_id
+		local pid = comment.parent_id
 		if pid == nil or not by_id[tostring(pid)] then
 			table.insert(roots, comment)
 		end
@@ -34,9 +32,9 @@ end
 ---@param comment JiraComment
 ---@return AtlasThreadedItem
 local function to_thread_item(comment)
-	local author = ((comment or {}).author or {}).display_name or "Unknown"
-	local when = utils.relative_time_text((comment or {}).created)
-	local body = tostring((comment or {}).body or "")
+	local author = (comment.author ~= nil and comment.author.display_name) or "Unknown"
+	local when = utils.relative_time_text(comment.created)
+	local body = comment.body
 	local can_edit = comments_helper.can_manage_comment(comment, jira_state.current_user)
 
 	local footer_items = {
@@ -48,7 +46,7 @@ local function to_thread_item(comment)
 	end
 
 	local children = {}
-	for _, child in ipairs((comment and comment.children) or {}) do
+	for _, child in ipairs(comment.children or {}) do
 		table.insert(children, to_thread_item(child))
 	end
 
@@ -91,7 +89,7 @@ function M.render(width)
 	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
 
 	--- Content
-	local comments_count = type(state.comments) == "table" and #state.comments or 0
+	local comments_count = state.comments ~= nil and #state.comments or 0
 	local comments_title = string.rep(" ", PADDING_X) .. string.format("Comments (%d)", comments_count)
 	table.insert(lines, comments_title)
 	table.insert(spans, {
@@ -101,7 +99,7 @@ function M.render(width)
 		hl_group = "AtlasTextMuted",
 	})
 
-	if type(state.comments) == "table" and #state.comments > 0 then
+	if state.comments ~= nil and #state.comments > 0 then
 		local roots = root_comments(state.comments)
 		local items = {}
 		for _, comment in ipairs(roots) do

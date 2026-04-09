@@ -31,8 +31,8 @@ local function item_header(item)
 	local function change_action()
 		local from = item.from_string or item.from
 		local to = item.to_string or item.to
-		local has_from = type(from) == "string" and vim.trim(from) ~= ""
-		local has_to = type(to) == "string" and vim.trim(to) ~= ""
+		local has_from = from ~= nil and vim.trim(from) ~= ""
+		local has_to = to ~= nil and vim.trim(to) ~= ""
 
 		if has_from and not has_to then
 			return "deleted"
@@ -90,8 +90,8 @@ local function item_content(item)
 	if field == "description" then
 		local from_value = item.from_string or item.from
 		local to_value = item.to_string or item.to
-		local from = type(from_value) == "string" and vim.trim(from_value:gsub("%s+", " ")) or ""
-		local to = type(to_value) == "string" and vim.trim(to_value:gsub("%s+", " ")) or ""
+		local from = from_value ~= nil and vim.trim(from_value:gsub("%s+", " ")) or ""
+		local to = to_value ~= nil and vim.trim(to_value:gsub("%s+", " ")) or ""
 		local has_from = from ~= ""
 		local has_to = to ~= ""
 
@@ -141,8 +141,8 @@ local function item_content(item)
 	if field == "IssueParentAssociation" then
 		local from = item.from_string or item.from
 		local to = item.to_string or item.to
-		local from_text = (type(from) == "string" and vim.trim(from) ~= "") and from or "None"
-		local to_text = (type(to) == "string" and vim.trim(to) ~= "") and to or "None"
+		local from_text = (from ~= nil and vim.trim(from) ~= "") and from or "None"
+		local to_text = (to ~= nil and vim.trim(to) ~= "") and to or "None"
 		return string.format("%s -> %s", tostring(from_text), tostring(to_text))
 	end
 
@@ -161,11 +161,10 @@ end
 ---@param _text string
 ---@return string|nil
 local function header_content_hl(item, _text)
-	local history_item = ((item or {}).line_map or {}).history_item
+	local history_item = item.line_map and item.line_map.history_item
 	if history_item == nil then
 		return nil
 	end
-
 	return "AtlasTextMuted"
 end
 
@@ -174,7 +173,7 @@ end
 ---@param row_index integer
 ---@return table[]|nil
 local function content_hl(item, row, row_index)
-	local history_item = ((item or {}).line_map or {}).history_item
+	local history_item = item.line_map and item.line_map.history_item
 	if history_item == nil then
 		return nil
 	end
@@ -183,8 +182,8 @@ local function content_hl(item, row, row_index)
 	if field == "description" then
 		local from_value = history_item.from_string or history_item.from
 		local to_value = history_item.to_string or history_item.to
-		local from = type(from_value) == "string" and vim.trim(from_value:gsub("%s+", " ")) or ""
-		local to = type(to_value) == "string" and vim.trim(to_value:gsub("%s+", " ")) or ""
+		local from = from_value ~= nil and vim.trim(from_value:gsub("%s+", " ")) or ""
+		local to = to_value ~= nil and vim.trim(to_value:gsub("%s+", " ")) or ""
 		local has_from = from ~= ""
 		local old_line_count = has_from and 1 or 0
 
@@ -280,10 +279,10 @@ end
 local function to_thread_items(entries)
 	local out = {}
 	for _, entry in ipairs(entries or {}) do
-		local author = ((entry or {}).author or {}).display_name or "Unknown"
-		local timestamp = utils.relative_time_text((entry or {}).created)
+		local author = (entry.author ~= nil and entry.author.display_name) or "Unknown"
+		local timestamp = utils.relative_time_text(entry.created)
 
-		for _, item in ipairs((entry or {}).items or {}) do
+		for _, item in ipairs(entry.items or {}) do
 			table.insert(out, {
 				author = tostring(author),
 				timestamp = tostring(timestamp),
@@ -324,7 +323,7 @@ function M.render(width)
 	utils.append_block(lines, spans, { lines = { "" }, highlights = {} })
 
 	--- Content
-	if type(state.history_items) == "table" and #state.history_items > 0 then
+	if state.history_items ~= nil and #state.history_items > 0 then
 		local items = to_thread_items(state.history_items)
 		local item_lines, item_spans, item_map = threads.render(items, width, {
 			padding_x = PADDING_X,

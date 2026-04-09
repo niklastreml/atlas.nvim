@@ -21,11 +21,10 @@ end
 ---@param lnum integer
 ---@return boolean
 local function is_history_line(lnum)
-	local item = (state.line_map or {})[lnum]
-	if type(item) ~= "table" then
+	local item = state.line_map[lnum]
+	if item == nil then
 		return false
 	end
-
 	return item.kind == "author"
 		or item.kind == "content"
 		or item.kind == "thread_author"
@@ -85,15 +84,14 @@ end
 
 ---@param entries JiraIssueHistoryEntry[]|nil
 local function sort_history_entries(entries)
-	if type(entries) ~= "table" then
+	if entries == nil then
 		return
 	end
-
 	table.sort(entries, function(a, b)
-		local ac = tostring((a and a.created) or "")
-		local bc = tostring((b and b.created) or "")
+		local ac = a.created or ""
+		local bc = b.created or ""
 		if ac == bc then
-			return tostring((a and a.id) or "") < tostring((b and b.id) or "")
+			return a.id < b.id
 		end
 		return ac > bc
 	end)
@@ -153,7 +151,7 @@ function M.show(issue)
 				return
 			end
 
-			if type(state.history_items) ~= "table" then
+			if state.history_items == nil then
 				state.history_items = {}
 			end
 
@@ -165,8 +163,8 @@ function M.show(issue)
 
 			require("atlas.jira.panel.init").refresh()
 
-			local next_start = (tonumber(page.start_at) or 0) + (tonumber(page.max_results) or 0)
-			local done = page.is_last == true or next_start >= (tonumber(page.total) or 0)
+			local next_start = page.start_at + page.max_results
+			local done = page.is_last == true or next_start >= page.total
 
 			if done then
 				state.is_loading = false

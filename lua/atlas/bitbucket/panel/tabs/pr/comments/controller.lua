@@ -21,11 +21,10 @@ end
 ---@param lnum integer
 ---@return boolean
 local function is_comment_line(lnum)
-	local item = (state.line_map or {})[lnum]
-	if type(item) ~= "table" or type(item.comment) ~= "table" then
+	local item = state.line_map[lnum]
+	if item == nil or item.comment == nil then
 		return false
 	end
-
 	return item.kind == "content" or item.kind == "thread_content"
 end
 
@@ -114,8 +113,8 @@ function M.show(pr)
 		return
 	end
 
-	local comments_url = (pr.links or {}).comments
-	if type(comments_url) ~= "string" or comments_url == "" then
+	local comments_url = pr.links.comments
+	if comments_url == "" then
 		state.comments = nil
 		footer.notify("error", "Missing comments URL")
 		return
@@ -137,7 +136,7 @@ function M.show(pr)
 			state.comments = nil
 			footer.notify("error", "Failed to load comments: " .. tostring(err))
 		else
-			state.comments = helper.normalize_comments((comments or {}).entries)
+			state.comments = helper.normalize_comments(comments.entries)
 			footer.notify("success", "Comments loaded", 1200)
 		end
 
@@ -152,8 +151,8 @@ function M.refresh()
 		return
 	end
 
-	local comments_url = (pr.links or {}).comments
-	if type(comments_url) ~= "string" or comments_url == "" then
+	local comments_url = pr.links.comments
+	if comments_url == "" then
 		return
 	end
 
@@ -173,7 +172,7 @@ function M.refresh()
 			state.comments = nil
 			footer.notify("error", "Failed to refresh comments")
 		else
-			state.comments = helper.normalize_comments((comments or {}).entries)
+			state.comments = helper.normalize_comments(comments.entries)
 			footer.notify("success", "Comments refreshed", 1200)
 		end
 

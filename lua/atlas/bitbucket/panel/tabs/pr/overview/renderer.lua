@@ -227,7 +227,7 @@ function M.render(width)
 	elseif diffstat == nil then
 		push(lines, spans, "No file info available.", nil)
 	else
-		local entries = (type(diffstat) == "table" and diffstat.entries) or {}
+		local entries = diffstat.entries
 
 		local added_count, removed_count = 0, 0
 		for _, e in ipairs(entries) do
@@ -259,8 +259,8 @@ function M.render(width)
 		else
 			for _, entry in ipairs(entries) do
 				local status = tostring(entry.status or ""):lower()
-				local old_path = (type(entry.old_file) == "table" and tostring(entry.old_file.path or "")) or ""
-				local new_path = (type(entry.new_file) == "table" and tostring(entry.new_file.path or "")) or ""
+				local old_path = entry.old_file ~= nil and entry.old_file.path or ""
+				local new_path = entry.new_file ~= nil and entry.new_file.path or ""
 
 				local marker, hl, path = "~", "AtlasTextMuted", (new_path ~= "" and new_path) or old_path
 				if status == "added" then

@@ -76,9 +76,9 @@ function M.show(pr)
 		return
 	end
 
-	local diff_url = (pr.links or {}).diff
+	local diff_url = pr.links.diff
 
-	if type(diff_url) ~= "string" or diff_url == "" then
+	if diff_url == "" then
 		state.diff = nil
 		footer.notify("error", "Missing diff URL")
 	else
@@ -114,14 +114,14 @@ function M.refresh()
 	end
 
 	local pr = state.pr
-	local diff_url = (pr.links or {}).diff
+	local diff_url = pr.links.diff
 
 	cancel_handles()
 	state.diff = "loading"
 	start_spinner()
 	require("atlas.bitbucket.panel.init").refresh()
 
-	if type(diff_url) == "string" and diff_url ~= "" then
+	if diff_url ~= "" then
 		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
 			diff_handle = nil
 
@@ -166,10 +166,10 @@ function M.toggle_fold()
 	local header_lnum = lnum
 
 	-- If not on a header, walk up to find the enclosing hunk header
-	if type(entry) ~= "table" or entry.type ~= "hunk_header" then
+	if entry == nil or entry.type ~= "hunk_header" then
 		for l = lnum - 1, 1, -1 do
 			local e = line_map[l]
-			if type(e) == "table" and e.type == "hunk_header" then
+			if e ~= nil and e.type == "hunk_header" then
 				entry = e
 				header_lnum = l
 				break
@@ -177,7 +177,7 @@ function M.toggle_fold()
 		end
 	end
 
-	if type(entry) ~= "table" or entry.type ~= "hunk_header" then
+	if entry == nil or entry.type ~= "hunk_header" then
 		return
 	end
 
@@ -212,7 +212,7 @@ function M.jump_hunk(delta)
 
 	local function is_hunk_header(lnum)
 		local e = line_map[lnum]
-		return type(e) == "table" and e.type == "hunk_header"
+		return e ~= nil and e.type == "hunk_header"
 	end
 
 	local target = nil

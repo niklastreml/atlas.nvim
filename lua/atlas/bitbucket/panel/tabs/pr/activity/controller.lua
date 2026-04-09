@@ -20,11 +20,10 @@ end
 ---@param lnum integer
 ---@return boolean
 local function is_activity_line(lnum)
-	local item = (state.line_map or {})[lnum]
-	if type(item) ~= "table" then
+	local item = state.line_map[lnum]
+	if item == nil then
 		return false
 	end
-
 	return item.kind == "author"
 		or item.kind == "content"
 		or item.kind == "thread_author"
@@ -116,8 +115,8 @@ function M.show(pr)
 		return
 	end
 
-	local activity_url = (pr.links or {}).activity
-	if type(activity_url) ~= "string" or activity_url == "" then
+	local activity_url = pr.links.activity
+	if activity_url == "" then
 		state.activity = nil
 		footer.notify("error", "Missing activity URL")
 		return
@@ -154,8 +153,8 @@ function M.refresh()
 		return
 	end
 
-	local activity_url = (pr.links or {}).activity
-	if type(activity_url) ~= "string" or activity_url == "" then
+	local activity_url = pr.links.activity
+	if activity_url == "" then
 		return
 	end
 

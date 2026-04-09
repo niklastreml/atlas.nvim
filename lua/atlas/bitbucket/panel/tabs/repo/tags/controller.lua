@@ -24,7 +24,7 @@ panel_spinner = spinner.create({
 		end
 
 		if tags_handle == nil and tab_state.repo ~= nil and tags_loading and not waiting_for_detail then
-			if type(state.detail) == "table" then
+			if state.detail ~= nil and state.detail ~= "loading" then
 				M.show(tab_state.repo)
 			else
 				tab_state.tags = nil
@@ -55,7 +55,7 @@ local function start_spinner()
 	panel_spinner:start()
 end
 
----@param repo table|nil
+---@param repo BitbucketRepository|nil
 function M.show(repo)
 	local prev_name = tab_state.repo and tab_state.repo.full_name or nil
 	local next_name = repo and repo.full_name or nil
@@ -101,7 +101,7 @@ function M.show(repo)
 		return
 	end
 
-	local tags_url = (detail.links and detail.links.tags and detail.links.tags) or ""
+	local tags_url = detail.links.tags
 	if tags_url == "" then
 		tab_state.tags = nil
 		footer.notify("error", "Missing tags URL")

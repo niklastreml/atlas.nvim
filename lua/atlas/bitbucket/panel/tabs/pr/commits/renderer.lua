@@ -80,8 +80,8 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	local entries = (type(commits) == "table" and commits.entries) or {}
-	if type(entries) ~= "table" or #entries == 0 then
+	local entries = (commits ~= nil and commits.entries) or {}
+	if #entries == 0 then
 		table.insert(lines, "No commits yet.")
 		state.line_map = line_map
 		return lines, spans, line_map

@@ -24,11 +24,10 @@ end
 ---@param lnum integer
 ---@return boolean
 local function is_comment_line(lnum)
-	local item = (state.line_map or {})[lnum]
-	if type(item) ~= "table" or type(item.comment) ~= "table" then
+	local item = state.line_map[lnum]
+	if item == nil or item.comment == nil then
 		return false
 	end
-
 	return item.kind == "content" or item.kind == "thread_content"
 end
 
@@ -40,48 +39,40 @@ local function current_comment_under_cursor()
 	end
 
 	local line = vim.api.nvim_win_get_cursor(win)[1]
-	local item = (state.line_map or {})[line]
-	if type(item) ~= "table" then
+	local item = state.line_map[line]
+	if item == nil then
 		return nil
 	end
-
 	if item.kind ~= "content" and item.kind ~= "thread_content" then
 		return nil
 	end
-
-	if type(item.comment) ~= "table" then
+	if item.comment == nil then
 		return nil
 	end
-
 	return item.comment
 end
 
 ---@param comment_id string
 ---@return JiraComment|nil
 local function find_comment_by_id(comment_id)
-	if comment_id == "" or type(state.comments) ~= "table" then
+	if comment_id == "" or state.comments == nil then
 		return nil
 	end
-
 	for _, comment in ipairs(state.comments) do
-		if tostring((comment or {}).id or "") == comment_id then
+		if comment.id == comment_id then
 			return comment
 		end
 	end
-
 	return nil
 end
 
 ---@param user JiraUser|nil
 ---@return string
 local function mention_prefix_for_user(user)
-	local account_id = tostring((user or {}).account_id or "")
-	local display_name = tostring((user or {}).display_name or "")
-	if account_id == "" or display_name == "" then
+	if user == nil or user.account_id == "" or user.display_name == "" then
 		return ""
 	end
-
-	return string.format("[@%s]{mention:%s} ", display_name, account_id)
+	return string.format("[@%s]{mention:%s} ", user.display_name, user.account_id)
 end
 
 ---@param win integer
@@ -284,7 +275,7 @@ end
 
 function M.add_comment()
 	local issue = state.issue
-	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
+	if issue == nil or issue.key == "" then
 		footer.notify("warn", "No issue selected")
 		return
 	end
@@ -308,14 +299,12 @@ function M.add_comment()
 					return
 				end
 
-				if type(state.comments) ~= "table" then
+				if state.comments == nil then
 					state.comments = {}
 				end
-
-				if type(comment) == "table" then
+				if comment ~= nil then
 					table.insert(state.comments, comment)
 				end
-
 				state.comments = helper.normalize_comments(state.comments)
 
 				require("atlas.jira.panel.init").refresh()
@@ -331,7 +320,7 @@ end
 
 function M.reply_to_comment()
 	local issue = state.issue
-	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
+	if issue == nil or issue.key == "" then
 		footer.notify("warn", "No issue selected")
 		return
 	end
@@ -343,8 +332,8 @@ function M.reply_to_comment()
 	end
 
 	--- We cant reply to a subcomment, so we need to find the top level parent comment to reply to. Jira API only supports one level of nesting, so all replies are added as children of the top level comment.
-	local parent_id = tostring(parent.id or "")
-	if type(parent.parent_id) == "string" or type(parent.parent_id) == "number" then
+	local parent_id = parent.id
+	if parent.parent_id ~= nil then
 		local maybe_parent = tostring(parent.parent_id)
 		if maybe_parent ~= "" then
 			parent_id = maybe_parent
@@ -356,10 +345,8 @@ function M.reply_to_comment()
 	end
 
 	local reply_target = find_comment_by_id(parent_id) or parent
-	local parent_label = (
-		(reply_target.author or {}).display_name and tostring((reply_target.author or {}).display_name) ~= ""
-	)
-			and tostring((reply_target.author or {}).display_name)
+	local parent_label = (reply_target.author ~= nil and reply_target.author.display_name ~= "")
+			and reply_target.author.display_name
 		or "unknown user"
 	local initial_text = mention_prefix_for_user(reply_target.author)
 
@@ -385,11 +372,10 @@ function M.reply_to_comment()
 				return
 			end
 
-			if type(state.comments) ~= "table" then
+			if state.comments == nil then
 				state.comments = {}
 			end
-
-			if type(comment) == "table" then
+			if comment ~= nil then
 				table.insert(state.comments, comment)
 			end
 
@@ -404,7 +390,7 @@ end
 
 function M.edit_comment()
 	local issue = state.issue
-	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
+	if issue == nil or issue.key == "" then
 		footer.notify("warn", "No issue selected")
 		return
 	end
@@ -420,13 +406,13 @@ function M.edit_comment()
 		return
 	end
 
-	local comment_id = tostring(comment.id or "")
+	local comment_id = comment.id
 	if comment_id == "" then
 		footer.notify("warn", "Invalid comment id")
 		return
 	end
 
-	local current_body = tostring(comment.body or "")
+	local current_body = comment.body
 
 	markdown_editor.open({
 		key = string.format("comment-%s-%s", issue.key, comment_id),
@@ -448,7 +434,7 @@ function M.edit_comment()
 				end
 
 				state.comments = helper.remove_comment(state.comments, comment_id)
-				if type(updated_comment) == "table" then
+				if updated_comment ~= nil then
 					table.insert(state.comments, updated_comment)
 				end
 				state.comments = helper.normalize_comments(state.comments)
@@ -466,6 +452,10 @@ end
 
 function M.delete_comment()
 	local issue = state.issue
+	if issue == nil or issue.key == "" then
+		footer.notify("warn", "No issue selected")
+		return
+	end
 
 	local comment = current_comment_under_cursor()
 	if comment == nil then
@@ -478,19 +468,13 @@ function M.delete_comment()
 		return
 	end
 
-	if issue == nil or type(issue.key) ~= "string" or issue.key == "" then
-		footer.notify("warn", "No issue selected")
-		return
-	end
-
-	local comment_id = tostring(comment.id or "")
+	local comment_id = comment.id
 	if comment_id == "" then
 		footer.notify("warn", "Invalid comment id")
 		return
 	end
 
-	local comment_label = ((comment.author or {}).display_name and tostring((comment.author or {}).display_name) ~= "")
-			and tostring((comment.author or {}).display_name)
+	local comment_label = (comment.author ~= nil and comment.author.display_name ~= "") and comment.author.display_name
 		or "unknown user"
 
 	vim.ui.input({

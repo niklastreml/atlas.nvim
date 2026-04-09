@@ -51,7 +51,7 @@ local function start_spinner()
 	panel_spinner:start()
 end
 
----@param repo table|nil
+---@param repo BitbucketRepository|nil
 function M.show(repo)
 	local prev_name = tab_state.repo and tab_state.repo.full_name or nil
 	local next_name = repo and repo.full_name or nil
@@ -90,8 +90,8 @@ function M.show(repo)
 		return
 	end
 
-	local workspace = tostring(repo.workspace or "")
-	local repo_slug = tostring(repo.repo_slug or repo.slug or "")
+	local workspace = repo.workspace
+	local repo_slug = repo.slug
 
 	if workspace == "" or repo_slug == "" then
 		state.reset()
