@@ -8,12 +8,8 @@ local layout = require("atlas.ui.layout")
 local ui_state = require("atlas.ui.main.state")
 local autocomplete_fetch_started = false
 
-local function ensure_jira_open()
-	if layout.is_open() and ui_state.current_view == "jira" then
-		return
-	end
-
-	require("atlas").open("jira")
+local function is_jira_open()
+	return layout.is_open() and ui_state.current_view == "jira"
 end
 
 ---@param query string
@@ -29,20 +25,26 @@ function M.run(query)
 		jql = text,
 	}
 
-	controller.switch_view(search_view, function()
-		navigation.focus_first_item()
-	end)
+	if is_jira_open() then
+		controller.switch_view(search_view, function()
+			navigation.focus_first_item()
+		end)
+	else
+		require("atlas").open("jira", { initial_view = search_view })
+		vim.schedule(function()
+			navigation.focus_first_item()
+		end)
+	end
 
 	return true, nil
 end
 
 ---@param opts { args: string }
 function M.command(opts)
-	ensure_jira_open()
-
 	local ok, err = M.run(opts.args or "")
 	if not ok then
-		footer.notify("warn", err or "Search query cannot be empty")
+		vim.notify(err or "Invalid query", vim.log.levels.WARN)
+		footer.notify("warn", err or "Invalid query")
 	end
 end
 

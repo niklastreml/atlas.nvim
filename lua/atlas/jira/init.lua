@@ -8,6 +8,7 @@ local help = require("atlas.ui.popups.help")
 local navigation = require("atlas.ui.navigation")
 local layout = require("atlas.ui.layout")
 local footer = require("atlas.ui.components.footer")
+local state = require("atlas.jira.state")
 
 ---@return JiraIssue|nil
 local function selected_issue()
@@ -173,7 +174,13 @@ local function register_dynamic_keys(buf, views)
 	})
 end
 
-function M.setup()
+---@param opts { initial_view?: JiraViewConfig }|nil
+function M.setup(opts)
+	opts = opts or {}
+	if opts.initial_view ~= nil then
+		state.active_view = opts.initial_view
+	end
+
 	footer.clear_items()
 
 	local target_buf = layout.buf_id("main")

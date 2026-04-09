@@ -19,16 +19,19 @@ local function bootstrap_common()
 end
 
 ---@param view "jira"|"bitbucket"
-local function bootstrap_provider(view)
+---@param opts table|nil
+local function bootstrap_provider(view, opts)
 	if view == "bitbucket" then
 		require("atlas.bitbucket").setup()
 		return
 	end
 
-	require("atlas.jira").setup()
+	require("atlas.jira").setup(opts)
 end
 
-function M.open(view)
+---@param view "jira"|"bitbucket"
+---@param opts table|nil
+function M.open(view, opts)
 	logger.loginfo("Atlas open requested", { view = view })
 
 	local layout = require("atlas.ui.layout")
@@ -39,7 +42,7 @@ function M.open(view)
 
 	layout.ensure_open()
 	bootstrap_common()
-	bootstrap_provider(view)
+	bootstrap_provider(view, opts)
 	layout.open(view)
 
 	--FIX: This removes the statusline but is there a better way to do this? Could also effect other plugins that rely on the statusline
