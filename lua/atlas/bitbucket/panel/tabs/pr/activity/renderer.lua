@@ -48,18 +48,7 @@ function M.render(width)
 	-- Tabs
 	local panel_state = require("atlas.bitbucket.panel.state")
 	local tab_lines, tab_spans = tabs.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
-	local tab_base = #lines
-	for _, line in ipairs(tab_lines) do
-		table.insert(lines, line)
-	end
-	for _, span in ipairs(tab_spans) do
-		table.insert(spans, {
-			line = tab_base + span.line,
-			start_col = span.start_col,
-			end_col = span.end_col,
-			hl_group = span.hl_group,
-		})
-	end
+	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
 	-- Activity content

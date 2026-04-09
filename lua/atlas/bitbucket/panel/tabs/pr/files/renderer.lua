@@ -6,6 +6,7 @@ local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local spinner = require("atlas.ui.components.spinner")
+local utils = require("atlas.utils")
 
 local CONTENT_PADDING = 1
 
@@ -49,12 +50,7 @@ function M.render(width)
 
 	-- Header
 	local header_lines, header_spans = header.render(pr, width)
-	for _, line in ipairs(header_lines) do
-		table.insert(lines, line)
-	end
-	for _, span in ipairs(header_spans) do
-		table.insert(spans, span)
-	end
+	utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 
 	-- Chips
 	local chip_line, chip_spans = chips.render(pr)
@@ -72,18 +68,7 @@ function M.render(width)
 
 	-- Tabs
 	local tab_lines, tab_spans = tabs_component.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
-	local tab_base = #lines
-	for _, line in ipairs(tab_lines) do
-		table.insert(lines, line)
-	end
-	for _, span in ipairs(tab_spans) do
-		table.insert(spans, {
-			line = tab_base + span.line,
-			start_col = span.start_col,
-			end_col = span.end_col,
-			hl_group = span.hl_group,
-		})
-	end
+	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
 	-- Loading state
@@ -119,9 +104,7 @@ function M.render(width)
 			local body_count = #hunk.lines
 
 			-- @@ header line
-			local display_header = is_collapsed
-				and (hunk.header .. "  [+" .. body_count .. " lines]")
-				or hunk.header
+			local display_header = is_collapsed and (hunk.header .. "  [+" .. body_count .. " lines]") or hunk.header
 			table.insert(lines, pad(display_header))
 			local buf_line = #lines
 			table.insert(spans, {
