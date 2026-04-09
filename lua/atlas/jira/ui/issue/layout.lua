@@ -8,6 +8,26 @@ local function valid_buf(buf)
 	return buf ~= nil and vim.api.nvim_buf_is_valid(buf)
 end
 
+---@param buf integer|nil
+---@param on_quit fun()
+local function setup_buffer_quit_cmd(buf, on_quit)
+	if not valid_buf(buf) then
+		return
+	end
+
+	pcall(vim.api.nvim_buf_del_user_command, buf, "AtlasIssueQuit")
+	vim.api.nvim_buf_create_user_command(buf, "AtlasIssueQuit", function()
+		on_quit()
+	end, { desc = "Close Atlas issue editor" })
+
+	vim.api.nvim_buf_call(buf, function()
+		vim.cmd("silent! cunabbrev <buffer> q")
+		vim.cmd("silent! cunabbrev <buffer> quit")
+		vim.cmd("cnoreabbrev <buffer> q AtlasIssueQuit")
+		vim.cmd("cnoreabbrev <buffer> quit AtlasIssueQuit")
+	end)
+end
+
 ---@param kind "win"|"buf"
 ---@param id integer|nil
 local function close_target(kind, id)
@@ -41,7 +61,7 @@ end
 local function create_issue_buffer(opts)
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_set_option_value("buftype", opts.buftype, { buf = buf })
-	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+	vim.api.nvim_set_option_value("bufhidden", "hide", { buf = buf })
 	vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
 	if opts.filetype then
 		vim.api.nvim_set_option_value("filetype", opts.filetype, { buf = buf })
@@ -109,13 +129,13 @@ function M.open_layout(state)
 		mouse = false,
 		title = popup_title,
 		title_pos = "center",
-		footer = " q/:q close | :w create | ga assignee | gr reporter | gt issue type | m toggle ADF preview ",
+		footer = " q/:q close | <C-s> save | ga assignee | gr reporter | gt issue type | m toggle ADF preview ",
 		footer_pos = "center",
 	})
 	vim.api.nvim_set_option_value("wrap", false, { win = state.layout.container_win })
 
 	state.layout.title_buf = create_issue_buffer({
-		buftype = "acwrite",
+		buftype = "nofile",
 		modifiable = true,
 		name = "atlas://jira/create/title",
 	})
@@ -127,7 +147,7 @@ function M.open_layout(state)
 	})
 
 	state.layout.desc_buf = create_issue_buffer({
-		buftype = "acwrite",
+		buftype = "nofile",
 		modifiable = true,
 		name = "atlas://jira/create/description.md",
 		filetype = "markdown",
@@ -181,9 +201,11 @@ function M.open_layout(state)
 end
 
 ---@param state IssueState
----@param actions { confirm_close: fun(), toggle_preview: fun(), show_assignee_picker: fun(), show_reporter_picker: fun(), show_issue_type_picker: fun() }
+---@param actions { confirm_close: fun(), toggle_preview: fun(), show_assignee_picker: fun(), show_reporter_picker: fun(), show_issue_type_picker: fun(), create_issue: fun() }
 function M.setup_keymaps(state, actions)
 	local keymap_opts = { silent = true, nowait = true }
+	setup_buffer_quit_cmd(state.layout.title_buf, actions.confirm_close)
+	setup_buffer_quit_cmd(state.layout.desc_buf, actions.confirm_close)
 
 	if valid_buf(state.layout.title_buf) then
 		vim.keymap.set(
@@ -246,6 +268,10 @@ function M.setup_keymaps(state, actions)
 		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
 		vim.keymap.set({ "n", "i" }, "<C-k>", function()
 			vim.cmd("stopinsert")
+		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
+		vim.keymap.set({ "n", "i" }, "<C-s>", function()
+			vim.cmd("stopinsert")
+			actions.create_issue()
 		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.title_buf }))
 	end
 
@@ -331,38 +357,10 @@ function M.setup_keymaps(state, actions)
 		vim.keymap.set({ "n", "i" }, "<C-j>", function()
 			vim.cmd("stopinsert")
 		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
-	end
-end
-
----@param state IssueState
----@param actions { create_issue: fun(), confirm_close: fun() }
-function M.setup_autocmds(state, actions)
-	local write_bufs = { state.layout.title_buf, state.layout.desc_buf }
-	for _, buf in ipairs(write_bufs) do
-		if valid_buf(buf) then
-			vim.api.nvim_create_autocmd("BufWriteCmd", {
-				buffer = buf,
-				callback = function()
-					actions.create_issue()
-				end,
-			})
-		end
-	end
-
-	local all_bufs =
-		{ state.layout.title_buf, state.layout.meta_buf, state.layout.desc_buf, state.layout.container_buf }
-	for _, buf in ipairs(all_bufs) do
-		if valid_buf(buf) then
-			vim.api.nvim_create_autocmd("QuitPre", {
-				buffer = buf,
-				callback = function()
-					vim.schedule(function()
-						actions.confirm_close()
-					end)
-					return true
-				end,
-			})
-		end
+		vim.keymap.set({ "n", "i" }, "<C-s>", function()
+			vim.cmd("stopinsert")
+			actions.create_issue()
+		end, vim.tbl_extend("force", keymap_opts, { buffer = state.layout.desc_buf }))
 	end
 end
 
@@ -377,10 +375,6 @@ end
 ---}
 function M.setup(state, actions)
 	M.setup_keymaps(state, actions)
-	M.setup_autocmds(state, {
-		create_issue = actions.create_issue,
-		confirm_close = actions.confirm_close,
-	})
 end
 
 return M

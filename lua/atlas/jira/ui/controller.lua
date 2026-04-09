@@ -237,6 +237,9 @@ local function load_active_view(opts, on_done)
 
 	local target_view = state.active_view
 	local jql = target_view and target_view.jql or nil
+	local configured_max_result = tonumber((config.options.jira or {}).max_result)
+	configured_max_result = math.floor(configured_max_result or 100)
+	local max_result = configured_max_result > 0 and configured_max_result or 100
 	if target_view == nil or type(jql) ~= "string" or jql == "" then
 		state.is_loading = false
 		if target_view == nil then
@@ -355,6 +358,15 @@ local function load_active_view(opts, on_done)
 		end
 
 		issues = issues or {}
+		local remaining = max_result - #issues
+		if remaining <= 0 then
+			enrich_missing_parents(issues, opts.force_load == true, function(enriched_issues, parent_fetch_failures)
+				finalize_fetch_success(enriched_issues, parent_fetch_failures)
+			end)
+			return
+		end
+
+		local page_size = remaining
 
 		active_issues_handle = issues_api.search_issues(jql, function(page, err)
 			active_issues_handle = nil
@@ -369,6 +381,9 @@ local function load_active_view(opts, on_done)
 			end
 
 			for _, issue in ipairs((page and page.issues) or {}) do
+				if #issues >= max_result then
+					break
+				end
 				table.insert(issues, issue)
 			end
 
@@ -379,6 +394,13 @@ local function load_active_view(opts, on_done)
 
 			if layout.is_open() then
 				require("atlas.ui.main.renderer").render("jira")
+			end
+
+			if #issues >= max_result then
+				enrich_missing_parents(issues, opts.force_load == true, function(enriched_issues, parent_fetch_failures)
+					finalize_fetch_success(enriched_issues, parent_fetch_failures)
+				end)
+				return
 			end
 
 			local nextToken = page.nextPageToken
@@ -393,6 +415,7 @@ local function load_active_view(opts, on_done)
 		end, {
 			force_load = opts.force_load == true,
 			next_page_token = next_page_token,
+			max_results = page_size,
 		})
 	end
 

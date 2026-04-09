@@ -25,7 +25,7 @@ function M.open(opts)
 	end
 
 	local buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
 	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
 	vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
 	vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
@@ -61,7 +61,7 @@ function M.open(opts)
 		col = col,
 		title = opts.title,
 		title_pos = "center",
-		footer = " q quit | :w save ",
+		footer = " q quit | <C-s> save+close ",
 		footer_pos = "center",
 	})
 
@@ -71,47 +71,31 @@ function M.open(opts)
 	vim.api.nvim_set_option_value("cursorline", false, { win = win })
 
 	vim.keymap.set("n", "q", function()
+		if type(opts.on_cancel) == "function" then
+			opts.on_cancel()
+		end
 		if vim.api.nvim_win_is_valid(win) then
 			vim.api.nvim_win_close(win, true)
 		end
 	end, { buffer = buf, silent = true, nowait = true })
 
-	local did_save = false
+	local function save_and_close()
+		local body = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
 
-	vim.api.nvim_create_autocmd("BufWriteCmd", {
-		buffer = buf,
-		callback = function()
-			local body = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
-			did_save = true
-			vim.api.nvim_set_option_value("modified", false, { buf = buf })
-			if vim.api.nvim_win_is_valid(win) then
-				vim.api.nvim_win_close(win, true)
-			end
+		if type(opts.on_save) == "function" then
+			opts.on_save(body)
+		end
 
-			if type(opts.on_save) == "function" then
-				opts.on_save(body)
-			end
-		end,
-	})
+		if vim.api.nvim_win_is_valid(win) then
+			vim.api.nvim_win_close(win, true)
+		end
+	end
 
-	vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
-		buffer = buf,
-		callback = function()
-			if vim.api.nvim_buf_is_valid(buf) then
-				vim.api.nvim_set_option_value("modified", false, { buf = buf })
-			end
-		end,
-	})
-
-	vim.api.nvim_create_autocmd("BufWipeout", {
-		buffer = buf,
-		once = true,
-		callback = function()
-			if not did_save and type(opts.on_cancel) == "function" then
-				opts.on_cancel()
-			end
-		end,
-	})
+	vim.keymap.set("n", "<C-s>", save_and_close, { buffer = buf, silent = true, nowait = true })
+	vim.keymap.set("i", "<C-s>", function()
+		vim.cmd("stopinsert")
+		save_and_close()
+	end, { buffer = buf, silent = true, nowait = true })
 
 	return buf, win
 end

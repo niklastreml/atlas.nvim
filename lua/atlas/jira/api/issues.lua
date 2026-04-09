@@ -70,7 +70,6 @@ function M.search_issues(jql, on_done, opts)
 		logger.loginfo("Jira search page complete", {
 			jql = jql,
 			count = #page.issues,
-			next_page_token = page.nextPageToken,
 			is_last = page.isLast,
 		})
 		on_done(page, nil)
