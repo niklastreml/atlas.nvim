@@ -4,12 +4,17 @@ local state = require("atlas.bitbucket.panel.tabs.pr.comments.state")
 local panel_state = require("atlas.bitbucket.panel.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
+local bitbucket_helper = require("atlas.bitbucket.ui.helper")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threads")
 
 local PADDING_X = 2
+
+---@class BitbucketCommentFileGroup
+---@field file string
+---@field nodes BitbucketPRCommentTreeNode[]
 
 ---@param value string|nil
 ---@return string
@@ -77,9 +82,32 @@ local function to_thread_item(node, file)
 		},
 		meta = {
 			comment = comment,
+			author_hl_name = tostring((comment.author and comment.author.name) or ""),
 			is_deleted = comment.deleted == true,
 		},
 	}
+end
+
+---@param nodes BitbucketPRCommentTreeNode[]
+---@return BitbucketCommentFileGroup[]
+local function group_nodes_by_file(nodes)
+	---@type table<string, BitbucketCommentFileGroup>
+	local by_file = {}
+	---@type BitbucketCommentFileGroup[]
+	local ordered = {}
+
+	for _, node in ipairs(nodes or {}) do
+		local file = file_label(node.comment.inline)
+		local group = by_file[file]
+		if group == nil then
+			group = { file = file, nodes = {} }
+			by_file[file] = group
+			table.insert(ordered, group)
+		end
+		table.insert(group.nodes, node)
+	end
+
+	return ordered
 end
 
 ---@param width integer
@@ -143,44 +171,51 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	for idx, node in ipairs(comment_nodes) do
-		local file = file_label(node.comment.inline)
+	local file_groups = group_nodes_by_file(comment_nodes)
+	for _, group in ipairs(file_groups) do
+		local file = group.file
 		local file_line = string.rep(" ", PADDING_X) .. file
-		table.insert(lines, file_line)
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = 0,
-			end_col = #file_line,
-			hl_group = "AtlasTextMuted",
+		utils.append_block(lines, spans, {
+			lines = { file_line },
+			highlights = {
+				{ line = 0, start_col = 0, end_col = #file_line, hl_group = "AtlasTextMuted" },
+			},
 		})
 
-		local item_lines, item_spans, item_map = threads.render({ to_thread_item(node, file) }, max_width, {
-			padding_x = PADDING_X,
-		})
+		for node_index, node in ipairs(group.nodes) do
+			local item_lines, item_spans, item_map = threads.render({ to_thread_item(node, file) }, max_width, {
+				padding_x = PADDING_X,
+				author_hl = function(item, author)
+					local meta = item and item.meta or nil
+					local author_hl_name = meta and meta.author_hl_name or ""
+					if type(author_hl_name) ~= "string" or vim.trim(author_hl_name) == "" then
+						author_hl_name = author
+					end
 
-		local offset = #lines
-		for _, line in ipairs(item_lines) do
-			table.insert(lines, line)
-		end
-		for _, span in ipairs(item_spans or {}) do
-			table.insert(spans, {
-				line = offset + span.line,
-				start_col = span.start_col,
-				end_col = span.end_col,
-				hl_group = span.hl_group,
+					return bitbucket_helper.author_hl(author_hl_name)
+				end,
 			})
-		end
-		for lnum, entry in pairs(item_map or {}) do
-			line_map[offset + lnum] = entry
+
+			local offset = #lines
+			utils.append_block(lines, spans, {
+				lines = item_lines,
+				highlights = item_spans,
+			})
+			for lnum, entry in pairs(item_map or {}) do
+				line_map[offset + lnum] = entry
+			end
+
+			if node_index < #group.nodes then
+				table.insert(lines, "")
+			end
 		end
 
 		local separator = string.rep(" ", PADDING_X) .. string.rep("─", math.max(8, max_width - (PADDING_X * 2)))
-		table.insert(lines, separator)
-		table.insert(spans, {
-			line = #lines - 1,
-			start_col = 0,
-			end_col = #separator,
-			hl_group = "AtlasTextMuted",
+		utils.append_block(lines, spans, {
+			lines = { separator },
+			highlights = {
+				{ line = 0, start_col = 0, end_col = #separator, hl_group = "AtlasTextMuted" },
+			},
 		})
 	end
 

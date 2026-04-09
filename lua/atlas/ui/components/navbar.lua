@@ -11,7 +11,7 @@ function M.render(opts)
 	local active_hl = opts.active_hl
 	local inactive_hl = opts.inactive_hl or "AtlasTabInactive"
 
-	local margin = 2
+	local margin = 1
 	local line = string.rep(" ", margin)
 	local highlights = {}
 	local byte_col = margin

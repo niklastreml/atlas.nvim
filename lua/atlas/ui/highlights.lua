@@ -12,7 +12,6 @@ local dynamic_palette = {
 	"#b7bdf8",
 	"#f0c6c6",
 	"#f4dbd6",
-	"#ed8796",
 }
 
 ---@param text string

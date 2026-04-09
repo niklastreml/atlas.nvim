@@ -370,7 +370,7 @@ function M.render(opts)
 	end
 
 	local actions = {
-		{ label = " Refresh (R) ", hl_group = "AtlasJiraTheme" },
+		{ label = "Refresh (R)", hl_group = "AtlasTextMuted" },
 	}
 
 	local lines, spans = {}, {}

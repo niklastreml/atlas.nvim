@@ -89,7 +89,7 @@ local function fetch_pullrequests_single(workspace, repo, opts, on_done)
 	end)
 end
 
----@param view_repos BitbucketRepoConfig[]
+---@param view_repos BitbucketRepoRef[]
 ---@param opts { force_load: boolean, pagelen: number|nil }
 ---@param on_done fun(values: BitbucketPR[], err: string[]|nil)
 ---@return { cancel: fun() }|nil
