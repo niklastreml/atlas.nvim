@@ -283,13 +283,6 @@ function M.issue_popup_content(issue)
 		})
 	end
 
-	if type(issue.story_points) == "number" then
-		row.points = next_row
-		next_row = next_row + 1
-		table.insert(highlights, { row = row.points, col = 1, end_col = 10, hl_group = "AtlasTextMuted" })
-		table.insert(highlights, { row = row.points, col = 11, end_col = -1, hl_group = "AtlasJiraStoryPoints" })
-	end
-
 	if type(parent_key) == "string" and parent_key ~= "" then
 		row.parent = next_row
 		next_row = next_row + 1

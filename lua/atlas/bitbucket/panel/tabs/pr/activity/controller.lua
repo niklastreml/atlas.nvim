@@ -24,9 +24,9 @@ local function is_activity_line(lnum)
 	if item == nil then
 		return false
 	end
-	return item.kind == "author"
+	return item.kind == "header"
 		or item.kind == "content"
-		or item.kind == "thread_author"
+		or item.kind == "thread_header"
 		or item.kind == "thread_content"
 end
 

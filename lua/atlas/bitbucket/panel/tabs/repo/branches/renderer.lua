@@ -6,11 +6,30 @@ local panel_state = require("atlas.bitbucket.panel.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
+local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local icons = require("atlas.ui.icons")
-local table_view = require("atlas.ui.components.table_tree")
 local highlights = require("atlas.ui.highlights")
+
+---@param b BitbucketRepositoryBranch
+---@return AtlasThreadV2Item
+local function to_thread_item(b)
+	local msg = tostring(b.message or ""):gsub("\r\n", "\n")
+	msg = msg:match("([^\n]+)") or msg
+
+	local author = tostring(b.author or "")
+	local when = utils.relative_time(tostring(b.date or ""))
+
+	return {
+		icon = icons.entity("branch"),
+		icon_hl = "AtlasTextMuted",
+		author = tostring(b.name or "-"),
+		additional = author,
+		right_text = when,
+		content = msg,
+	}
+end
 
 ---@param width integer
 ---@return string[] lines
@@ -90,47 +109,28 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	-- Build table rows
-	local rows = {}
+	-- Build thread items
+	local items = {}
 	for _, b in ipairs(branches.entries) do
-		local msg = tostring(b.message or ""):gsub("\r\n", "\n")
-		msg = msg:match("([^\n]+)") or msg
-		table.insert(rows, {
-			branch = tostring(b.name or "-"),
-			message = msg,
-			author = tostring(b.author or "-"),
-			timestamp = utils.relative_time(tostring(b.date or "")),
-		})
+		table.insert(items, to_thread_item(b))
 	end
 
-	local table_lines, _, table_spans = table_view.render({
-		width = width,
-		margin = 0,
-		column_gap = 1,
-		show_header = true,
-		fill = true,
-		columns = {
-			{ key = "branch", name = icons.entity("branch"), can_grow = false },
-			{ key = "message", name = "Message", min_width = 24, can_grow = true },
-			{ key = "author", name = "Author", can_grow = false },
-			{ key = "timestamp", name = icons.entity("updated"), can_grow = false },
-		},
-		rows = rows,
-		cell_hl = function(row, col)
-			if col.key == "message" then
-				return "AtlasTextMuted"
-			end
-			if col.key == "timestamp" then
-				return "AtlasTextMuted"
-			end
-			if col.key == "author" then
-				return highlights.dynamic_for(row.author)
-			end
-			return nil
+	local thread_lines, thread_spans = threads.render(items, width, {
+		padding_x = 1,
+		mode = "linked",
+		right_text_align = "right",
+		content_max_lines = 1,
+		author_hl = function()
+			return "AtlasText"
+		end,
+		additional_hl = function(item)
+			return highlights.dynamic_for(item.additional or "")
+		end,
+		content_hl = function(_, row, _)
+			return { { start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" } }
 		end,
 	})
-
-	utils.append_block(lines, spans, { lines = table_lines, highlights = table_spans })
+	utils.append_block(lines, spans, { lines = thread_lines, highlights = thread_spans })
 
 	tab_state.line_map = line_map
 	return lines, spans, line_map

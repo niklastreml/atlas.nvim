@@ -33,6 +33,193 @@ local function push(lines, spans, text, hl_group)
 	end
 end
 
+---@param diffstat BitbucketPRDiffstat|"loading"|nil
+---@param width integer
+---@return string[] lines
+---@return table[] spans
+local function render_diffstat(diffstat, width)
+	local out_lines = {}
+	local out_spans = {}
+	local pad = CONTENT_PADDING
+	local inner_w = math.max(8, width - (pad * 2))
+
+	if diffstat == "loading" then
+		local section_header = "Files changes"
+		table.insert(out_lines, with_content_padding(section_header))
+		table.insert(out_spans, {
+			line = #out_lines - 1,
+			start_col = pad,
+			end_col = pad + #section_header,
+			hl_group = "AtlasColumnHeader",
+		})
+		local loading_line = spinner.with_text("Loading file changes...")
+		table.insert(out_lines, with_content_padding(loading_line))
+		table.insert(out_spans, {
+			line = #out_lines - 1,
+			start_col = pad,
+			end_col = pad + #loading_line,
+			hl_group = "AtlasTextMuted",
+		})
+		return out_lines, out_spans
+	end
+
+	if diffstat == nil then
+		local section_header = "Files changes"
+		table.insert(out_lines, with_content_padding(section_header))
+		table.insert(out_spans, {
+			line = #out_lines - 1,
+			start_col = pad,
+			end_col = pad + #section_header,
+			hl_group = "AtlasColumnHeader",
+		})
+		table.insert(out_lines, with_content_padding("No file info available."))
+		return out_lines, out_spans
+	end
+
+	local entries = diffstat.entries or {}
+
+	local total_added, total_removed = 0, 0
+	for _, e in ipairs(entries) do
+		total_added = total_added + (tonumber(e.lines_added) or 0)
+		total_removed = total_removed + (tonumber(e.lines_removed) or 0)
+	end
+
+	local left = string.format("Files changed (%d)", #entries)
+	local right_add = string.format("+%d", total_added)
+	local right_rm = string.format("-%d", total_removed)
+	local right = right_add .. "  " .. right_rm
+
+	local left_dw = vim.api.nvim_strwidth(left)
+	local right_dw = vim.api.nvim_strwidth(right)
+	local gap = math.max(2, inner_w - left_dw - right_dw)
+	local header_line = string.rep(" ", pad) .. left .. string.rep(" ", gap) .. right
+
+	table.insert(out_lines, header_line)
+
+	table.insert(out_spans, {
+		line = #out_lines - 1,
+		start_col = pad,
+		end_col = pad + #left,
+		hl_group = "AtlasColumnHeader",
+	})
+
+	local paren_text = string.format("(%d)", #entries)
+	local paren_start = pad + #left - #paren_text
+	table.insert(out_spans, {
+		line = #out_lines - 1,
+		start_col = paren_start,
+		end_col = pad + #left,
+		hl_group = "AtlasTextMuted",
+	})
+
+	local right_start = #header_line - #right
+	table.insert(out_spans, {
+		line = #out_lines - 1,
+		start_col = right_start,
+		end_col = right_start + #right_add,
+		hl_group = "AtlasTextPositive",
+	})
+	local rm_start = right_start + #right_add + 2
+	table.insert(out_spans, {
+		line = #out_lines - 1,
+		start_col = rm_start,
+		end_col = rm_start + #right_rm,
+		hl_group = "AtlasLogError",
+	})
+
+	if #entries == 0 then
+		table.insert(out_lines, with_content_padding("No files changed."))
+		return out_lines, out_spans
+	end
+
+	for _, entry in ipairs(entries) do
+		local status = tostring(entry.status or ""):lower()
+		local old_path = entry.old_file ~= nil and entry.old_file.path or ""
+		local new_path = entry.new_file ~= nil and entry.new_file.path or ""
+
+		local marker, marker_hl, path
+		if status == "added" then
+			marker, marker_hl = "+", "AtlasTextPositive"
+			path = (new_path ~= "" and new_path) or old_path
+		elseif status == "removed" or status == "deleted" then
+			marker, marker_hl = "-", "AtlasLogError"
+			path = (old_path ~= "" and old_path) or new_path
+		elseif status == "renamed" then
+			marker, marker_hl = "R", "AtlasLogWarn"
+			if old_path ~= "" and new_path ~= "" then
+				path = old_path .. " → " .. new_path
+			else
+				path = (new_path ~= "" and new_path) or old_path
+			end
+		else
+			marker, marker_hl = "~", "AtlasTextMuted"
+			path = (new_path ~= "" and new_path) or old_path
+		end
+		if path == "" then
+			path = "(unknown file)"
+		end
+
+		-- Split path into dir + filename for styling
+		local dir, name = path:match("^(.+/)([^/]+)$")
+		if dir == nil then
+			dir = ""
+			name = path
+		end
+
+		-- Per-file stats
+		local file_add = string.format("+%d", tonumber(entry.lines_added) or 0)
+		local file_rm = string.format("-%d", tonumber(entry.lines_removed) or 0)
+		local file_stats = file_add .. "  " .. file_rm
+
+		-- Build: pad + marker + " " + dir + name + gap + file_stats
+		local left_part = marker .. " " .. dir .. name
+		local left_part_dw = vim.api.nvim_strwidth(left_part)
+		local stats_dw = vim.api.nvim_strwidth(file_stats)
+		local file_gap = math.max(2, inner_w - left_part_dw - stats_dw)
+		local file_line = string.rep(" ", pad) .. left_part .. string.rep(" ", file_gap) .. file_stats
+
+		table.insert(out_lines, file_line)
+		local line_idx = #out_lines - 1
+
+		-- marker highlight
+		table.insert(out_spans, {
+			line = line_idx,
+			start_col = pad,
+			end_col = pad + #marker,
+			hl_group = marker_hl,
+		})
+		-- directory: muted
+		local path_start = pad + #marker + 1 -- after "marker "
+		if dir ~= "" then
+			table.insert(out_spans, {
+				line = line_idx,
+				start_col = path_start,
+				end_col = path_start + #dir,
+				hl_group = "AtlasTextMuted",
+			})
+		end
+		-- filename: normal (no extra hl, uses default fg)
+		-- +N: green
+		local stats_byte_start = #file_line - #file_stats
+		table.insert(out_spans, {
+			line = line_idx,
+			start_col = stats_byte_start,
+			end_col = stats_byte_start + #file_add,
+			hl_group = "AtlasTextPositive",
+		})
+		-- -N: red
+		local rm_byte_start = stats_byte_start + #file_add + 2
+		table.insert(out_spans, {
+			line = line_idx,
+			start_col = rm_byte_start,
+			end_col = rm_byte_start + #file_rm,
+			hl_group = "AtlasLogError",
+		})
+	end
+
+	return out_lines, out_spans
+end
+
 ---@param decision string
 ---@return string
 local function decision_icon(decision)
@@ -179,6 +366,11 @@ function M.render(width)
 	end
 	table.insert(lines, "")
 
+	-- Diffstat (above description)
+	local ds_lines, ds_spans = render_diffstat(diffstat, width)
+	utils.append_block(lines, spans, { lines = ds_lines, highlights = ds_spans })
+	table.insert(lines, "")
+
 	-- Description
 	local description_text = pr.description or ""
 	local description = utils.sanitize_lines(description_text)
@@ -192,80 +384,6 @@ function M.render(width)
 	})
 	for _, line in ipairs(description) do
 		table.insert(lines, with_content_padding(line))
-	end
-	table.insert(lines, "")
-
-	-- Diffstat
-	local diffstat_header = "Files"
-	table.insert(lines, with_content_padding(diffstat_header))
-	table.insert(spans, {
-		line = #lines - 1,
-		start_col = CONTENT_PADDING,
-		end_col = CONTENT_PADDING + #diffstat_header,
-		hl_group = "AtlasColumnHeader",
-	})
-
-	if diffstat == "loading" then
-		local loading_line = spinner.with_text("Loading file changes...")
-		push(lines, spans, loading_line, "AtlasTextMuted")
-	elseif diffstat == nil then
-		push(lines, spans, "No file info available.", nil)
-	else
-		local entries = diffstat.entries
-
-		local added_count, removed_count = 0, 0
-		for _, e in ipairs(entries) do
-			added_count = added_count + (tonumber(e.lines_added) or 0)
-			removed_count = removed_count + (tonumber(e.lines_removed) or 0)
-		end
-
-		local added_text = string.format("+%d added", added_count)
-		local removed_text = string.format("-%d removed", removed_count)
-		local stats_line = added_text .. "  " .. removed_text
-		local stats_idx = #lines
-		table.insert(lines, with_content_padding(stats_line))
-		table.insert(spans, {
-			line = stats_idx,
-			start_col = CONTENT_PADDING,
-			end_col = CONTENT_PADDING + #added_text,
-			hl_group = "AtlasTextPositive",
-		})
-		table.insert(spans, {
-			line = stats_idx,
-			start_col = CONTENT_PADDING + #added_text + 2,
-			end_col = CONTENT_PADDING + #stats_line,
-			hl_group = "AtlasTextWarning",
-		})
-		table.insert(lines, "")
-
-		if #entries == 0 then
-			push(lines, spans, "No files changed.", nil)
-		else
-			for _, entry in ipairs(entries) do
-				local status = tostring(entry.status or ""):lower()
-				local old_path = entry.old_file ~= nil and entry.old_file.path or ""
-				local new_path = entry.new_file ~= nil and entry.new_file.path or ""
-
-				local marker, hl, path = "~", "AtlasTextMuted", (new_path ~= "" and new_path) or old_path
-				if status == "added" then
-					marker, hl, path = "+", "AtlasTextPositive", (new_path ~= "" and new_path) or old_path
-				elseif status == "removed" or status == "deleted" then
-					marker, hl, path = "-", "AtlasTextWarning", (old_path ~= "" and old_path) or new_path
-				elseif status == "renamed" then
-					marker, hl = "R", "AtlasTextMuted"
-					if old_path ~= "" and new_path ~= "" then
-						path = old_path .. " -> " .. new_path
-					end
-				end
-
-				local file_line = marker .. " " .. (path ~= "" and path or "(unknown file)")
-				table.insert(lines, with_content_padding(file_line))
-				table.insert(
-					spans,
-					{ line = #lines - 1, start_col = CONTENT_PADDING, end_col = CONTENT_PADDING + 1, hl_group = hl }
-				)
-			end
-		end
 	end
 
 	state.line_map = line_map

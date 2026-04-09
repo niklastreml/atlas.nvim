@@ -122,7 +122,7 @@ function M.fetch_readme(workspace, repo_slug, ref, readme_path, opts, on_done)
 end
 
 ---@param branches_url string
----@param opts { force_load?: boolean }
+---@param opts { force_load?: boolean, pagelen?: number }
 ---@param on_done fun(branches: BitbucketRepositoryBranches|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_branches(branches_url, opts, on_done)
@@ -131,7 +131,9 @@ function M.fetch_branches(branches_url, opts, on_done)
 		return nil
 	end
 
-	return service.request("GET", branches_url, nil, nil, function(result, err)
+	local sep = branches_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", branches_url, sep, tonumber(opts.pagelen) or 100)
+	return service.request("GET", url, nil, nil, function(result, err)
 		if err ~= nil then
 			on_done(nil, err)
 			return
@@ -143,7 +145,7 @@ function M.fetch_branches(branches_url, opts, on_done)
 end
 
 ---@param tags_url string
----@param opts { force_load?: boolean }
+---@param opts { force_load?: boolean, pagelen?: number }
 ---@param on_done fun(tags: BitbucketRepositoryTags|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_tags(tags_url, opts, on_done)
@@ -152,7 +154,9 @@ function M.fetch_tags(tags_url, opts, on_done)
 		return nil
 	end
 
-	return service.request("GET", tags_url, nil, nil, function(result, err)
+	local sep = tags_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", tags_url, sep, tonumber(opts.pagelen) or 100)
+	return service.request("GET", url, nil, nil, function(result, err)
 		if err ~= nil then
 			on_done(nil, err)
 			return

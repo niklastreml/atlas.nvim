@@ -5,11 +5,29 @@ local panel_state = require("atlas.bitbucket.panel.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
+local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
 local icons = require("atlas.ui.icons")
-local table_view = require("atlas.ui.components.table_tree")
 local spinner = require("atlas.ui.components.spinner")
-local highlights = require("atlas.ui.highlights")
+
+---@param commit BitbucketPRCommit
+---@return AtlasThreadV2Item
+local function to_thread_item(commit)
+	local message = tostring(commit.message or ""):gsub("\r\n", "\n")
+	message = message:match("([^\n]+)") or message
+
+	local author = (commit.author_nickname ~= "" and commit.author_nickname) or commit.author_name or "Unknown"
+	local hash = tostring(commit.short_hash or commit.hash or ""):sub(1, 8)
+	local when = utils.relative_time(commit.date)
+
+	return {
+		icon = icons.entity("commit"),
+		icon_hl = "AtlasTextMuted",
+		author = message,
+		right_text = hash,
+		content = author .. " · " .. when,
+	}
+end
 
 ---@param width integer
 ---@return string[] lines
@@ -71,51 +89,23 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	local rows = {}
-	for _, c in ipairs(entries) do
-		local msg = tostring(c.message or ""):gsub("\r\n", "\n")
-		msg = msg:match("([^\n]+)") or msg
-		local author = (c.author_nickname ~= "" and c.author_nickname) or c.author_name or "Unknown"
-		local hash = tostring(c.short_hash or c.hash or "")
-		hash = hash:sub(1, 8)
-		table.insert(rows, {
-			icon = icons.entity("commit"),
-			hash = hash,
-			message = msg,
-			author = author,
-			date = utils.relative_time(c.date),
-		})
+	local items = {}
+	for _, commit in ipairs(entries) do
+		table.insert(items, to_thread_item(commit))
 	end
 
-	local table_lines, _, table_spans = table_view.render({
-		width = width,
-		margin = 0,
-		column_gap = 1,
-		show_header = false,
-		fill = true,
-		columns = {
-			{ key = "icon", name = "", width = 2, can_grow = false },
-			{ key = "hash", name = "", width = 12, can_grow = false },
-			{ key = "message", name = "", min_width = 24, can_grow = true },
-			{ key = "author", name = "", can_grow = false },
-			{ key = "date", name = "", width = 6, can_grow = false },
-		},
-		rows = rows,
-		cell_hl = function(row, col)
-			if col.key == "icon" then
-				return "AtlasTextPositive"
-			end
-			if col.key == "hash" or col.key == "date" then
-				return "AtlasTextMuted"
-			end
-			if col.key == "author" then
-				return highlights.dynamic_for(row.author)
-			end
-			return nil
+	local thread_lines, thread_spans = threads.render(items, width, {
+		padding_x = 1,
+		mode = "linked",
+		right_text_align = "right",
+		author_hl = function()
+			return "AtlasText"
+		end,
+		content_hl = function(_, row, _)
+			return { { start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" } }
 		end,
 	})
-
-	utils.append_block(lines, spans, { lines = table_lines, highlights = table_spans })
+	utils.append_block(lines, spans, { lines = thread_lines, highlights = thread_spans })
 
 	state.line_map = line_map
 	return lines, spans, line_map

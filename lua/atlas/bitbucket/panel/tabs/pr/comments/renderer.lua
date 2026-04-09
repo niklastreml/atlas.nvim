@@ -8,7 +8,8 @@ local bitbucket_helper = require("atlas.bitbucket.ui.helper")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
-local threads = require("atlas.ui.components.threads")
+local threads = require("atlas.ui.components.threadsv2")
+local icons = require("atlas.ui.icons")
 
 local PADDING_X = 2
 
@@ -55,12 +56,38 @@ local function file_label(inline)
 	return path
 end
 
+---@param file string         File label (path or "PR")
+---@param count integer       Number of comment threads in this group
+---@param pad integer         Left padding
+---@return string line
+---@return table[] spans
+local function render_file_header(file, count, pad)
+	local padding = string.rep(" ", pad)
+	local count_suffix = string.format(" (%d)", count)
+	local hdr_spans = {}
+
+	if file == "PR" then
+		local icon = icons.entity("comment")
+		local label = "Pull Request"
+		local line = padding .. icon .. " " .. label .. count_suffix
+		table.insert(hdr_spans, { line = 0, start_col = pad, end_col = #line, hl_group = "AtlasTextMuted" })
+		return line, hdr_spans
+	end
+
+	local icon = icons.entity("files")
+	local line = padding .. icon .. " " .. file .. count_suffix
+	table.insert(hdr_spans, { line = 0, start_col = pad, end_col = #line, hl_group = "AtlasTextMuted" })
+	return line, hdr_spans
+end
+
 ---@param node BitbucketPRCommentTreeNode
 ---@param file string
----@return AtlasThreadedItem
+---@return AtlasThreadV2Item
 local function to_thread_item(node, file)
 	local comment = node.comment
-	local text = first_line(comment.content.raw)
+	local is_deleted = comment.deleted == true
+	local is_pending = comment.pending == true
+	local text = is_deleted and "(deleted comment)" or first_line(comment.content.raw)
 	if text == "" then
 		text = "(empty comment)"
 	end
@@ -72,8 +99,10 @@ local function to_thread_item(node, file)
 	end
 
 	return {
+		icon = icons.entity("user"),
 		author = tostring(author),
-		timestamp = utils.relative_time(comment.created_on),
+		additional = is_pending and "PENDING" or nil,
+		right_text = utils.relative_time(comment.created_on),
 		content = text,
 		children = children,
 		line_map = {
@@ -83,7 +112,8 @@ local function to_thread_item(node, file)
 		meta = {
 			comment = comment,
 			author_hl_name = tostring((comment.author and comment.author.name) or ""),
-			is_deleted = comment.deleted == true,
+			is_deleted = is_deleted,
+			is_pending = is_pending,
 		},
 	}
 end
@@ -172,51 +202,73 @@ function M.render(width)
 	end
 
 	local file_groups = group_nodes_by_file(comment_nodes)
-	for _, group in ipairs(file_groups) do
-		local file = group.file
-		local file_line = string.rep(" ", PADDING_X) .. file
-		utils.append_block(lines, spans, {
-			lines = { file_line },
-			highlights = {
-				{ line = 0, start_col = 0, end_col = #file_line, hl_group = "AtlasTextMuted" },
-			},
-		})
+	for group_index, group in ipairs(file_groups) do
+		local fh_line, fh_spans = render_file_header(group.file, #group.nodes, PADDING_X)
+		utils.append_block(lines, spans, { lines = { fh_line }, highlights = fh_spans })
 
-		for node_index, node in ipairs(group.nodes) do
-			local item_lines, item_spans, item_map = threads.render({ to_thread_item(node, file) }, max_width, {
-				padding_x = PADDING_X,
-				author_hl = function(item, author)
-					local meta = item and item.meta or nil
-					local author_hl_name = meta and meta.author_hl_name or ""
-					if type(author_hl_name) ~= "string" or vim.trim(author_hl_name) == "" then
-						author_hl_name = author
-					end
-
-					return bitbucket_helper.author_hl(author_hl_name)
-				end,
-			})
-
-			local offset = #lines
-			utils.append_block(lines, spans, {
-				lines = item_lines,
-				highlights = item_spans,
-			})
-			for lnum, entry in pairs(item_map or {}) do
-				line_map[offset + lnum] = entry
-			end
-
-			if node_index < #group.nodes then
-				table.insert(lines, "")
-			end
+		local items = {}
+		for _, node in ipairs(group.nodes) do
+			table.insert(items, to_thread_item(node, group.file))
 		end
 
-		local separator = string.rep(" ", PADDING_X) .. string.rep("─", math.max(8, max_width - (PADDING_X * 2)))
-		utils.append_block(lines, spans, {
-			lines = { separator },
-			highlights = {
-				{ line = 0, start_col = 0, end_col = #separator, hl_group = "AtlasTextMuted" },
-			},
+		local item_lines, item_spans, item_map = threads.render(items, max_width, {
+			padding_x = PADDING_X,
+			mode = "linked",
+			additional_hl = function(item)
+				local meta = item and item.meta or {}
+				if meta.is_pending then
+					return "AtlasLogWarn"
+				end
+				return "AtlasTextMuted"
+			end,
+			author_hl = function(item, author)
+				local meta = item and item.meta or nil
+				local author_hl_name = meta and meta.author_hl_name or ""
+				if type(author_hl_name) ~= "string" or vim.trim(author_hl_name) == "" then
+					author_hl_name = author
+				end
+				return bitbucket_helper.author_hl(author_hl_name)
+			end,
+			icon_hl_fn = function(item)
+				local meta = item and item.meta or nil
+				local author_hl_name = meta and meta.author_hl_name or ""
+				if type(author_hl_name) ~= "string" or vim.trim(author_hl_name) == "" then
+					author_hl_name = tostring(item.author or "")
+				end
+				return bitbucket_helper.author_hl(author_hl_name)
+			end,
+			content_hl = function(item, row)
+				local meta = item and item.meta or {}
+				if meta.is_deleted then
+					return {
+						{ start_col = 0, end_col = #row, hl_group = "AtlasTextMutedItalic" },
+					}
+				end
+				return nil
+			end,
 		})
+
+		local offset = #lines
+		utils.append_block(lines, spans, {
+			lines = item_lines,
+			highlights = item_spans,
+		})
+		for lnum, entry in pairs(item_map or {}) do
+			line_map[offset + lnum] = entry
+		end
+
+		if group_index < #file_groups then
+			local pad = string.rep(" ", PADDING_X)
+			local sep = pad .. string.rep("─", max_width - PADDING_X * 2)
+			table.insert(lines, sep)
+			table.insert(spans, {
+				line = #lines - 1,
+				start_col = 0,
+				end_col = #sep,
+				hl_group = "AtlasTextMuted",
+			})
+			table.insert(lines, "")
+		end
 	end
 
 	line_map[1] = line_map[1] or { kind = "pr", pr = pr }

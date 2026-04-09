@@ -237,15 +237,24 @@ function M.fetch_diff(diff_url, on_done)
 end
 
 ---@param commits_url string
+---@param opts? { pagelen?: number }
 ---@param on_done fun(commits: BitbucketPRCommits|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.fetch_commits(commits_url, on_done)
+function M.fetch_commits(commits_url, opts, on_done)
+	if type(opts) == "function" then
+		on_done = opts
+		opts = {}
+	end
+	opts = opts or {}
+
 	if type(commits_url) ~= "string" or commits_url == "" then
 		on_done(nil, "Missing Bitbucket commits URL")
 		return nil
 	end
 
-	return service.request("GET", commits_url, nil, nil, function(result, err)
+	local sep = commits_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", commits_url, sep, tonumber(opts.pagelen) or 50)
+	return service.request("GET", url, nil, nil, function(result, err)
 		if err then
 			on_done(nil, err)
 			return
@@ -257,15 +266,24 @@ function M.fetch_commits(commits_url, on_done)
 end
 
 ---@param activity_url string
+---@param opts? { pagelen?: number }
 ---@param on_done fun(activity: BitbucketPRActivity|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.fetch_activity(activity_url, on_done)
+function M.fetch_activity(activity_url, opts, on_done)
+	if type(opts) == "function" then
+		on_done = opts
+		opts = {}
+	end
+	opts = opts or {}
+
 	if type(activity_url) ~= "string" or activity_url == "" then
 		on_done(nil, "Missing Bitbucket activity URL")
 		return nil
 	end
 
-	return service.request("GET", activity_url, nil, nil, function(result, err)
+	local sep = activity_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", activity_url, sep, tonumber(opts.pagelen) or 50)
+	return service.request("GET", url, nil, nil, function(result, err)
 		if err then
 			on_done(nil, err)
 			return
@@ -277,15 +295,24 @@ function M.fetch_activity(activity_url, on_done)
 end
 
 ---@param comments_url string
+---@param opts? { pagelen?: number }
 ---@param on_done fun(comments: BitbucketPRComments|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_comments(comments_url, opts, on_done)
+	if type(opts) == "function" then
+		on_done = opts
+		opts = {}
+	end
+	opts = opts or {}
+
 	if type(comments_url) ~= "string" or comments_url == "" then
 		on_done(nil, "Missing Bitbucket comments URL")
 		return nil
 	end
 
-	return service.request("GET", comments_url, nil, nil, function(result, err)
+	local sep = comments_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", comments_url, sep, tonumber(opts.pagelen) or 100)
+	return service.request("GET", url, nil, nil, function(result, err)
 		if err then
 			on_done(nil, err)
 			return

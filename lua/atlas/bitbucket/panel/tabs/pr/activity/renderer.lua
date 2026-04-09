@@ -7,9 +7,190 @@ local tabs = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local highlights = require("atlas.ui.highlights")
-local threads = require("atlas.ui.components.threads")
+local threads = require("atlas.ui.components.threadsv2")
+local icons = require("atlas.ui.icons")
 
 local PADDING_X = 2
+
+---@param actor {nickname:string?, name:string?}|nil
+---@return string
+local function actor_name(actor)
+	if actor == nil then
+		return "Unknown"
+	end
+	if actor.nickname and actor.nickname ~= "" then
+		return actor.nickname
+	end
+	if actor.name and actor.name ~= "" then
+		return actor.name
+	end
+	return "Unknown"
+end
+
+-- ── update change summary ────────────────────────────────────────
+
+---Build a human-readable "additional" text for an update entry.
+---@param entry BitbucketPRActivityUpdateEntry
+---@return string
+local function update_additional(entry)
+	local changes = entry.changes or {}
+
+	local keys = {}
+	for k, _ in pairs(changes) do
+		keys[#keys + 1] = k
+	end
+	table.sort(keys)
+
+	if #keys == 1 then
+		local key = keys[1]
+		if key == "description" then
+			return "updated description"
+		end
+		if key == "title" then
+			return "updated title"
+		end
+		if key == "draft" then
+			local val = changes.draft
+			if type(val) == "table" and val.new == false then
+				return "marked as ready"
+			end
+			return "marked as draft"
+		end
+		if key == "reviewers" then
+			local rev = changes.reviewers or {}
+			local added = rev.added or {}
+			if #added > 0 then
+				local names = {}
+				for _, r in ipairs(added) do
+					names[#names + 1] = r.display_name or r.nickname or "someone"
+				end
+				return "added reviewer: " .. table.concat(names, ", ")
+			end
+			local removed = rev.removed or {}
+			if #removed > 0 then
+				local names = {}
+				for _, r in ipairs(removed) do
+					names[#names + 1] = r.display_name or r.nickname or "someone"
+				end
+				return "removed reviewer: " .. table.concat(names, ", ")
+			end
+			return "updated reviewers"
+		end
+	end
+
+	if #keys > 1 then
+		return "updated " .. table.concat(keys, ", ")
+	end
+
+	-- No explicit changes. fallback to branch info
+	local src = entry.source_branch or ""
+	local dst = entry.target_branch or ""
+	if src ~= "" and dst ~= "" then
+		return string.format("updated %s → %s", src, dst)
+	end
+
+	return "updated pull request"
+end
+
+---@param entry BitbucketPRActivityUpdateEntry
+---@return string|nil
+local function update_content(entry)
+	local changes = entry.changes or {}
+	local desc_change = changes.description
+	if desc_change == nil then
+		return nil
+	end
+
+	-- Just indicate "description changed"
+	return nil
+end
+
+---@param entries BitbucketPRActivityEntry[]
+---@return AtlasThreadV2Item[]
+local function to_thread_items(entries)
+	local items = {}
+	for _, e in ipairs(entries) do
+		local kind = e.kind
+		local author = actor_name(e.actor)
+		local timestamp = utils.relative_time(e.date)
+
+		local additional ---@type string|nil
+		local content ---@type string|nil
+		local entry_icon = icons.entity("user")
+
+		if kind == "approval" then
+			additional = "approved"
+			entry_icon = icons.entity("success")
+		elseif kind == "comment" then
+			additional = "commented"
+			local raw = tostring(e.content_raw or ""):gsub("\r\n", "\n")
+			local first = raw:match("([^\n]+)") or raw
+			content = first ~= "" and first or "(empty comment)"
+
+			if e.deleted == true then
+				content = "(deleted comment)"
+			end
+		elseif kind == "update" then
+			additional = update_additional(e)
+			content = update_content(e)
+			entry_icon = icons.entity("activity")
+		end
+
+		items[#items + 1] = {
+			icon = entry_icon,
+			author = author,
+			right_text = timestamp,
+			additional = additional,
+			content = content,
+			line_map = {
+				activity_entry = e,
+				activity_actor = e.actor,
+			},
+		}
+	end
+	return items
+end
+
+-- ── highlight callbacks ──────────────────────────────────────────
+
+---@param item AtlasThreadV2Item
+---@param _text string
+---@return string|nil
+local function additional_hl(item, _text)
+	local entry = item.line_map and item.line_map.activity_entry
+	if entry == nil then
+		return "AtlasTextMuted"
+	end
+	if entry.kind == "approval" then
+		return "AtlasTextPositive"
+	end
+	return "AtlasTextMuted"
+end
+
+---@param item AtlasThreadV2Item
+---@param row string
+---@param _row_index integer
+---@return table[]|nil
+local function content_hl(item, row, _row_index)
+	local entry = item.line_map and item.line_map.activity_entry
+	if entry == nil then
+		return nil
+	end
+
+	if entry.kind == "comment" and entry.deleted == true then
+		return {
+			{ start_col = 0, end_col = #row, hl_group = "AtlasTextMutedStrikethrough" },
+		}
+	end
+
+	if entry.kind == "update" then
+		return {
+			{ start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" },
+		}
+	end
+
+	return nil
+end
 
 ---@param width integer
 ---@return string[] lines
@@ -72,167 +253,20 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	local function first_line(text)
-		local raw = tostring(text or ""):gsub("\r\n", "\n")
-		return raw:match("([^\n]+)") or raw
-	end
-
-	local function actor_name(actor)
-		if actor == nil then
-			return "Unknown"
-		end
-		if actor.nickname ~= "" then
-			return actor.nickname
-		end
-		if actor.name ~= "" then
-			return actor.name
-		end
-		return "Unknown"
-	end
-
-	local function update_detail(entry)
-		local changes = entry.changes or {}
-		local keys = {}
-		for key, _ in pairs(changes) do
-			table.insert(keys, tostring(key))
-		end
-		table.sort(keys)
-		if #keys > 0 then
-			return "changes: " .. table.concat(keys, ", ")
-		end
-
-		local source_branch = tostring(entry.source_branch or "")
-		local target_branch = tostring(entry.target_branch or "")
-		if source_branch ~= "" and target_branch ~= "" then
-			return string.format("%s -> %s", source_branch, target_branch)
-		end
-
-		return "pull request updated"
-	end
-
-	---@param entry BitbucketPRActivityEntry
-	---@return string
-	local function entry_header(entry)
-		local kind = entry.kind
-		if kind == "approval" then
-			return "approved this pull request"
-		end
-		if kind == "comment" then
-			return "commented on this pull request"
-		end
-		return "updated this pull request"
-	end
-
-	---@param entry BitbucketPRActivityEntry
-	---@return string|nil
-	local function entry_content(entry)
-		local kind = entry.kind
-		if kind == "approval" then
-			return "approval"
-		end
-		if kind == "comment" then
-			local text = first_line(entry.content_raw)
-			if text == "" then
-				return "(empty comment)"
-			end
-			return text
-		end
-		if kind == "update" then
-			return update_detail(entry)
-		end
-		return nil
-	end
-
-	---@param entry BitbucketPRActivityEntry
-	---@return string[]|nil
-	local function entry_footer(entry)
-		if entry.kind ~= "comment" then
-			return nil
-		end
-
-		local items = {}
-		if entry.pending == true then
-			table.insert(items, "PENDING")
-		end
-		if entry.deleted == true then
-			table.insert(items, "DELETED")
-		end
-
-		return #items > 0 and items or nil
-	end
-
-	---@param item AtlasThreadedItem
-	---@param author string
-	---@return string|nil
-	local function author_hl(item, author)
-		if author == "" then
-			return "AtlasTextMutedItalic"
-		end
-		local actor = item.line_map and item.line_map.activity_actor
-		local key = actor ~= nil and (actor.nickname or actor.name) or author
-		return highlights.dynamic_for(key)
-	end
-
-	---@param item AtlasThreadedItem
-	---@param _text string
-	---@return string|nil
-	local function header_content_hl(item, _text)
-		local entry = item.line_map and item.line_map.activity_entry
-		local kind = entry ~= nil and entry.kind or ""
-		if kind == "approval" then
-			return "AtlasTextPositive"
-		end
-		if kind == "comment" then
-			return "AtlasTextMuted"
-		end
-		return "AtlasTextWarning"
-	end
-
-	---@param item AtlasThreadedItem
-	---@param row string
-	---@param _row_index integer
-	---@return table[]|nil
-	local function content_hl(item, row, _row_index)
-		local entry = item.line_map and item.line_map.activity_entry
-		if entry == nil then
-			return nil
-		end
-
-		if entry.kind == "comment" and entry.deleted == true then
-			return {
-				{ start_col = 0, end_col = #row, hl_group = "AtlasTextMutedStrikethrough" },
-			}
-		end
-
-		if entry.kind == "update" then
-			return {
-				{ start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" },
-			}
-		end
-
-		return nil
-	end
-
-	local items = {}
-	for _, e in ipairs(entries) do
-		table.insert(items, {
-			author = actor_name(e.actor),
-			timestamp = utils.relative_time(e.date),
-			header_content = entry_header(e),
-			content = entry_content(e),
-			footer_items = entry_footer(e),
-			line_map = {
-				activity_entry = e,
-				activity_actor = e.actor,
-			},
-		})
-	end
-
+	local items = to_thread_items(entries)
 	local item_lines, item_spans, item_map = threads.render(items, width, {
 		padding_x = PADDING_X,
-		author_hl = author_hl,
-		header_content_hl = header_content_hl,
+		content_max_lines = 3,
+		additional_hl = additional_hl,
 		content_hl = content_hl,
+		icon_hl_fn = function(item)
+			local entry = item.line_map and item.line_map.activity_entry
+			if entry and entry.kind == "approval" then
+				return "AtlasTextPositive"
+			end
+			local author = vim.trim(tostring(item.author or "")):lower()
+			return highlights.dynamic_for(author) or "AtlasTextMuted"
+		end,
 	})
 
 	local offset = #lines
