@@ -1,6 +1,7 @@
 @jira_issue_key = KAN-2
 @jira_project_key = KAN
 @jira_project_id = 10000
+@jira_query = KAN
 
 ### Get current user
 GET {{JIRA_BASE_URL}}/rest/api/3/myself
@@ -42,6 +43,11 @@ Accept: application/json
   "nextPageToken": "",
   "maxResults": 1
 }
+
+### Search issue picker (query ticket)
+GET {{JIRA_BASE_URL}}/rest/api/3/issue/picker?query={{jira_query}}&showSubTasks=true&showSubTaskParent=true
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Accept: application/json
 
 ### Get issue details
 GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}

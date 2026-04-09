@@ -20,6 +20,14 @@ local SEARCH_FIELDS = {
 	"customfield_10016", --- story points
 }
 
+---@param str string
+---@return string
+local function url_encode(str)
+	return (str:gsub("([^%w%-_.~])", function(c)
+		return string.format("%%%02X", string.byte(c))
+	end))
+end
+
 ---@class JiraIssueSearchPage
 ---@field issues JiraIssue[]
 ---@field nextPageToken string|nil
@@ -73,6 +81,62 @@ function M.search_issues(jql, on_done, opts)
 			is_last = page.isLast,
 		})
 		on_done(page, nil)
+	end)
+end
+
+---@class JiraIssuePickerItem
+---@field id string
+---@field key string
+---@field summary string
+
+---@param query string
+---@param on_done fun(items: JiraIssuePickerItem[]|nil, err: string|nil)
+---@param opts { force_load?: boolean }|nil
+---@return { job_id: integer, cancel: fun() }|nil
+function M.search_issue(query, on_done, opts)
+	opts = opts or {}
+	local q = vim.trim(tostring(query or ""))
+
+	local cache_key = "jira:issue_picker:" .. q
+	if not opts.force_load then
+		local cached_items, ok = service.get_memory_cache(cache_key)
+		if ok then
+			on_done(cached_items, nil)
+			return nil
+		end
+	end
+
+	local endpoint = "/issue/picker?query="
+		.. url_encode(q)
+		.. "&showSubTasks=true&showSubTaskParent=true"
+	logger.loginfo("Jira issue picker search", { query = q })
+
+	return service.request("GET", endpoint, nil, function(result, err)
+		if err ~= nil or type(result) ~= "table" then
+			on_done(nil, err or "Empty response")
+			return
+		end
+
+		---@type JiraIssuePickerItem[]
+		local items = {}
+		for _, section in ipairs(result.sections or {}) do
+			for _, issue in ipairs((type(section) == "table" and section.issues) or {}) do
+				if type(issue) == "table" then
+					local key = tostring(issue.key or "")
+					if key ~= "" then
+						local summary = tostring(issue.summaryText or issue.summary or "")
+						table.insert(items, {
+							id = tostring(issue.id or key),
+							key = key,
+							summary = summary,
+						})
+					end
+				end
+			end
+		end
+
+		service.set_memory_cache(cache_key, items)
+		on_done(items, nil)
 	end)
 end
 

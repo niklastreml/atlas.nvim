@@ -474,8 +474,75 @@ local ACTIONS = {
 		end,
 	},
 	{
+		id = "search_query_issue",
+		label = "Search Issue",
+		is_available = function()
+			return true
+		end,
+		run = function(_, done)
+			async_picker.open({
+				title = "Search Query Ticket",
+				prompt = "Search tickets",
+				debounce_ms = 200,
+				identifier = "jira_issue_picker_search",
+				cache_ttl_ms = 30000,
+				fetch_on_open = true,
+				format_item = function(item)
+					return string.format("%s %s", icons.jira_icon("story"), item.label)
+				end,
+				fetch = function(fetch_ctx, fetch_done)
+					local query = vim.trim(fetch_ctx.query)
+					issues_api.search_issue(query, function(items, err)
+						if fetch_ctx.signal.cancelled then
+							return
+						end
+
+						if err ~= nil or items == nil then
+							fetch_done(nil, err or "Failed to search tickets")
+							return
+						end
+
+						---@type AsyncPickerItem[]
+						local picker_items = {}
+						for _, issue in ipairs(items) do
+							table.insert(picker_items, {
+								id = tostring(issue.id or issue.key),
+								label = string.format("%s - %s", issue.key, issue.summary),
+								secondary = issue.key,
+								value = issue,
+							})
+						end
+
+						fetch_done(picker_items, nil)
+					end)
+				end,
+				on_select = function(item)
+					local issue = item.value
+					local issue_key = tostring((issue or {}).key or "")
+					if issue_key == "" then
+						done(nil, "Selected issue is missing key")
+						return
+					end
+
+					local search_view = {
+						name = string.format("Search (%s)", issue_key),
+						jql = string.format('key = "%s"', issue_key),
+					}
+
+					require("atlas.jira.ui.controller").switch_view(search_view, function()
+						require("atlas.ui.navigation").focus_first_item()
+					end)
+					done({ changed_issue_key = issue_key, message = string.format("Opened %s", issue_key) }, nil)
+				end,
+				on_cancel = function()
+					done({ changed_issue_key = nil, message = "Search cancelled" }, nil)
+				end,
+			})
+		end,
+	},
+	{
 		id = "search_issues",
-		label = "Search issues",
+		label = "Search JQL",
 		is_available = function()
 			return true
 		end,
