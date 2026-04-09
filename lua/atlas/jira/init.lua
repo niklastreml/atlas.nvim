@@ -52,34 +52,20 @@ end
 local function register_dynamic_keys(buf, views)
 	local items = {
 		{
-			key = "r",
-			desc = "Reload selected issue",
-			callback = function()
-				controller.refresh_current_issue()
-			end,
-		},
-		{
-			key = "R",
-			desc = "Refresh current Jira view",
-			callback = function()
-				controller.refresh_current_view(function()
-					navigation.focus_first_item()
-				end)
-			end,
-		},
-		{
-			key = "K",
-			desc = "Show issue details popup",
-			callback = function()
-				controller.show_issue_details(buf)
-			end,
-		},
-		{
 			key = "A",
 			desc = "Open Jira actions",
 			callback = function()
 				controller.open_actions()
 			end,
+			index = 1,
+		},
+		{
+			key = "/",
+			desc = "Search issues",
+			callback = function()
+				controller.open_issue_search_popup()
+			end,
+			index = 2,
 		},
 		{
 			key = "ge",
@@ -87,6 +73,7 @@ local function register_dynamic_keys(buf, views)
 			callback = function()
 				run_selected_issue_action("edit_issue", "Edit issue")
 			end,
+			index = 3,
 		},
 		{
 			key = "gs",
@@ -94,6 +81,7 @@ local function register_dynamic_keys(buf, views)
 			callback = function()
 				run_selected_issue_action("transition", "Transition")
 			end,
+			index = 4,
 		},
 		{
 			key = "ga",
@@ -101,6 +89,15 @@ local function register_dynamic_keys(buf, views)
 			callback = function()
 				run_selected_issue_action("assign", "Change assignee")
 			end,
+			index = 5,
+		},
+		{
+			key = "gx",
+			desc = "Open issue in browser",
+			callback = function()
+				actions.browse_issue(selected_issue())
+			end,
+			index = 6,
 		},
 		{
 			key = "c",
@@ -108,12 +105,31 @@ local function register_dynamic_keys(buf, views)
 			callback = function()
 				actions.create_issue()
 			end,
+			index = 7,
 		},
 		{
-			key = "gx",
-			desc = "Open issue in browser",
+			key = "r",
+			desc = "Reload selected issue",
 			callback = function()
-				actions.browse_issue(selected_issue())
+				controller.refresh_current_issue()
+			end,
+			index = 8,
+		},
+		{
+			key = "R",
+			desc = "Refresh current view",
+			callback = function()
+				controller.refresh_current_view(function()
+					navigation.focus_first_item()
+				end)
+			end,
+			index = 9,
+		},
+		{
+			key = "K",
+			desc = "Show issue details",
+			callback = function()
+				controller.show_issue_details(buf)
 			end,
 		},
 		{
@@ -130,13 +146,6 @@ local function register_dynamic_keys(buf, views)
 				actions.copy_issue_url(selected_issue())
 			end,
 		},
-		{
-			key = "/",
-			desc = "Search issues",
-			callback = function()
-				controller.open_issue_search_popup()
-			end,
-		},
 	}
 
 	local view_items = {}
@@ -146,6 +155,7 @@ local function register_dynamic_keys(buf, views)
 			table.insert(view_items, {
 				key = v.key,
 				desc = string.format("Switch to %s", v.name),
+				hidden = true,
 				callback = function()
 					controller.switch_view(v, function()
 						navigation.focus_first_item()
@@ -155,22 +165,14 @@ local function register_dynamic_keys(buf, views)
 		end
 	end
 
-	for _, item in ipairs(items) do
-		help.unregister_key("Jira", item.key, { buf = buf })
-	end
-	for _, item in ipairs(view_items) do
-		help.unregister_key("Jira", item.key, { buf = buf })
-	end
-
-	help.register_keys("Jira", items, {
+	help.register("Jira", items, {
 		index = 220,
-		buf = buf,
+		buffer = buf,
 	})
 
-	help.register_keys("Jira", view_items, {
+	help.register("Jira", view_items, {
 		index = 220,
-		buf = buf,
-		add_to_registry = false,
+		buffer = buf,
 	})
 end
 

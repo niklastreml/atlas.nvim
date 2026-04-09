@@ -316,16 +316,6 @@ function M.refresh()
 end
 
 function M.setup()
-	local help = require("atlas.ui.popups.help")
-	help.register_keys("General", {
-		{
-			key = "?",
-			desc = "Toggle this help popup",
-			callback = function()
-				help.toggle()
-			end,
-		},
-	}, { index = 100 })
 end
 
 return M

@@ -11,11 +11,12 @@ local function bootstrap_common()
 	require("atlas.ui.highlights").setup()
 	require("atlas.ui.components.footer").setup()
 
-	require("atlas.ui.popups.help").register_keys("Commands", {
-		{ key = ":AtlasBitbucket", desc = "Open Bitbucket picker" },
-		{ key = ":AtlasJira", desc = "Open Jira picker" },
-		{ key = ":AtlasLogs", desc = "Open Atlas logs" },
-	}, { index = 999 })
+	require("atlas.ui.popups.help").register_command("Commands", {
+		{ name = "AtlasBitbucket", desc = "Open Bitbucket picker" },
+		{ name = "AtlasJira", desc = "Open Jira picker" },
+		{ name = "AtlasJqlSearch", desc = "Start JQL Search" },
+		{ name = "AtlasLogs", desc = "Open Atlas logs" },
+	}, { index = 999, buffer = require("atlas.ui.layout").buf_id("main") })
 end
 
 ---@param view "jira"|"bitbucket"
@@ -44,12 +45,6 @@ function M.open(view, opts)
 	bootstrap_common()
 	bootstrap_provider(view, opts)
 	layout.open(view)
-
-	--FIX: This removes the statusline but is there a better way to do this? Could also effect other plugins that rely on the statusline
-	vim.o.laststatus = 0
-	vim.schedule(function()
-		vim.o.laststatus = 0
-	end)
 end
 
 return M

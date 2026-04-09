@@ -41,33 +41,60 @@ local function register_panel_keys()
 		return
 	end
 
-	vim.keymap.set("n", "q", function()
-		M.close()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "p", function()
-		M.toggle()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "[", function()
-		current_panel_controller().prev_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "<S-Tab>", function()
-		current_panel_controller().prev_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "]", function()
-		current_panel_controller().next_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "<Tab>", function()
-		current_panel_controller().next_tab()
-	end, { buffer = buf, silent = true, nowait = true })
-
-	vim.keymap.set("n", "r", function()
-		refresh_current_panel()
-	end, { buffer = buf, silent = true, nowait = true })
+	local help = require("atlas.ui.popups.help")
+	help.register("General", {
+		{
+			key = "?",
+			desc = "Toggle this help popup",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				help.toggle({ buffer = buf })
+			end,
+		},
+		{
+			key = "q",
+			desc = "Close detail pane",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				if help.is_open() then
+					return
+				end
+				M.close()
+			end,
+		},
+		{
+			key = "p",
+			desc = "Toggle detail pane",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				M.toggle()
+			end,
+		},
+		{
+			key = { "[", "<S-Tab>" },
+			desc = "Previous panel tab",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				current_panel_controller().prev_tab()
+			end,
+		},
+		{
+			key = { "]", "<Tab>" },
+			desc = "Next panel tab",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				current_panel_controller().next_tab()
+			end,
+		},
+		{
+			key = "r",
+			desc = "Refresh current panel",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				refresh_current_panel()
+			end,
+		},
+	}, { index = 210, buffer = buf })
 end
 
 function M.open()

@@ -105,64 +105,19 @@ local function register_dynamic_keys(buf, views)
 			callback = function()
 				actions.open_pr_actions_popup(selected_pr())
 			end,
+			index = 1,
 		},
 		{
-			key = "gx",
-			desc = "Open PR in browser",
+			key = "/",
+			desc = "Search repositories",
 			callback = function()
-				actions.browse_current_pr(selected_pr())
+				actions.open_pr_search_popup()
 			end,
-		},
-		{
-			key = "K",
-			desc = "Show PR details popup",
-			callback = function()
-				controller.show_pr_details(buf)
-			end,
-		},
-		{
-			key = "y",
-			desc = "Copy PR id",
-			callback = function()
-				actions.copy_current_pr_id(selected_pr())
-			end,
-		},
-		{
-			key = "Y",
-			desc = "Copy PR URL",
-			callback = function()
-				actions.copy_current_pr_url(selected_pr())
-			end,
-		},
-		{
-			key = "R",
-			desc = "Refresh current Bitbucket view",
-			callback = function()
-				controller.refresh_current_view(function()
-					navigation.focus_first_item()
-				end)
-			end,
-		},
-		{
-			key = "r",
-			desc = "Refetch selected PR",
-			callback = function()
-				local panel = require("atlas.ui.panel")
-				local panel_state = require("atlas.ui.panel.state")
-				if panel.is_open() then
-					local selected = panel_state.selected_item
-					if type(selected) == "table" and selected.kind == "repo" then
-						require("atlas.bitbucket.panel.tabs.repo.overview.controller").refresh()
-						return
-					end
-				end
-
-				actions.refresh_pr(selected_pr())
-			end,
+			index = 2,
 		},
 		{
 			key = "o",
-			desc = "Open repository panel",
+			desc = "Toggle repository panel",
 			callback = function()
 				local repo = selected_repo()
 				if repo == nil then
@@ -181,13 +136,68 @@ local function register_dynamic_keys(buf, views)
 				end
 				panel.show("bitbucket", repo)
 			end,
+			index = 3,
+		},
+
+		{
+			key = "gx",
+			desc = "Open PR in browser",
+			callback = function()
+				actions.browse_current_pr(selected_pr())
+			end,
+			index = 6,
 		},
 		{
-			key = "/",
-			desc = "Search repositories",
+			key = "r",
+			desc = "Refetch selected PR",
 			callback = function()
-				actions.open_pr_search_popup()
+				local panel = require("atlas.ui.panel")
+				local panel_state = require("atlas.ui.panel.state")
+				if panel.is_open() then
+					local selected = panel_state.selected_item
+					if type(selected) == "table" and selected.kind == "repo" then
+						require("atlas.bitbucket.panel.tabs.repo.overview.controller").refresh()
+						return
+					end
+				end
+
+				actions.refresh_pr(selected_pr())
 			end,
+			index = 8,
+		},
+		{
+			key = "R",
+			desc = "Refresh current Bitbucket view",
+			callback = function()
+				controller.refresh_current_view(function()
+					navigation.focus_first_item()
+				end)
+			end,
+			index = 9,
+		},
+		{
+			key = "K",
+			desc = "Show PR details popup",
+			callback = function()
+				controller.show_pr_details(buf)
+			end,
+			index = 10,
+		},
+		{
+			key = "y",
+			desc = "Copy PR id",
+			callback = function()
+				actions.copy_current_pr_id(selected_pr())
+			end,
+			index = 11,
+		},
+		{
+			key = "Y",
+			desc = "Copy PR URL",
+			callback = function()
+				actions.copy_current_pr_url(selected_pr())
+			end,
+			index = 12,
 		},
 	}
 	local view_items = {}
@@ -198,6 +208,7 @@ local function register_dynamic_keys(buf, views)
 			table.insert(view_items, {
 				key = v.key,
 				desc = string.format("Switch to %s", v.name),
+				hidden = true,
 				callback = function()
 					controller.switch_view(v, function()
 						navigation.focus_first_item()
@@ -207,22 +218,14 @@ local function register_dynamic_keys(buf, views)
 		end
 	end
 
-	for _, item in ipairs(items) do
-		help.unregister_key("Bitbucket", item.key, { buf = buf })
-	end
-	for _, item in ipairs(view_items) do
-		help.unregister_key("Bitbucket", item.key, { buf = buf })
-	end
-
-	help.register_keys("Bitbucket", items, {
+	help.register("Bitbucket", items, {
 		index = 220,
-		buf = buf,
+		buffer = buf,
 	})
 
-	help.register_keys("Bitbucket", view_items, {
+	help.register("Bitbucket", view_items, {
 		index = 220,
-		buf = buf,
-		add_to_registry = false,
+		buffer = buf,
 	})
 end
 

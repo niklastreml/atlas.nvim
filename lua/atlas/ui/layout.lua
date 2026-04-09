@@ -36,7 +36,7 @@ local function apply_main_win_opts(win)
 	vim.api.nvim_set_option_value("cursorbind", false, { win = win })
 	vim.api.nvim_set_option_value("diff", false, { win = win })
 	vim.api.nvim_set_option_value("winbar", " ", { win = win })
-	vim.api.nvim_set_option_value("statusline", "", { win = win })
+	vim.api.nvim_set_option_value("statusline", " ", { win = win })
 	vim.api.nvim_set_option_value(
 		"winhighlight",
 		"Normal:Normal,NormalFloat:Normal,FloatBorder:FloatBorder,CursorLine:CursorLine",
@@ -53,7 +53,7 @@ local function apply_footer_win_opts(win)
 	vim.api.nvim_set_option_value("wrap", false, { win = win })
 	vim.api.nvim_set_option_value("cursorline", false, { win = win })
 	vim.api.nvim_set_option_value("winbar", " ", { win = win })
-	vim.api.nvim_set_option_value("statusline", "", { win = win })
+	vim.api.nvim_set_option_value("statusline", " ", { win = win })
 	vim.api.nvim_set_option_value("winfixheight", true, { win = win })
 end
 
@@ -69,7 +69,7 @@ local function apply_detail_win_opts(win)
 	vim.api.nvim_set_option_value("cursorbind", false, { win = win })
 	vim.api.nvim_set_option_value("diff", false, { win = win })
 	vim.api.nvim_set_option_value("winbar", " ", { win = win })
-	vim.api.nvim_set_option_value("statusline", "", { win = win })
+	vim.api.nvim_set_option_value("statusline", " ", { win = win })
 	vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
 end
 
@@ -148,12 +148,29 @@ local function ensure_main()
 	apply_main_win_opts(state.main_win)
 
 	local help = require("atlas.ui.popups.help")
-	help.register_keys("General", {
-		{ key = "q", desc = "Close Atlas window" },
-	})
-	vim.keymap.set("n", "q", function()
-		M.close()
-	end, { buffer = main_buf, silent = true, nowait = true })
+	help.register("General", {
+		{
+			key = "q",
+			desc = "Close Atlas window",
+			opts = { nowait = true, silent = true },
+			callback = function()
+				if help.is_open() then
+					return
+				end
+				M.close()
+			end,
+		},
+	}, { buffer = main_buf })
+	help.register("General", {
+		{
+			key = "?",
+			desc = "Toggle this help popup",
+			opts = { nowait = true, silent = true },
+			callback = function()
+				help.toggle()
+			end,
+		},
+	}, { buffer = main_buf })
 end
 
 local function ensure_footer()

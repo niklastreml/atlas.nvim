@@ -33,83 +33,86 @@ local function register_panel_keys()
 		return
 	end
 
-	vim.keymap.set("n", "j", function()
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab ~= nil and type(tab.move_cursor) == "function" then
-			tab.move_cursor(1)
-		end
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Next item in tab",
-	})
+	local help = require("atlas.ui.popups.help")
+	help.register("Jira", {
+		{
+			key = "j",
+			desc = "Next item in tab",
+			opts = { silent = true, nowait = true },
+      hidden = true,
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.move_cursor) == "function" then
+					tab.move_cursor(1)
+				end
+			end,
+		},
+		{
+			key = "k",
+			desc = "Previous item in tab",
+			opts = { silent = true, nowait = true },
+      hidden = true,
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.move_cursor) == "function" then
+					tab.move_cursor(-1)
+				end
+			end,
+		},
+		{
+			key = "gg",
+			desc = "First item in tab",
+			opts = { silent = true, nowait = true },
+      hidden = true,
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.move_cursor) == "function" then
+					tab.move_cursor(0)
+				end
+			end,
+		},
+		{
+			key = "G",
+			desc = "Last item in tab",
+			opts = { silent = true, nowait = true },
+      hidden = true,
+			callback = function()
+				local tab = get_tab_module(panel_state.current_tab)
+				if tab ~= nil and type(tab.move_cursor) == "function" then
+					tab.move_cursor(math.huge)
+				end
+			end,
+		},
+		{
+			key = "A",
+			desc = "Open Jira actions",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				local issue = panel_state.current_issue
+				if type(issue) ~= "table" then
+					footer.notify("warn", "No issue selected")
+					return
+				end
 
-	vim.keymap.set("n", "k", function()
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab ~= nil and type(tab.move_cursor) == "function" then
-			tab.move_cursor(-1)
-		end
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Previous item in tab",
-	})
+				jira_actions.open({ issue = issue, source = "panel" }, function(result, err)
+					if err ~= nil then
+						footer.notify("error", tostring(err))
+						return
+					end
 
-	vim.keymap.set("n", "gg", function()
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab ~= nil and type(tab.move_cursor) == "function" then
-			tab.move_cursor(0)
-		end
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "First item in tab",
-	})
+					if result ~= nil and result.message ~= nil and result.message ~= "" then
+						footer.notify("info", result.message, 1200)
+					end
 
-	vim.keymap.set("n", "G", function()
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab ~= nil and type(tab.move_cursor) == "function" then
-			tab.move_cursor(math.huge)
-		end
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Last item in tab",
-	})
-
-	vim.keymap.set("n", "A", function()
-		local issue = panel_state.current_issue
-		if type(issue) ~= "table" then
-			footer.notify("warn", "No issue selected")
-			return
-		end
-
-		jira_actions.open({ issue = issue, source = "panel" }, function(result, err)
-			if err ~= nil then
-				footer.notify("error", tostring(err))
-				return
-			end
-
-			if result ~= nil and result.message ~= nil and result.message ~= "" then
-				footer.notify("info", result.message, 1200)
-			end
-
-			if result ~= nil and result.changed_issue_key ~= nil and result.changed_issue_key ~= "" then
-				jira_controller.refresh_issue(result.changed_issue_key, function()
-					M.refresh()
+					if result ~= nil and result.changed_issue_key ~= nil and result.changed_issue_key ~= "" then
+						jira_controller.refresh_issue(result.changed_issue_key, function()
+							M.refresh()
+						end)
+					end
 				end)
-			end
-		end)
-	end, {
-		buffer = buf,
-		silent = true,
-		nowait = true,
-		desc = "Open Jira actions",
-	})
+			end,
+		},
+	}, { index = 220, buffer = buf })
 
 	mapped_buf = buf
 end

@@ -142,6 +142,7 @@ function M.register_keys(buf)
 		{
 			key = "j",
 			desc = "Next item",
+			hidden = true,
 			callback = function()
 				M.move_cursor("down")
 			end,
@@ -149,6 +150,7 @@ function M.register_keys(buf)
 		{
 			key = "k",
 			desc = "Previous item",
+			hidden = true,
 			callback = function()
 				M.move_cursor("up")
 			end,
@@ -156,6 +158,7 @@ function M.register_keys(buf)
 		{
 			key = "gg",
 			desc = "Go to first PR",
+			hidden = true,
 			callback = function()
 				M.focus_first_item()
 			end,
@@ -163,6 +166,7 @@ function M.register_keys(buf)
 		{
 			key = "G",
 			desc = "Go to last PR",
+			hidden = true,
 			callback = function()
 				M.focus_last_item()
 			end,
@@ -185,8 +189,9 @@ function M.register_keys(buf)
 			end,
 		},
 		{
-			key = "[",
+			key = { "[", "<S-Tab>" },
 			desc = "Previous panel tab",
+			opts = { silent = true, nowait = true },
 			callback = function()
 				local panel = require("atlas.ui.panel")
 				if not panel.is_open() then
@@ -201,40 +206,9 @@ function M.register_keys(buf)
 			end,
 		},
 		{
-			key = "<S-Tab>",
-			desc = "Previous panel tab",
-			callback = function()
-				local panel = require("atlas.ui.panel")
-				if not panel.is_open() then
-					return
-				end
-
-				if ui_state.current_view == "jira" then
-					require("atlas.jira.panel.init").prev_tab()
-				elseif ui_state.current_view == "bitbucket" then
-					require("atlas.bitbucket.panel.init").prev_tab()
-				end
-			end,
-		},
-		{
-			key = "]",
+			key = { "]", "<Tab>" },
 			desc = "Next panel tab",
-			callback = function()
-				local panel = require("atlas.ui.panel")
-				if not panel.is_open() then
-					return
-				end
-
-				if ui_state.current_view == "jira" then
-					require("atlas.jira.panel.init").next_tab()
-				elseif ui_state.current_view == "bitbucket" then
-					require("atlas.bitbucket.panel.init").next_tab()
-				end
-			end,
-		},
-		{
-			key = "<Tab>",
-			desc = "Next panel tab",
+			opts = { silent = true, nowait = true },
 			callback = function()
 				local panel = require("atlas.ui.panel")
 				if not panel.is_open() then
@@ -250,13 +224,9 @@ function M.register_keys(buf)
 		},
 	}
 
-	for _, item in ipairs(items) do
-		help.unregister_key("Navigation", item.key, { buf = target_buf })
-	end
-
-	help.register_keys("Navigation", items, {
+	help.register("General", items, {
 		index = 210,
-		buf = target_buf,
+		buffer = target_buf,
 	})
 end
 
