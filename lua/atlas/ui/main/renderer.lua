@@ -36,6 +36,7 @@ function M.render(view, opts)
 	local width = vim.api.nvim_win_get_width(win)
 	local height = vim.api.nvim_win_get_height(win)
 
+	---FIX: Honestly just a mess. Clean up
 	if target_view == "jira" then
 		state.current_view = "jira"
 		local jira_state = require("atlas.jira.state")

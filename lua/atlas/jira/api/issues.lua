@@ -106,9 +106,7 @@ function M.search_issue(query, on_done, opts)
 		end
 	end
 
-	local endpoint = "/issue/picker?query="
-		.. url_encode(q)
-		.. "&showSubTasks=true&showSubTaskParent=true"
+	local endpoint = "/issue/picker?query=" .. url_encode(q) .. "&showSubTasks=true&showSubTaskParent=true"
 	logger.loginfo("Jira issue picker search", { query = q })
 
 	return service.request("GET", endpoint, nil, function(result, err)

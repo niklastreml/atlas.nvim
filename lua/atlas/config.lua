@@ -91,12 +91,23 @@ M.options = {
 
 local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasJira", nil)
+	pcall(vim.api.nvim_del_user_command, "AtlasJqlSearch", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasLogs", nil)
 
 	vim.api.nvim_create_user_command("AtlasJira", function()
 		require("atlas").open("jira")
 	end, { desc = "Open Jira issue picker" })
+
+	vim.api.nvim_create_user_command("AtlasJqlSearch", function(opts)
+		require("atlas.jira.completion.search").command(opts)
+	end, {
+		desc = "Search Jira with text or JQL",
+		nargs = "*",
+		complete = function(arglead, cmdline, cursorpos)
+			return require("atlas.jira.completion.search").complete(arglead, cmdline, cursorpos)
+		end,
+	})
 
 	vim.api.nvim_create_user_command("AtlasBitbucket", function()
 		require("atlas").open("bitbucket")

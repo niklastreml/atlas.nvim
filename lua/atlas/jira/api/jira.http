@@ -49,6 +49,11 @@ GET {{JIRA_BASE_URL}}/rest/api/3/issue/picker?query={{jira_query}}&showSubTasks=
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
 Accept: application/json
 
+### Get JQL autocomplete data
+GET {{JIRA_BASE_URL}}/rest/api/3/jql/autocompletedata
+Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
+Accept: application/json
+
 ### Get issue details
 GET {{JIRA_BASE_URL}}/rest/api/3/issue/{{jira_issue_key}}
 Authorization: Basic {{JIRA_EMAIL}}:{{JIRA_TOKEN}}
