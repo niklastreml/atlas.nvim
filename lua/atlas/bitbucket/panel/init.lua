@@ -50,6 +50,30 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
+---@param panel_type "pr"|"repo"|nil
+---@param tab_key string
+---@return table|nil
+local function get_tab_module_for(panel_type, tab_key)
+	local tabs = {}
+	if panel_type == "pr" then
+		tabs = PR_TABS
+	elseif panel_type == "repo" then
+		tabs = REPO_TABS
+	end
+
+	for _, tab in ipairs(tabs) do
+		if tab.key == tab_key then
+			local ok, mod = pcall(require, tab.mod)
+			if ok then
+				return mod
+			end
+			return nil
+		end
+	end
+
+	return nil
+end
+
 local function register_panel_keys()
 	local buf = layout.buf_id("detail")
 	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
@@ -160,6 +184,16 @@ end
 ---@param panel_type "pr"|"repo"
 ---@param item BitbucketPR|BitbucketRepository|nil
 function M.on_select(panel_type, item)
+	local previous_panel_type = panel_state.panel_type
+	local previous_tab = panel_state.current_tab
+
+	if previous_panel_type ~= panel_type then
+		local previous_tab_mod = get_tab_module_for(previous_panel_type, previous_tab)
+		if previous_tab_mod and type(previous_tab_mod.deactivate) == "function" then
+			previous_tab_mod.deactivate()
+		end
+	end
+
 	panel_state.set_panel_type(panel_type)
 	panel_state.set_current_item(item)
 	register_panel_keys()

@@ -23,6 +23,52 @@ local function selected_pr()
 	return nil
 end
 
+---@param workspace string
+---@param repo_slug string
+---@param existing_name string|nil
+---@return string
+local function repo_full_name(workspace, repo_slug, existing_name)
+	local full_name = tostring(existing_name or "")
+	if full_name ~= "" then
+		return full_name
+	end
+
+	if workspace == "" or repo_slug == "" then
+		return ""
+	end
+
+	return string.format("%s/%s", workspace, repo_slug)
+end
+
+---@param full_name string
+---@return table|nil
+local function repo_settings_for(full_name)
+	if full_name == "" then
+		return nil
+	end
+
+	return vim.tbl_get(config.options, "bitbucket", "repo_config", "settings", full_name)
+end
+
+---@param raw_repo table|nil
+---@return table
+local function normalize_selected_repo(raw_repo)
+	local repo = raw_repo or {}
+	local workspace = tostring(repo.workspace or "")
+	local repo_slug = tostring(repo.slug or repo.repo_slug or repo.repo or "")
+	local full_name = repo_full_name(workspace, repo_slug, repo.full_name or repo.name)
+	local repo_settings = repo_settings_for(full_name)
+
+	return {
+		kind = "repo",
+		workspace = workspace,
+		slug = repo_slug,
+		repo_slug = repo_slug,
+		full_name = full_name,
+		readme = repo.readme or (repo_settings and repo_settings.readme or nil),
+	}
+end
+
 ---@return table|nil
 local function selected_repo()
 	local node = navigation.current_item()
@@ -31,33 +77,19 @@ local function selected_repo()
 	end
 
 	if node.kind == "repo" then
-		return node
+		return normalize_selected_repo(node)
 	end
 
 	if type(node._repo) == "table" then
-		return node._repo
+		return normalize_selected_repo(node._repo)
 	end
 
 	if node.kind == "pr" and type(node.pr) == "table" then
-		local r = node.pr.repo or {}
-		local workspace = tostring(r.workspace or "")
-		local repo_slug = tostring(r.repo or "")
-		local full_name = tostring(r.name or "")
-		local repo_name = workspace ~= "" and repo_slug ~= "" and string.format("%s/%s", workspace, repo_slug) or ""
-		local repo_settings = repo_name ~= ""
-				and ((((config.options.bitbucket or {}).repo_config or {}).settings or {})[repo_name])
-			or nil
-		if full_name == "" and workspace ~= "" and repo_slug ~= "" then
-			full_name = string.format("%s/%s", workspace, repo_slug)
-		end
-
-		return {
-			kind = "repo",
-			workspace = workspace,
-			repo_slug = repo_slug,
-			full_name = full_name,
-			readme = repo_settings and repo_settings.readme or nil,
-		}
+		return normalize_selected_repo({
+			workspace = node.pr.workspace,
+			repo_slug = node.pr.repo_slug or node.pr.repo,
+			full_name = node.pr.repo_full_name,
+		})
 	end
 
 	return nil

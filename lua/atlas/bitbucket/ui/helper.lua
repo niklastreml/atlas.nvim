@@ -63,12 +63,18 @@ function M.group_prs_by_repo(prs)
 
 	for _, pr in ipairs(source) do
 		local workspace = tostring(pr.workspace or "")
-		local repo = tostring(pr.repo or "")
-		local key = workspace .. "/" .. repo
+		local repo = tostring(pr.repo_slug or pr.repo or "")
+		local full_name = tostring(pr.repo_full_name or "")
+		if full_name == "" and workspace ~= "" and repo ~= "" then
+			full_name = string.format("%s/%s", workspace, repo)
+		end
+
+		local key = full_name ~= "" and full_name or (workspace .. "/" .. repo)
 		if grouped[key] == nil then
 			grouped[key] = {
 				workspace = workspace,
 				repo = repo,
+				full_name = full_name,
 				prs = {},
 			}
 			table.insert(order, key)
@@ -268,17 +274,23 @@ local function plain_tree_columns()
 end
 
 local function append_compact_group_rows(rows, group)
-	local full_name = string.format("%s/%s", tostring(group.workspace or ""), tostring(group.repo or ""))
+	local workspace = tostring(group.workspace or "")
+	local repo = tostring(group.repo or "")
+	local full_name = tostring(group.full_name or "")
+	if full_name == "" and workspace ~= "" and repo ~= "" then
+		full_name = string.format("%s/%s", workspace, repo)
+	end
+
 	local repo_ctx = {
 		kind = "repo",
-		workspace = group.workspace,
-		repo_slug = group.repo,
+		workspace = workspace,
+		repo_slug = repo,
 		full_name = full_name,
 	}
 
 	for _, pr in ipairs(group.prs or {}) do
 		local author_name = tostring((pr.author and pr.author.name) or "Unknown")
-		local repo_name = full_name
+		local repo_name = full_name ~= "" and full_name or repo
 		local source_branch = tostring(((pr.source or {}).branch or "?"))
 		local target_branch = tostring(((pr.destination or {}).branch or "?"))
 		table.insert(rows, {
@@ -336,7 +348,12 @@ end
 function M.build_plain_tree_table(repo_groups)
 	local rows = {}
 	for _, group in ipairs(repo_groups or {}) do
-		local full_name = string.format("%s/%s", tostring(group.workspace or ""), tostring(group.repo or ""))
+		local workspace = tostring(group.workspace or "")
+		local repo = tostring(group.repo or "")
+		local full_name = tostring(group.full_name or "")
+		if full_name == "" and workspace ~= "" and repo ~= "" then
+			full_name = string.format("%s/%s", workspace, repo)
+		end
 		local repo_row = {
 			kind = "repo",
 			repo_name = full_name,
@@ -352,8 +369,8 @@ function M.build_plain_tree_table(repo_groups)
 			_item = {
 				kind = "repo",
 				repo = full_name,
-				workspace = group.workspace,
-				repo_slug = group.repo,
+				workspace = workspace,
+				repo_slug = repo,
 				full_name = full_name,
 			},
 		}
@@ -379,8 +396,8 @@ function M.build_plain_tree_table(repo_groups)
 					pr = pr,
 					_repo = {
 						kind = "repo",
-						workspace = group.workspace,
-						repo_slug = group.repo,
+						workspace = workspace,
+						repo_slug = repo,
 						full_name = full_name,
 					},
 				},

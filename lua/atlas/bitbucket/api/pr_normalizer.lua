@@ -73,10 +73,17 @@ function M.pullrequests(result, workspace, repo)
 		local links = as_table(pr.links) or {}
 		local source = as_table(pr.source) or {}
 		local destination = as_table(pr.destination) or {}
+		local source_repo = as_table(source.repository) or {}
+		local destination_repo = as_table(destination.repository) or {}
 		local source_branch = as_table(source.branch) or {}
 		local source_commit = as_table(source.commit) or {}
 		local destination_branch = as_table(destination.branch) or {}
 		local destination_commit = as_table(destination.commit) or {}
+		local repo_slug = tostring(destination_repo.slug or source_repo.slug or rp)
+		local repo_full_name = tostring(destination_repo.full_name or source_repo.full_name or "")
+		if repo_full_name == "" and ws ~= "" and repo_slug ~= "" then
+			repo_full_name = string.format("%s/%s", ws, repo_slug)
+		end
 
 		table.insert(out, {
 			id = tonumber(pr.id) or 0,
@@ -116,7 +123,9 @@ function M.pullrequests(result, workspace, repo)
 			created_on = tostring(pr.created_on or ""),
 			updated_on = tostring(pr.updated_on or ""),
 			workspace = ws,
-			repo = rp,
+			repo = repo_slug,
+			repo_slug = repo_slug,
+			repo_full_name = repo_full_name,
 		})
 	end
 

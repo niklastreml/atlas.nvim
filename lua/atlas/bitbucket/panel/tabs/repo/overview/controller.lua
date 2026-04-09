@@ -91,7 +91,7 @@ function M.show(repo)
 	end
 
 	local workspace = repo.workspace
-	local repo_slug = repo.slug
+	local repo_slug = repo.slug or repo.repo_slug
 
 	if workspace == "" or repo_slug == "" then
 		state.reset()
@@ -111,7 +111,7 @@ function M.show(repo)
 			return
 		end
 
-		if err ~= nil then
+		if err ~= nil or not detail then
 			state.detail = nil
 			tab_state.readme = nil
 			footer.notify("error", "Failed to load repo detail: " .. tostring(err))

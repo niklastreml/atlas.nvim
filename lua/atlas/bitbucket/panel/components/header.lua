@@ -63,12 +63,12 @@ function M.render(pr, width)
 
 	local rows = {
 		{
-			k1 = "Branch:",
-			v1 = string.format("%s %s -> %s", branch_icon, source_branch, target_branch),
-			v1_hl = "AtlasTextPositive",
-			k2 = "Repo:",
-			v2 = string.format("%s %s", repo_icon, repo_name),
-			v2_hl = helper.repo_hl(repo_name),
+			k1 = "Repo:",
+			v1 = string.format("%s %s", repo_icon, repo_name),
+			v1_hl = helper.repo_hl(repo_name),
+			k2 = "Branch:",
+			v2 = string.format("%s %s -> %s", branch_icon, source_branch, target_branch),
+			v2_hl = "AtlasTextMuted",
 		},
 		{
 			k1 = "Close source:",

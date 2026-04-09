@@ -62,6 +62,8 @@
 ---@field updated_on string
 ---@field workspace string
 ---@field repo string
+---@field repo_slug string|nil
+---@field repo_full_name string|nil
 
 --------------------------------------------------------------------------------
 -- PR Details
@@ -220,6 +222,7 @@
 ---@field size number
 ---@field created_on string
 ---@field mainbranch string
+---@field readme string|nil
 
 --------------------------------------------------------------------------------
 -- Branches
