@@ -10,10 +10,8 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 > [!CAUTION]
 > **Still in early development, will have breaking changes!**
 
-<div>
-  <img src="https://github.com/user-attachments/assets/3da6e584-47a1-411e-91f6-110dbdc75293" width="49%" />
-  <img src="https://github.com/user-attachments/assets/80eeb59a-4a04-40e0-90fb-92ac5d4da249" width="49%" />
-</div>
+<img src="https://github.com/user-attachments/assets/3da6e584-47a1-411e-91f6-110dbdc75293"/>
+<img src="https://github.com/user-attachments/assets/80eeb59a-4a04-40e0-90fb-92ac5d4da249"/>
 
 ## Table of Contents
 
@@ -331,6 +329,19 @@ bitbucket = {
 | Bitbucket                 | `y` / `Y`   | Copy PR id / URL             |
 | Bitbucket (Files changes) | `za`        | Toggle hunk fold             |
 | Bitbucket (File changes)  | `]h` / `[h` | Next / previous hunk         |
+
+## Contributors ✨
+
+Thanks go to these wonderful people ([emoji key](https://allcontributors.org/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ## License
 

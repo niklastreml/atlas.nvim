@@ -12,6 +12,7 @@ local level_hl = {
 }
 
 local LOGS_BUFFER_NAME = "atlas://logs"
+local LOGS_RENDER_WIDTH = 10000
 local logs_buf = nil
 local logs_win = nil
 
@@ -100,7 +101,7 @@ local function refresh_buffer()
 	end
 
 	local rendered_lines, _, spans = table_view.render({
-		width = width,
+		width = math.max(width, LOGS_RENDER_WIDTH),
 		margin = 0,
 		fill = false,
 		columns = {
