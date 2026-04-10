@@ -113,7 +113,7 @@ local function sync_pr_shortcuts(buf)
 			},
 			{
 				key = "gd",
-				desc = "Open selected PR in Diffview",
+				desc = "Open selected PR diff",
 				opts = { silent = true, nowait = true },
 				callback = function()
 					local pr = selected_pr()
@@ -124,7 +124,6 @@ local function sync_pr_shortcuts(buf)
 					bitbucket_actions.run("open_diffview", {
 						pr = pr,
 						source = "panel",
-						repo_path = nil,
 					}, function() end)
 				end,
 			},

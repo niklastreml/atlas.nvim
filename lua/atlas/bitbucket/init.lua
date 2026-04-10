@@ -164,7 +164,7 @@ local function register_dynamic_keys(buf, views)
 		},
 		{
 			key = "gd",
-			desc = "Open PR in Diffview",
+			desc = "Open PR diff",
 			callback = function()
 				run_main_pr_action("open_diffview")
 			end,

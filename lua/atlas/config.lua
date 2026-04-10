@@ -32,6 +32,9 @@
 ---@field settings table<string, BitbucketRepoSettings>|nil
 ---@field paths table<string, string>|nil
 
+---@class BitbucketDiffConfig
+---@field open_cmd "DiffviewOpen"|"CodeDiff"|string|nil
+
 ---@class BitbucketViewConfig
 ---@field name string
 ---@field key string|nil
@@ -55,6 +58,7 @@
 --- @field cache_ttl number|nil
 --- @field views BitbucketViewConfig[]|nil
 --- @field repo_config BitbucketRepoConfig|nil
+--- @field diff BitbucketDiffConfig|nil
 --- @field custom_actions BitbucketCustomAction[]|nil
 
 --- @class AtlasConfig
@@ -81,6 +85,7 @@ M.options = {
 		token = vim.env.BITBUCKET_TOKEN or "",
 		cache_ttl = 300,
 		views = nil,
+		diff = {},
 		repo_config = {
 			settings = {},
 			paths = {},
