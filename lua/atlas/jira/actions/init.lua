@@ -4,7 +4,17 @@ local registry = require("atlas.jira.actions.registry")
 local logger = require("atlas.core.logger")
 local footer = require("atlas.ui.components.footer")
 
----@param action_id string
+---@alias JiraActionId
+---| "transition"
+---| "assign"
+---| "reporter"
+---| "delete_issue"
+---| "edit_issue"
+---| "search_query_issue"
+---| "search_issues"
+---| "create_issue"
+
+---@param action_id JiraActionId|string
 ---@param ctx JiraActionContext
 ---@param on_done fun(result: JiraActionResult|nil, err: string|nil)
 function M.run(action_id, ctx, on_done)
