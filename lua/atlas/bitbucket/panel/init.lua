@@ -3,7 +3,6 @@ local M = {}
 local panel_state = require("atlas.bitbucket.panel.state")
 local bitbucket_actions = require("atlas.bitbucket.actions")
 local bitbucket_controller = require("atlas.bitbucket.ui.controller")
-local checkout = require("atlas.core.git.checkout")
 local layout = require("atlas.ui.layout")
 local footer = require("atlas.ui.components.footer")
 local help = require("atlas.ui.popups.help")
@@ -107,7 +106,6 @@ local function sync_pr_shortcuts(buf)
 					bitbucket_actions.run("checkout", {
 						pr = pr,
 						source = "panel",
-						repo_path = nil,
 					}, function() end)
 				end,
 			},
@@ -217,16 +215,10 @@ local function register_panel_keys()
 					return
 				end
 
-				local repo_path = checkout.resolve_repo_path_for_pr(item, {
-					require_git = false,
-					require_existing = false,
-				})
-
 				---@type BitbucketActionContext
 				local ctx = {
 					pr = item,
 					source = "panel",
-					repo_path = repo_path,
 				}
 
 				bitbucket_actions.open(ctx, function(result, err)

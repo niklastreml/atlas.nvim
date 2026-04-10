@@ -35,7 +35,6 @@ local function run_main_pr_action(action_id)
 	bitbucket_actions.run(action_id, {
 		pr = pr,
 		source = "main",
-		repo_path = nil,
 	}, function() end)
 end
 

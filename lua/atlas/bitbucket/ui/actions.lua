@@ -5,7 +5,6 @@ local users = require("atlas.bitbucket.api.users")
 local actions = require("atlas.bitbucket.actions")
 local navigation = require("atlas.ui.navigation")
 local footer = require("atlas.ui.components.footer")
-local checkout = require("atlas.core.git.checkout")
 
 ---@param value string
 ---@param label string
@@ -27,13 +26,10 @@ function M.open_pr_actions_popup(pr)
 		return
 	end
 
-	local repo_path = checkout.resolve_repo_path_for_pr(pr, { require_git = false, require_existing = false })
-
 	---@type BitbucketActionContext
 	local ctx = {
 		pr = pr,
 		source = "main",
-		repo_path = repo_path,
 	}
 
 	actions.open(ctx, function(result, err)

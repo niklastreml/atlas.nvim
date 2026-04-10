@@ -8,7 +8,6 @@ local logger = require("atlas.core.logger")
 ---@class BitbucketActionContext
 ---@field pr BitbucketPR|nil
 ---@field source "panel"|"main"|nil
----@field repo_path string|nil
 
 ---@class BitbucketActionResult
 ---@field changed_pr boolean
@@ -362,8 +361,13 @@ function M.available(ctx)
 						end)
 					end
 
+					local repo_path = checkout.resolve_repo_path_for_pr(action_ctx.pr, {
+						require_git = false,
+						require_existing = false,
+					})
+
 					local ok, err = pcall(item.run, action_ctx.pr, {
-						repo_path = action_ctx.repo_path,
+						repo_path = repo_path,
 						pr = action_ctx.pr,
 					}, custom_done)
 
