@@ -104,8 +104,8 @@ M.options = {
 			help = "?",
 			close = "q",
 			toggle_panel = "p",
-			previous_panel_tab = { "[", "<S-Tab>" },
-			next_panel_tab = { "]", "<Tab>" },
+			previous_panel_tab = "<S-Tab>",
+			next_panel_tab = "<Tab>",
 			refresh = "r",
 		},
 		jira = {

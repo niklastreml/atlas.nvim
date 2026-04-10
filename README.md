@@ -315,17 +315,17 @@ require("atlas").setup({
 
 #### General
 
-| Context | Key             | Action                    |
-| ------- | --------------- | ------------------------- |
-| Atlas   | `q`             | Close Atlas               |
-| Atlas   | `?`             | Toggle help popup         |
-| Atlas   | `p`             | Toggle detail pane        |
-| Atlas   | `[` / `<S-Tab>` | Previous panel tab        |
-| Atlas   | `]` / `<Tab>`   | Next panel tab            |
-| Atlas   | `K`             | Show issue/pr details     |
-| Atlas   | `R`             | Refresh current view      |
-| Atlas   | `r`             | Refresh selected issue/pr |
-| Atlas   | `gx`            | Open issue/pr in browser  |
+| Context | Key       | Action                    |
+| ------- | --------- | ------------------------- |
+| Atlas   | `q`       | Close Atlas               |
+| Atlas   | `?`       | Toggle help popup         |
+| Atlas   | `p`       | Toggle detail pane        |
+| Atlas   | `<S-Tab>` | Previous panel tab        |
+| Atlas   | `<Tab>`   | Next panel tab            |
+| Atlas   | `K`       | Show issue/pr details     |
+| Atlas   | `R`       | Refresh current view      |
+| Atlas   | `r`       | Refresh selected issue/pr |
+| Atlas   | `gx`      | Open issue/pr in browser  |
 
 #### Jira
 
