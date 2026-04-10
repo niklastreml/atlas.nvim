@@ -35,7 +35,6 @@ local function run_main_pr_action(action_id)
 	bitbucket_actions.run(action_id, {
 		pr = pr,
 		source = "main",
-		repo_path = nil,
 	}, function() end)
 end
 
@@ -164,7 +163,7 @@ local function register_dynamic_keys(buf, views)
 		},
 		{
 			key = "gd",
-			desc = "Open PR in Diffview",
+			desc = "Open PR diff",
 			callback = function()
 				run_main_pr_action("open_diffview")
 			end,

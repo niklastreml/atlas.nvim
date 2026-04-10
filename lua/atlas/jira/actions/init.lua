@@ -1,6 +1,8 @@
 local M = {}
 
 local registry = require("atlas.jira.actions.registry")
+local logger = require("atlas.core.logger")
+local footer = require("atlas.ui.components.footer")
 
 ---@param action_id string
 ---@param ctx JiraActionContext
@@ -8,12 +10,18 @@ local registry = require("atlas.jira.actions.registry")
 function M.run(action_id, ctx, on_done)
 	local action = registry.find(action_id)
 	if action == nil then
-		on_done(nil, string.format("Unknown action: %s", tostring(action_id)))
+		local err = string.format("Unknown action: %s", tostring(action_id))
+		logger.logerror("jira.action.unknown", { action_id = tostring(action_id), source = ctx.source })
+		on_done(nil, err)
 		return
 	end
 
-	if not action.is_available(ctx) then
-		on_done(nil, string.format("Action not available: %s", tostring(action.label or action_id)))
+	local available, available_err = action.is_available(ctx)
+	if not available then
+		local err = tostring(available_err or string.format("Action not available: %s", tostring(action.label or action_id)))
+		logger.logwarn("jira.action.unavailable", { action_id = tostring(action_id), source = ctx.source, error = err })
+		footer.notify("warn", err)
+		on_done(nil, err)
 		return
 	end
 

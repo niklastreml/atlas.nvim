@@ -60,6 +60,23 @@ local function check_repo_paths()
 	)
 end
 
+local function check_diff_open_command()
+	local bitbucket = (config.options and config.options.bitbucket) or {}
+	local diff = bitbucket.diff or {}
+	local cmd = tostring(diff.open_cmd or "")
+	if cmd == "" then
+		vim.health.warn("bitbucket.diff.open_cmd is empty")
+		return
+	end
+
+	if vim.fn.exists(":" .. cmd) == 2 then
+		vim.health.ok(string.format("bitbucket.diff.open_cmd available: %s", cmd))
+		return
+	end
+
+	vim.health.error(string.format("bitbucket.diff.open_cmd not found: %s", cmd))
+end
+
 function M.check()
 	--- Requirements
 	vim.health.start("Requirements")
@@ -73,6 +90,7 @@ function M.check()
 	vim.health.start("Bitbucket")
 	check_repo_paths()
 	check_credentials("bitbucket", "user", "token", "Bitbucket")
+	check_diff_open_command()
 
 	vim.health.start("Jira")
 	check_credentials("jira", "email", "token", "Jira")

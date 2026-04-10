@@ -28,7 +28,8 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
   "emrearmagan/atlas.nvim",
   dependencies = {
     "MeanderingProgrammer/render-markdown.nvim", -- optional but recommended (Jira)
-    "sindrets/diffview.nvim", -- optional but recommended (Bitbucket)
+    "sindrets/diffview.nvim", -- optional (Bitbucket PR diff)
+    "esmuellert/codediff.nvim", -- optional (Bitbucket PR diff alternative)
   },
   config = function()
     require("atlas").setup({
@@ -166,7 +167,7 @@ Examples:
 - [x] PR actions: merge, approve, request changes
 - [x] Add custom actions to PRs
 - [x] Resolve and checkout PR branches locally
-- [x] Open Diff of a pull request in Diffview.nvim
+- [x] Open PR diff in given command
 - [x] View Repository details like branches, tags, commits
 - [ ] Pagination for API results (PRs, comments, commits, files, activity)
 - [ ] Switch between open, merged and superseded PRs
@@ -185,6 +186,10 @@ return {
         user = os.getenv("BITBUCKET_USER") or "",
         token = os.getenv("BITBUCKET_TOKEN") or "",
         cache_ttl = 300,
+        diff = {
+          -- Command must support range input: origin/<destination>...origin/<source>
+          open_cmd = "DiffviewOpen", -- e.g. "DiffviewOpen" or "CodeDiff", defaults to nil.
+        },
         repo_config = {
           -- Maps `workspace/repo` to local paths. Used for checkout and custom actions.
           paths = {
@@ -319,16 +324,16 @@ bitbucket = {
 
 #### Bitbucket
 
-| Context                   | Key         | Action                       |
-| ------------------------- | ----------- | ---------------------------- |
-| Bitbucket                 | `A`         | Open PR actions              |
-| Bitbucket                 | `/`         | Search repositories          |
-| Bitbucket                 | `o`         | Toggle repository panel      |
-| Bitbucket                 | `gc`        | Checkout selected PR         |
-| Bitbucket                 | gd`         | Open selected PR in Diffview |
-| Bitbucket                 | `y` / `Y`   | Copy PR id / URL             |
-| Bitbucket (Files changes) | `za`        | Toggle hunk fold             |
-| Bitbucket (File changes)  | `]h` / `[h` | Next / previous hunk         |
+| Context                   | Key         | Action                  |
+| ------------------------- | ----------- | ----------------------- |
+| Bitbucket                 | `A`         | Open PR actions         |
+| Bitbucket                 | `/`         | Search repositories     |
+| Bitbucket                 | `o`         | Toggle repository panel |
+| Bitbucket                 | `gc`        | Checkout selected PR    |
+| Bitbucket                 | `gd`        | Open selected PR diff   |
+| Bitbucket                 | `y` / `Y`   | Copy PR id / URL        |
+| Bitbucket (Files changes) | `za`        | Toggle hunk fold        |
+| Bitbucket (File changes)  | `]h` / `[h` | Next / previous hunk    |
 
 ## Contributors ✨
 

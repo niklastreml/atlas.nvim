@@ -23,13 +23,22 @@ local icons = require("atlas.ui.icons")
 ---@class JiraActionDef
 ---@field id string
 ---@field label string
----@field is_available fun(ctx: JiraActionContext): boolean
+---@field is_available fun(ctx: JiraActionContext): boolean, string|nil
 ---@field run fun(ctx: JiraActionContext, done: fun(result: JiraActionResult|nil, err: string|nil))
 
 ---@param ctx JiraActionContext
 ---@return boolean
+---@return string|nil
 local function has_issue_key(ctx)
-	return ctx.issue ~= nil and ctx.issue.key ~= ""
+	if ctx.issue == nil then
+		return false, "No issue selected"
+	end
+
+	if tostring(ctx.issue.key or "") == "" then
+		return false, "Selected issue is missing key"
+	end
+
+	return true, nil
 end
 
 ---@param opts IssueFields
@@ -154,6 +163,7 @@ local ACTIONS = {
 			end
 
 			local issue_key = issue.key
+			local issue_project_key = issue.project and issue.project.key or nil
 			local current_assignee = type(issue.assignee) == "table" and issue.assignee.display_name or ""
 			local current_assignee_key = vim.trim(current_assignee):lower()
 
@@ -479,7 +489,7 @@ local ACTIONS = {
 		id = "search_query_issue",
 		label = "Search Issue",
 		is_available = function()
-			return true
+			return true, nil
 		end,
 		run = function(_, done)
 			async_picker.open({
@@ -546,7 +556,7 @@ local ACTIONS = {
 		id = "search_issues",
 		label = "Search JQL",
 		is_available = function()
-			return true
+			return true, nil
 		end,
 		run = function(_, done)
 			require("atlas.jira.completion.search").open_cmdline()
@@ -557,7 +567,7 @@ local ACTIONS = {
 		id = "create_issue",
 		label = "Create Issue",
 		is_available = function()
-			return true
+			return true, nil
 		end,
 		run = function(_, done)
 			---@param project string

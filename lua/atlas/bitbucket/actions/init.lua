@@ -1,19 +1,28 @@
 local M = {}
 
 local registry = require("atlas.bitbucket.actions.registry")
+local logger = require("atlas.core.logger")
+local footer = require("atlas.ui.components.footer")
 
 ---@param id string
 ---@param ctx BitbucketActionContext
 ---@param on_done fun(result: BitbucketActionResult|nil, err: string|nil)
 function M.run(id, ctx, on_done)
 	local action = registry.find(id)
+
 	if action == nil then
-		on_done(nil, string.format("Unknown action: %s", tostring(id)))
+		local err = string.format("Unknown action: %s", tostring(id))
+		logger.logerror("bitbucket.action.unknown", { action_id = tostring(id), source = ctx.source })
+		on_done(nil, err)
 		return
 	end
 
-	if not action.is_available(ctx) then
-		on_done(nil, string.format("Action is not available: %s", tostring(id)))
+	local available, available_err = action.is_available(ctx)
+	if not available then
+		local err = tostring(available_err or string.format("Action is not available: %s", tostring(id)))
+		logger.logwarn("bitbucket.action.unavailable", { action_id = tostring(id), source = ctx.source, error = err })
+		footer.notify("warn", err)
+		on_done(nil, err)
 		return
 	end
 

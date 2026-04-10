@@ -8,7 +8,6 @@ local logger = require("atlas.core.logger")
 ---@class BitbucketActionContext
 ---@field pr BitbucketPR|nil
 ---@field source "panel"|"main"|nil
----@field repo_path string|nil
 
 ---@class BitbucketActionResult
 ---@field changed_pr boolean
@@ -17,7 +16,7 @@ local logger = require("atlas.core.logger")
 ---@class BitbucketActionDef
 ---@field id string
 ---@field label string
----@field is_available fun(ctx: BitbucketActionContext): boolean
+---@field is_available fun(ctx: BitbucketActionContext): boolean, string|nil
 ---@field run fun(ctx: BitbucketActionContext, done: fun(result: BitbucketActionResult|nil, err: string|nil))
 
 ---@param ctx BitbucketActionContext
@@ -27,41 +26,35 @@ local function has_pr(ctx)
 end
 
 ---@param ctx BitbucketActionContext
----@return boolean
-local function has_merge_link(ctx)
-	if not has_pr(ctx) or ctx.pr == nil then
-		return false
+---@param pr BitbucketPR|nil
+---@return string|nil open_cmd
+---@return string|nil command
+---@return string|nil err
+local function diff_open_command(ctx, pr)
+	if not has_pr(ctx) or type(pr) ~= "table" then
+		return nil, nil, "No PR selected"
 	end
-	local merge_url = tostring(ctx.pr.links.merge or "")
-	return merge_url ~= ""
-end
 
----@param ctx BitbucketActionContext
----@return boolean
-local function has_approve_link(ctx)
-	if not has_pr(ctx) or ctx.pr == nil then
-		return false
+	local cfg = require("atlas.config").options.bitbucket or {}
+	local diff = cfg.diff or {}
+	local cmd = tostring(diff.open_cmd or "")
+	cmd = (cmd:gsub("^%s+", ""):gsub("%s+$", ""))
+	if cmd == "" then
+		return nil, nil, "bitbucket.diff.open_cmd is not configured"
 	end
-	local link = tostring(ctx.pr.links.approve or "")
-	return link ~= ""
-end
 
----@param ctx BitbucketActionContext
----@return boolean
-local function has_request_changes_link(ctx)
-	if not has_pr(ctx) or ctx.pr == nil then
-		return false
+	if vim.fn.exists(":" .. cmd) ~= 2 then
+		return nil, nil, string.format("bitbucket.diff.open_cmd command not found: %s", cmd)
 	end
-	return tostring((ctx.pr.links or {}).request_changes or "") ~= ""
-end
 
----@param ctx BitbucketActionContext
----@return boolean
-local function has_diffview(ctx)
-	if not has_pr(ctx) then
-		return false
+	local src = tostring((pr.source or {}).branch or "")
+	local dst = tostring((pr.destination or {}).branch or "")
+	if src == "" or dst == "" then
+		return nil, nil, "PR branch refs are missing"
 	end
-	return pcall(require, "diffview")
+
+	local range = "origin/" .. dst .. "...origin/" .. src
+	return cmd, cmd .. " " .. range, nil
 end
 
 ---@param ctx BitbucketActionContext
@@ -80,7 +73,13 @@ local ACTIONS = {
 		id = "checkout",
 		label = "Checkout",
 		is_available = function(ctx)
-			return has_pr(ctx) and has_repo_paths_configured(ctx)
+			if not has_pr(ctx) then
+				return false, "No PR selected"
+			end
+			if not has_repo_paths_configured(ctx) then
+				return false, "bitbucket.repo_config.paths is not configured"
+			end
+			return true, nil
 		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
@@ -107,15 +106,22 @@ local ACTIONS = {
 	},
 	{
 		id = "open_diffview",
-		label = "Open Diffview",
+		label = "Open PR Diff",
 		is_available = function(ctx)
-			if not has_diffview(ctx) or not has_pr(ctx) or ctx.pr == nil then
-				return false
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if not has_repo_paths_configured(ctx) then
+				return false, "bitbucket.repo_config.paths is not configured"
 			end
 
 			local src = tostring((ctx.pr.source or {}).branch or "")
 			local dst = tostring((ctx.pr.destination or {}).branch or "")
-			return src ~= "" and dst ~= ""
+			if src == "" or dst == "" then
+				return false, "PR branch refs are missing"
+			end
+
+			return true, nil
 		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
@@ -124,56 +130,85 @@ local ACTIONS = {
 				return
 			end
 
-			local repo_path = ctx.repo_path
-			if repo_path == nil or repo_path == "" then
-				repo_path = checkout.resolve_repo_path_for_pr(pr, { require_git = true, require_existing = true })
-			end
-			if repo_path == nil or repo_path == "" then
+			local resolved_path = checkout.resolve_repo_path_for_pr(pr, { require_git = true, require_existing = true })
+			if resolved_path == nil or resolved_path == "" then
 				footer.notify("warn", "Local repo not found")
 				done(nil, "Local repo not found")
 				return
 			end
 
-			local src = tostring((pr.source or {}).branch or "")
-			local dst = tostring((pr.destination or {}).branch or "")
-			if src == "" or dst == "" then
-				footer.notify("warn", "PR branch refs are missing")
-				done(nil, "PR branch refs are missing")
+			local repo_path = vim.fn.fnameescape(resolved_path)
+			local open_cmd, command, open_cmd_err = diff_open_command(ctx, pr)
+			if open_cmd_err ~= nil or open_cmd == nil or command == nil then
+				local level = open_cmd_err == "PR branch refs are missing" and "warn" or "error"
+				footer.notify(level, tostring(open_cmd_err))
+				done(nil, tostring(open_cmd_err))
 				return
 			end
 
 			footer.notify("loading", "Fetching remote branches...")
-			checkout.fetch_pr_branches(pr, repo_path, function(fetch_err)
+			checkout.fetch_pr_branches(pr, resolved_path, function(fetch_err)
 				if fetch_err ~= nil then
 					local message = "Fetch failed: " .. tostring(fetch_err)
+					logger.logerror(
+						"bitbucket.diff.fetch_failed",
+						{ pr_id = pr.id, repo_path = resolved_path, command = command, error = tostring(fetch_err) }
+					)
 					footer.notify("error", message)
 					done(nil, message)
 					return
 				end
 
-				local range = "origin/" .. dst .. "...origin/" .. src
-				local prev_cwd = vim.fn.chdir(repo_path)
-				local open_ok, open_err = pcall(function()
-					vim.cmd("DiffviewOpen " .. range)
+				logger.loginfo("bitbucket.diff.open", { pr_id = pr.id, repo_path = resolved_path, command = command })
+				local ok, err = pcall(function()
+					if open_cmd == "DiffviewOpen" then
+						local prev_path = vim.fn.fnameescape(vim.fn.getcwd())
+						vim.cmd("cd " .. repo_path)
+						local cmd_ok, cmd_err = pcall(function()
+							vim.cmd(command)
+						end)
+
+						vim.cmd("cd " .. prev_path)
+						if not cmd_ok then
+							error(cmd_err)
+						end
+						return
+					end
+
+					vim.cmd("tabnew")
+					vim.cmd("cd " .. repo_path)
+					vim.cmd(command)
 				end)
-				vim.fn.chdir(prev_cwd)
 
-				if not open_ok then
-					local message = "DiffviewOpen failed: " .. tostring(open_err)
+				if not ok then
+					local message = string.format("%s failed: %s", open_cmd, tostring(err))
+					logger.logerror(
+						"bitbucket.diff.open_failed",
+						{ pr_id = pr.id, repo_path = resolved_path, command = command, error = tostring(err) }
+					)
 					footer.notify("error", message)
 					done(nil, message)
 					return
 				end
 
-				footer.notify("success", "Opened Diffview", 1200)
-				done({ changed_pr = false, message = "Opened diffview" }, nil)
+				footer.notify("success", "Opened PR diff", 1200)
+				done({ changed_pr = false, message = "Opened PR diff" }, nil)
 			end)
 		end,
 	},
 	{
 		id = "merge",
 		label = "Merge",
-		is_available = has_merge_link,
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			local merge_url = tostring((ctx.pr.links or {}).merge or "")
+			if merge_url == "" then
+				return false, "No merge URL available"
+			end
+			return true, nil
+		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
 			if pr == nil then
@@ -226,7 +261,16 @@ local ACTIONS = {
 	{
 		id = "approve",
 		label = "Approve",
-		is_available = has_approve_link,
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			local link = tostring((ctx.pr.links or {}).approve or "")
+			if link == "" then
+				return false, "No approve URL available"
+			end
+			return true, nil
+		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
 			if pr == nil then
@@ -256,7 +300,15 @@ local ACTIONS = {
 	{
 		id = "request_changes",
 		label = "Request changes",
-		is_available = has_request_changes_link,
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if tostring((ctx.pr.links or {}).request_changes or "") == "" then
+				return false, "No request changes URL available"
+			end
+			return true, nil
+		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
 			if pr == nil then
@@ -303,12 +355,15 @@ function M.available(ctx)
 	-- Add custom actions
 	for _, item in ipairs(custom_actions) do
 		if type(item) == "table" and type(item.label) == "string" and type(item.run) == "function" then
-			table.insert(out, {
-				id = tostring(item.id or item.label),
-				label = item.label,
-				is_available = function()
-					return has_pr(ctx)
-				end,
+				table.insert(out, {
+					id = tostring(item.id or item.label),
+					label = item.label,
+					is_available = function(action_ctx)
+						if not has_pr(action_ctx) then
+							return false, "No PR selected"
+						end
+						return true, nil
+					end,
 				run = function(action_ctx, done)
 					footer.notify("loading", string.format("Running %s...", tostring(item.label)))
 
@@ -331,8 +386,13 @@ function M.available(ctx)
 						end)
 					end
 
+					local repo_path = checkout.resolve_repo_path_for_pr(action_ctx.pr, {
+						require_git = false,
+						require_existing = false,
+					})
+
 					local ok, err = pcall(item.run, action_ctx.pr, {
-						repo_path = action_ctx.repo_path,
+						repo_path = repo_path,
 						pr = action_ctx.pr,
 					}, custom_done)
 

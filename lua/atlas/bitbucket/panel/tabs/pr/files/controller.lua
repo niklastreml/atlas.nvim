@@ -264,7 +264,6 @@ function M.open_diffview()
 	actions.run("open_diffview", {
 		pr = pr,
 		source = "panel",
-		repo_path = nil,
 	}, function() end)
 end
 
