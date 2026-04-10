@@ -16,7 +16,7 @@ local logger = require("atlas.core.logger")
 ---@class BitbucketActionDef
 ---@field id string
 ---@field label string
----@field is_available fun(ctx: BitbucketActionContext): boolean
+---@field is_available fun(ctx: BitbucketActionContext): boolean, string|nil
 ---@field run fun(ctx: BitbucketActionContext, done: fun(result: BitbucketActionResult|nil, err: string|nil))
 
 ---@param ctx BitbucketActionContext
@@ -73,7 +73,13 @@ local ACTIONS = {
 		id = "checkout",
 		label = "Checkout",
 		is_available = function(ctx)
-			return has_pr(ctx) and has_repo_paths_configured(ctx)
+			if not has_pr(ctx) then
+				return false, "No PR selected"
+			end
+			if not has_repo_paths_configured(ctx) then
+				return false, "bitbucket.repo_config.paths is not configured"
+			end
+			return true, nil
 		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
@@ -102,13 +108,20 @@ local ACTIONS = {
 		id = "open_diffview",
 		label = "Open PR Diff",
 		is_available = function(ctx)
-			if not has_pr(ctx) or ctx.pr == nil or not has_repo_paths_configured(ctx) then
-				return false
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if not has_repo_paths_configured(ctx) then
+				return false, "bitbucket.repo_config.paths is not configured"
 			end
 
 			local src = tostring((ctx.pr.source or {}).branch or "")
 			local dst = tostring((ctx.pr.destination or {}).branch or "")
-			return src ~= "" and dst ~= ""
+			if src == "" or dst == "" then
+				return false, "PR branch refs are missing"
+			end
+
+			return true, nil
 		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
@@ -188,10 +201,13 @@ local ACTIONS = {
 		label = "Merge",
 		is_available = function(ctx)
 			if not has_pr(ctx) or ctx.pr == nil then
-				return false
+				return false, "No PR selected"
 			end
 			local merge_url = tostring((ctx.pr.links or {}).merge or "")
-			return merge_url ~= ""
+			if merge_url == "" then
+				return false, "No merge URL available"
+			end
+			return true, nil
 		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
@@ -247,10 +263,13 @@ local ACTIONS = {
 		label = "Approve",
 		is_available = function(ctx)
 			if not has_pr(ctx) or ctx.pr == nil then
-				return false
+				return false, "No PR selected"
 			end
 			local link = tostring((ctx.pr.links or {}).approve or "")
-			return link ~= ""
+			if link == "" then
+				return false, "No approve URL available"
+			end
+			return true, nil
 		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
@@ -283,9 +302,12 @@ local ACTIONS = {
 		label = "Request changes",
 		is_available = function(ctx)
 			if not has_pr(ctx) or ctx.pr == nil then
-				return false
+				return false, "No PR selected"
 			end
-			return tostring((ctx.pr.links or {}).request_changes or "") ~= ""
+			if tostring((ctx.pr.links or {}).request_changes or "") == "" then
+				return false, "No request changes URL available"
+			end
+			return true, nil
 		end,
 		run = function(ctx, done)
 			local pr = ctx.pr
@@ -333,12 +355,15 @@ function M.available(ctx)
 	-- Add custom actions
 	for _, item in ipairs(custom_actions) do
 		if type(item) == "table" and type(item.label) == "string" and type(item.run) == "function" then
-			table.insert(out, {
-				id = tostring(item.id or item.label),
-				label = item.label,
-				is_available = function()
-					return has_pr(ctx)
-				end,
+				table.insert(out, {
+					id = tostring(item.id or item.label),
+					label = item.label,
+					is_available = function(action_ctx)
+						if not has_pr(action_ctx) then
+							return false, "No PR selected"
+						end
+						return true, nil
+					end,
 				run = function(action_ctx, done)
 					footer.notify("loading", string.format("Running %s...", tostring(item.label)))
 
