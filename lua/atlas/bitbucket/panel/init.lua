@@ -99,8 +99,6 @@ end
 
 ---@param tab_key string
 function M.select_tab(tab_key)
-	register_panel_keys()
-
 	local old_tab = get_tab_module(panel_state.current_tab)
 	if old_tab and type(old_tab.deactivate) == "function" then
 		old_tab.deactivate()
