@@ -2,151 +2,15 @@ local M = {}
 
 local config = require("atlas.config")
 local controller = require("atlas.jira.ui.controller")
-local actions = require("atlas.jira.ui.actions")
-local jira_actions = require("atlas.jira.actions")
+local keymaps = require("atlas.jira.keymaps")
 local help = require("atlas.ui.popups.help")
 local navigation = require("atlas.ui.navigation")
 local layout = require("atlas.ui.layout")
 local footer = require("atlas.ui.components.footer")
 local state = require("atlas.jira.state")
 
----@return JiraIssue|nil
-local function selected_issue()
-	local node = navigation.current_item()
-	if type(node) ~= "table" then
-		return nil
-	end
-
-	if node.kind == "issue" and type(node._issue) == "table" then
-		return node._issue
-	end
-
-	return nil
-end
-
----@param action_id string
----@param message_prefix string
-local function run_selected_issue_action(action_id, message_prefix)
-	local issue = selected_issue()
-	if issue == nil then
-		footer.notify("warn", "No issue selected")
-		return
-	end
-
-	jira_actions.run(action_id, { issue = issue, source = "main" }, function(result, err)
-		if err ~= nil then
-			footer.notify("error", tostring(err))
-			return
-		end
-
-		if result ~= nil and result.message ~= nil and result.message ~= "" then
-			footer.notify("info", string.format("%s: %s", message_prefix, result.message), 1200)
-		end
-
-		if result ~= nil and result.changed_issue_key ~= nil and result.changed_issue_key ~= "" then
-			controller.refresh_issue(result.changed_issue_key)
-		end
-	end)
-end
-
-local function register_dynamic_keys(buf, views)
-	local items = {
-		{
-			key = "A",
-			desc = "Open Jira actions",
-			callback = function()
-				controller.open_actions()
-			end,
-			index = 1,
-		},
-		{
-			key = "/",
-			desc = "Search issues",
-			callback = function()
-				controller.open_issue_search_popup()
-			end,
-			index = 2,
-		},
-		{
-			key = "ge",
-			desc = "Edit issue",
-			callback = function()
-				run_selected_issue_action("edit_issue", "Edit issue")
-			end,
-			index = 3,
-		},
-		{
-			key = "gs",
-			desc = "Transition issue",
-			callback = function()
-				run_selected_issue_action("transition", "Transition")
-			end,
-			index = 4,
-		},
-		{
-			key = "ga",
-			desc = "Change assignee",
-			callback = function()
-				run_selected_issue_action("assign", "Change assignee")
-			end,
-			index = 5,
-		},
-		{
-			key = "gx",
-			desc = "Open issue in browser",
-			callback = function()
-				actions.browse_issue(selected_issue())
-			end,
-			index = 6,
-		},
-		{
-			key = "c",
-			desc = "Create Jira issue",
-			callback = function()
-				actions.create_issue()
-			end,
-			index = 7,
-		},
-		{
-			key = "r",
-			desc = "Reload selected issue",
-			callback = function()
-				controller.refresh_current_issue()
-			end,
-			index = 8,
-		},
-		{
-			key = "R",
-			desc = "Refresh current view",
-			callback = function()
-				controller.refresh_current_view(function()
-					navigation.focus_first_item()
-				end)
-			end,
-			index = 9,
-		},
-		{
-			key = "K",
-			desc = "Show issue details",
-			callback = function()
-				controller.show_issue_details(buf)
-			end,
-		},
-		{
-			key = "y",
-			desc = "Copy issue key",
-			callback = function()
-				actions.copy_issue_key(selected_issue())
-			end,
-		},
-		{
-			key = "Y",
-			desc = "Copy issue URL",
-			callback = function()
-				actions.copy_issue_url(selected_issue())
-			end,
-		},
-	}
+local function register_keymaps(buf, views)
+	keymaps.register(buf)
 
 	local view_items = {}
 	for _, view in ipairs(views or {}) do
@@ -164,11 +28,6 @@ local function register_dynamic_keys(buf, views)
 			})
 		end
 	end
-
-	help.register("Jira", items, {
-		index = 220,
-		buffer = buf,
-	})
 
 	help.register("Jira", view_items, {
 		index = 220,
@@ -191,7 +50,7 @@ function M.setup(opts)
 	end
 
 	local views = (config.options.jira and config.options.jira.views) or {}
-	register_dynamic_keys(target_buf, views)
+	register_keymaps(target_buf, views)
 end
 
 return M

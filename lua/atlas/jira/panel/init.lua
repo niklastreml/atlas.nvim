@@ -2,11 +2,8 @@ local M = {}
 
 local panel_state = require("atlas.jira.panel.state")
 local layout = require("atlas.ui.layout")
-local footer = require("atlas.ui.components.footer")
-local jira_actions = require("atlas.jira.actions")
-local jira_controller = require("atlas.jira.ui.controller")
+local keymaps = require("atlas.jira.panel.keymaps")
 local ns = vim.api.nvim_create_namespace("atlas.jira.panel")
-local mapped_buf = nil
 
 local TABS = {
 	{ key = "overview", label = "Overview", mod = "atlas.jira.panel.tabs.overview" },
@@ -24,117 +21,13 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
-local function register_panel_keys()
-	local buf = layout.buf_id("detail")
-	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-	if mapped_buf == buf then
-		return
-	end
-
-	local help = require("atlas.ui.popups.help")
-	help.register("Navigation", {
-		{
-			key = "j",
-			desc = "Next item in tab",
-			opts = { silent = true, nowait = true },
-			hidden = true,
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(1)
-				end
-			end,
-		},
-		{
-			key = "k",
-			desc = "Previous item in tab",
-			opts = { silent = true, nowait = true },
-			hidden = true,
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(-1)
-				end
-			end,
-		},
-		{
-			key = "gg",
-			desc = "First item in tab",
-			opts = { silent = true, nowait = true },
-			hidden = true,
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(0)
-				end
-			end,
-		},
-		{
-			key = "G",
-			desc = "Last item in tab",
-			opts = { silent = true, nowait = true },
-			hidden = true,
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(math.huge)
-				end
-			end,
-		},
-	}, { index = 999, buffer = buf })
-
-	help.register("Jira", {
-		{
-			key = "r",
-			desc = "Refresh current tab",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.refresh) == "function" then
-					tab.refresh()
-				end
-			end,
-		},
-		{
-			key = "A",
-			desc = "Open Jira actions",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				local issue = panel_state.current_issue
-				if type(issue) ~= "table" then
-					footer.notify("warn", "No issue selected")
-					return
-				end
-
-				jira_actions.open({ issue = issue, source = "panel" }, function(result, err)
-					if err ~= nil then
-						footer.notify("error", tostring(err))
-						return
-					end
-
-					if result ~= nil and result.message ~= nil and result.message ~= "" then
-						footer.notify("info", result.message, 1200)
-					end
-
-					if result ~= nil and result.changed_issue_key ~= nil and result.changed_issue_key ~= "" then
-						jira_controller.refresh_issue(result.changed_issue_key, function()
-							M.refresh()
-						end)
-					end
-				end)
-			end,
-		},
-	}, { index = 220, buffer = buf })
-
-	mapped_buf = buf
-end
-
 ---@param issue JiraIssue|nil
 function M.on_select(issue)
 	panel_state.set_current(issue)
-	register_panel_keys()
+	local buf = layout.buf_id("detail")
+	if buf ~= nil then
+		keymaps.register(buf)
+	end
 
 	if issue ~= nil then
 		M.select_tab("overview")

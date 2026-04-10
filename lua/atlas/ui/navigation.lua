@@ -1,8 +1,6 @@
 local M = {}
 
-local help = require("atlas.ui.popups.help")
 local ui_state = require("atlas.ui.main.state")
-local panel_state = require("atlas.ui.panel.state")
 
 ---@param view string|nil
 ---@param node table|nil
@@ -128,106 +126,6 @@ function M.focus_last_item()
 			return
 		end
 	end
-end
-
----@param buf integer|nil
-function M.register_keys(buf)
-	local layout = require("atlas.ui.layout")
-	local target_buf = buf or layout.buf_id("main")
-	if target_buf == nil or not vim.api.nvim_buf_is_valid(target_buf) then
-		return
-	end
-
-	local items = {
-		{
-			key = "j",
-			desc = "Next item",
-			hidden = true,
-			callback = function()
-				M.move_cursor("down")
-			end,
-		},
-		{
-			key = "k",
-			desc = "Previous item",
-			hidden = true,
-			callback = function()
-				M.move_cursor("up")
-			end,
-		},
-		{
-			key = "gg",
-			desc = "Go to first PR",
-			hidden = true,
-			callback = function()
-				M.focus_first_item()
-			end,
-		},
-		{
-			key = "G",
-			desc = "Go to last PR",
-			hidden = true,
-			callback = function()
-				M.focus_last_item()
-			end,
-		},
-
-		{
-			key = "p",
-			desc = "Toggle detail pane",
-			callback = function()
-				local panel = require("atlas.ui.panel")
-				local current = M.current_item()
-				if panel.is_open() then
-					local selected = panel_state.selected_item
-					if type(selected) == "table" and (selected.kind == "pr" or selected.kind == "issue") then
-						panel.close()
-						return
-					end
-				end
-				panel.show(ui_state.current_view, current)
-			end,
-		},
-		{
-			key = { "[", "<S-Tab>" },
-			desc = "Previous panel tab",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				local panel = require("atlas.ui.panel")
-				if not panel.is_open() then
-					return
-				end
-
-				if ui_state.current_view == "jira" then
-					require("atlas.jira.panel.init").prev_tab()
-				elseif ui_state.current_view == "bitbucket" then
-					require("atlas.bitbucket.panel.init").prev_tab()
-				end
-			end,
-		},
-		{
-			key = { "]", "<Tab>" },
-			desc = "Next panel tab",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				local panel = require("atlas.ui.panel")
-				if not panel.is_open() then
-					return
-				end
-
-				if ui_state.current_view == "jira" then
-					require("atlas.jira.panel.init").next_tab()
-				elseif ui_state.current_view == "bitbucket" then
-					require("atlas.bitbucket.panel.init").next_tab()
-				end
-			end,
-		},
-	}
-
-	help.register("General", items, {
-		index = 210,
-		buffer = target_buf,
-	})
 end
 
 return M

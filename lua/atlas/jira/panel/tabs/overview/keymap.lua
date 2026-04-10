@@ -10,7 +10,7 @@ function M.setup()
 		return
 	end
 
-	help.register("Jira", {
+	local items = {
 		{
 			key = "m",
 			desc = "Toggle adf/markdown",
@@ -19,7 +19,8 @@ function M.setup()
 				controller.toggle_view_mode()
 			end,
 		},
-	}, { index = 220, buffer = buf })
+	}
+	help.register("Jira", items, { index = 220, buffer = buf })
 end
 
 function M.teardown()
@@ -28,9 +29,7 @@ function M.teardown()
 		return
 	end
 
-	help.remove("Jira", {
-		{ key = "m" },
-	}, { buffer = buf })
+	help.remove("Jira", { { key = "m" } }, { buffer = buf })
 end
 
 return M

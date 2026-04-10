@@ -1,13 +1,9 @@
 local M = {}
 
 local panel_state = require("atlas.bitbucket.panel.state")
-local bitbucket_actions = require("atlas.bitbucket.actions")
-local bitbucket_controller = require("atlas.bitbucket.ui.controller")
+local keymaps = require("atlas.bitbucket.panel.keymaps")
 local layout = require("atlas.ui.layout")
-local footer = require("atlas.ui.components.footer")
-local help = require("atlas.ui.popups.help")
 local ns = vim.api.nvim_create_namespace("atlas.bitbucket.panel")
-local mapped_buf = nil
 
 -- Tab registries for each panel type
 local PR_TABS = {
@@ -74,177 +70,6 @@ local function get_tab_module_for(panel_type, tab_key)
 	return nil
 end
 
----@return BitbucketPR|nil
-local function selected_pr()
-	local item = panel_state.current_item
-	if type(item) ~= "table" then
-		footer.notify("warn", "No item selected")
-		return nil
-	end
-
-	if panel_state.panel_type ~= "pr" then
-		return nil
-	end
-
-	return item
-end
-
----@param buf integer
-local function sync_pr_shortcuts(buf)
-	if panel_state.panel_type == "pr" then
-		help.register("Bitbucket", {
-			{
-				key = "gc",
-				desc = "Checkout selected PR",
-				opts = { silent = true, nowait = true },
-				callback = function()
-					local pr = selected_pr()
-					if pr == nil then
-						return
-					end
-
-					bitbucket_actions.run("checkout", {
-						pr = pr,
-						source = "panel",
-					}, function() end)
-				end,
-			},
-			{
-				key = "gd",
-				desc = "Open selected PR diff",
-				opts = { silent = true, nowait = true },
-				callback = function()
-					local pr = selected_pr()
-					if pr == nil then
-						return
-					end
-
-					bitbucket_actions.run("open_diffview", {
-						pr = pr,
-						source = "panel",
-					}, function() end)
-				end,
-			},
-		}, { index = 220, buffer = buf })
-		return
-	end
-
-	help.remove("Bitbucket", {
-		{ key = "gc" },
-		{ key = "gd" },
-	}, { buffer = buf })
-end
-
-local function register_panel_keys()
-	local buf = layout.buf_id("detail")
-	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-	if mapped_buf == buf then
-		sync_pr_shortcuts(buf)
-		return
-	end
-
-	help.register("Bitbucket", {
-		{
-			key = "j",
-			desc = "Next item in tab",
-			opts = { silent = true, nowait = true },
-			hidden = true,
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(1)
-				end
-			end,
-		},
-		{
-			key = "k",
-			desc = "Previous item in tab",
-			opts = { silent = true, nowait = true },
-			hidden = true,
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(-1)
-				end
-			end,
-		},
-		{
-			key = "gg",
-			desc = "First item in tab",
-			opts = { silent = true, nowait = true },
-			hidden = true,
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(0)
-				end
-			end,
-		},
-		{
-			key = "G",
-			desc = "Last item in tab",
-			opts = { silent = true, nowait = true },
-			hidden = true,
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(math.huge)
-				end
-			end,
-		},
-		{
-			key = "r",
-			desc = "Refresh current tab",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.refresh) == "function" then
-					tab.refresh()
-				end
-			end,
-		},
-		{
-			key = "A",
-			desc = "Open PR actions",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				local item = selected_pr()
-				if item == nil then
-					return
-				end
-
-				---@type BitbucketActionContext
-				local ctx = {
-					pr = item,
-					source = "panel",
-				}
-
-				bitbucket_actions.open(ctx, function(result, err)
-					if err ~= nil then
-						footer.notify("error", tostring(err))
-						return
-					end
-
-					if result ~= nil and result.message ~= nil and result.message ~= "" then
-						footer.notify("info", result.message, 1200)
-					end
-
-					if result ~= nil and result.changed_pr then
-						bitbucket_controller.refresh_pr(item, function()
-							M.refresh()
-						end)
-					end
-				end)
-			end,
-		},
-	}, { index = 220, buffer = buf })
-
-	mapped_buf = buf
-	sync_pr_shortcuts(buf)
-end
-
 ---@param panel_type "pr"|"repo"
 ---@param item BitbucketPR|BitbucketRepository|nil
 function M.on_select(panel_type, item)
@@ -260,7 +85,10 @@ function M.on_select(panel_type, item)
 
 	panel_state.set_panel_type(panel_type)
 	panel_state.set_current_item(item)
-	register_panel_keys()
+	local buf = layout.buf_id("detail")
+	if buf ~= nil then
+		keymaps.register(buf)
+	end
 
 	if item ~= nil then
 		M.select_tab("overview")

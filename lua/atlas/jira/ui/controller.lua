@@ -501,19 +501,6 @@ function M.open_actions()
 	end)
 end
 
-function M.open_issue_search_popup()
-	jira_actions.run("search_query_issue", { issue = nil, source = "main" }, function(result, err)
-		if err ~= nil then
-			footer.notify("error", tostring(err))
-			return
-		end
-
-		if result ~= nil and result.message ~= nil and result.message ~= "" then
-			footer.notify("info", result.message, 1200)
-		end
-	end)
-end
-
 ---@param issue_key string|nil
 ---@param on_done fun()|nil
 function M.refresh_issue(issue_key, on_done)

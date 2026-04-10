@@ -293,6 +293,26 @@ bitbucket = {
 
 ### Keymaps
 
+Set an action to `false` to disable it, or set it to a list to add aliases.
+
+```lua
+require("atlas").setup({
+  keymaps = {
+    ui = {
+      toggle_panel = false,
+      next_panel_tab = { "]", "<Tab>", "gn" },
+      previous_panel_tab = { "[", "<S-Tab>", "gp" },
+    },
+    jira = {
+      create_issue = "i",
+    },
+    bitbucket = {
+      open_diffview = { "go", "gd" },
+    },
+  },
+})
+```
+
 #### General
 
 | Context | Key             | Action                    |
@@ -303,7 +323,7 @@ bitbucket = {
 | Atlas   | `[` / `<S-Tab>` | Previous panel tab        |
 | Atlas   | `]` / `<Tab>`   | Next panel tab            |
 | Atlas   | `K`             | Show issue/pr details     |
-| Atlas   | R`              | Refresh current view      |
+| Atlas   | `R`             | Refresh current view      |
 | Atlas   | `r`             | Refresh selected issue/pr |
 | Atlas   | `gx`            | Open issue/pr in browser  |
 
