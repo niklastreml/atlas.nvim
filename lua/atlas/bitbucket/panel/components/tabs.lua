@@ -3,17 +3,17 @@ local icons = require("atlas.ui.utils.icons")
 local tabs = require("atlas.ui.components.tabs")
 
 local PR_TABS = {
-	{ key = "overview", label = "Overview", icon = icons.entity("overview") },
-	{ key = "activity", label = "Activity", icon = icons.entity("activity") },
-	{ key = "comments", label = "Comments", icon = icons.entity("comment") },
-	{ key = "commits", label = "Commits", icon = icons.entity("commit") },
-	{ key = "files", label = "File changes", icon = icons.entity("files") },
+	{ key = "overview", label = "Overview", icon = icons.bitbucket_icon("bitbucket.entity.overview") },
+	{ key = "activity", label = "Activity", icon = icons.bitbucket_icon("bitbucket.entity.activity") },
+	{ key = "comments", label = "Comments", icon = icons.bitbucket_icon("bitbucket.entity.comment") },
+	{ key = "commits", label = "Commits", icon = icons.bitbucket_icon("bitbucket.entity.commit") },
+	{ key = "files", label = "File changes", icon = icons.bitbucket_icon("bitbucket.entity.files") },
 }
 
 local REPO_TABS = {
-	{ key = "overview", label = "Overview", icon = icons.entity("overview") },
-	{ key = "branches", label = "Branches", icon = icons.entity("branch") },
-	{ key = "tags", label = "Tags", icon = icons.entity("tag") },
+	{ key = "overview", label = "Overview", icon = icons.bitbucket_icon("bitbucket.entity.overview") },
+	{ key = "branches", label = "Branches", icon = icons.bitbucket_icon("bitbucket.entity.branch") },
+	{ key = "tags", label = "Tags", icon = icons.bitbucket_icon("bitbucket.entity.tag") },
 }
 
 ---@param active_tab "overview"|"activity"|"comments"|"commits"|"files"

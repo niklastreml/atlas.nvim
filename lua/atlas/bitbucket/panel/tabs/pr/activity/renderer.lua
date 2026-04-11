@@ -119,11 +119,11 @@ local function to_thread_items(entries, mention_map)
 
 		local additional ---@type string|nil
 		local content ---@type string|nil
-		local entry_icon = icons.entity("user")
+		local entry_icon = icons.bitbucket_icon("bitbucket.entity.user")
 
 		if kind == "approval" then
 			additional = "approved"
-			entry_icon = icons.entity("success")
+			entry_icon = icons.bitbucket_icon("bitbucket.entity.success")
 		elseif kind == "comment" then
 			additional = "commented"
 			local raw = tostring(e.content_raw or ""):gsub("\r\n", "\n")
@@ -137,7 +137,7 @@ local function to_thread_items(entries, mention_map)
 		elseif kind == "update" then
 			additional = update_additional(e)
 			content = update_content(e)
-			entry_icon = icons.entity("activity")
+			entry_icon = icons.bitbucket_icon("bitbucket.entity.activity")
 		end
 
 		items[#items + 1] = {

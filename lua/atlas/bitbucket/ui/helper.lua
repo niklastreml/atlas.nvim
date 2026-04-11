@@ -176,7 +176,7 @@ function M.build_footer_items(repos, current_user)
 
 	local items = {
 		{
-			text = string.format("%s %d PR%s", icons.entity("pr"), pr_count, pr_count == 1 and "" or "s"),
+			text = string.format("%s %d PR%s", icons.bitbucket_icon("bitbucket.entity.pr"), pr_count, pr_count == 1 and "" or "s"),
 			hl_group = "AtlasLogInfo",
 		},
 	}
@@ -184,13 +184,13 @@ function M.build_footer_items(repos, current_user)
 	local user_name = tostring((current_user or {}).nickname or (current_user or {}).display_name or "")
 	if user_name ~= "" then
 		table.insert(items, {
-			text = string.format("%s @%s", icons.entity("author"), user_name),
+			text = string.format("%s @%s", icons.bitbucket_icon("bitbucket.entity.author"), user_name),
 			hl_group = "AtlasFooterText",
 		})
 	end
 
 	for _, name in ipairs(repo_names) do
-		table.insert(items, { text = string.format("%s %s", icons.entity("repo"), name), hl_group = "AtlasFooterText" })
+		table.insert(items, { text = string.format("%s %s", icons.bitbucket_icon("bitbucket.entity.repo"), name), hl_group = "AtlasFooterText" })
 	end
 
 	return items
@@ -202,34 +202,34 @@ local function columns()
 		{ key = "repo_pr", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
 		{
 			key = "comments",
-			name = icons.entity("comments"),
+			name = icons.bitbucket_icon("bitbucket.entity.comments"),
 			min_width = 2,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
 		{
 			key = "tasks",
-			name = icons.entity("tasks"),
+			name = icons.bitbucket_icon("bitbucket.entity.tasks"),
 			min_width = 2,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
 		{
 			key = "author",
-			name = string.format("%s Author", icons.entity("user")),
+			name = string.format("%s Author", icons.bitbucket_icon("bitbucket.entity.user")),
 			min_width = 3,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
 		{
 			key = "repo",
-			name = string.format("%s Repo", icons.entity("repo")),
+			name = string.format("%s Repo", icons.bitbucket_icon("bitbucket.entity.repo")),
 			min_width = 5,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
-		{ key = "created", name = icons.entity("created"), can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "updated", name = icons.entity("updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "created", name = icons.bitbucket_icon("bitbucket.entity.created"), can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "updated", name = icons.bitbucket_icon("bitbucket.entity.updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
 	}
 end
 
@@ -238,34 +238,34 @@ local function plain_tree_columns()
 		{ key = "name", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
 		{
 			key = "comments",
-			name = icons.entity("comments"),
+			name = icons.bitbucket_icon("bitbucket.entity.comments"),
 			min_width = 2,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
 		{
 			key = "tasks",
-			name = icons.entity("tasks"),
+			name = icons.bitbucket_icon("bitbucket.entity.tasks"),
 			min_width = 2,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
 		{
 			key = "author",
-			name = string.format("%s Author", icons.entity("user")),
+			name = string.format("%s Author", icons.bitbucket_icon("bitbucket.entity.user")),
 			min_width = 3,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
 		{
 			key = "branch",
-			name = string.format("%s Branch", icons.entity("branch")),
+			name = string.format("%s Branch", icons.bitbucket_icon("bitbucket.entity.branch")),
 			max_width = 28,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
-		{ key = "created", name = icons.entity("created"), can_grow = false, header_hl = "AtlasColumnHeader" },
-		{ key = "updated", name = icons.entity("updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "created", name = icons.bitbucket_icon("bitbucket.entity.created"), can_grow = false, header_hl = "AtlasColumnHeader" },
+		{ key = "updated", name = icons.bitbucket_icon("bitbucket.entity.updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
 	}
 end
 
@@ -291,13 +291,13 @@ local function append_compact_group_rows(rows, group)
 		local target_branch = tostring(((pr.destination or {}).branch or "?"))
 		table.insert(rows, {
 			kind = "pr",
-			pr_icon = icons.entity("pr"),
+			pr_icon = icons.bitbucket_icon("bitbucket.entity.pr"),
 			repo_pr = string.format("#%s %s", tostring(pr.id), pr.title or ""),
 			comments = tostring(pr.comments),
 			tasks = tostring(pr.tasks),
-			author = string.format("%s %s", icons.entity("user"), author_name),
+			author = string.format("%s %s", icons.bitbucket_icon("bitbucket.entity.user"), author_name),
 			author_hl = author_name,
-			repo = string.format("%s %s", icons.entity("repo"), repo_name),
+			repo = string.format("%s %s", icons.bitbucket_icon("bitbucket.entity.repo"), repo_name),
 			repo_hl = repo_name,
 			created = utils.relative_time(pr.created_on),
 			updated = utils.relative_time(pr.updated_on),
@@ -353,7 +353,7 @@ function M.build_plain_tree_table(repo_groups)
 		local repo_row = {
 			kind = "repo",
 			repo_name = full_name,
-			name = string.format("%s %s", icons.entity("repo"), full_name),
+			name = string.format("%s %s", icons.bitbucket_icon("bitbucket.entity.repo"), full_name),
 			branch = "",
 			comments = "",
 			tasks = "",
@@ -377,11 +377,11 @@ function M.build_plain_tree_table(repo_groups)
 			local target_branch = tostring(((pr.destination or {}).branch or "?"))
 			table.insert(repo_row.children, {
 				kind = "pr",
-				name = string.format("%s #%s %s", icons.entity("pr"), tostring(pr.id), pr.title or ""),
+				name = string.format("%s #%s %s", icons.bitbucket_icon("bitbucket.entity.pr"), tostring(pr.id), pr.title or ""),
 				branch = string.format("%s -> %s", source_branch, target_branch),
 				comments = tostring(pr.comments),
 				tasks = tostring(pr.tasks),
-				author = string.format("%s %s", icons.entity("user"), author_name),
+				author = string.format("%s %s", icons.bitbucket_icon("bitbucket.entity.user"), author_name),
 				author_hl = author_name,
 				created = utils.relative_time(pr.created_on),
 				updated = utils.relative_time(pr.updated_on),

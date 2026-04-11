@@ -113,7 +113,7 @@ local function render_header(lines, spans, width, views)
 		spans,
 		header.render({
 			width = width,
-			icon = icons.provider("bitbucket"),
+			icon = icons.bitbucket_icon("bitbucket.provider"),
 			title = "Bitbucket",
 			hl_group = "AtlasBitbucketTheme",
 		})

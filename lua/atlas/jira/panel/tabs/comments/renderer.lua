@@ -40,11 +40,11 @@ local function to_thread_item(comment)
 	local can_edit = comments_helper.can_manage_comment(comment, jira_state.current_user)
 
 	local footer_items = {
-		string.format("%s (c)", icons.entity("reply")),
+		string.format("%s (c)", icons.jira_icon("jira.entity.reply")),
 	}
 	if can_edit then
-		table.insert(footer_items, string.format("%s (e)", icons.entity("edit")))
-		table.insert(footer_items, string.format("%s (d)", icons.entity("delete")))
+		table.insert(footer_items, string.format("%s (e)", icons.jira_icon("jira.entity.edit")))
+		table.insert(footer_items, string.format("%s (d)", icons.jira_icon("jira.entity.delete")))
 	end
 
 	local children = {}

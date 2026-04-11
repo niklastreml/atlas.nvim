@@ -42,13 +42,13 @@ local function to_thread_item(commit, build_state)
 	local when = utils.relative_time(commit.date)
 	local content = author .. " · " .. when
 	if build_state == "loading" then
-		content = content .. " · " .. icons.bitbucket_status("INPROGRESS") .. " builds"
+		content = content .. " · " .. icons.bitbucket_icon("bitbucket.status.INPROGRESS") .. " builds"
 	elseif build_state ~= nil and build_state ~= "unknown" then
-		content = content .. " · " .. icons.bitbucket_status(build_state) .. " " .. helper.statuses.label(build_state)
+		content = content .. " · " .. icons.bitbucket_icon("bitbucket.status." .. build_state) .. " " .. helper.statuses.label(build_state)
 	end
 
 	return {
-		icon = icons.entity("commit"),
+		icon = icons.bitbucket_icon("bitbucket.entity.commit"),
 		icon_hl = "AtlasTextMuted",
 		author = message,
 		right_text = hash,
@@ -149,7 +149,7 @@ function M.render(width)
 			local out = { { start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" } }
 			local build_state = type(item.meta) == "table" and tostring(item.meta.build_state or "") or ""
 			if build_state == "loading" then
-				local marker = icons.bitbucket_status("INPROGRESS") .. " builds"
+				local marker = icons.bitbucket_icon("bitbucket.status.INPROGRESS") .. " builds"
 				local start_col, end_col = row:find(marker, 1, true)
 				if start_col ~= nil and end_col ~= nil then
 					table.insert(out, {
@@ -162,7 +162,7 @@ function M.render(width)
 			end
 
 			if build_state ~= "" and build_state ~= "unknown" then
-				local marker = icons.bitbucket_status(build_state) .. " " .. helper.statuses.label(build_state)
+				local marker = icons.bitbucket_icon("bitbucket.status." .. build_state) .. " " .. helper.statuses.label(build_state)
 				local start_col, end_col = row:find(marker, 1, true)
 				if start_col ~= nil and end_col ~= nil then
 					table.insert(out, {

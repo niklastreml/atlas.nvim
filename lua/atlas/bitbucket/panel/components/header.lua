@@ -44,9 +44,9 @@ function M.render(pr, width)
 	local source_branch = tostring((pr.source or {}).branch or "-")
 	local target_branch = tostring((pr.destination or {}).branch or "-")
 	local close_source = pr.close_source_branch == true
-	local branch_icon = icons.entity("branch")
-	local repo_icon = icons.entity("repo")
-	local author_icon = icons.entity("author")
+	local branch_icon = icons.bitbucket_icon("bitbucket.entity.branch")
+	local repo_icon = icons.bitbucket_icon("bitbucket.entity.repo")
+	local author_icon = icons.bitbucket_icon("bitbucket.entity.author")
 	local id_text = string.format("#%s", tostring(pr.id or "?"))
 	local title_text = tostring(pr.title or "")
 	local title = string.format(" %s %s", id_text, title_text)
@@ -162,7 +162,7 @@ function M.render_repo(repo, detail, width)
 	local title = " " .. full_name
 	local workspace = tostring(repo.workspace or "unknown")
 	local timestamp_text = utils.relative_time_text(tostring(detail.created_on or ""))
-	local by_prefix = string.format("%s by @", icons.entity("author"))
+	local by_prefix = string.format("%s by @", icons.bitbucket_icon("bitbucket.entity.author"))
 	local by_sep = " - "
 	local byline = by_prefix .. workspace .. by_sep .. timestamp_text
 

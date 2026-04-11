@@ -22,7 +22,7 @@ local function to_thread_item(t)
 	local when = utils.relative_time(tostring(t.date or ""))
 
 	return {
-		icon = icons.entity("tag"),
+		icon = icons.bitbucket_icon("bitbucket.entity.tag"),
 		icon_hl = "AtlasTextMuted",
 		author = tostring(t.name or "-"),
 		additional = hash,

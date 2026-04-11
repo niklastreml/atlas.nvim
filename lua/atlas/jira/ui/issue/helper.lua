@@ -50,7 +50,7 @@ end
 ---@return { line: integer, start_col: integer, end_col: integer, hl_group: string }[]
 function M.render_meta_lines(width, fields, assignees, issue_types, spinner_instance)
 	local user_icon = icons.entity("user")
-	local project_icon = icons.entity("project")
+	local project_icon = icons.jira_icon("jira.entity.project")
 	local assignee_text, is_loading = get_assignee_display(fields, assignees, spinner_instance)
 	local issue_type_text, issue_type_loading = get_issue_type_display(fields, issue_types, spinner_instance)
 	local reporter_name = fields.reporter.display_name

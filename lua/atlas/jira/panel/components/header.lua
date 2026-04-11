@@ -181,7 +181,7 @@ function M.render(issue, width, opts)
 			active = true,
 		},
 		{
-			text = string.format("%s %s", icons.entity("story_points"), story_points_text),
+			text = string.format("%s %s", icons.jira_icon("jira.entity.story_points"), story_points_text),
 			hl_group = type(story_points) == "number" and "AtlasJiraChipStoryPoints" or "AtlasTextMuted",
 			active = true,
 		},

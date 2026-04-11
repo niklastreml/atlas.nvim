@@ -71,14 +71,14 @@ local function render_file_header(file, count, pad, max_width)
 	local hdr_spans = {}
 
 	if file == "PR" then
-		local icon = icons.entity("comment")
+		local icon = icons.bitbucket_icon("bitbucket.entity.comment")
 		local label = "Pull Request"
 		local line = padding .. icon .. " " .. label .. count_suffix
 		table.insert(hdr_spans, { line = 0, start_col = pad, end_col = #line, hl_group = "AtlasTextMuted" })
 		return line, hdr_spans
 	end
 
-	local icon = icons.entity("files")
+	local icon = icons.bitbucket_icon("bitbucket.entity.files")
 	local prefix = padding .. icon .. " "
 	local available = max_width - vim.api.nvim_strwidth(prefix) - vim.api.nvim_strwidth(count_suffix)
 	if available < 1 then
@@ -110,7 +110,7 @@ local function to_thread_item(node, file, mention_map)
 	end
 
 	return {
-		icon = icons.entity("user"),
+		icon = icons.bitbucket_icon("bitbucket.entity.user"),
 		author = tostring(author),
 		additional = is_pending and "PENDING" or nil,
 		right_text = utils.relative_time(comment.created_on),

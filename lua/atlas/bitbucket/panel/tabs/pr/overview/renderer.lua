@@ -135,12 +135,12 @@ end
 ---@return string
 local function decision_icon(decision)
 	if decision == "approved" then
-		return icons.entity("success")
+		return icons.bitbucket_icon("bitbucket.entity.success")
 	end
 	if decision == "changes_requested" then
-		return icons.entity("warning")
+		return icons.bitbucket_icon("bitbucket.entity.warning")
 	end
-	return icons.entity("pending")
+	return icons.bitbucket_icon("bitbucket.entity.pending")
 end
 
 ---@param decision string
@@ -327,7 +327,7 @@ function M.render(width)
 		for _, entry in ipairs(statuses.entries) do
 			local status = tostring(entry.state or "UNKNOWN")
 			local status_label = pr_helper.statuses.label(status)
-			local icon = icons.bitbucket_status(status)
+			local icon = icons.bitbucket_icon("bitbucket.status." .. status)
 			local name = tostring(entry.name or "")
 			if name == "" then
 				name = tostring(entry.key or "")

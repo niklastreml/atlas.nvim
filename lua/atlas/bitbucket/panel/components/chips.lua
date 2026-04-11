@@ -65,10 +65,10 @@ function M.render(pr, statuses, opts)
 	local checks_chip = nil
 	local checks_hl = nil
 	if statuses == "loading" then
-		checks_chip = string.format("%s Loading builds", icons.bitbucket_status("INPROGRESS"))
+		checks_chip = string.format("%s Loading builds", icons.bitbucket_icon("bitbucket.status.inprogress"))
 		checks_hl = "AtlasTextMuted"
 	elseif checks_status ~= nil and checks_status ~= "unknown" then
-		checks_chip = string.format("%s %s", icons.bitbucket_status(checks_status), pr_helper.statuses.label(checks_status))
+		checks_chip = string.format("%s %s", icons.bitbucket_icon("bitbucket.status." .. checks_status), pr_helper.statuses.label(checks_status))
 		checks_hl = status_hl(checks_status)
 	end
 
@@ -112,9 +112,9 @@ function M.render_repo(repo, opts)
 	end
 
 	local chips = {
-		{ label = string.format("%s %s", icons.entity("files"), utils.human_size(repo.size)), hl = "AtlasTabInactive" },
+		{ label = string.format("%s %s", icons.bitbucket_icon("bitbucket.entity.files"), utils.human_size(repo.size)), hl = "AtlasTabInactive" },
 		{
-			label = string.format("%s %s", icons.entity("branch"), tostring(repo.mainbranch or "-")),
+			label = string.format("%s %s", icons.bitbucket_icon("bitbucket.entity.branch"), tostring(repo.mainbranch or "-")),
 			hl = "AtlasBitbucketPRMerged",
 		},
 		repo.is_private == true and { label = "private", hl = "AtlasBitbucketPRDraft" }
