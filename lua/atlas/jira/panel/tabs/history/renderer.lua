@@ -5,10 +5,10 @@ local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
-local icons = require("atlas.ui.icons")
-local highlights = require("atlas.ui.highlights")
+local icons = require("atlas.ui.utils.icons")
+local highlights = require("atlas.ui.utils.highlights")
 local jira_ui_helper = require("atlas.jira.ui.helper")
-local PADDING_X = 2
+local PADDING_X = 1
 
 ---@param value string|nil
 ---@return string

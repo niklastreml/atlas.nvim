@@ -5,9 +5,10 @@ local renderer = require("atlas.jira.panel.tabs.overview.renderer")
 local keymap = require("atlas.jira.panel.tabs.overview.keymap")
 
 ---@param issue JiraIssue|nil
-function M.activate(issue)
+---@param opts? { force_refresh?: boolean }
+function M.activate(issue, opts)
 	keymap.setup()
-	controller.show(issue)
+	controller.show(issue, opts)
 	controller.move(0)
 
 	local layout = require("atlas.ui.layout")
@@ -38,6 +39,11 @@ end
 
 function M.refresh()
 	controller.refresh()
+end
+
+---@return boolean
+function M.is_loading()
+	return controller.is_loading()
 end
 
 ---@param width integer

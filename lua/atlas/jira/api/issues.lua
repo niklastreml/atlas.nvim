@@ -5,6 +5,8 @@ local normalizer = require("atlas.jira.api.normalizer")
 local cache = require("atlas.core.cache")
 local logger = require("atlas.core.logger")
 
+local CACHE_TTL = 300
+
 local SEARCH_FIELDS = {
 	"summary",
 	"status",
@@ -164,15 +166,26 @@ end
 ---@param start_at number|nil
 ---@param max_results number|nil
 ---@param on_done fun(page: JiraIssueHistoryPage|nil, err: string|nil)
+---@param opts { force_load?: boolean }|nil
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.get_issue_history_page(issue_key, start_at, max_results, on_done)
+function M.get_issue_history_page(issue_key, start_at, max_results, on_done, opts)
 	if type(issue_key) ~= "string" or issue_key == "" then
 		on_done(nil, "Missing issue key")
 		return nil
 	end
 
+	opts = opts or {}
 	local start = math.max(0, tonumber(start_at) or 0)
 	local size = math.max(1, tonumber(max_results) or 100)
+	local cache_key = string.format("jira:panel:history:%s:start:%d:size:%d", issue_key, start, size)
+
+	if not opts.force_load then
+		local cached_page, ok = service.get_memory_cache(cache_key)
+		if ok then
+			on_done(cached_page, nil)
+			return nil
+		end
+	end
 
 	logger.loginfo("Jira fetch issue history page", {
 		issue_key = issue_key,
@@ -188,7 +201,9 @@ function M.get_issue_history_page(issue_key, start_at, max_results, on_done)
 			return
 		end
 
-		on_done(normalizer.normalize_issue_history_page(result, start, size), nil)
+		local page = normalizer.normalize_issue_history_page(result, start, size)
+		service.set_memory_cache(cache_key, page, CACHE_TTL)
+		on_done(page, nil)
 	end)
 end
 
@@ -198,7 +213,7 @@ end
 
 ---@param issue_key string
 ---@param on_done fun(detail: JiraIssueDetailResult|nil, err: string|nil)
----@param opts { extra_fields?: string[] }|nil
+---@param opts { extra_fields?: string[], force_load?: boolean }|nil
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.get_issue_detail(issue_key, on_done, opts)
 	if type(issue_key) ~= "string" or issue_key == "" then
@@ -211,6 +226,22 @@ function M.get_issue_detail(issue_key, on_done, opts)
 	local extra = opts.extra_fields or {}
 	for _, f in ipairs(extra) do
 		table.insert(fields, f)
+	end
+
+	local fields_suffix = "description"
+	if #extra > 0 then
+		local sorted_extra = vim.deepcopy(extra)
+		table.sort(sorted_extra)
+		fields_suffix = "description+" .. table.concat(sorted_extra, ",")
+	end
+
+	local cache_key = string.format("jira:panel:detail:%s:fields:%s", issue_key, fields_suffix)
+	if not opts.force_load then
+		local cached_detail, ok = service.get_memory_cache(cache_key)
+		if ok then
+			on_done(cached_detail, nil)
+			return nil
+		end
 	end
 
 	logger.loginfo("Jira fetch issue detail", { issue_key = issue_key, fields = fields })
@@ -247,10 +278,13 @@ function M.get_issue_detail(issue_key, on_done, opts)
 			custom_field_count = custom_fields and #extra or 0,
 		})
 
-		on_done({
+		local detail = {
 			description = raw_fields.description,
 			custom_fields = custom_fields,
-		}, nil)
+		}
+
+		service.set_memory_cache(cache_key, detail, CACHE_TTL)
+		on_done(detail, nil)
 	end)
 end
 

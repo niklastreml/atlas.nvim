@@ -5,19 +5,32 @@ local normalizer = require("atlas.jira.api.normalizer")
 local logger = require("atlas.core.logger")
 local markdown = require("atlas.jira.converted.markdown")
 
+local PANEL_CACHE_TTL = 300
+
 ---@param issue_key string
 ---@param start_at number|nil
 ---@param max_results number|nil
 ---@param callback fun(page: JiraCommentPage|nil, err: string|nil)
+---@param opts { force_load?: boolean }|nil
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.get_comments_page(issue_key, start_at, max_results, callback)
+function M.get_comments_page(issue_key, start_at, max_results, callback, opts)
 	if type(issue_key) ~= "string" or issue_key == "" then
 		callback(nil, "Missing issue key")
 		return nil
 	end
 
+	opts = opts or {}
 	local start = tonumber(start_at) or 0
 	local size = tonumber(max_results) or 100
+	local cache_key = string.format("jira:panel:comments:%s:start:%d:size:%d", issue_key, start, size)
+
+	if not opts.force_load then
+		local cached_page, ok = service.get_memory_cache(cache_key)
+		if ok then
+			callback(cached_page, nil)
+			return nil
+		end
+	end
 
 	logger.loginfo("Jira fetch comments page", { issue_key = issue_key, start_at = start, max_results = size })
 	local endpoint = string.format("/issue/%s/comment?startAt=%d&maxResults=%d", issue_key, start, size)
@@ -28,7 +41,9 @@ function M.get_comments_page(issue_key, start_at, max_results, callback)
 			return
 		end
 
-		callback(normalizer.normalize_comments(result), nil)
+		local page = normalizer.normalize_comments(result)
+		service.set_memory_cache(cache_key, page, PANEL_CACHE_TTL)
+		callback(page, nil)
 	end)
 end
 
@@ -78,6 +93,7 @@ function M.add_comment(issue_key, comment, opts, callback)
 			return
 		end
 
+		service.clear_memory_cache()
 		local page = normalizer.normalize_comments({ comments = { result } })
 		callback(page.comments[1], nil)
 	end)
@@ -122,6 +138,7 @@ function M.edit_comment(issue_key, comment_id, comment, callback)
 			return
 		end
 
+		service.clear_memory_cache()
 		local page = normalizer.normalize_comments({ comments = { result } })
 		callback(page.comments[1], nil)
 	end)
@@ -151,6 +168,7 @@ function M.delete_comment(issue_key, comment_id, callback)
 			callback(false, err)
 			return
 		end
+		service.clear_memory_cache()
 		callback(true, nil)
 	end)
 end

@@ -42,7 +42,7 @@ local function selected_repo()
 	if node.kind == "pr" and type(node.pr) == "table" then
 		return {
 			workspace = node.pr.workspace,
-			repo_slug = node.pr.repo_slug or node.pr.repo,
+			slug = node.pr.repo_slug or node.pr.repo,
 			full_name = node.pr.repo_full_name,
 		}
 	end
@@ -128,15 +128,16 @@ function M.register(buf)
 			end
 
 			local panel = require("atlas.ui.panel")
-			local panel_state = require("atlas.ui.panel.state")
 			if panel.is_open() then
-				local selected = panel_state.selected_item
-				if type(selected) == "table" and selected.kind == "repo" then
-					panel.close()
-					return
-				end
+				panel.close()
+				return
 			end
-			panel.show("bitbucket", repo)
+
+			panel.show({
+				provider = "bitbucket",
+				panel_type = "repo",
+				item = repo,
+			})
 		end,
 	})
 
@@ -168,16 +169,6 @@ function M.register(buf)
 		desc = "Refetch selected PR",
 		index = 8,
 		callback = function()
-			local panel = require("atlas.ui.panel")
-			local panel_state = require("atlas.ui.panel.state")
-			if panel.is_open() then
-				local selected = panel_state.selected_item
-				if type(selected) == "table" and selected.kind == "repo" then
-					require("atlas.bitbucket.panel.tabs.repo.overview.controller").refresh()
-					return
-				end
-			end
-
 			actions.refresh_pr(selected_pr())
 		end,
 	})
@@ -186,9 +177,7 @@ function M.register(buf)
 		desc = "Refresh current Bitbucket view",
 		index = 9,
 		callback = function()
-			controller.refresh_current_view(function()
-				navigation.focus_first_item()
-			end)
+			controller.refresh_current_view()
 		end,
 	})
 

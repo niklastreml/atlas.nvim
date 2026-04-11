@@ -13,6 +13,9 @@ local footer = require("atlas.ui.components.footer")
 ---| "search_query_issue"
 ---| "search_issues"
 ---| "create_issue"
+---| "browse_issue"
+---| "copy_issue_key"
+---| "copy_issue_url"
 
 ---@param action_id JiraActionId|string
 ---@param ctx JiraActionContext
@@ -28,7 +31,8 @@ function M.run(action_id, ctx, on_done)
 
 	local available, available_err = action.is_available(ctx)
 	if not available then
-		local err = tostring(available_err or string.format("Action not available: %s", tostring(action.label or action_id)))
+		local err =
+			tostring(available_err or string.format("Action not available: %s", tostring(action.label or action_id)))
 		logger.logwarn("jira.action.unavailable", { action_id = tostring(action_id), source = ctx.source, error = err })
 		footer.notify("warn", err)
 		on_done(nil, err)

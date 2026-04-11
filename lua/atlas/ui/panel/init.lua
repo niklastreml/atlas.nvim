@@ -3,7 +3,7 @@ local M = {}
 local layout = require("atlas.ui.layout")
 local keymaps = require("atlas.ui.panel.keymaps")
 local state = require("atlas.ui.panel.state")
-local ui_state = require("atlas.ui.main.state")
+local ui_state = require("atlas.ui.state")
 
 ---@param provider "bitbucket"|"jira"|nil
 local function deactivate_provider(provider)
@@ -16,7 +16,6 @@ local function deactivate_provider(provider)
 		require("atlas.bitbucket.panel.init").deactivate()
 	end
 end
-
 
 function M.open()
 	if M.is_open() then
@@ -34,13 +33,12 @@ function M.open()
 	end
 end
 
----@param provider "bitbucket"|"jira"
----@param item table|nil
-function M.show(provider, item)
+---@param selection AtlasPanelSelection
+function M.show(selection)
 	if not M.is_open() then
 		M.open()
 	end
-	M.on_select(provider, item)
+	M.on_select(selection)
 end
 
 function M.close()
@@ -68,54 +66,41 @@ function M.is_open()
 	return layout.win_id("detail") ~= nil
 end
 
----@param provider "bitbucket"|"jira"
----@param item table|nil
-function M.on_select(provider, item)
+---@param selection AtlasPanelSelection|nil
+---@param opts? { force_refresh?: boolean }
+function M.on_select(selection, opts)
+	opts = opts or {}
+	if selection == nil then
+		return
+	end
+
+	local provider = selection.provider
 	local previous_provider = state.active_provider
 	if previous_provider ~= provider then
 		deactivate_provider(previous_provider)
 	end
 
-	state.set_selection(provider, item)
-	if not M.is_open() then
-		return
-	end
-
 	if provider == "jira" then
-		local jira_issue = item
-		if type(item) == "table" and type(item._issue) == "table" then
-			jira_issue = item._issue
+		---@cast selection AtlasJiraPanelSelection
+		state.set_selection(selection)
+		if not M.is_open() then
+			return
 		end
-		require("atlas.jira.panel.init").on_select(jira_issue)
+
+		require("atlas.jira.panel.init").on_select(selection.item, { force_refresh = opts.force_refresh == true })
 		return
 	end
 
 	if provider == "bitbucket" then
+		---@cast selection AtlasBitbucketPanelSelection
 		local bb_panel = require("atlas.bitbucket.panel.init")
-
-		-- Determine panel type from item kind
-		local panel_type = nil
-		local panel_item = nil
-
-		if type(item) == "table" then
-			if item.kind == "repo" then
-				panel_type = "repo"
-				panel_item = item
-			elseif item.kind == "pr" or item.kind == "pr_meta" then
-				panel_type = "pr"
-				panel_item = item.pr
-			end
+		state.set_selection(selection)
+		if not M.is_open() then
+			return
 		end
 
-		if panel_type ~= nil then
-			bb_panel.on_select(panel_type, panel_item)
-		else
-			bb_panel.on_select(nil, nil)
-		end
-		return
+		bb_panel.on_select(selection.panel_type, selection.item, { force_refresh = opts.force_refresh == true })
 	end
-
-	require("atlas.ui.panel.renderer").render(provider)
 end
 
 function M.refresh()

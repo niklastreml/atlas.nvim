@@ -2,14 +2,14 @@ local M = {}
 
 local tab_state = require("atlas.bitbucket.panel.tabs.repo.tags.state")
 local state = require("atlas.bitbucket.panel.tabs.repo.state")
-local panel_state = require("atlas.bitbucket.panel.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
+local PADDING_X = 1
 
 ---@param t BitbucketRepositoryTag
 ---@return AtlasThreadV2Item
@@ -79,7 +79,7 @@ function M.render(width)
 	end
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs_component.render_repo(panel_state.current_tab, { width = width, padding_x = 1 })
+	local tab_lines, tab_spans = tabs_component.render_repo(state.tab, { width = width, padding_x = 1 })
 	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
@@ -98,11 +98,12 @@ function M.render(width)
 	end
 
 	if tags == nil or tags.entries == nil or #tags.entries == 0 then
-		table.insert(lines, "No tags found.")
+		local empty_line = string.rep(" ", PADDING_X) .. "No tags found."
+		table.insert(lines, empty_line)
 		table.insert(spans, {
 			line = #lines - 1,
-			start_col = 0,
-			end_col = #lines[#lines],
+			start_col = PADDING_X,
+			end_col = #empty_line,
 			hl_group = "AtlasTextMuted",
 		})
 		state.line_map = line_map
@@ -115,7 +116,7 @@ function M.render(width)
 		table.insert(items, to_thread_item(t))
 	end
 
-	local thread_lines, thread_spans = threads.render(items, width, {
+	local thread_lines, thread_spans, thread_line_map = threads.render(items, width, {
 		padding_x = 1,
 		mode = "linked",
 		right_text_align = "right",
@@ -130,7 +131,11 @@ function M.render(width)
 			return { { start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" } }
 		end,
 	})
+	local thread_base = #lines
 	utils.append_block(lines, spans, { lines = thread_lines, highlights = thread_spans })
+	for lnum, entry in pairs(thread_line_map or {}) do
+		line_map[thread_base + lnum] = entry
+	end
 
 	tab_state.line_map = line_map
 	return lines, spans, line_map

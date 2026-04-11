@@ -3,7 +3,6 @@ local M = {}
 local controller = require("atlas.bitbucket.ui.controller")
 local users = require("atlas.bitbucket.api.users")
 local actions = require("atlas.bitbucket.actions")
-local navigation = require("atlas.ui.navigation")
 local footer = require("atlas.ui.components.footer")
 
 ---@param value string
@@ -38,9 +37,7 @@ function M.open_pr_actions_popup(pr)
 		end
 
 		if result ~= nil and result.changed_pr then
-			controller.refresh_pr(pr, function()
-				-- Keep cursor position after refresh
-			end)
+			controller.refresh_pr(pr)
 		end
 	end)
 end
@@ -87,12 +84,7 @@ function M.refresh_pr(pr)
 		return
 	end
 
-	controller.refresh_pr(pr, function()
-		local panel = require("atlas.ui.panel")
-		if panel.is_open() then
-			require("atlas.bitbucket.panel.init").on_select("pr", pr)
-		end
-	end)
+	controller.refresh_pr(pr)
 end
 
 function M.open_pr_search_popup()
@@ -162,9 +154,7 @@ function M.open_pr_search_popup()
 						}
 
 						footer.notify("success", string.format("Search view -> %s", repo.full_name))
-						controller.switch_view(search_view, function()
-							navigation.focus_first_item()
-						end)
+						controller.switch_view(search_view)
 					end)
 				end)
 			end)

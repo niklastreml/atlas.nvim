@@ -38,25 +38,6 @@ end
 function M.register(buf)
 	local items = {
 		{
-			key = "q",
-			desc = "Close Atlas window",
-			opts = { nowait = true, silent = true },
-			callback = function()
-				if help.is_open() then
-					return
-				end
-				require("atlas.ui.layout").close()
-			end,
-		},
-		{
-			key = "?",
-			desc = "Toggle this help popup",
-			opts = { nowait = true, silent = true },
-			callback = function()
-				help.toggle({ buffer = buf })
-			end,
-		},
-		{
 			key = "j",
 			desc = "Next item",
 			hidden = true,
@@ -94,22 +75,50 @@ function M.register(buf)
 		utils.insert_if(items, item(action_id, map_item))
 	end
 
+	add("ui.help", {
+		desc = "Toggle this help popup",
+		opts = { nowait = true, silent = true },
+		callback = function()
+			help.toggle({ buffer = buf })
+		end,
+	})
+
+	add("ui.close", {
+		desc = "Close Atlas window",
+		opts = { nowait = true, silent = true },
+		callback = function()
+			if help.is_open() then
+				return
+			end
+			require("atlas.ui.layout").close()
+		end,
+	})
+
 	add("ui.toggle_panel", {
 		desc = "Toggle detail pane",
 		callback = function()
 			local panel = require("atlas.ui.panel")
 			local navigation = require("atlas.ui.navigation")
 			local panel_state = require("atlas.ui.panel.state")
-			local ui_state = require("atlas.ui.main.state")
+			local ui_state = require("atlas.ui.state")
 			local current = navigation.current_item()
 			if panel.is_open() then
-				local selected = panel_state.selected_item
-				if type(selected) == "table" and (selected.kind == "pr" or selected.kind == "issue") then
+				if panel_state.active_provider == ui_state.current_view then
 					panel.close()
 					return
 				end
 			end
-			panel.show(ui_state.current_view, current)
+
+			local selection = nil
+			if ui_state.current_view == "jira" then
+				selection = require("atlas.jira").panel_selection_from_item(current)
+			elseif ui_state.current_view == "bitbucket" then
+				selection = require("atlas.bitbucket").panel_selection_from_item(current)
+			end
+
+			if selection ~= nil then
+				panel.show(selection)
+			end
 		end,
 	})
 
@@ -122,7 +131,7 @@ function M.register(buf)
 				return
 			end
 
-			local ui_state = require("atlas.ui.main.state")
+			local ui_state = require("atlas.ui.state")
 			if ui_state.current_view == "jira" then
 				require("atlas.jira.panel.init").prev_tab()
 			elseif ui_state.current_view == "bitbucket" then
@@ -140,7 +149,7 @@ function M.register(buf)
 				return
 			end
 
-			local ui_state = require("atlas.ui.main.state")
+			local ui_state = require("atlas.ui.state")
 			if ui_state.current_view == "jira" then
 				require("atlas.jira.panel.init").next_tab()
 			elseif ui_state.current_view == "bitbucket" then
@@ -156,13 +165,13 @@ end
 ---@param buf integer
 function M.remove(buf)
 	local items = {
-		{ key = "q" },
-		{ key = "?" },
 		{ key = "j" },
 		{ key = "k" },
 		{ key = "gg" },
 		{ key = "G" },
 	}
+	utils.insert_if(items, remove_item("ui.help"))
+	utils.insert_if(items, remove_item("ui.close"))
 	utils.insert_if(items, remove_item("ui.toggle_panel"))
 	utils.insert_if(items, remove_item("ui.previous_panel_tab"))
 	utils.insert_if(items, remove_item("ui.next_panel_tab"))

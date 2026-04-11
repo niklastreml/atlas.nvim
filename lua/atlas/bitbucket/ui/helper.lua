@@ -1,7 +1,7 @@
 local M = {}
 
-local highlights = require("atlas.ui.highlights")
-local icons = require("atlas.ui.icons")
+local highlights = require("atlas.ui.utils.highlights")
+local icons = require("atlas.ui.utils.icons")
 local utils = require("atlas.utils")
 
 ---@param name string|nil
@@ -280,7 +280,7 @@ local function append_compact_group_rows(rows, group)
 	local repo_ctx = {
 		kind = "repo",
 		workspace = workspace,
-		repo_slug = repo,
+		slug = repo,
 		full_name = full_name,
 	}
 
@@ -366,7 +366,7 @@ function M.build_plain_tree_table(repo_groups)
 				kind = "repo",
 				repo = full_name,
 				workspace = workspace,
-				repo_slug = repo,
+				slug = repo,
 				full_name = full_name,
 			},
 		}
@@ -393,7 +393,7 @@ function M.build_plain_tree_table(repo_groups)
 					_repo = {
 						kind = "repo",
 						workspace = workspace,
-						repo_slug = repo,
+						slug = repo,
 						full_name = full_name,
 					},
 				},

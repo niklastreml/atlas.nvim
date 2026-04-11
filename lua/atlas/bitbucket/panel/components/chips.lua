@@ -1,6 +1,6 @@
 local M = {}
 local utils = require("atlas.utils")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 
 local MAX_HASH_CHIP_LEN = 12
 

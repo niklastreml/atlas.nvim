@@ -57,8 +57,31 @@ function M.cache_ttl()
 	return ((config.options.bitbucket and config.options.bitbucket.cache_ttl) or 300)
 end
 
-function M.clear_memory_cache()
+function M.clear_cache()
 	memory_cache.clear_all()
+end
+
+---@param key string
+---@return any|nil, boolean
+function M.get_cache(key)
+	local entry = memory_cache.get(key)
+	if not entry then
+		return nil, false
+	end
+
+	return entry.value, true
+end
+
+---@param key string
+---@param value any
+---@param ttl number|nil
+function M.set_cache(key, value, ttl)
+	memory_cache.set(key, value, ttl or M.cache_ttl())
+end
+
+---@param key string
+function M.delete_cache(key)
+	memory_cache.delete(key)
 end
 
 ---@param result any

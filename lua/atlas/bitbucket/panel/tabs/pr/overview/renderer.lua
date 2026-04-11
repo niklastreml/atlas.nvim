@@ -1,12 +1,12 @@
 local M = {}
 
 local state = require("atlas.bitbucket.panel.tabs.pr.overview.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local spinner = require("atlas.ui.components.spinner")
 
 local CONTENT_PADDING = 1
@@ -190,7 +190,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
+	local tab_lines, tab_spans = tabs.render_pr(pr_state.tab, { width = width, padding_x = 1 })
 	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
@@ -263,7 +263,13 @@ function M.render(width)
 				table.sort(names)
 				local icon = decision_icon(status)
 				local label = table.concat(names, ", ")
-				local line_text = icon .. " " .. label
+				local icon_prefix = icon .. " "
+				local icon_prefix_width = vim.api.nvim_strwidth(icon_prefix)
+				local content_width = math.max(10, width - (CONTENT_PADDING * 2))
+				local label_width = math.max(1, content_width - icon_prefix_width)
+				local wrapped = utils.wrap_line(label, label_width)
+
+				local line_text = icon_prefix .. wrapped[1]
 				table.insert(lines, with_content_padding(line_text))
 				table.insert(spans, {
 					line = #lines - 1,
@@ -271,12 +277,17 @@ function M.render(width)
 					end_col = CONTENT_PADDING + #icon,
 					hl_group = decision_hl(status),
 				})
+
+				local continuation_prefix = string.rep(" ", icon_prefix_width)
+				for i = 2, #wrapped do
+					table.insert(lines, with_content_padding(continuation_prefix .. wrapped[i]))
+				end
 			end
 		end
 	end
 	table.insert(lines, "")
 
-	-- Diffstat (above description)
+	-- Diffstat
 	local ds_lines, ds_spans = render_diffstat(diffstat, width)
 	utils.append_block(lines, spans, { lines = ds_lines, highlights = ds_spans })
 	table.insert(lines, "")
@@ -284,6 +295,7 @@ function M.render(width)
 	-- Description
 	local description_text = pr.description or ""
 	local description = utils.sanitize_lines(description_text)
+	local content_width = math.max(10, width - (CONTENT_PADDING * 2))
 	local description_header = "Description"
 	table.insert(lines, with_content_padding(description_header))
 	table.insert(spans, {
@@ -293,7 +305,10 @@ function M.render(width)
 		hl_group = "AtlasColumnHeader",
 	})
 	for _, line in ipairs(description) do
-		table.insert(lines, with_content_padding(line))
+		local wrapped = utils.wrap_line(line, content_width)
+		for _, chunk in ipairs(wrapped) do
+			table.insert(lines, with_content_padding(chunk))
+		end
 	end
 
 	state.line_map = line_map

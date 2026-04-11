@@ -18,7 +18,7 @@ local M = {}
 ---@field create_issue? AtlasKeymapValue
 ---@field refresh_issue? AtlasKeymapValue
 ---@field refresh_view? AtlasKeymapValue
----@field refresh_tab? AtlasKeymapValue
+---@field toggle_issue_children? AtlasKeymapValue
 ---@field show_details? AtlasKeymapValue
 ---@field copy_key? AtlasKeymapValue
 ---@field copy_url? AtlasKeymapValue
@@ -32,7 +32,6 @@ local M = {}
 ---@field open_in_browser? AtlasKeymapValue
 ---@field refresh_pr? AtlasKeymapValue
 ---@field refresh_view? AtlasKeymapValue
----@field refresh_tab? AtlasKeymapValue
 ---@field show_details? AtlasKeymapValue
 ---@field copy_id? AtlasKeymapValue
 ---@field copy_url? AtlasKeymapValue
@@ -56,7 +55,7 @@ local M = {}
 ---| "jira.create_issue"
 ---| "jira.refresh_issue"
 ---| "jira.refresh_view"
----| "jira.refresh_tab"
+---| "jira.toggle_issue_children"
 ---| "jira.show_details"
 ---| "jira.copy_key"
 ---| "jira.copy_url"
@@ -68,7 +67,6 @@ local M = {}
 ---| "bitbucket.open_in_browser"
 ---| "bitbucket.refresh_pr"
 ---| "bitbucket.refresh_view"
----| "bitbucket.refresh_tab"
 ---| "bitbucket.show_details"
 ---| "bitbucket.copy_id"
 ---| "bitbucket.copy_url"
@@ -111,41 +109,107 @@ local function normalize(value)
 end
 
 ---@param action_id AtlasKeymapActionId|string
----@return string[]
-local function split_path(action_id)
-	local parts = {}
-	for part in string.gmatch(action_id, "[^%.]+") do
-		table.insert(parts, part)
-	end
-	return parts
-end
-
----@param action_id AtlasKeymapActionId|string
 ---@return AtlasKeymapValue
 local function from_config(action_id)
-	local path = split_path(action_id)
-	local unpack_fn = table.unpack or unpack
-	local tbl_get = vim.tbl_get
-	if type(tbl_get) == "function" then
-		return tbl_get(require("atlas.config").options, "keymaps", unpack_fn(path))
+	local group, key = tostring(action_id):match("^([^.]+)%.([^.]+)$")
+	if group == nil or key == nil then
+		return nil
 	end
 
-	---@type AtlasKeymapsConfig|nil
-	local node = require("atlas.config").options.keymaps
-	for _, part in ipairs(path) do
-		if type(node) ~= "table" then
-			return nil
-		end
-		node = node[part]
+	local keymaps = require("atlas.config").options.keymaps
+	if type(keymaps) ~= "table" then
+		return nil
 	end
 
-	return node
+	local section = keymaps[group]
+	if type(section) ~= "table" then
+		return nil
+	end
+
+	return section[key]
 end
 
 ---@param action_id AtlasKeymapActionId|string
 ---@return string[]|nil
 function M.resolve(action_id)
 	return normalize(from_config(action_id))
+end
+
+---@param action_ids AtlasKeymapActionId[]
+---@param builtins string[]
+---@return table<string, string[]>
+local function conflicts_for(action_ids, builtins)
+	---@type table<string, table<string, true>>
+	local seen_by_key = {}
+	for _, action_id in ipairs(action_ids) do
+		local keys = M.resolve(action_id) or {}
+		for _, key in ipairs(keys) do
+			seen_by_key[key] = seen_by_key[key] or {}
+			seen_by_key[key][action_id] = true
+		end
+	end
+
+	for _, key in ipairs(builtins) do
+		seen_by_key[key] = seen_by_key[key] or {}
+		seen_by_key[key]["builtin:" .. key] = true
+	end
+
+	---@type table<string, string[]>
+	local conflicts = {}
+	for key, seen in pairs(seen_by_key) do
+		local actions = vim.tbl_keys(seen)
+		table.sort(actions)
+		if #actions > 1 then
+			conflicts[key] = actions
+		end
+	end
+
+	return conflicts
+end
+
+---@return table<string, table<string, string[]>>
+function M.validate()
+	return {
+		ui = conflicts_for({
+			"ui.help",
+			"ui.close",
+			"ui.toggle_panel",
+			"ui.previous_panel_tab",
+			"ui.next_panel_tab",
+			"ui.refresh",
+		}, { "j", "k", "gg", "G" }),
+		jira = conflicts_for({
+			"jira.open_actions",
+			"jira.search",
+			"jira.edit_issue",
+			"jira.transition_issue",
+			"jira.change_assignee",
+			"jira.open_in_browser",
+			"jira.create_issue",
+			"jira.refresh_issue",
+			"jira.refresh_view",
+			"jira.toggle_issue_children",
+			"jira.show_details",
+			"jira.copy_key",
+			"jira.copy_url",
+		}, { "j", "k", "gg", "G" }),
+		bitbucket = conflicts_for({
+			"bitbucket.open_actions",
+			"bitbucket.search",
+			"bitbucket.toggle_repo_panel",
+			"bitbucket.checkout_pr",
+			"bitbucket.open_diffview",
+			"bitbucket.open_in_browser",
+			"bitbucket.refresh_pr",
+			"bitbucket.refresh_view",
+			"bitbucket.show_details",
+			"bitbucket.copy_id",
+			"bitbucket.copy_url",
+			"bitbucket.pr_files_toggle_fold",
+			"bitbucket.pr_files_next_hunk",
+			"bitbucket.pr_files_previous_hunk",
+		}, { "j", "k", "gg", "G" }),
+	}
 end
 
 return M

@@ -101,7 +101,7 @@ M.options = {
 
 	keymaps = {
 		ui = {
-			help = "?",
+			help = "g?",
 			close = "q",
 			toggle_panel = "p",
 			previous_panel_tab = "<S-Tab>",
@@ -110,7 +110,7 @@ M.options = {
 		},
 		jira = {
 			open_actions = "A",
-			search = "/",
+			search = "?",
 			edit_issue = "ge",
 			transition_issue = "gs",
 			change_assignee = "ga",
@@ -121,18 +121,17 @@ M.options = {
 			show_details = "K",
 			copy_key = "y",
 			copy_url = "Y",
-			refresh_tab = "r",
+			toggle_issue_children = "za",
 		},
 		bitbucket = {
 			open_actions = "A",
-			search = "/",
+			search = "?",
 			toggle_repo_panel = "o",
 			checkout_pr = "gc",
 			open_diffview = "gd",
 			open_in_browser = "gx",
 			refresh_pr = "r",
 			refresh_view = "R",
-			refresh_tab = "r",
 			show_details = "K",
 			copy_id = "y",
 			copy_url = "Y",
@@ -148,6 +147,7 @@ local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasJqlSearch", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasLogs", nil)
+	pcall(vim.api.nvim_del_user_command, "AtlasClearCache", nil)
 
 	vim.api.nvim_create_user_command("AtlasJira", function()
 		require("atlas").open("jira")
@@ -170,6 +170,12 @@ local function register_commands()
 	vim.api.nvim_create_user_command("AtlasLogs", function()
 		require("atlas.ui.logs").toggle()
 	end, { desc = "Open Atlas logs" })
+
+	vim.api.nvim_create_user_command("AtlasClearCache", function()
+		require("atlas.core.cache").clear_all()
+		require("atlas.core.memory_cache").clear_all()
+		vim.notify("Atlas cache cleared", vim.log.levels.INFO)
+	end, { desc = "Clear Atlas disk and memory cache" })
 end
 
 ---@param opts AtlasConfig|nil

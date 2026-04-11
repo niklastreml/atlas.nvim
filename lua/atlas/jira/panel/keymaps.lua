@@ -113,17 +113,6 @@ function M.register(buf)
 		utils.insert_if(jira_items, item(action_id, map_item))
 	end
 
-	add("jira.refresh_tab", {
-		desc = "Refresh current tab",
-		opts = { silent = true, nowait = true },
-		callback = function()
-			local tab = get_tab_module(panel_state.current_tab)
-			if tab ~= nil and type(tab.refresh) == "function" then
-				tab.refresh()
-			end
-		end,
-	})
-
 	add("jira.open_actions", {
 		desc = "Open Jira actions",
 		opts = { silent = true, nowait = true },
@@ -168,7 +157,6 @@ function M.remove(buf)
 	}, { buffer = buf })
 
 	local jira_items = {}
-	utils.insert_if(jira_items, remove_item("jira.refresh_tab"))
 	utils.insert_if(jira_items, remove_item("jira.open_actions"))
 	help.remove("Jira", jira_items, { buffer = buf })
 end

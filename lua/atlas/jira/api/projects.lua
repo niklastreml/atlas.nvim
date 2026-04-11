@@ -1,7 +1,6 @@
 local M = {}
 
 local service = require("atlas.jira.api.service")
-local users_api = require("atlas.jira.api.users")
 local normalizer = require("atlas.jira.api.normalizer")
 
 ---@class JiraProjectGroup

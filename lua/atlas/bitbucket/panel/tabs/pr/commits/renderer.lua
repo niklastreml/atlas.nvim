@@ -1,14 +1,15 @@
 local M = {}
 
 local state = require("atlas.bitbucket.panel.tabs.pr.commits.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local spinner = require("atlas.ui.components.spinner")
+local PADDING_X = 1
 
 ---@param commit BitbucketPRCommit
 ---@return AtlasThreadV2Item
@@ -26,6 +27,9 @@ local function to_thread_item(commit)
 		author = message,
 		right_text = hash,
 		content = author .. " · " .. when,
+		line_map = {
+			commit = commit,
+		},
 	}
 end
 
@@ -64,13 +68,13 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs_component.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
+	local tab_lines, tab_spans = tabs_component.render_pr(pr_state.tab, { width = width, padding_x = PADDING_X })
 	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
 	-- Commits content
 	if commits == "loading" then
-		local loading_line = spinner.with_text("Loading commits...")
+		local loading_line = string.rep(" ", PADDING_X) .. spinner.with_text("Loading commits...")
 		table.insert(lines, loading_line)
 		table.insert(spans, {
 			line = #lines - 1,
@@ -84,7 +88,14 @@ function M.render(width)
 
 	local entries = (commits ~= nil and commits.entries) or {}
 	if #entries == 0 then
-		table.insert(lines, "No commits yet.")
+		local empty_line = string.rep(" ", PADDING_X) .. "No commits yet."
+		table.insert(lines, empty_line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X,
+			end_col = #empty_line,
+			hl_group = "AtlasTextMuted",
+		})
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
@@ -94,8 +105,8 @@ function M.render(width)
 		table.insert(items, to_thread_item(commit))
 	end
 
-	local thread_lines, thread_spans = threads.render(items, width, {
-		padding_x = 1,
+	local thread_lines, thread_spans, thread_map = threads.render(items, width, {
+		padding_x = PADDING_X,
 		mode = "linked",
 		right_text_align = "right",
 		author_hl = function()
@@ -105,7 +116,11 @@ function M.render(width)
 			return { { start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" } }
 		end,
 	})
+	local offset = #lines
 	utils.append_block(lines, spans, { lines = thread_lines, highlights = thread_spans })
+	for lnum, entry in pairs(thread_map or {}) do
+		line_map[offset + lnum] = entry
+	end
 
 	state.line_map = line_map
 	return lines, spans, line_map

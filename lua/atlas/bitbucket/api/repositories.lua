@@ -59,6 +59,8 @@ end
 ---@param on_done fun(detail: BitbucketRepository|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_detail(workspace, repo_slug, opts, on_done)
+	opts = opts or {}
+
 	if type(workspace) ~= "string" or workspace == "" then
 		on_done(nil, "Missing workspace slug")
 		return nil
@@ -66,6 +68,15 @@ function M.fetch_detail(workspace, repo_slug, opts, on_done)
 	if type(repo_slug) ~= "string" or repo_slug == "" then
 		on_done(nil, "Missing repository slug")
 		return nil
+	end
+
+	local key = string.format("bitbucket:repo:detail:%s/%s", workspace, repo_slug)
+	if opts.force_load ~= true then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
 	end
 
 	local endpoint = string.format("/repositories/%s/%s", workspace, repo_slug)
@@ -76,6 +87,7 @@ function M.fetch_detail(workspace, repo_slug, opts, on_done)
 		end
 
 		local detail = repo_normalizer.repository(result, workspace)
+		service.set_cache(key, detail, service.cache_ttl())
 		on_done(detail, nil)
 	end)
 end
@@ -88,6 +100,8 @@ end
 ---@param on_done fun(readme: string|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_readme(workspace, repo_slug, ref, readme_path, opts, on_done)
+	opts = opts or {}
+
 	if type(workspace) ~= "string" or workspace == "" then
 		on_done(nil, "Missing workspace slug")
 		return nil
@@ -109,6 +123,14 @@ function M.fetch_readme(workspace, repo_slug, ref, readme_path, opts, on_done)
 	local encoded_ref = ref:gsub(" ", "%%20")
 	local encoded_path = path:gsub(" ", "%%20")
 	local endpoint = string.format("/repositories/%s/%s/src/%s/%s", workspace, repo_slug, encoded_ref, encoded_path)
+	local key = string.format("bitbucket:repo:readme:%s/%s:%s:%s", workspace, repo_slug, ref, path)
+	if opts.force_load ~= true then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
 
 	return service.request_text("GET", endpoint, { Accept = "text/plain" }, nil, function(result, err)
 		if err ~= nil then
@@ -117,6 +139,7 @@ function M.fetch_readme(workspace, repo_slug, ref, readme_path, opts, on_done)
 		end
 
 		local text = tostring(result or "")
+		service.set_cache(key, text, service.cache_ttl())
 		on_done(text, nil)
 	end)
 end
@@ -126,6 +149,8 @@ end
 ---@param on_done fun(branches: BitbucketRepositoryBranches|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_branches(branches_url, opts, on_done)
+	opts = opts or {}
+
 	if type(branches_url) ~= "string" or branches_url == "" then
 		on_done(nil, "Missing branches URL")
 		return nil
@@ -133,6 +158,15 @@ function M.fetch_branches(branches_url, opts, on_done)
 
 	local sep = branches_url:find("?") and "&" or "?"
 	local url = string.format("%s%spagelen=%d", branches_url, sep, tonumber(opts.pagelen) or 100)
+	local key = "bitbucket:repo:branches:" .. url
+	if opts.force_load ~= true then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
 	return service.request("GET", url, nil, nil, function(result, err)
 		if err ~= nil then
 			on_done(nil, err)
@@ -140,6 +174,7 @@ function M.fetch_branches(branches_url, opts, on_done)
 		end
 
 		local branches = repo_normalizer.repository_branches(result)
+		service.set_cache(key, branches, service.cache_ttl())
 		on_done(branches, nil)
 	end)
 end
@@ -149,6 +184,8 @@ end
 ---@param on_done fun(tags: BitbucketRepositoryTags|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.fetch_tags(tags_url, opts, on_done)
+	opts = opts or {}
+
 	if type(tags_url) ~= "string" or tags_url == "" then
 		on_done(nil, "Missing tags URL")
 		return nil
@@ -156,6 +193,15 @@ function M.fetch_tags(tags_url, opts, on_done)
 
 	local sep = tags_url:find("?") and "&" or "?"
 	local url = string.format("%s%spagelen=%d", tags_url, sep, tonumber(opts.pagelen) or 100)
+	local key = "bitbucket:repo:tags:" .. url
+	if opts.force_load ~= true then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
 	return service.request("GET", url, nil, nil, function(result, err)
 		if err ~= nil then
 			on_done(nil, err)
@@ -163,6 +209,7 @@ function M.fetch_tags(tags_url, opts, on_done)
 		end
 
 		local tags = repo_normalizer.repository_tags(result)
+		service.set_cache(key, tags, service.cache_ttl())
 		on_done(tags, nil)
 	end)
 end

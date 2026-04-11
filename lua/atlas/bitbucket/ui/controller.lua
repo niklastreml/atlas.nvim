@@ -1,20 +1,32 @@
 local M = {}
 
-local config = require("atlas.config")
 local footer = require("atlas.ui.components.footer")
 local spinner = require("atlas.ui.popups.spinner")
 local state = require("atlas.bitbucket.state")
+local main = require("atlas.bitbucket.ui")
 local layout = require("atlas.ui.layout")
 local service = require("atlas.bitbucket.api.service")
 local users = require("atlas.bitbucket.api.users")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local helper = require("atlas.bitbucket.ui.helper")
 local navigation = require("atlas.ui.navigation")
-local renderer = require("atlas.bitbucket.ui.renderer")
 local info_popup = require("atlas.ui.popups.info")
 
 local active_user_handle = nil
 local active_pullrequests_handle = nil
+
+local function render_if_active()
+	if not layout.is_open() then
+		return
+	end
+
+	local ui_main_state = require("atlas.ui.state")
+	if ui_main_state.current_view ~= "bitbucket" then
+		return
+	end
+
+	main.render()
+end
 
 local function cancel_active_requests()
 	if active_user_handle ~= nil and active_user_handle.cancel then
@@ -95,11 +107,6 @@ local function load_active_view(opts, on_done)
 	on_done = on_done or function() end
 	opts = opts or { force_load = false }
 
-	local views = (config.options.bitbucket and config.options.bitbucket.views) or {}
-	if state.active_view == nil and views[1] then
-		state.active_view = views[1]
-	end
-
 	local target_view = state.active_view
 	local target_view_id = helper.view_id(target_view)
 	local token = next_request_token()
@@ -111,9 +118,7 @@ local function load_active_view(opts, on_done)
 	footer.notify("loading", "Loading pull requests...")
 	spinner.start("Loading pull requests...")
 
-	if layout.is_open() then
-		require("atlas.ui.main.renderer").render("bitbucket")
-	end
+	render_if_active()
 
 	local function is_stale_request()
 		if not helper.same_view(state.active_view, target_view) then
@@ -165,9 +170,7 @@ local function load_active_view(opts, on_done)
 		footer.set_items(helper.build_footer_items(state.repos, state.current_user))
 		spinner.stop()
 
-		if layout.is_open() then
-			require("atlas.ui.main.renderer").render("bitbucket")
-		end
+		render_if_active()
 
 		on_done()
 	end
@@ -197,9 +200,7 @@ local function load_active_view(opts, on_done)
 			end
 
 			footer.set_items(helper.build_footer_items(state.repos or {}, state.current_user))
-			if layout.is_open() then
-				require("atlas.ui.main.renderer").render("bitbucket")
-			end
+			render_if_active()
 		end)
 	end
 
@@ -208,8 +209,12 @@ end
 
 ---@param on_done fun()|nil
 function M.refresh_current_view(on_done)
-	service.clear_memory_cache()
-	load_active_view({ force_load = true }, on_done)
+	load_active_view({ force_load = true }, function()
+		navigation.focus_first_item()
+		if on_done ~= nil then
+			on_done()
+		end
+	end)
 end
 
 ---@param pr BitbucketPR|nil
@@ -233,16 +238,23 @@ function M.refresh_pr(pr, on_done)
 		return
 	end
 
-	footer.notify("loading", string.format("Reloading PR #%s...", tostring(pr_id)))
+	local panel = require("atlas.ui.panel")
+	if panel.is_open() then
+		panel.on_select({
+			provider = "bitbucket",
+			panel_type = "pr",
+			item = pr,
+		}, { force_refresh = true })
+	end
 
-	pullrequests.fetch_pullrequest(workspace, repo, pr_id, function(fetched_pr, err)
+	footer.notify("loading", string.format("Reloading PR #%s...", tostring(pr_id)))
+	pullrequests.fetch_pullrequest(workspace, repo, pr_id, { force_load = true }, function(fetched_pr, err)
 		if err ~= nil or fetched_pr == nil then
 			footer.notify("error", tostring(err or "Failed to reload PR"))
 			on_done()
 			return
 		end
 
-		-- Replace the PR in state.repos
 		local repos = state.repos or {}
 		local replaced = false
 
@@ -262,20 +274,14 @@ function M.refresh_pr(pr, on_done)
 		end
 
 		state.repos = repos
-		if layout.is_open() then
-			require("atlas.ui.main.renderer").render("bitbucket")
-		end
+		render_if_active()
 
-		-- Update panel if open and showing the same PR
-		local panel = require("atlas.ui.panel")
 		if panel.is_open() then
-			local ui_panel_state = require("atlas.ui.panel.state")
-			local current_panel_pr = require("atlas.bitbucket.panel.state").current_pr
-			local current_panel_id = type(current_panel_pr) == "table" and current_panel_pr.id or nil
-
-			if ui_panel_state.active_provider == "bitbucket" and current_panel_id == pr_id then
-				panel.on_select("bitbucket", fetched_pr)
-			end
+			panel.on_select({
+				provider = "bitbucket",
+				panel_type = "pr",
+				item = fetched_pr,
+			}, { force_refresh = false })
 		end
 
 		footer.notify("success", string.format("Reloaded PR #%s", tostring(pr_id)), 1200)
@@ -286,9 +292,7 @@ end
 ---Refresh the currently selected PR in the main view.
 ---@param on_done fun()|nil
 function M.refresh_current_pr(on_done)
-	local navigation = require("atlas.ui.navigation")
 	local node = navigation.current_item()
-
 	if type(node) ~= "table" or node.kind ~= "pr" then
 		footer.notify("warn", "No PR selected")
 		if on_done then
@@ -301,10 +305,11 @@ function M.refresh_current_pr(on_done)
 end
 
 ---@param view BitbucketViewConfig|nil
----@param on_done fun()|nil
-function M.switch_view(view, on_done)
+function M.switch_view(view)
 	state.active_view = view
-	load_active_view({ force_load = false }, on_done)
+	load_active_view({ force_load = false }, function()
+		require("atlas.ui.navigation").focus_first_item()
+	end)
 end
 
 ---@param source_buf integer|nil
@@ -321,6 +326,7 @@ function M.show_pr_details(source_buf)
 		return
 	end
 
+	local renderer = require("atlas.bitbucket.ui.renderer")
 	local lines, highlights = renderer.pr_popup_content(pr)
 	info_popup.show({
 		lines = lines,

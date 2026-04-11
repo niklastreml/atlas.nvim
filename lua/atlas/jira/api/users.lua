@@ -16,8 +16,6 @@ end
 ---@param callback fun(user: JiraUser|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.get_myself(callback)
-	logger.loginfo("Jira fetch current user")
-
 	local cache_key = "jira:myself:" .. (config.options.jira.email or "")
 	local cached = cache.get(cache_key)
 	if cached and cached.value then
@@ -25,6 +23,7 @@ function M.get_myself(callback)
 		return nil
 	end
 
+	logger.loginfo("Jira fetch current user")
 	return service.request("GET", "/myself", nil, function(result, err)
 		if err or not result then
 			callback(nil, err or "Empty response")

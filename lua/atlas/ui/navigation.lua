@@ -1,6 +1,6 @@
 local M = {}
 
-local ui_state = require("atlas.ui.main.state")
+local ui_state = require("atlas.ui.state")
 
 ---@param view string|nil
 ---@param node table|nil
@@ -28,7 +28,18 @@ local function update_panel_selection(win)
 	end
 
 	local line = vim.api.nvim_win_get_cursor(win)[1]
-	panel.on_select(ui_state.current_view, (ui_state.line_map or {})[line])
+	local item = (ui_state.line_map or {})[line]
+
+	local selection = nil
+	if ui_state.current_view == "jira" then
+		selection = require("atlas.jira").panel_selection_from_item(item)
+	elseif ui_state.current_view == "bitbucket" then
+		selection = require("atlas.bitbucket").panel_selection_from_item(item)
+	end
+
+	if selection ~= nil then
+		panel.on_select(selection)
+	end
 end
 
 ---@return table|nil
@@ -62,17 +73,16 @@ function M.move_cursor(direction)
 	local step = direction == "up" and -1 or 1
 	local view = ui_state.current_view
 	local line_map = ui_state.line_map or {}
+	local current_is_selectable = is_selectable(view, line_map[line])
 
-	for lnum = line + step, (direction == "up" and 1 or max_line), step do
-		if is_selectable(view, line_map[lnum]) then
-			vim.api.nvim_win_set_cursor(win, { lnum, col })
-			update_panel_selection(win)
-			return
+	if current_is_selectable then
+		for lnum = line + step, (direction == "up" and 1 or max_line), step do
+			if is_selectable(view, line_map[lnum]) then
+				vim.api.nvim_win_set_cursor(win, { lnum, col })
+				update_panel_selection(win)
+				return
+			end
 		end
-	end
-
-	if is_selectable(view, line_map[line]) then
-		return
 	end
 
 	local fallback = math.max(1, math.min(max_line, line + step))

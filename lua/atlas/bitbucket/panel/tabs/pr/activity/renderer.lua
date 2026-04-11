@@ -1,16 +1,18 @@
 local M = {}
 
 local state = require("atlas.bitbucket.panel.tabs.pr.activity.state")
+local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
-local highlights = require("atlas.ui.highlights")
+local highlights = require("atlas.ui.utils.highlights")
 local threads = require("atlas.ui.components.threadsv2")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
+local pr_helper = require("atlas.bitbucket.panel.tabs.pr.helper")
 
-local PADDING_X = 2
+local PADDING_X = 1
 
 ---@param actor {nickname:string?, name:string?}|nil
 ---@return string
@@ -106,8 +108,9 @@ local function update_content(entry)
 end
 
 ---@param entries BitbucketPRActivityEntry[]
+---@param mention_map table<string, string>
 ---@return AtlasThreadV2Item[]
-local function to_thread_items(entries)
+local function to_thread_items(entries, mention_map)
 	local items = {}
 	for _, e in ipairs(entries) do
 		local kind = e.kind
@@ -125,6 +128,7 @@ local function to_thread_items(entries)
 			additional = "commented"
 			local raw = tostring(e.content_raw or ""):gsub("\r\n", "\n")
 			local first = raw:match("([^\n]+)") or raw
+			first = pr_helper.mentions.resolve(first, mention_map)
 			content = first ~= "" and first or "(empty comment)"
 
 			if e.deleted == true then
@@ -227,14 +231,13 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local panel_state = require("atlas.bitbucket.panel.state")
-	local tab_lines, tab_spans = tabs.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
+	local tab_lines, tab_spans = tabs.render_pr(pr_state.tab, { width = width, padding_x = PADDING_X })
 	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
 	-- Activity content
 	if activity == "loading" then
-		local loading_line = spinner.with_text("Loading activity...")
+		local loading_line = string.rep(" ", PADDING_X) .. spinner.with_text("Loading activity...")
 		table.insert(lines, loading_line)
 		table.insert(spans, {
 			line = #lines - 1,
@@ -248,12 +251,19 @@ function M.render(width)
 
 	local entries = (activity ~= nil and activity.entries) or {}
 	if #entries == 0 then
-		table.insert(lines, "No activity yet.")
+		local empty_line = string.rep(" ", PADDING_X) .. "No activity yet."
+		table.insert(lines, empty_line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X,
+			end_col = #empty_line,
+			hl_group = "AtlasTextMuted",
+		})
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
 
-	local items = to_thread_items(entries)
+	local items = to_thread_items(entries, pr_helper.mentions.build_map())
 	local item_lines, item_spans, item_map = threads.render(items, width, {
 		padding_x = PADDING_X,
 		content_max_lines = 3,

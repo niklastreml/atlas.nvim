@@ -1,7 +1,7 @@
 local M = {}
 
 local helper = require("atlas.jira.ui.helper")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local table_tree = require("atlas.ui.components.table_tree")
 local chips = require("atlas.jira.panel.components.chips")
 local utils = require("atlas.utils")

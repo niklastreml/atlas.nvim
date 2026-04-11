@@ -4,6 +4,8 @@ local panel_state = require("atlas.jira.panel.state")
 local layout = require("atlas.ui.layout")
 local keymaps = require("atlas.jira.panel.keymaps")
 local ns = vim.api.nvim_create_namespace("atlas.jira.panel")
+local render_timer = nil
+local RENDER_INTERVAL_MS = 120
 
 local TABS = {
 	{ key = "overview", label = "Overview", mod = "atlas.jira.panel.tabs.overview" },
@@ -21,8 +23,56 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
+local function stop_render_loop()
+	if render_timer ~= nil then
+		render_timer:stop()
+		render_timer:close()
+		render_timer = nil
+	end
+end
+
+local function active_tab_is_loading()
+	local tab = get_tab_module(panel_state.current_tab)
+	return tab ~= nil and type(tab.is_loading) == "function" and tab.is_loading() == true
+end
+
+local function sync_render_loop()
+	if not active_tab_is_loading() then
+		stop_render_loop()
+		return
+	end
+
+	if render_timer ~= nil then
+		return
+	end
+
+	render_timer = vim.loop.new_timer()
+	if render_timer == nil then
+		return
+	end
+
+	render_timer:start(
+		0,
+		RENDER_INTERVAL_MS,
+		vim.schedule_wrap(function()
+			if not active_tab_is_loading() then
+				stop_render_loop()
+				return
+			end
+
+			M.render()
+		end)
+	)
+end
+
 ---@param issue JiraIssue|nil
-function M.on_select(issue)
+---@param opts? { force_refresh?: boolean }
+function M.on_select(issue, opts)
+	opts = opts or {}
+	local target_tab = panel_state.current_tab
+	if get_tab_module(target_tab) == nil then
+		target_tab = "overview"
+	end
 	panel_state.set_current(issue)
 	local buf = layout.buf_id("detail")
 	if buf ~= nil then
@@ -30,14 +80,16 @@ function M.on_select(issue)
 	end
 
 	if issue ~= nil then
-		M.select_tab("overview")
+		M.select_tab(target_tab, { force_refresh = opts.force_refresh == true })
 	else
 		M.render()
 	end
 end
 
 ---@param tab_key string
-function M.select_tab(tab_key)
+---@param opts? { force_refresh?: boolean }
+function M.select_tab(tab_key, opts)
+	opts = opts or {}
 	local old_tab = get_tab_module(panel_state.current_tab)
 	if old_tab then
 		old_tab.deactivate()
@@ -47,7 +99,7 @@ function M.select_tab(tab_key)
 
 	local new_tab = get_tab_module(tab_key)
 	if new_tab then
-		new_tab.activate(panel_state.current_issue)
+		new_tab.activate(panel_state.current_issue, opts)
 	end
 
 	M.render()
@@ -91,9 +143,11 @@ function M.render()
 	local buf = layout.buf_id("detail")
 	local win = layout.win_id("detail")
 	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		stop_render_loop()
 		return
 	end
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		stop_render_loop()
 		return
 	end
 
@@ -139,13 +193,23 @@ function M.render()
 		end
 	end
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+	sync_render_loop()
 end
 
 function M.refresh()
 	M.render()
 end
 
+function M.refresh_tab()
+	local tab = get_tab_module(panel_state.current_tab)
+	if tab ~= nil and type(tab.refresh) == "function" then
+		tab.refresh()
+	end
+	M.render()
+end
+
 function M.deactivate()
+	stop_render_loop()
 	local tab = get_tab_module(panel_state.current_tab)
 	if tab ~= nil and type(tab.deactivate) == "function" then
 		tab.deactivate()

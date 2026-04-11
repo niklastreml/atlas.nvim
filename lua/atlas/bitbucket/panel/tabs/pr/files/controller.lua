@@ -1,47 +1,18 @@
 local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.files.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local actions = require("atlas.bitbucket.actions")
 local diff_parser = require("atlas.core.git.diff_parser")
-local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 
 local diff_handle = nil
-
-local panel_spinner
-panel_spinner = spinner.create({
-	interval_ms = 120,
-	on_tick = function()
-		if state.diff ~= "loading" then
-			panel_spinner:stop()
-			return
-		end
-
-		if panel_state.current_tab ~= "files" then
-			return
-		end
-
-		require("atlas.bitbucket.panel.init").refresh()
-	end,
-})
 
 local function cancel_handles()
 	if diff_handle ~= nil and diff_handle.cancel then
 		pcall(diff_handle.cancel)
 	end
 	diff_handle = nil
-end
-
-local function stop_spinner()
-	panel_spinner:stop()
-end
-
-local function start_spinner()
-	if panel_spinner:is_running() then
-		return
-	end
-	panel_spinner:start()
 end
 
 ---@param pr BitbucketPR|nil
@@ -58,12 +29,9 @@ function M.show(pr)
 	if same_pr and state.diff == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		start_spinner()
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
-	stop_spinner()
 	state.pr = pr
 	state.line_map = {}
 
@@ -83,9 +51,8 @@ function M.show(pr)
 		footer.notify("error", "Missing diff URL")
 	else
 		state.diff = "loading"
-		start_spinner()
 
-		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
+		diff_handle = pullrequests.fetch_diff(diff_url, {}, function(diff, err)
 			diff_handle = nil
 
 			if state.pr == nil or state.pr.id ~= next_id then
@@ -97,18 +64,17 @@ function M.show(pr)
 				footer.notify("error", "Failed to load diff: " .. tostring(err))
 			else
 				state.diff = diff_parser.parse(diff)
-				stop_spinner()
 				footer.notify("success", "Files loaded", 1200)
 			end
-			require("atlas.bitbucket.panel.init").refresh()
 		end)
 	end
 
 	footer.notify("loading", "Loading file changes...")
-	require("atlas.bitbucket.panel.init").refresh()
 end
 
-function M.refresh()
+---@param opts? { force_load?: boolean }
+function M.refresh(opts)
+	opts = opts or {}
 	if state.pr == nil then
 		return
 	end
@@ -118,11 +84,9 @@ function M.refresh()
 
 	cancel_handles()
 	state.diff = "loading"
-	start_spinner()
-	require("atlas.bitbucket.panel.init").refresh()
 
 	if diff_url ~= "" then
-		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
+		diff_handle = pullrequests.fetch_diff(diff_url, { force_load = opts.force_load == true }, function(diff, err)
 			diff_handle = nil
 
 			if state.pr == nil then
@@ -135,22 +99,19 @@ function M.refresh()
 				state.diff = diff_parser.parse(diff)
 			end
 
-			stop_spinner()
 			footer.notify("success", "Files refreshed", 1200)
-			require("atlas.bitbucket.panel.init").refresh()
 		end)
 	end
 end
 
 function M.reset()
 	cancel_handles()
-	stop_spinner()
 	state.reset()
 end
 
 --- Toggle fold on the hunk header under the cursor.
 function M.toggle_fold()
-	if panel_state.current_tab ~= "files" then
+	if pr_state.tab ~= "files" then
 		return
 	end
 
@@ -195,7 +156,7 @@ end
 --- Jump to the next (delta=1) or previous (delta=-1) hunk header.
 ---@param delta integer
 function M.jump_hunk(delta)
-	if panel_state.current_tab ~= "files" then
+	if pr_state.tab ~= "files" then
 		return
 	end
 
@@ -268,38 +229,17 @@ function M.open_diffview()
 end
 
 function M.deactivate()
-	stop_spinner()
 end
 
----@param delta integer
-function M.move(delta)
-	if panel_state.current_tab ~= "files" then
-		return
-	end
+---@return boolean
+function M.is_loading()
+	return state.diff == "loading"
+end
 
-	local layout = require("atlas.ui.layout")
-	local win = layout.win_id("detail")
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return
-	end
-
-	local buf = vim.api.nvim_win_get_buf(win)
-	local max_line = vim.api.nvim_buf_line_count(buf)
-
-	if delta == 0 then
-		vim.api.nvim_win_set_cursor(win, { 1, 0 })
-		return
-	end
-
-	if delta == math.huge then
-		vim.api.nvim_win_set_cursor(win, { max_line, 0 })
-		return
-	end
-
-	local line = vim.api.nvim_win_get_cursor(win)[1]
-	local step = delta > 0 and 1 or -1
-	local target = math.max(1, math.min(max_line, line + step))
-	vim.api.nvim_win_set_cursor(win, { target, 0 })
+---@param _lnum integer
+---@return boolean
+function M.is_selectable_line(_lnum)
+	return true
 end
 
 return M

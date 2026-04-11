@@ -6,10 +6,11 @@ local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local comments_helper = require("atlas.jira.panel.tabs.comments.helper")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local threads = require("atlas.ui.components.threadsv2")
-local highlights = require("atlas.ui.highlights")
-local PADDING_X = 2
+local highlights = require("atlas.ui.utils.highlights")
+
+local PADDING_X = 1
 
 ---@param comments JiraComment[]
 ---@return JiraComment[]

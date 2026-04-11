@@ -1,9 +1,7 @@
 local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.comments.state")
-local panel_state = require("atlas.bitbucket.panel.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local helper = require("atlas.bitbucket.panel.tabs.pr.comments.helper")
-local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 
 local active_handle = nil
@@ -47,39 +45,11 @@ local function jump_next_comment(win, delta)
 	return false
 end
 
-local panel_spinner
-panel_spinner = spinner.create({
-	interval_ms = 120,
-	on_tick = function()
-		if state.comments ~= "loading" then
-			panel_spinner:stop()
-			return
-		end
-
-		if panel_state.current_tab ~= "comments" then
-			return
-		end
-
-		require("atlas.bitbucket.panel.init").refresh()
-	end,
-})
-
 local function cancel_active_handle()
 	if active_handle ~= nil and active_handle.cancel then
 		pcall(active_handle.cancel)
 	end
 	active_handle = nil
-end
-
-local function stop_spinner()
-	panel_spinner:stop()
-end
-
-local function start_spinner()
-	if panel_spinner:is_running() then
-		return
-	end
-	panel_spinner:start()
 end
 
 ---@param pr BitbucketPR|nil
@@ -95,12 +65,9 @@ function M.show(pr)
 	if same_pr and state.comments == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		start_spinner()
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
-	stop_spinner()
 	state.pr = pr
 	state.line_map = {}
 
@@ -121,9 +88,7 @@ function M.show(pr)
 	end
 
 	state.comments = "loading"
-	start_spinner()
 	footer.notify("loading", "Loading comments...")
-	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_comments(comments_url, {}, function(comments, err)
 		active_handle = nil
@@ -140,12 +105,12 @@ function M.show(pr)
 			footer.notify("success", "Comments loaded", 1200)
 		end
 
-		stop_spinner()
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
-function M.refresh()
+---@param opts? { force_load?: boolean }
+function M.refresh(opts)
+	opts = opts or {}
 	local pr = state.pr
 	if pr == nil then
 		return
@@ -158,10 +123,8 @@ function M.refresh()
 
 	cancel_active_handle()
 	state.comments = "loading"
-	start_spinner()
-	require("atlas.bitbucket.panel.init").refresh()
 
-	active_handle = pullrequests.fetch_comments(comments_url, { force_load = true }, function(comments, err)
+	active_handle = pullrequests.fetch_comments(comments_url, { force_load = opts.force_load == true }, function(comments, err)
 		active_handle = nil
 
 		if state.pr == nil then
@@ -176,63 +139,26 @@ function M.refresh()
 			footer.notify("success", "Comments refreshed", 1200)
 		end
 
-		stop_spinner()
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
 function M.reset()
 	cancel_active_handle()
-	stop_spinner()
 	state.reset()
 end
 
 function M.deactivate()
-	stop_spinner()
 end
 
----@param delta integer
-function M.move(delta)
-	if panel_state.current_tab ~= "comments" then
-		return
-	end
+---@return boolean
+function M.is_loading()
+	return state.comments == "loading"
+end
 
-	local win = detail_win()
-	if win == nil then
-		return
-	end
-
-	local buf = vim.api.nvim_win_get_buf(win)
-	local max_line = vim.api.nvim_buf_line_count(buf)
-
-	if delta == 0 then
-		for lnum = 1, max_line do
-			if is_comment_line(lnum) then
-				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
-				return
-			end
-		end
-		return
-	end
-
-	if delta == math.huge then
-		for lnum = max_line, 1, -1 do
-			if is_comment_line(lnum) then
-				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
-				return
-			end
-		end
-		return
-	end
-
-	if jump_next_comment(win, delta) then
-		return
-	end
-
-	local line = vim.api.nvim_win_get_cursor(win)[1]
-	local step = delta > 0 and 1 or -1
-	local target = math.max(1, math.min(max_line, line + step))
-	vim.api.nvim_win_set_cursor(win, { target, 0 })
+---@param lnum integer
+---@return boolean
+function M.is_selectable_line(lnum)
+	return is_comment_line(lnum)
 end
 
 return M

@@ -72,6 +72,7 @@ use {
 - `:AtlasJira` - Open Jira issue picker
 - `:AtlasJqlSearch {query}` - Search Jira issues with JQL
 - `:AtlasBitbucket` - Open Bitbucket PR picker
+- `:AtlasClearCache` - Clear Atlas disk and memory cache
 - `:AtlasLogs` - Toggle Atlas logs
 
 ## Jira

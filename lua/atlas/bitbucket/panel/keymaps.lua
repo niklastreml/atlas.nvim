@@ -8,20 +8,6 @@ local footer = require("atlas.ui.components.footer")
 local bitbucket_actions = require("atlas.bitbucket.actions")
 local bitbucket_controller = require("atlas.bitbucket.ui.controller")
 
-local PR_TAB_MODULES = {
-	overview = "atlas.bitbucket.panel.tabs.pr.overview",
-	activity = "atlas.bitbucket.panel.tabs.pr.activity",
-	comments = "atlas.bitbucket.panel.tabs.pr.comments",
-	commits = "atlas.bitbucket.panel.tabs.pr.commits",
-	files = "atlas.bitbucket.panel.tabs.pr.files",
-}
-
-local REPO_TAB_MODULES = {
-	overview = "atlas.bitbucket.panel.tabs.repo.overview",
-	branches = "atlas.bitbucket.panel.tabs.repo.branches",
-	tags = "atlas.bitbucket.panel.tabs.repo.tags",
-}
-
 ---@param action_id AtlasKeymapActionId|string
 ---@param map_item table
 ---@return AtlasHelpKeyItem|nil
@@ -52,23 +38,6 @@ local function remove_item(action_id, mode)
 	return out
 end
 
----@param tab_key string
----@return table|nil
-local function get_tab_module(tab_key)
-	local modules = panel_state.panel_type == "repo" and REPO_TAB_MODULES or PR_TAB_MODULES
-	local mod = modules[tab_key]
-	if mod == nil then
-		return nil
-	end
-
-	local ok, tab_mod = pcall(require, mod)
-	if not ok then
-		return nil
-	end
-
-	return tab_mod
-end
-
 ---@return BitbucketPR|nil
 local function selected_pr()
 	local selected = panel_state.current_item
@@ -84,7 +53,8 @@ local function selected_pr()
 end
 
 ---@param buf integer
-function M.register(buf)
+---@param api { move: fun(delta: integer), refresh: fun() }
+function M.register(buf, api)
 	local navigation_items = {
 		{
 			key = "j",
@@ -92,10 +62,7 @@ function M.register(buf)
 			opts = { silent = true, nowait = true },
 			hidden = true,
 			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(1)
-				end
+				api.move(1)
 			end,
 		},
 		{
@@ -104,10 +71,7 @@ function M.register(buf)
 			opts = { silent = true, nowait = true },
 			hidden = true,
 			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(-1)
-				end
+				api.move(-1)
 			end,
 		},
 		{
@@ -116,10 +80,7 @@ function M.register(buf)
 			opts = { silent = true, nowait = true },
 			hidden = true,
 			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(0)
-				end
+				api.move(0)
 			end,
 		},
 		{
@@ -128,10 +89,7 @@ function M.register(buf)
 			opts = { silent = true, nowait = true },
 			hidden = true,
 			callback = function()
-				local tab = get_tab_module(panel_state.current_tab)
-				if tab ~= nil and type(tab.move_cursor) == "function" then
-					tab.move_cursor(math.huge)
-				end
+				api.move(math.huge)
 			end,
 		},
 	}
@@ -140,17 +98,6 @@ function M.register(buf)
 	local function add(action_id, map_item)
 		utils.insert_if(bitbucket_items, item(action_id, map_item))
 	end
-
-	add("bitbucket.refresh_tab", {
-		desc = "Refresh current tab",
-		opts = { silent = true, nowait = true },
-		callback = function()
-			local tab = get_tab_module(panel_state.current_tab)
-			if tab ~= nil and type(tab.refresh) == "function" then
-				tab.refresh()
-			end
-		end,
-	})
 
 	add("bitbucket.open_actions", {
 		desc = "Open PR actions",
@@ -174,7 +121,7 @@ function M.register(buf)
 
 				if result ~= nil and result.changed_pr then
 					bitbucket_controller.refresh_pr(pr, function()
-						require("atlas.bitbucket.panel").refresh()
+						api.refresh()
 					end)
 				end
 			end)
@@ -230,7 +177,6 @@ function M.remove(buf)
 	}, { buffer = buf })
 
 	local items = {}
-	utils.insert_if(items, remove_item("bitbucket.refresh_tab"))
 	utils.insert_if(items, remove_item("bitbucket.open_actions"))
 	utils.insert_if(items, remove_item("bitbucket.checkout_pr"))
 	utils.insert_if(items, remove_item("bitbucket.open_diffview"))

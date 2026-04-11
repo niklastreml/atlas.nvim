@@ -2,6 +2,7 @@ local M = {}
 
 local config = require("atlas.config")
 local checkout = require("atlas.core.git.checkout")
+local keymaps = require("atlas.core.keymaps")
 
 ---@param section string
 ---@param user_key string
@@ -77,6 +78,47 @@ local function check_diff_open_command()
 	vim.health.error(string.format("bitbucket.diff.open_cmd not found: %s", cmd))
 end
 
+local function check_jira_base_url()
+	local jira = (config.options and config.options.jira) or {}
+	local base_url = tostring(jira.base_url or "")
+	if base_url == "" then
+		vim.health.warn("jira.base_url is empty")
+		return
+	end
+
+	if not base_url:match("^https://") then
+		vim.health.warn(string.format("jira.base_url should start with https:// (current: %s)", base_url))
+		return
+	end
+
+	vim.health.ok("jira.base_url looks valid")
+end
+
+local function validate_keymaps()
+	local by_context = keymaps.validate()
+	local context_names = { "ui", "jira", "bitbucket" }
+
+	local has_conflicts = false
+	for _, context_name in ipairs(context_names) do
+		local conflicts = by_context[context_name] or {}
+		local keys = vim.tbl_keys(conflicts)
+		table.sort(keys)
+		if #keys == 0 then
+			vim.health.ok(string.format("%s: no conflicting mapped keys", context_name))
+		else
+			has_conflicts = true
+			vim.health.warn(string.format("%s: %d conflicting key(s)", context_name, #keys))
+			for _, key in ipairs(keys) do
+				vim.health.warn(string.format("  %s -> %s", key, table.concat(conflicts[key], ", ")))
+			end
+		end
+	end
+
+	if not has_conflicts and #context_names == 0 then
+		vim.health.ok("No conflicting mapped keys")
+	end
+end
+
 function M.check()
 	--- Requirements
 	vim.health.start("Requirements")
@@ -94,6 +136,10 @@ function M.check()
 
 	vim.health.start("Jira")
 	check_credentials("jira", "email", "token", "Jira")
+	check_jira_base_url()
+
+	vim.health.start("Keymaps")
+	validate_keymaps()
 end
 
 return M

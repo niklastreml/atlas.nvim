@@ -1,19 +1,19 @@
 local M = {}
 
 local state = require("atlas.bitbucket.panel.tabs.pr.files.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local spinner = require("atlas.ui.components.spinner")
 local utils = require("atlas.utils")
 
-local CONTENT_PADDING = 1
+local PADDING_X = 1
 
 ---@param text string
 ---@return string
 local function pad(text)
-	return string.rep(" ", CONTENT_PADDING) .. tostring(text or "")
+	return string.rep(" ", PADDING_X) .. tostring(text or "")
 end
 
 ---@param lines string[]
@@ -25,8 +25,8 @@ local function push(lines, spans, text, hl_group)
 	if hl_group then
 		table.insert(spans, {
 			line = #lines - 1,
-			start_col = CONTENT_PADDING,
-			end_col = CONTENT_PADDING + #text,
+			start_col = PADDING_X,
+			end_col = PADDING_X + #text,
 			hl_group = hl_group,
 		})
 	end
@@ -40,6 +40,7 @@ function M.render(width)
 	local lines = {}
 	local spans = {}
 	local line_map = {}
+	local max_width = math.max(20, tonumber(width) or 60)
 
 	local pr = state.pr
 	local diff = state.diff
@@ -67,7 +68,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs_component.render_pr(panel_state.current_tab, { width = width, padding_x = 1 })
+	local tab_lines, tab_spans = tabs_component.render_pr(pr_state.tab, { width = width, padding_x = PADDING_X })
 	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
@@ -95,7 +96,8 @@ function M.render(width)
 		if file.status == "renamed" and file.old_path then
 			path_label = file.old_path .. " -> " .. file.path
 		end
-		push(lines, spans, path_label, "AtlasColumnHeader")
+		local available = math.max(1, max_width - PADDING_X)
+		push(lines, spans, utils.truncate(path_label, available, false), "AtlasColumnHeader")
 
 		for _, hunk in ipairs(file.hunks) do
 			hunk_counter = hunk_counter + 1
@@ -109,8 +111,8 @@ function M.render(width)
 			local buf_line = #lines
 			table.insert(spans, {
 				line = buf_line - 1,
-				start_col = CONTENT_PADDING,
-				end_col = CONTENT_PADDING + #display_header,
+				start_col = PADDING_X,
+				end_col = PADDING_X + #display_header,
 				hl_group = "AtlasTextMuted",
 			})
 			line_map[buf_line] = { type = "hunk_header", hunk_idx = hunk_idx }

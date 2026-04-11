@@ -313,7 +313,7 @@ end
 ---@field column_gap? integer
 ---@field fill? boolean
 ---@field tree? TableTreeTreeOpts
----@field cell_hl? fun(row:table, col:table, ctx:{text:string, padded:string, width:integer}):table[]|nil
+---@field cell_hl? fun(row:table, col:table, ctx:{text:string, padded:string, width:integer}):string|table[]|nil
 ---@field align_title? boolean If true and header_align is nil, header uses column align.
 
 ---@param opts TableTreeRenderOpts

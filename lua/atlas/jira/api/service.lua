@@ -3,7 +3,6 @@ local M = {}
 local config = require("atlas.config")
 local http = require("atlas.core.http")
 local memory_cache = require("atlas.core.memory_cache")
-local cache = require("atlas.core.cache")
 local logger = require("atlas.core.logger")
 
 local API_PATH = "/rest/api/3"
