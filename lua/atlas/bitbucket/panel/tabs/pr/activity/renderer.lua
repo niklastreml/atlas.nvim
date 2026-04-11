@@ -10,6 +10,7 @@ local spinner = require("atlas.ui.components.spinner")
 local highlights = require("atlas.ui.utils.highlights")
 local threads = require("atlas.ui.components.threadsv2")
 local icons = require("atlas.ui.utils.icons")
+local pr_helper = require("atlas.bitbucket.panel.tabs.pr.helper")
 
 local PADDING_X = 1
 
@@ -107,8 +108,9 @@ local function update_content(entry)
 end
 
 ---@param entries BitbucketPRActivityEntry[]
+---@param mention_map table<string, string>
 ---@return AtlasThreadV2Item[]
-local function to_thread_items(entries)
+local function to_thread_items(entries, mention_map)
 	local items = {}
 	for _, e in ipairs(entries) do
 		local kind = e.kind
@@ -126,6 +128,7 @@ local function to_thread_items(entries)
 			additional = "commented"
 			local raw = tostring(e.content_raw or ""):gsub("\r\n", "\n")
 			local first = raw:match("([^\n]+)") or raw
+			first = pr_helper.mentions.resolve(first, mention_map)
 			content = first ~= "" and first or "(empty comment)"
 
 			if e.deleted == true then
@@ -260,7 +263,7 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	local items = to_thread_items(entries)
+	local items = to_thread_items(entries, pr_helper.mentions.build_map())
 	local item_lines, item_spans, item_map = threads.render(items, width, {
 		padding_x = PADDING_X,
 		content_max_lines = 3,

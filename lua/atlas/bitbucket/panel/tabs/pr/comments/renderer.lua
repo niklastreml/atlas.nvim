@@ -10,6 +10,7 @@ local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local icons = require("atlas.ui.utils.icons")
+local pr_helper = require("atlas.bitbucket.panel.tabs.pr.helper")
 
 local PADDING_X = 1
 
@@ -17,55 +18,13 @@ local PADDING_X = 1
 ---@field file string
 ---@field nodes BitbucketPRCommentTreeNode[]
 
----@return table<string, string>
-local function build_mention_map()
-	local overview_state = require("atlas.bitbucket.panel.tabs.pr.overview.state")
-	local detail = overview_state.detail
-	if type(detail) ~= "table" then
-		return {}
-	end
-
-	local map = {}
-
-	local function add(user)
-		if type(user) == "table" and type(user.account_id) == "string" and user.account_id ~= "" then
-			map[user.account_id] = user.name or user.nickname or user.account_id
-		end
-	end
-
-	add(detail.author)
-	for _, r in ipairs(detail.reviewers or {}) do
-		add(r)
-	end
-	for _, p in ipairs(detail.participants or {}) do
-		add(p)
-	end
-
-	return map
-end
-
----@param text string
----@param mention_map table<string, string>
----@return string
-local function resolve_mentions(text, mention_map)
-	return (
-		text:gsub("@{([^}]+)}", function(id)
-			local name = mention_map[id]
-			if name and name ~= "" then
-				return "@" .. name
-			end
-			return "@{" .. id .. "}"
-		end)
-	)
-end
-
 ---@param value string|nil
 ---@param mention_map table<string, string>
 ---@return string
 local function first_line(value, mention_map)
 	local raw = tostring(value or ""):gsub("\r\n", "\n")
 	local line = raw:match("([^\n]+)") or raw
-	return resolve_mentions(line, mention_map)
+	return pr_helper.mentions.resolve(line, mention_map)
 end
 
 ---@param author BitbucketPRAuthor|nil
@@ -261,7 +220,7 @@ function M.render(width)
 	end
 
 	local file_groups = group_nodes_by_file(comment_nodes)
-	local mention_map = build_mention_map()
+	local mention_map = pr_helper.mentions.build_map()
 	for group_index, group in ipairs(file_groups) do
 		local fh_line, fh_spans = render_file_header(group.file, #group.nodes, PADDING_X, max_width)
 		utils.append_block(lines, spans, { lines = { fh_line }, highlights = fh_spans })
