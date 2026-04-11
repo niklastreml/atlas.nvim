@@ -19,6 +19,7 @@ local M = {}
 ---@field refresh_issue? AtlasKeymapValue
 ---@field refresh_view? AtlasKeymapValue
 ---@field refresh_tab? AtlasKeymapValue
+---@field toggle_issue_children? AtlasKeymapValue
 ---@field show_details? AtlasKeymapValue
 ---@field copy_key? AtlasKeymapValue
 ---@field copy_url? AtlasKeymapValue
@@ -57,6 +58,7 @@ local M = {}
 ---| "jira.refresh_issue"
 ---| "jira.refresh_view"
 ---| "jira.refresh_tab"
+---| "jira.toggle_issue_children"
 ---| "jira.show_details"
 ---| "jira.copy_key"
 ---| "jira.copy_url"

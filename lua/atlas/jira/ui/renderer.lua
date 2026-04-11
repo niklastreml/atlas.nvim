@@ -86,9 +86,17 @@ local function cell_hl(row, col, ctx)
 
 	if col.key == "icon" then
 		local issue_type_name = type(issue) == "table" and type(issue.type) == "table" and issue.type.name or nil
+		local issue_icon = icons.jira_icon(issue_type_name)
+		if issue_icon == "" then
+			return nil
+		end
+		local s, e = ctx.text:find(issue_icon, 1, true)
+		if not s or not e then
+			return nil
+		end
 		local hl_group = helper.issue_type_hl(issue_type_name)
 		return {
-			{ start_col = 0, end_col = #ctx.padded, hl_group = hl_group },
+			{ start_col = s - 1, end_col = e, hl_group = hl_group },
 		}
 	end
 
@@ -120,6 +128,17 @@ local function view_id(view)
 		return ""
 	end
 	return view.key or view.name or ""
+end
+
+---@param action_id AtlasKeymapActionId|string
+---@param fallback string
+---@return string
+local function key_label(action_id, fallback)
+	local keys = resolver.resolve(action_id)
+	if type(keys) == "table" and #keys > 0 then
+		return tostring(keys[1])
+	end
+	return fallback
 end
 
 ---@param issue JiraIssue
@@ -167,7 +186,6 @@ local function issue_to_row(issue, is_child)
 			return string.format(" %s ", issue.status)
 		end)(),
 
-		expanded = true,
 		_item = { kind = "issue", key = issue.key, _issue = issue },
 		_issue = issue,
 		children = {},
@@ -181,11 +199,17 @@ end
 local function issues_to_rows(issue_groups)
 	local rows = {}
 	for i, group in ipairs(issue_groups) do
-		table.insert(rows, issue_to_row(group.issue))
+		local children = group.children or {}
+		local has_children = #children > 0
+		local root_row = issue_to_row(group.issue, false)
 
-		for _, child in ipairs(group.children or {}) do
-			table.insert(rows, issue_to_row(child, true))
+		if has_children then
+			for _, child in ipairs(children) do
+				table.insert(root_row.children, issue_to_row(child, true))
+			end
 		end
+
+		table.insert(rows, root_row)
 
 		if i < #issue_groups then
 			table.insert(rows, {
@@ -195,6 +219,7 @@ local function issues_to_rows(issue_groups)
 				assignee = "",
 				reporter = "",
 				status = "",
+				children = {},
 			})
 		end
 	end
@@ -383,7 +408,9 @@ function M.render(opts)
 			},
 		})
 	else
-		local rows = issues_to_rows(state.issue_tree or {})
+		local issue_groups = state.issue_tree or {}
+		local rows = issues_to_rows(issue_groups)
+		local show_tree_indicator = should_show_indicator(issue_groups)
 		if state.is_loading then
 			table.insert(rows, {
 				icon = "",
@@ -428,11 +455,18 @@ function M.render(opts)
 				tree = {
 					column_key = "icon",
 					children_key = "children",
-					expanded_field = "expanded",
 					default_expanded = true,
 					indent = "",
-					show_indicator = true,
+					show_indicator = show_tree_indicator,
 					leaf_prefix = "",
+					is_expanded = function(row)
+						local issue = type(row) == "table" and row._issue or nil
+						local issue_key = type(issue) == "table" and tostring(issue.key or "") or ""
+						if issue_key == "" then
+							return true
+						end
+						return (state.collapsed_issue_keys or {})[issue_key] ~= true
+					end,
 				},
 				cell_hl = cell_hl,
 			})

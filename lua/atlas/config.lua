@@ -122,6 +122,7 @@ M.options = {
 			copy_key = "y",
 			copy_url = "Y",
 			refresh_tab = "r",
+			toggle_issue_children = "za",
 		},
 		bitbucket = {
 			open_actions = "A",

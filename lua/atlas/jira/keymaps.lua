@@ -195,6 +195,14 @@ function M.register(buf)
 		end,
 	})
 
+	add("jira.toggle_issue_children", {
+		desc = "Toggle issue children",
+		index = 10,
+		callback = function()
+			controller.toggle_current_issue_collapsed()
+		end,
+	})
+
 	M.remove(buf)
 	help.register("Jira", items, {
 		index = 220,
@@ -217,6 +225,7 @@ function M.remove(buf)
 	utils.insert_if(items, remove_item("jira.show_details"))
 	utils.insert_if(items, remove_item("jira.copy_key"))
 	utils.insert_if(items, remove_item("jira.copy_url"))
+	utils.insert_if(items, remove_item("jira.toggle_issue_children"))
 
 	help.remove("Jira", items, { buffer = buf })
 end

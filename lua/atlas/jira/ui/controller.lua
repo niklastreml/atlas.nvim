@@ -564,9 +564,26 @@ function M.refresh_issue(issue_key, on_done)
 	table.insert(active_issue_reload_handles, reload_handle)
 end
 
+---@param issue_key string|nil
+function M.toggle_issue_collapsed(issue_key)
+	if state.toggle_issue_collapsed(issue_key) ~= true then
+		return
+	end
+
+	render_if_active()
+end
+
+function M.toggle_current_issue_collapsed()
+	if state.toggle_current_issue_collapsed() ~= true then
+		return
+	end
+	render_if_active()
+end
+
 function M.teardown()
 	cancel_active_requests()
 	service.clear_memory_cache()
+	state.collapsed_issue_keys = {}
 end
 
 ---@param on_done fun()|nil
