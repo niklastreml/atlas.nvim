@@ -13,6 +13,8 @@ local footer = require("atlas.ui.components.footer")
 ---| "search_query_issue"
 ---| "search_issues"
 ---| "create_issue"
+---| "create_template"
+---| "manage_templates"
 ---| "browse_issue"
 ---| "copy_issue_key"
 ---| "copy_issue_url"

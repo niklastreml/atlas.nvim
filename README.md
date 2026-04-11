@@ -85,7 +85,7 @@ use {
 - [x] Search issues
 - [x] JQL support and completion
 - [x] Support for custom fields
-- [ ] Create and edit issue templates
+- [x] Create and edit issue templates
 
 > [!ATTENTION]
 > The markdown editor for issue descriptions and comments is still experimental and may not work perfectly in all cases. You can toggle between markdown and ADF view in the overview tab to see the raw ADF content and how it translates to markdown. If you encounter any issues with the markdown editor, please open an issue with details.
@@ -306,6 +306,7 @@ require("atlas").setup({
     },
     jira = {
       create_issue = "i",
+      manage_templates = "gT",
     },
     bitbucket = {
       open_diffview = { "go", "gd" },
@@ -337,6 +338,7 @@ require("atlas").setup({
 | Jira            | `gs`                  | Transition Issue                    |
 | Jira            | `ga` / `gr`           | Change Assignee and reporter        |
 | Jira            | `gt`                  | Change issue type                   |
+| Jira            | `gT`                  | Open template editor                |
 | Jira            | `gx`                  | Open issue in browser               |
 | Jira            | `c`                   | Create issue                        |
 | Jira            | `y` / `Y`             | Copy issue key / URL                |
@@ -345,17 +347,17 @@ require("atlas").setup({
 
 #### Bitbucket
 
-| Context                   | Key         | Action                   |
-| ------------------------- | ----------- | ------------------------ |
-| Bitbucket                 | `A`         | Open PR actions          |
-| Bitbucket                 | `/`         | Search repositories      |
-| Bitbucket                 | `o`         | Toggle repository panel  |
-| Bitbucket                 | `gc`        | Checkout selected PR     |
-| Bitbucket                 | `gd`        | Open selected PR diff    |
-| Bitbucket                 | `gx`        | Open pr/build in browser |
-| Bitbucket                 | `y` / `Y`   | Copy PR id / URL         |
-| Bitbucket (Files changes) | `za`        | Toggle hunk fold         |
-| Bitbucket (File changes)  | `]h` / `[h` | Next / previous hunk     |
+| Context                  | Key         | Action                   |
+| ------------------------ | ----------- | ------------------------ |
+| Bitbucket                | `A`         | Open PR actions          |
+| Bitbucket                | `/`         | Search repositories      |
+| Bitbucket                | `o`         | Toggle repository panel  |
+| Bitbucket                | `gc`        | Checkout selected PR     |
+| Bitbucket                | `gd`        | Open selected PR diff    |
+| Bitbucket                | `gx`        | Open pr/build in browser |
+| Bitbucket                | `y` / `Y`   | Copy PR id / URL         |
+| Bitbucket (File changes) | `za`        | Toggle hunk fold         |
+| Bitbucket (File changes) | `]h` / `[h` | Next / previous hunk     |
 
 ## Contributors ✨
 

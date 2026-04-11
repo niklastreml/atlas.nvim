@@ -16,6 +16,7 @@ local M = {}
 ---@field change_assignee? AtlasKeymapValue
 ---@field open_in_browser? AtlasKeymapValue
 ---@field create_issue? AtlasKeymapValue
+---@field manage_templates? AtlasKeymapValue
 ---@field refresh_issue? AtlasKeymapValue
 ---@field refresh_view? AtlasKeymapValue
 ---@field toggle_issue_children? AtlasKeymapValue
@@ -53,6 +54,7 @@ local M = {}
 ---| "jira.change_assignee"
 ---| "jira.open_in_browser"
 ---| "jira.create_issue"
+---| "jira.manage_templates"
 ---| "jira.refresh_issue"
 ---| "jira.refresh_view"
 ---| "jira.toggle_issue_children"
@@ -186,6 +188,7 @@ function M.validate()
 			"jira.change_assignee",
 			"jira.open_in_browser",
 			"jira.create_issue",
+			"jira.manage_templates",
 			"jira.refresh_issue",
 			"jira.refresh_view",
 			"jira.toggle_issue_children",

@@ -28,6 +28,7 @@ local default_keymaps = {
 	jira = {
 		open_actions = "A",
 		search = "/",
+		manage_templates = "gT",
 		refresh_tab = "r",
 	},
 	bitbucket = {
@@ -72,6 +73,7 @@ describe("atlas keymaps resolver", function()
 	it("resolves jira and bitbucket picker action IDs", function()
 		assert.are.same({ "A" }, keymaps.resolve("jira.open_actions"))
 		assert.are.same({ "/" }, keymaps.resolve("jira.search"))
+		assert.are.same({ "gT" }, keymaps.resolve("jira.manage_templates"))
 		assert.are.same({ "gc" }, keymaps.resolve("bitbucket.checkout_pr"))
 		assert.are.same({ "gd" }, keymaps.resolve("bitbucket.open_diffview"))
 	end)

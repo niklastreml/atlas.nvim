@@ -116,6 +116,7 @@ M.options = {
 			change_assignee = "ga",
 			open_in_browser = "gx",
 			create_issue = "c",
+			manage_templates = "gT",
 			refresh_issue = "r",
 			refresh_view = "R",
 			show_details = "K",
