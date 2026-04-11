@@ -73,17 +73,16 @@ function M.move_cursor(direction)
 	local step = direction == "up" and -1 or 1
 	local view = ui_state.current_view
 	local line_map = ui_state.line_map or {}
+	local current_is_selectable = is_selectable(view, line_map[line])
 
-	for lnum = line + step, (direction == "up" and 1 or max_line), step do
-		if is_selectable(view, line_map[lnum]) then
-			vim.api.nvim_win_set_cursor(win, { lnum, col })
-			update_panel_selection(win)
-			return
+	if current_is_selectable then
+		for lnum = line + step, (direction == "up" and 1 or max_line), step do
+			if is_selectable(view, line_map[lnum]) then
+				vim.api.nvim_win_set_cursor(win, { lnum, col })
+				update_panel_selection(win)
+				return
+			end
 		end
-	end
-
-	if is_selectable(view, line_map[line]) then
-		return
 	end
 
 	local fallback = math.max(1, math.min(max_line, line + step))

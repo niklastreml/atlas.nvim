@@ -8,7 +8,6 @@ local keymap = require("atlas.bitbucket.panel.tabs.pr.commits.keymap")
 function M.activate(pr)
 	keymap.setup()
 	controller.show(pr)
-	controller.move(0)
 end
 
 function M.deactivate()
@@ -16,9 +15,10 @@ function M.deactivate()
 	controller.deactivate()
 end
 
----@param delta integer
-function M.move_cursor(delta)
-	controller.move(delta)
+---@param lnum integer
+---@return boolean
+function M.is_selectable_line(lnum)
+	return controller.is_selectable_line(lnum)
 end
 
 function M.refresh()

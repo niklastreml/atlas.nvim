@@ -136,15 +136,6 @@ function M.move(delta)
 	entry.move(delta)
 end
 
-function M.refresh_tab()
-	local entry = tab_entry(panel_state.panel_type)
-	if entry == nil then
-		return
-	end
-	entry.refresh()
-	M.render()
-end
-
 function M.render()
 	local buf = layout.buf_id("detail")
 	local win = layout.win_id("detail")
@@ -205,6 +196,15 @@ function M.render()
 end
 
 function M.refresh()
+	M.render()
+end
+
+function M.refresh_tab()
+	local entry = tab_entry(panel_state.panel_type)
+	if entry == nil then
+		return
+	end
+	entry.refresh()
 	M.render()
 end
 

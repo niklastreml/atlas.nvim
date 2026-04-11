@@ -238,22 +238,31 @@ function M.move(delta)
 	end
 
 	local line = vim.api.nvim_win_get_cursor(win)[1]
-	if delta > 0 then
+	local step = delta > 0 and 1 or -1
+	if is_selectable_line(line) ~= true then
+		local target = math.max(1, math.min(max_line, line + step))
+		vim.api.nvim_win_set_cursor(win, { target, 0 })
+		return
+	end
+
+	if step > 0 then
 		for lnum = line + 1, max_line do
 			if is_selectable_line(lnum) == true then
 				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
 				return
 			end
 		end
-		return
-	end
-
-	for lnum = line - 1, 1, -1 do
-		if is_selectable_line(lnum) == true then
-			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
-			return
+	else
+		for lnum = line - 1, 1, -1 do
+			if is_selectable_line(lnum) == true then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
 		end
 	end
+
+	local target = math.max(1, math.min(max_line, line + step))
+	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
 
 function M.refresh()

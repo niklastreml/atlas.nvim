@@ -1,6 +1,5 @@
 local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.commits.state")
-local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local footer = require("atlas.ui.components.footer")
 
@@ -153,48 +152,10 @@ function M.is_loading()
 	return state.commits == "loading"
 end
 
----@param delta integer
-function M.move(delta)
-	if pr_state.tab ~= "commits" then
-		return
-	end
-
-	local win = detail_win()
-	if win == nil then
-		return
-	end
-
-	local buf = vim.api.nvim_win_get_buf(win)
-	local max_line = vim.api.nvim_buf_line_count(buf)
-
-	if delta == 0 then
-		for lnum = 1, max_line do
-			if is_commit_line(lnum) then
-				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
-				return
-			end
-		end
-		return
-	end
-
-	if delta == math.huge then
-		for lnum = max_line, 1, -1 do
-			if is_commit_line(lnum) then
-				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
-				return
-			end
-		end
-		return
-	end
-
-	if jump_next_commit(win, delta) then
-		return
-	end
-
-	local line = vim.api.nvim_win_get_cursor(win)[1]
-	local step = delta > 0 and 1 or -1
-	local target = math.max(1, math.min(max_line, line + step))
-	vim.api.nvim_win_set_cursor(win, { target, 0 })
+---@param lnum integer
+---@return boolean
+function M.is_selectable_line(lnum)
+	return is_commit_line(lnum)
 end
 
 return M

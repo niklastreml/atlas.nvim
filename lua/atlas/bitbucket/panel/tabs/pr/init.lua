@@ -104,9 +104,85 @@ end
 ---@param delta integer
 function M.move(delta)
 	local tab = resolve_tab_module(active_tab_key())
-	if tab ~= nil and type(tab.move_cursor) == "function" then
-		tab.move_cursor(delta)
+	if tab == nil then
+		return
 	end
+
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+
+	local buf = vim.api.nvim_win_get_buf(win)
+	local max_line = vim.api.nvim_buf_line_count(buf)
+	if max_line <= 0 then
+		return
+	end
+
+	local is_selectable_line = tab.is_selectable_line
+	if type(is_selectable_line) ~= "function" then
+		if delta == 0 then
+			vim.api.nvim_win_set_cursor(win, { 1, 0 })
+			return
+		end
+		if delta == math.huge then
+			vim.api.nvim_win_set_cursor(win, { max_line, 0 })
+			return
+		end
+		local line = vim.api.nvim_win_get_cursor(win)[1]
+		local step = delta > 0 and 1 or -1
+		local target = math.max(1, math.min(max_line, line + step))
+		vim.api.nvim_win_set_cursor(win, { target, 0 })
+		return
+	end
+
+	if delta == 0 then
+		for lnum = 1, max_line do
+			if is_selectable_line(lnum) == true then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
+		return
+	end
+
+	if delta == math.huge then
+		for lnum = max_line, 1, -1 do
+			if is_selectable_line(lnum) == true then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
+		return
+	end
+
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local step = delta > 0 and 1 or -1
+	if is_selectable_line(line) ~= true then
+		local target = math.max(1, math.min(max_line, line + step))
+		vim.api.nvim_win_set_cursor(win, { target, 0 })
+		return
+	end
+
+	if step > 0 then
+		for lnum = line + 1, max_line do
+			if is_selectable_line(lnum) == true then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
+	else
+		for lnum = line - 1, 1, -1 do
+			if is_selectable_line(lnum) == true then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
+	end
+
+	local target = math.max(1, math.min(max_line, line + step))
+	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
 
 function M.refresh()
@@ -121,6 +197,7 @@ local function select_tab(tab_key)
 	deactivate_tab(pr_state.tab)
 	pr_state.tab = tab_key
 	activate_tab(tab_key)
+	M.move(0)
 end
 
 ---@param item BitbucketPR|nil
