@@ -53,7 +53,7 @@ local function selected_pr()
 end
 
 ---@param buf integer
----@param api { move: fun(delta: integer), refresh_tab: fun(), refresh: fun() }
+---@param api { move: fun(delta: integer), refresh: fun() }
 function M.register(buf, api)
 	local navigation_items = {
 		{
@@ -98,14 +98,6 @@ function M.register(buf, api)
 	local function add(action_id, map_item)
 		utils.insert_if(bitbucket_items, item(action_id, map_item))
 	end
-
-	add("bitbucket.refresh_tab", {
-		desc = "Refresh current tab",
-		opts = { silent = true, nowait = true },
-		callback = function()
-			api.refresh_tab()
-		end,
-	})
 
 	add("bitbucket.open_actions", {
 		desc = "Open PR actions",
@@ -185,7 +177,6 @@ function M.remove(buf)
 	}, { buffer = buf })
 
 	local items = {}
-	utils.insert_if(items, remove_item("bitbucket.refresh_tab"))
 	utils.insert_if(items, remove_item("bitbucket.open_actions"))
 	utils.insert_if(items, remove_item("bitbucket.checkout_pr"))
 	utils.insert_if(items, remove_item("bitbucket.open_diffview"))

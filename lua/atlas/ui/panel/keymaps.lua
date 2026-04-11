@@ -38,7 +38,7 @@ end
 local function current_panel_controller()
 	local provider = state.active_provider
 	if provider == "jira" then
-		return require("atlas.jira.panel.init")
+		return require("atlas.jira.panel")
 	end
 
 	return require("atlas.bitbucket.panel.init")
@@ -47,11 +47,21 @@ end
 local function refresh_current_panel()
 	local provider = state.active_provider
 	if provider == "jira" then
-		require("atlas.jira.panel.init").refresh()
+		local panel = require("atlas.jira.panel")
+		if type(panel.refresh_tab) == "function" then
+			panel.refresh_tab()
+			return
+		end
+		panel.refresh()
 		return
 	end
 
-	require("atlas.bitbucket.panel.init").refresh()
+	local panel = require("atlas.bitbucket.panel.init")
+	if type(panel.refresh_tab) == "function" then
+		panel.refresh_tab()
+		return
+	end
+	panel.refresh()
 end
 
 ---@param buf integer

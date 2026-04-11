@@ -200,6 +200,14 @@ function M.refresh()
 	M.render()
 end
 
+function M.refresh_tab()
+	local tab = get_tab_module(panel_state.current_tab)
+	if tab ~= nil and type(tab.refresh) == "function" then
+		tab.refresh()
+	end
+	M.render()
+end
+
 function M.deactivate()
 	stop_render_loop()
 	local tab = get_tab_module(panel_state.current_tab)

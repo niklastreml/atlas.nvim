@@ -93,7 +93,6 @@ function M.on_select(panel_type, item, opts)
 	if buf ~= nil then
 		keymaps.register(buf, {
 			move = M.move,
-			refresh_tab = M.refresh_tab,
 			refresh = M.refresh,
 		})
 	end

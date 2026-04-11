@@ -121,7 +121,6 @@ M.options = {
 			show_details = "K",
 			copy_key = "y",
 			copy_url = "Y",
-			refresh_tab = "r",
 			toggle_issue_children = "za",
 		},
 		bitbucket = {
@@ -133,7 +132,6 @@ M.options = {
 			open_in_browser = "gx",
 			refresh_pr = "r",
 			refresh_view = "R",
-			refresh_tab = "r",
 			show_details = "K",
 			copy_id = "y",
 			copy_url = "Y",

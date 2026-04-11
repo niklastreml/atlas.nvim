@@ -2,6 +2,7 @@ local M = {}
 
 local config = require("atlas.config")
 local checkout = require("atlas.core.git.checkout")
+local keymaps = require("atlas.core.keymaps")
 
 ---@param section string
 ---@param user_key string
@@ -77,6 +78,119 @@ local function check_diff_open_command()
 	vim.health.error(string.format("bitbucket.diff.open_cmd not found: %s", cmd))
 end
 
+local function check_jira_base_url()
+	local jira = (config.options and config.options.jira) or {}
+	local base_url = tostring(jira.base_url or "")
+	if base_url == "" then
+		vim.health.warn("jira.base_url is empty")
+		return
+	end
+
+	if not base_url:match("^https://") then
+		vim.health.warn(string.format("jira.base_url should start with https:// (current: %s)", base_url))
+		return
+	end
+
+	vim.health.ok("jira.base_url looks valid")
+end
+
+local function check_jira_views()
+	local jira = (config.options and config.options.jira) or {}
+	local views = jira.views
+	if type(views) ~= "table" or #views == 0 then
+		vim.health.warn("jira.views is empty")
+		return
+	end
+
+	local seen_keys = {}
+	local has_problems = false
+	for i, view in ipairs(views) do
+		local key = tostring((type(view) == "table" and view.key) or "")
+		if key == "" then
+			has_problems = true
+			vim.health.warn(string.format("jira.views[%d] is missing key", i))
+		elseif seen_keys[key] ~= nil then
+			has_problems = true
+			vim.health.warn(
+				string.format("jira.views[%d] key duplicates jira.views[%d]: %s", i, seen_keys[key], tostring(key))
+			)
+		else
+			seen_keys[key] = i
+		end
+
+		local jql = tostring((type(view) == "table" and view.jql) or "")
+		if jql == "" then
+			has_problems = true
+			vim.health.warn(string.format("jira.views[%d] has empty jql", i))
+		end
+	end
+
+	if not has_problems then
+		vim.health.ok(string.format("jira.views configured (%d view%s)", #views, #views == 1 and "" or "s"))
+	end
+end
+
+local function check_bitbucket_views()
+	local bitbucket = (config.options and config.options.bitbucket) or {}
+	local views = bitbucket.views
+	if type(views) ~= "table" or #views == 0 then
+		vim.health.warn("bitbucket.views is empty")
+		return
+	end
+
+	local seen_keys = {}
+	local has_problems = false
+	for i, view in ipairs(views) do
+		local key = tostring((type(view) == "table" and view.key) or "")
+		if key == "" then
+			has_problems = true
+			vim.health.warn(string.format("bitbucket.views[%d] is missing key", i))
+		elseif seen_keys[key] ~= nil then
+			has_problems = true
+			vim.health.warn(
+				string.format("bitbucket.views[%d] key duplicates bitbucket.views[%d]: %s", i, seen_keys[key], key)
+			)
+		else
+			seen_keys[key] = i
+		end
+
+		local repos = (type(view) == "table" and view.repos) or nil
+		if type(repos) ~= "table" or #repos == 0 then
+			has_problems = true
+			vim.health.warn(string.format("bitbucket.views[%d] has no repos", i))
+		end
+	end
+
+	if not has_problems then
+		vim.health.ok(string.format("bitbucket.views configured (%d view%s)", #views, #views == 1 and "" or "s"))
+	end
+end
+
+local function validate_keymaps()
+	local by_context = keymaps.validate()
+	local context_names = { "ui", "jira", "bitbucket" }
+
+	local has_conflicts = false
+	for _, context_name in ipairs(context_names) do
+		local conflicts = by_context[context_name] or {}
+		local keys = vim.tbl_keys(conflicts)
+		table.sort(keys)
+		if #keys == 0 then
+			vim.health.ok(string.format("%s: no conflicting mapped keys", context_name))
+		else
+			has_conflicts = true
+			vim.health.warn(string.format("%s: %d conflicting key(s)", context_name, #keys))
+			for _, key in ipairs(keys) do
+				vim.health.warn(string.format("  %s -> %s", key, table.concat(conflicts[key], ", ")))
+			end
+		end
+	end
+
+	if not has_conflicts and #context_names == 0 then
+		vim.health.ok("No conflicting mapped keys")
+	end
+end
+
 function M.check()
 	--- Requirements
 	vim.health.start("Requirements")
@@ -91,9 +205,15 @@ function M.check()
 	check_repo_paths()
 	check_credentials("bitbucket", "user", "token", "Bitbucket")
 	check_diff_open_command()
+	check_bitbucket_views()
 
 	vim.health.start("Jira")
 	check_credentials("jira", "email", "token", "Jira")
+	check_jira_base_url()
+	check_jira_views()
+
+	vim.health.start("Keymaps")
+	validate_keymaps()
 end
 
 return M
