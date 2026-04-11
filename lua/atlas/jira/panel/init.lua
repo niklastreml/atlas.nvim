@@ -23,12 +23,6 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
----@param issue JiraIssue|nil
----@return string|nil
-local function issue_key(issue)
-	return issue and issue.key or nil
-end
-
 local function stop_render_loop()
 	if render_timer ~= nil then
 		render_timer:stop()
@@ -73,8 +67,6 @@ end
 
 ---@param issue JiraIssue|nil
 function M.on_select(issue)
-	local previous_issue = panel_state.current_issue
-	local force_refresh = issue_key(previous_issue) ~= issue_key(issue)
 	local target_tab = panel_state.current_tab
 	if get_tab_module(target_tab) == nil then
 		target_tab = "overview"
@@ -86,7 +78,7 @@ function M.on_select(issue)
 	end
 
 	if issue ~= nil then
-		M.select_tab(target_tab, { force_refresh = force_refresh })
+		M.select_tab(target_tab)
 	else
 		M.render()
 	end

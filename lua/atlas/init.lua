@@ -15,6 +15,7 @@ local function bootstrap_common()
 		{ name = "AtlasBitbucket", desc = "Open Bitbucket picker" },
 		{ name = "AtlasJira", desc = "Open Jira picker" },
 		{ name = "AtlasJqlSearch", desc = "Start JQL Search" },
+		{ name = "AtlasClearCache", desc = "Clear Atlas cache" },
 		{ name = "AtlasLogs", desc = "Open Atlas logs" },
 	}, { index = 999, buffer = require("atlas.ui.layout").buf_id("main") })
 end

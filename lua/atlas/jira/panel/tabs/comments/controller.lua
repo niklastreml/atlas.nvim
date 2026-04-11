@@ -9,6 +9,7 @@ local markdown_editor = require("atlas.jira.ui.markdown_editor")
 
 local active_handle = nil
 local COMMENTS_PAGE_SIZE = 20
+local MAX_COMMENT_PAGES = 5
 
 ---@return integer|nil
 local function detail_win()
@@ -180,7 +181,8 @@ function M.show(issue, opts)
 	footer.notify("loading", string.format("Loading comments for %s...", issue.key))
 	require("atlas.jira.panel.init").refresh()
 
-	local function fetch_next(start_at)
+	local function fetch_next(start_at, page_count)
+		page_count = page_count or 1
 		active_handle = comments_api.get_comments_page(issue.key, start_at, COMMENTS_PAGE_SIZE, function(page, err)
 			active_handle = nil
 
@@ -204,21 +206,25 @@ function M.show(issue, opts)
 
 			local loaded = #state.comments
 			local total = (page and page.total) or loaded
-			if loaded < total then
-				fetch_next(loaded)
+			if loaded < total and page_count < MAX_COMMENT_PAGES then
+				fetch_next(loaded, page_count + 1)
 				return
 			end
 
 			state.comments = helper.normalize_comments(state.comments)
-
 			state.state = nil
-			footer.notify("success", string.format("Comments loaded for %s (%d)", issue.key, loaded), 1200)
+			if loaded < total then
+				footer.notify("warn", string.format("Comments partial (%d/%d)", loaded, total), 1800)
+			else
+				footer.notify("success", string.format("Comments loaded for %s (%d)", issue.key, loaded), 1200)
+			end
+
 			require("atlas.jira.panel.init").refresh()
 			M.move(0)
 		end, { force_load = force_refresh })
 	end
 
-	fetch_next(0)
+	fetch_next(0, 1)
 end
 
 function M.refresh()
@@ -234,8 +240,7 @@ function M.reset()
 	state.reset()
 end
 
-function M.deactivate()
-end
+function M.deactivate() end
 
 ---@return boolean
 function M.is_loading()

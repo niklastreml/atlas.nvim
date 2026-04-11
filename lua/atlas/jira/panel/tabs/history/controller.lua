@@ -6,6 +6,7 @@ local footer = require("atlas.ui.components.footer")
 
 local active_handle = nil
 local request_id = 0
+local MAX_HISTORY_PAGES = 5
 
 ---@return integer|nil
 local function detail_win()
@@ -110,7 +111,8 @@ function M.show(issue, opts)
 	footer.notify("loading", string.format("Loading history for %s...", issue.key))
 	require("atlas.jira.panel.init").refresh()
 
-	local function fetch_page(start_at)
+	local function fetch_page(start_at, page_count)
+		page_count = page_count or 1
 		active_handle = issues_api.get_issue_history_page(issue.key, start_at, 100, function(page, err)
 			active_handle = nil
 
@@ -140,22 +142,30 @@ function M.show(issue, opts)
 			local next_start = page.start_at + page.max_results
 			local done = page.is_last == true or next_start >= page.total
 
-			if done then
+			if done or page_count >= MAX_HISTORY_PAGES then
 				state.is_loading = false
-				footer.notify(
-					"success",
-					string.format("History loaded for %s (%d)", issue.key, #state.history_items),
-					1200
-				)
+				if not done then
+					footer.notify(
+						"warn",
+						string.format("History partial (%d/%d)", #state.history_items, MAX_HISTORY_PAGES),
+						1800
+					)
+				else
+					footer.notify(
+						"success",
+						string.format("History loaded for %s (%d)", issue.key, #state.history_items),
+						1200
+					)
+				end
 				require("atlas.jira.panel.init").refresh()
 				return
 			end
 
-			fetch_page(next_start)
+			fetch_page(next_start, page_count + 1)
 		end, { force_load = force_refresh })
 	end
 
-	fetch_page(0)
+	fetch_page(0, 1)
 end
 
 function M.refresh()

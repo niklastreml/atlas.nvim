@@ -148,6 +148,7 @@ local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasJqlSearch", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket", nil)
 	pcall(vim.api.nvim_del_user_command, "AtlasLogs", nil)
+	pcall(vim.api.nvim_del_user_command, "AtlasClearCache", nil)
 
 	vim.api.nvim_create_user_command("AtlasJira", function()
 		require("atlas").open("jira")
@@ -170,6 +171,12 @@ local function register_commands()
 	vim.api.nvim_create_user_command("AtlasLogs", function()
 		require("atlas.ui.logs").toggle()
 	end, { desc = "Open Atlas logs" })
+
+	vim.api.nvim_create_user_command("AtlasClearCache", function()
+		require("atlas.core.cache").clear_all()
+		require("atlas.core.memory_cache").clear_all()
+		vim.notify("Atlas cache cleared", vim.log.levels.INFO)
+	end, { desc = "Clear Atlas disk and memory cache" })
 end
 
 ---@param opts AtlasConfig|nil
