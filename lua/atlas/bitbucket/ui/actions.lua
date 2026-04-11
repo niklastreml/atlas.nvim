@@ -86,12 +86,7 @@ function M.refresh_pr(pr)
 		return
 	end
 
-	controller.refresh_pr(pr, function()
-		local panel = require("atlas.ui.panel")
-		if panel.is_open() then
-			require("atlas.bitbucket.panel.init").on_select("pr", pr)
-		end
-	end)
+	controller.refresh_pr(pr)
 end
 
 function M.open_pr_search_popup()

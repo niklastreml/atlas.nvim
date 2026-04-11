@@ -29,7 +29,6 @@ function M.show(pr)
 	if same_pr and state.diff == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -67,12 +66,10 @@ function M.show(pr)
 				state.diff = diff_parser.parse(diff)
 				footer.notify("success", "Files loaded", 1200)
 			end
-			require("atlas.bitbucket.panel.init").refresh()
 		end)
 	end
 
 	footer.notify("loading", "Loading file changes...")
-	require("atlas.bitbucket.panel.init").refresh()
 end
 
 function M.refresh()
@@ -85,7 +82,6 @@ function M.refresh()
 
 	cancel_handles()
 	state.diff = "loading"
-	require("atlas.bitbucket.panel.init").refresh()
 
 	if diff_url ~= "" then
 		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
@@ -102,7 +98,6 @@ function M.refresh()
 			end
 
 			footer.notify("success", "Files refreshed", 1200)
-			require("atlas.bitbucket.panel.init").refresh()
 		end)
 	end
 end

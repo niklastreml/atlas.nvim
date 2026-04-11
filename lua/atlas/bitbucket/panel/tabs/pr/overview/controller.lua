@@ -35,7 +35,6 @@ function M.show(pr)
 	if same_pr and (detail_loading or diffstat_loading) then
 		state.pr = pr
 		state.line_map = {}
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -67,7 +66,6 @@ function M.show(pr)
 	end
 
 	footer.notify("loading", string.format("Loading PR #%s...", pr_id))
-	require("atlas.bitbucket.panel.init").refresh()
 
 	if needs_detail then
 		state.detail = "loading"
@@ -90,7 +88,6 @@ function M.show(pr)
 				footer.notify("success", string.format("PR #%s loaded", pr_id), 1200)
 			end
 
-			require("atlas.bitbucket.panel.init").refresh()
 		end)
 	end
 
@@ -116,7 +113,6 @@ function M.show(pr)
 					footer.notify("success", string.format("PR #%s loaded", pr_id), 1200)
 				end
 
-				require("atlas.bitbucket.panel.init").refresh()
 			end)
 		else
 			state.diffstat = nil
@@ -141,7 +137,6 @@ function M.refresh()
 	cancel_active_handle()
 	state.detail = "loading"
 	state.diffstat = "loading"
-	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_pullrequest(workspace, repo_slug, pr_id, function(detail, err)
 		active_handle = nil
@@ -161,7 +156,6 @@ function M.refresh()
 			footer.notify("success", string.format("PR #%s refreshed", pr_id), 1200)
 		end
 
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 
 	local diffstat_url = pr.links.diffstat
@@ -183,7 +177,6 @@ function M.refresh()
 				footer.notify("success", string.format("PR #%s refreshed", pr_id), 1200)
 			end
 
-			require("atlas.bitbucket.panel.init").refresh()
 		end)
 	else
 		state.diffstat = nil

@@ -28,7 +28,6 @@ function M.show(repo, opts)
 	if same_repo and tab_state.tags == "loading" then
 		tab_state.repo = repo
 		tab_state.line_map = {}
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -46,7 +45,6 @@ function M.show(repo, opts)
 
 	tab_state.tags = "loading"
 	footer.notify("loading", "Loading tags...")
-	require("atlas.bitbucket.panel.init").refresh()
 
 	local detail = repo_state.detail
 	if detail == "loading" then
@@ -55,7 +53,6 @@ function M.show(repo, opts)
 	if detail == nil then
 		tab_state.tags = nil
 		footer.notify("error", "Failed to load tags: missing repo detail")
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -63,7 +60,6 @@ function M.show(repo, opts)
 	if tags_url == "" then
 		tab_state.tags = nil
 		footer.notify("error", "Missing tags URL")
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -83,8 +79,6 @@ function M.show(repo, opts)
 			tab_state.tags = tags
 			footer.notify("success", "Tags loaded", 1200)
 		end
-
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 

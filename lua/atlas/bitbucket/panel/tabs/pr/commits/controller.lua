@@ -26,7 +26,6 @@ function M.show(pr)
 	if same_pr and state.commits == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -51,7 +50,6 @@ function M.show(pr)
 
 	state.commits = "loading"
 	footer.notify("loading", "Loading commits...")
-	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_commits(commits_url, function(commits, err)
 		active_handle = nil
@@ -68,7 +66,6 @@ function M.show(pr)
 			footer.notify("success", "Commits loaded", 1200)
 		end
 
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
@@ -85,7 +82,6 @@ function M.refresh()
 
 	cancel_active_handle()
 	state.commits = "loading"
-	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_commits(commits_url, function(commits, err)
 		active_handle = nil
@@ -102,7 +98,6 @@ function M.refresh()
 			footer.notify("success", "Commits refreshed", 1200)
 		end
 
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 

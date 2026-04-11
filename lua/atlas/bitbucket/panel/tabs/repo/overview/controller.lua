@@ -30,7 +30,6 @@ function M.show(repo, opts)
 	if same_repo and (detail_loading or readme_loading) then
 		tab_state.repo = repo
 		tab_state.line_map = {}
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -65,7 +64,6 @@ function M.show(repo, opts)
 
 	tab_state.readme = "loading"
 	footer.notify("loading", "Loading repository...")
-	require("atlas.bitbucket.panel.init").refresh()
 
 	local detail = repo_state.detail
 	if detail == "loading" then
@@ -74,7 +72,6 @@ function M.show(repo, opts)
 	if detail == nil then
 		tab_state.readme = nil
 		footer.notify("error", "Failed to load repo detail")
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -100,7 +97,6 @@ function M.show(repo, opts)
 			end
 
 			footer.notify("success", "Repository loaded", 1200)
-			require("atlas.bitbucket.panel.init").refresh()
 		end
 	)
 end
@@ -120,8 +116,7 @@ function M.reset()
 	tab_state.reset()
 end
 
-function M.deactivate()
-end
+function M.deactivate() end
 
 ---@return boolean
 function M.is_loading()

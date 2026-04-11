@@ -64,12 +64,11 @@ local function sync_render_loop()
 		0,
 		RENDER_INTERVAL_MS,
 		vim.schedule_wrap(function()
+			M.render()
+
 			if not active_panel_loading() then
 				stop_render_loop()
-				return
 			end
-
-			M.render()
 		end)
 	)
 end
@@ -138,6 +137,7 @@ function M.refresh_tab()
 		return
 	end
 	entry.refresh()
+	M.render()
 end
 
 function M.render()

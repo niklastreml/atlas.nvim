@@ -66,7 +66,6 @@ function M.show(pr)
 	if same_pr and state.comments == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -91,7 +90,6 @@ function M.show(pr)
 
 	state.comments = "loading"
 	footer.notify("loading", "Loading comments...")
-	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_comments(comments_url, {}, function(comments, err)
 		active_handle = nil
@@ -108,7 +106,6 @@ function M.show(pr)
 			footer.notify("success", "Comments loaded", 1200)
 		end
 
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
@@ -125,7 +122,6 @@ function M.refresh()
 
 	cancel_active_handle()
 	state.comments = "loading"
-	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_comments(comments_url, { force_load = true }, function(comments, err)
 		active_handle = nil
@@ -142,7 +138,6 @@ function M.refresh()
 			footer.notify("success", "Comments refreshed", 1200)
 		end
 
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 

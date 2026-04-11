@@ -68,7 +68,6 @@ function M.show(pr)
 	if same_pr and state.activity == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -93,7 +92,6 @@ function M.show(pr)
 
 	state.activity = "loading"
 	footer.notify("loading", "Loading activity...")
-	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_activity(activity_url, function(activity, err)
 		active_handle = nil
@@ -110,7 +108,6 @@ function M.show(pr)
 			footer.notify("success", "Activity loaded", 1200)
 		end
 
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
@@ -127,7 +124,6 @@ function M.refresh()
 
 	cancel_active_handle()
 	state.activity = "loading"
-	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_activity(activity_url, function(activity, err)
 		active_handle = nil
@@ -144,7 +140,6 @@ function M.refresh()
 			footer.notify("success", "Activity refreshed", 1200)
 		end
 
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 

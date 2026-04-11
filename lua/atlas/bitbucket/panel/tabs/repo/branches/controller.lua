@@ -28,7 +28,6 @@ function M.show(repo, opts)
 	if same_repo and tab_state.branches == "loading" then
 		tab_state.repo = repo
 		tab_state.line_map = {}
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -49,13 +48,11 @@ function M.show(repo, opts)
 	if workspace == "" or repo_slug == "" then
 		tab_state.branches = nil
 		footer.notify("error", "Missing repository info")
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
 	tab_state.branches = "loading"
 	footer.notify("loading", "Loading branches...")
-	require("atlas.bitbucket.panel.init").refresh()
 
 	local detail = repo_state.detail
 	if detail == "loading" then
@@ -64,7 +61,6 @@ function M.show(repo, opts)
 	if detail == nil then
 		tab_state.branches = nil
 		footer.notify("error", "Failed to load branches: missing repo detail")
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -72,7 +68,6 @@ function M.show(repo, opts)
 	if branches_url == "" then
 		tab_state.branches = nil
 		footer.notify("error", "Missing branches URL")
-		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -92,8 +87,6 @@ function M.show(repo, opts)
 			tab_state.branches = branches
 			footer.notify("success", "Branches loaded", 1200)
 		end
-
-		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
