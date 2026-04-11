@@ -5,28 +5,57 @@ local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
+local helper = require("atlas.bitbucket.panel.tabs.pr.helper")
 local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
 local icons = require("atlas.ui.utils.icons")
 local spinner = require("atlas.ui.components.spinner")
 local PADDING_X = 1
 
+---@param state_name string|nil
+---@return string
+local function status_hl(state_name)
+	if state_name == "successful" then
+		return "AtlasTextPositive"
+	end
+	if state_name == "failed" then
+		return "AtlasLogError"
+	end
+	if state_name == "inprogress" then
+		return "AtlasTextWarning"
+	end
+	if state_name == "stopped" then
+		return "AtlasTextMuted"
+	end
+	return "AtlasTextMuted"
+end
+
 ---@param commit BitbucketPRCommit
+---@param build_state "successful"|"failed"|"inprogress"|"stopped"|"unknown"|"loading"|nil
 ---@return AtlasThreadV2Item
-local function to_thread_item(commit)
+local function to_thread_item(commit, build_state)
 	local message = tostring(commit.message or ""):gsub("\r\n", "\n")
 	message = message:match("([^\n]+)") or message
 
 	local author = (commit.author_nickname ~= "" and commit.author_nickname) or commit.author_name or "Unknown"
 	local hash = tostring(commit.short_hash or commit.hash or ""):sub(1, 8)
 	local when = utils.relative_time(commit.date)
+	local content = author .. " · " .. when
+	if build_state == "loading" then
+		content = content .. " · " .. icons.bitbucket_status("INPROGRESS") .. " builds"
+	elseif build_state ~= nil and build_state ~= "unknown" then
+		content = content .. " · " .. icons.bitbucket_status(build_state) .. " " .. helper.statuses.label(build_state)
+	end
 
 	return {
 		icon = icons.entity("commit"),
 		icon_hl = "AtlasTextMuted",
 		author = message,
 		right_text = hash,
-		content = author .. " · " .. when,
+		content = content,
+		meta = {
+			build_state = build_state,
+		},
 		line_map = {
 			commit = commit,
 		},
@@ -54,7 +83,7 @@ function M.render(width)
 	utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 
 	-- Chips
-	local chip_line, chip_spans = chips.render(pr)
+	local chip_line, chip_spans = chips.render(pr, pr_state.statuses)
 	table.insert(lines, chip_line)
 	local chip_base = #lines - 1
 	for _, span in ipairs(chip_spans) do
@@ -102,7 +131,11 @@ function M.render(width)
 
 	local items = {}
 	for _, commit in ipairs(entries) do
-		table.insert(items, to_thread_item(commit))
+		local hash = tostring(commit.hash or "")
+		local build_state = state.commit_status_by_hash[hash]
+		local build_url = state.commit_build_url_by_hash[hash]
+		table.insert(items, to_thread_item(commit, build_state))
+		items[#items].line_map.build_url = build_url
 	end
 
 	local thread_lines, thread_spans, thread_map = threads.render(items, width, {
@@ -112,8 +145,34 @@ function M.render(width)
 		author_hl = function()
 			return "AtlasText"
 		end,
-		content_hl = function(_, row, _)
-			return { { start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" } }
+		content_hl = function(item, row, _)
+			local out = { { start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" } }
+			local build_state = type(item.meta) == "table" and tostring(item.meta.build_state or "") or ""
+			if build_state == "loading" then
+				local marker = icons.bitbucket_status("INPROGRESS") .. " builds"
+				local start_col, end_col = row:find(marker, 1, true)
+				if start_col ~= nil and end_col ~= nil then
+					table.insert(out, {
+						start_col = start_col - 1,
+						end_col = end_col,
+						hl_group = "AtlasTextMuted",
+					})
+				end
+				return out
+			end
+
+			if build_state ~= "" and build_state ~= "unknown" then
+				local marker = icons.bitbucket_status(build_state) .. " " .. helper.statuses.label(build_state)
+				local start_col, end_col = row:find(marker, 1, true)
+				if start_col ~= nil and end_col ~= nil then
+					table.insert(out, {
+						start_col = start_col - 1,
+						end_col = end_col,
+						hl_group = status_hl(build_state),
+					})
+				end
+			end
+			return out
 		end,
 	})
 	local offset = #lines

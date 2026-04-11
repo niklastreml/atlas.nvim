@@ -12,6 +12,7 @@ local api_service = require("atlas.bitbucket.api.service")
 ---@field reset? fun()
 ---@field move fun(delta: integer)
 ---@field refresh fun(opts?: { force_load?: boolean })
+---@field open_current_line? fun(): boolean
 ---@field next_tab fun()
 ---@field prev_tab fun()
 ---@field deactivate fun()
@@ -204,6 +205,15 @@ end
 
 function M.refresh()
 	M.render()
+end
+
+---@return boolean
+function M.open_current_line()
+	local entry = tab_entry(panel_state.panel_type)
+	if entry ~= nil and type(entry.open_current_line) == "function" then
+		return entry.open_current_line() == true
+	end
+	return false
 end
 
 ---@param opts? { force_load?: boolean }

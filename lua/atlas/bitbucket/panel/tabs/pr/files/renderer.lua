@@ -54,7 +54,7 @@ function M.render(width)
 	utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 
 	-- Chips
-	local chip_line, chip_spans = chips.render(pr)
+	local chip_line, chip_spans = chips.render(pr, pr_state.statuses)
 	table.insert(lines, chip_line)
 	local chip_base = #lines - 1
 	for _, span in ipairs(chip_spans) do

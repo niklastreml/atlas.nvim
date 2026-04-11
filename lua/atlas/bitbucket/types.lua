@@ -194,10 +194,31 @@
 ---@field author_name string
 ---@field author_nickname string
 ---@field html_url string
+---@field statuses_url string
 
 ---@class BitbucketPRCommits
 ---@field entries BitbucketPRCommit[]
 ---@field page number
+
+--------------------------------------------------------------------------------
+-- Statuses
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRStatus
+---@field key string
+---@field type string
+---@field state "SUCCESSFUL"|"FAILED"|"INPROGRESS"|"STOPPED"|"UNKNOWN"
+---@field name string
+---@field refname string
+---@field description string
+---@field url string
+---@field created_on string
+---@field updated_on string
+---@field commit_hash string
+
+---@class BitbucketPRStatuses
+---@field entries BitbucketPRStatus[]
+---@field size number|nil
 
 --------------------------------------------------------------------------------
 -- Repository

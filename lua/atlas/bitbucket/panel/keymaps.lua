@@ -7,6 +7,7 @@ local panel_state = require("atlas.bitbucket.panel.state")
 local footer = require("atlas.ui.components.footer")
 local bitbucket_actions = require("atlas.bitbucket.actions")
 local bitbucket_controller = require("atlas.bitbucket.ui.controller")
+local bitbucket_ui_actions = require("atlas.bitbucket.ui.actions")
 
 ---@param action_id AtlasKeymapActionId|string
 ---@param map_item table
@@ -162,6 +163,18 @@ function M.register(buf, api)
 		end,
 	})
 
+	add("bitbucket.open_in_browser", {
+		desc = "Open PR/build in browser",
+		opts = { silent = true, nowait = true },
+		callback = function()
+			if require("atlas.bitbucket.panel.init").open_current_line() then
+				return
+			end
+
+			bitbucket_ui_actions.browse_current_pr(selected_pr())
+		end,
+	})
+
 	M.remove(buf)
 	help.register("Navigation", navigation_items, { index = 999, buffer = buf })
 	help.register("Bitbucket", bitbucket_items, { index = 220, buffer = buf })
@@ -180,6 +193,7 @@ function M.remove(buf)
 	utils.insert_if(items, remove_item("bitbucket.open_actions"))
 	utils.insert_if(items, remove_item("bitbucket.checkout_pr"))
 	utils.insert_if(items, remove_item("bitbucket.open_diffview"))
+	utils.insert_if(items, remove_item("bitbucket.open_in_browser"))
 	help.remove("Bitbucket", items, { buffer = buf })
 end
 

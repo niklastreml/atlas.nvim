@@ -2,14 +2,79 @@ local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.commits.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local footer = require("atlas.ui.components.footer")
+local helper = require("atlas.bitbucket.panel.tabs.pr.helper")
 
 local active_handle = nil
+local status_handles = {}
+local status_batch = 0
+local MAX_STATUS_COMMITS = 5
 
 local function cancel_active_handle()
 	if active_handle ~= nil and active_handle.cancel then
 		pcall(active_handle.cancel)
 	end
 	active_handle = nil
+end
+
+local function cancel_status_handles()
+	for key, handle in pairs(status_handles) do
+		if handle ~= nil and handle.cancel then
+			pcall(handle.cancel)
+		end
+		status_handles[key] = nil
+	end
+end
+
+---@return boolean
+local function has_status_requests()
+	return next(status_handles) ~= nil
+end
+
+---@param pr BitbucketPR|nil
+---@param commits BitbucketPRCommits|nil
+---@param force_load boolean
+local function fetch_commit_builds(pr, commits, force_load)
+	cancel_status_handles()
+	status_batch = status_batch + 1
+	local batch = status_batch
+	local pr_id = pr and pr.id or nil
+
+	state.commit_status_by_hash = {}
+	state.commit_build_url_by_hash = {}
+	if pr == nil or commits == nil or type(commits.entries) ~= "table" then
+		return
+	end
+
+	local count = math.min(MAX_STATUS_COMMITS, #commits.entries)
+	for i = 1, count do
+		local commit = commits.entries[i]
+		local hash = tostring(commit.hash or "")
+		local statuses_url = tostring(commit.statuses_url or "")
+		if hash ~= "" and statuses_url ~= "" then
+			state.commit_status_by_hash[hash] = "loading"
+			status_handles[hash] = pullrequests.fetch_commit_statuses(statuses_url, {
+				force_load = force_load == true,
+			}, function(statuses, err)
+				if batch ~= status_batch then
+					return
+				end
+				status_handles[hash] = nil
+
+				local current = state.pr
+				if current == nil or current.id ~= pr_id then
+					return
+				end
+
+				if err ~= nil then
+					state.commit_status_by_hash[hash] = "unknown"
+					state.commit_build_url_by_hash[hash] = nil
+				else
+					state.commit_status_by_hash[hash] = helper.statuses.aggregate(statuses)
+					state.commit_build_url_by_hash[hash] = helper.statuses.first_url(statuses)
+				end
+			end)
+		end
+	end
 end
 
 ---@param pr BitbucketPR|nil
@@ -20,6 +85,9 @@ function M.show(pr)
 
 	if not same_pr then
 		cancel_active_handle()
+		cancel_status_handles()
+		state.commit_status_by_hash = {}
+		state.commit_build_url_by_hash = {}
 	end
 
 	if same_pr and state.commits == "loading" then
@@ -62,6 +130,7 @@ function M.show(pr)
 			footer.notify("error", "Failed to load commits: " .. tostring(err))
 		else
 			state.commits = commits
+			fetch_commit_builds(pr, commits, false)
 			footer.notify("success", "Commits loaded", 1200)
 		end
 
@@ -82,6 +151,9 @@ function M.refresh(opts)
 	end
 
 	cancel_active_handle()
+	cancel_status_handles()
+	state.commit_status_by_hash = {}
+	state.commit_build_url_by_hash = {}
 	state.commits = "loading"
 
 	active_handle = pullrequests.fetch_commits(commits_url, { force_load = opts.force_load == true }, function(commits, err)
@@ -96,6 +168,7 @@ function M.refresh(opts)
 			footer.notify("error", "Failed to refresh commits")
 		else
 			state.commits = commits
+			fetch_commit_builds(state.pr, commits, opts.force_load == true)
 			footer.notify("success", "Commits refreshed", 1200)
 		end
 
@@ -104,20 +177,11 @@ end
 
 function M.reset()
 	cancel_active_handle()
+	cancel_status_handles()
 	state.reset()
 end
 
 function M.deactivate() end
-
----@return integer|nil
-local function detail_win()
-	local layout = require("atlas.ui.layout")
-	local win = layout.win_id("detail")
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return nil
-	end
-	return win
-end
 
 ---@param lnum integer
 ---@return boolean
@@ -127,31 +191,38 @@ local function is_commit_line(lnum)
 		return false
 	end
 
-	return item.kind == "header" or item.kind == "thread_header"
+	return item.kind == "header"
+		or item.kind == "thread_header"
+		or item.kind == "content"
+		or item.kind == "thread_content"
 end
 
----@param win integer
----@param delta integer
 ---@return boolean
-local function jump_next_commit(win, delta)
-	local line = vim.api.nvim_win_get_cursor(win)[1]
-	local buf = vim.api.nvim_win_get_buf(win)
-	local max_line = vim.api.nvim_buf_line_count(buf)
-	local step = delta > 0 and 1 or -1
-
-	for lnum = line + step, (step > 0 and max_line or 1), step do
-		if is_commit_line(lnum) then
-			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
-			return true
-		end
+function M.open_current_line()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return false
 	end
 
-	return false
+	local lnum = vim.api.nvim_win_get_cursor(win)[1]
+	local entry = state.line_map[lnum]
+	if type(entry) ~= "table" then
+		return false
+	end
+
+	local url = tostring(entry.build_url or "")
+	if url == "" then
+		return false
+	end
+
+	vim.ui.open(url)
+	return true
 end
 
 ---@return boolean
 function M.is_loading()
-	return state.commits == "loading"
+	return state.commits == "loading" or has_status_requests()
 end
 
 ---@param lnum integer

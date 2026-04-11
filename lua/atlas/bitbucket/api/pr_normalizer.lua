@@ -19,6 +19,16 @@ local function as_number_or_nil(v)
 	return n
 end
 
+---@param value any
+---@return "SUCCESSFUL"|"FAILED"|"INPROGRESS"|"STOPPED"|"UNKNOWN"
+local function status_state(value)
+	local s = tostring(value or "")
+	if s == "SUCCESSFUL" or s == "FAILED" or s == "INPROGRESS" or s == "STOPPED" then
+		return s
+	end
+	return "UNKNOWN"
+end
+
 ---@param user table|nil
 ---@return BitbucketPRAuthor
 local function actor(user)
@@ -255,12 +265,43 @@ function M.pr_commits(result)
 			author_name = tostring(author_user.display_name or "Unknown"),
 			author_nickname = tostring(author_user.nickname or ""),
 			html_url = tostring((as_table(links.html) or {}).href or ""),
+			statuses_url = tostring((as_table(links.statuses) or {}).href or ""),
 		})
 	end
 
 	return {
 		entries = entries,
 		page = tonumber(payload.page) or 1,
+	}
+end
+
+---@param result table|nil
+---@return BitbucketPRStatuses
+function M.pr_statuses(result)
+	local payload = as_table(result) or {}
+	local entries = {}
+
+	for _, item in ipairs(payload.values or {}) do
+		local status = as_table(item) or {}
+		local commit = as_table(status.commit) or {}
+
+		table.insert(entries, {
+			key = tostring(status.key or ""),
+			type = tostring(status.type or ""),
+			state = status_state(status.state),
+			name = tostring(status.name or ""),
+			refname = tostring(status.refname or ""),
+			description = tostring(status.description or ""),
+			url = tostring(status.url or ""),
+			created_on = tostring(status.created_on or ""),
+			updated_on = tostring(status.updated_on or ""),
+			commit_hash = tostring(commit.hash or ""),
+		})
+	end
+
+	return {
+		entries = entries,
+		size = payload.size ~= nil and tonumber(payload.size) or nil,
 	}
 end
 

@@ -2,6 +2,7 @@ local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.overview.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local footer = require("atlas.ui.components.footer")
+local layout = require("atlas.ui.layout")
 
 local active_handle = nil
 local diffstat_handle = nil
@@ -192,6 +193,28 @@ function M.reset()
 end
 
 function M.deactivate()
+end
+
+---@return boolean
+function M.open_current_line()
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return false
+	end
+
+	local lnum = vim.api.nvim_win_get_cursor(win)[1]
+	local entry = state.line_map[lnum]
+	if type(entry) ~= "table" or entry.kind ~= "build" then
+		return false
+	end
+
+	local url = tostring(entry.url or "")
+	if url == "" then
+		return false
+	end
+
+	vim.ui.open(url)
+	return true
 end
 
 ---@return boolean
