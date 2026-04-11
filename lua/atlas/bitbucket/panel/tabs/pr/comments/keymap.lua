@@ -20,6 +20,14 @@ function M.setup()
 			end,
 		},
 		{
+			key = "T",
+			desc = "Add task",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.add_task()
+			end,
+		},
+		{
 			key = "c",
 			desc = "Reply to comment",
 			opts = { silent = true, nowait = true },
@@ -64,6 +72,7 @@ function M.teardown()
 
 	help.remove("Bitbucket", {
 		{ key = "a" },
+		{ key = "T" },
 		{ key = "c" },
 		{ key = "t" },
 		{ key = "e" },

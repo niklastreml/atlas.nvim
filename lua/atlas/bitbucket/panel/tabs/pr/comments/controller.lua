@@ -493,6 +493,63 @@ function M.add_comment()
 	})
 end
 
+function M.add_task()
+	local pr = state.pr
+	if pr == nil then
+		footer.notify("warn", "No PR selected")
+		return
+	end
+
+	local workspace = tostring(pr.workspace or "")
+	local repo = tostring(pr.repo or "")
+	local pr_id = tostring(pr.id or "")
+	if workspace == "" or repo == "" or pr_id == "" then
+		footer.notify("error", "Missing PR info")
+		return
+	end
+
+	local selected_comment = current_comment_under_cursor()
+	local comment_id = selected_comment and selected_comment.id or nil
+
+	markdown_editor.open({
+		key = string.format("bitbucket-task-add-%s", pr_id),
+		title = "Add Task",
+		initial_text = "",
+		width_ratio = 0.22,
+		height_ratio = 0.22,
+		completion = mention_completions.build_completion(),
+		on_save = function(body)
+			local final_body = tostring(body or "")
+			if vim.trim(final_body) == "" then
+				footer.notify("warn", "Task cannot be empty")
+				return
+			end
+
+			footer.notify("loading", "Adding task...")
+			comments_api.create_task(workspace, repo, pr_id, final_body, {
+				comment_id = comment_id,
+			}, function(created, err)
+				if err ~= nil then
+					footer.notify("error", tostring(err))
+					return
+				end
+
+				if state.tasks ~= "loading" then
+					if type(state.tasks) ~= "table" then
+						state.tasks = {}
+					end
+					if type(created) == "table" then
+						table.insert(state.tasks, created)
+					end
+				end
+
+				footer.notify("success", "Task added", 1200)
+				require("atlas.bitbucket.panel.init").refresh()
+			end)
+		end,
+	})
+end
+
 function M.reply_to_comment()
 	local comment = current_comment_under_cursor()
 	if comment == nil then
