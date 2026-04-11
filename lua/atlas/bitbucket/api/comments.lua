@@ -255,4 +255,43 @@ function M.delete_task(task_url, on_done)
 	return service.request("DELETE", url, nil, nil, on_done)
 end
 
+---@param workspace string
+---@param repo string
+---@param pr_id string|number
+---@param raw string
+---@param opts? { comment_id?: number|string|nil }
+---@param on_done fun(task: BitbucketPRTask|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.create_task(workspace, repo, pr_id, raw, opts, on_done)
+	opts = opts or {}
+
+	local ws = tostring(workspace or "")
+	local rp = tostring(repo or "")
+	local id = tostring(pr_id or "")
+	if ws == "" or rp == "" or id == "" then
+		on_done(nil, "Missing Bitbucket PR task endpoint params")
+		return nil
+	end
+
+	local endpoint = string.format("/repositories/%s/%s/pullrequests/%s/tasks", ws, rp, id)
+	local payload = {
+		content = { raw = tostring(raw or "") },
+	}
+	if opts.comment_id ~= nil and tostring(opts.comment_id) ~= "" then
+		payload.comment = { id = tonumber(opts.comment_id) or opts.comment_id }
+	end
+
+	local body = vim.json.encode(payload)
+	return service.request("POST", endpoint, nil, body, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		local normalized = pr_normalizer.pr_tasks({ values = { result } })
+		local entries = (normalized or {}).entries or {}
+		on_done(entries[1] or nil, nil)
+	end)
+end
+
 return M

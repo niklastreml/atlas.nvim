@@ -357,6 +357,7 @@ require("atlas").setup({
 | Bitbucket                | `A`         | Open PR actions                  |
 | Bitbucket                | `/`         | Search repositories              |
 | Bitbucket                | `o`         | Toggle repository panel          |
+| Bitbucket                | `T`         | Create new tasks on PR           |
 | Bitbucket                | `gc`        | Checkout selected PR             |
 | Bitbucket                | `gd`        | Open selected PR diff            |
 | Bitbucket                | `gx`        | Open pr/build/comment in browser |
