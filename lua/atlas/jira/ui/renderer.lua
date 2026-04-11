@@ -380,7 +380,7 @@ function M.render(opts)
 		spans,
 		header.render({
 			width = opts.width,
-			icon = icons.provider("jira"),
+			icon = icons.jira_icon("jira.provider"),
 			title = "Jira",
 			hl_group = "AtlasJiraTheme",
 		})

@@ -2,6 +2,12 @@ local M = {}
 
 local footer = require("atlas.ui.components.footer")
 
+---@class JiraMarkdownEditorAction
+---@field key string|string[]
+---@field description string|nil
+---@field callback fun(ctx: { buf: integer, win: integer, close: fun(), get_text: fun(): string })
+---@field mode string|string[]|nil
+
 ---@class JiraMarkdownEditorOptions
 ---@field key string
 ---@field title string|nil
@@ -10,6 +16,7 @@ local footer = require("atlas.ui.components.footer")
 ---@field height_ratio number|nil
 ---@field on_save fun(text: string)|nil
 ---@field on_cancel fun()|nil
+---@field actions JiraMarkdownEditorAction[]|nil
 
 ---@param opts JiraMarkdownEditorOptions
 ---@return integer|nil, integer|nil
@@ -50,6 +57,16 @@ function M.open(opts)
 	local height = math.max(math.floor(vim.o.lines * height_ratio), min_height)
 	local row = math.floor((vim.o.lines - height) / 2)
 	local col = math.floor((vim.o.columns - width) / 2)
+	local footer_items = { "q quit", "<C-s> save+close" }
+	for _, action in ipairs(type(opts.actions) == "table" and opts.actions or {}) do
+		local key = action and action.key or nil
+		local description = action and action.description or nil
+		if type(key) == "string" and key ~= "" and type(description) == "string" and description ~= "" then
+			table.insert(footer_items, string.format("%s %s", key, description))
+		end
+	end
+
+	local footer_text = " " .. table.concat(footer_items, " | ") .. " "
 
 	local win = vim.api.nvim_open_win(buf, true, {
 		relative = "editor",
@@ -61,7 +78,7 @@ function M.open(opts)
 		col = col,
 		title = opts.title,
 		title_pos = "center",
-		footer = " q quit | <C-s> save+close ",
+		footer = footer_text,
 		footer_pos = "center",
 	})
 
@@ -70,34 +87,38 @@ function M.open(opts)
 	vim.api.nvim_set_option_value("wrap", true, { win = win })
 	vim.api.nvim_set_option_value("cursorline", false, { win = win })
 
+	local function close_editor()
+		if vim.api.nvim_win_is_valid(win) then
+			vim.api.nvim_win_close(win, true)
+		end
+	end
+
+	local function get_text()
+		return table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+	end
+
 	vim.keymap.set("n", "q", function()
 		if type(opts.on_cancel) == "function" then
 			opts.on_cancel()
 		end
-		if vim.api.nvim_win_is_valid(win) then
-			vim.api.nvim_win_close(win, true)
-		end
+		close_editor()
 	end, { buffer = buf, silent = true, nowait = true })
 
 	vim.keymap.set("n", "<Esc>", function()
 		if type(opts.on_cancel) == "function" then
 			opts.on_cancel()
 		end
-		if vim.api.nvim_win_is_valid(win) then
-			vim.api.nvim_win_close(win, true)
-		end
+		close_editor()
 	end, { buffer = buf, silent = true, nowait = true })
 
 	local function save_and_close()
-		local body = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+		local body = get_text()
 
 		if type(opts.on_save) == "function" then
 			opts.on_save(body)
 		end
 
-		if vim.api.nvim_win_is_valid(win) then
-			vim.api.nvim_win_close(win, true)
-		end
+		close_editor()
 	end
 
 	vim.keymap.set("n", "<C-s>", save_and_close, { buffer = buf, silent = true, nowait = true })
@@ -105,6 +126,26 @@ function M.open(opts)
 		vim.cmd("stopinsert")
 		save_and_close()
 	end, { buffer = buf, silent = true, nowait = true })
+
+	for _, action in ipairs(type(opts.actions) == "table" and opts.actions or {}) do
+		if type(action) == "table" and type(action.callback) == "function" then
+			local action_key = action.key
+			local action_mode = action.mode or "n"
+			if type(action_key) == "string" or type(action_key) == "table" then
+				vim.keymap.set(action_mode, action_key, function()
+					local ok, err = pcall(action.callback, {
+						buf = buf,
+						win = win,
+						close = close_editor,
+						get_text = get_text,
+					})
+					if not ok then
+						footer.notify("error", tostring(err or "Markdown action failed"))
+					end
+				end, { buffer = buf, silent = true, nowait = true, desc = action.description })
+			end
+		end
+	end
 
 	return buf, win
 end

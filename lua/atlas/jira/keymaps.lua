@@ -158,9 +158,26 @@ function M.register(buf)
 		end,
 	})
 
+	add("jira.manage_templates", {
+		desc = "Edit issue templates",
+		index = 8,
+		callback = function()
+			jira_actions.run("manage_templates", { issue = nil, source = "main", description = nil }, function(result, err)
+				if err ~= nil then
+					footer.notify("error", tostring(err))
+					return
+				end
+
+				if result ~= nil and result.message ~= nil and result.message ~= "" then
+					footer.notify("info", result.message, 1200)
+				end
+			end)
+		end,
+	})
+
 	add("jira.refresh_issue", {
 		desc = "Reload selected issue",
-		index = 8,
+		index = 9,
 		callback = function()
 			controller.refresh_current_issue()
 		end,
@@ -168,7 +185,7 @@ function M.register(buf)
 
 	add("jira.refresh_view", {
 		desc = "Refresh current view",
-		index = 9,
+		index = 10,
 		callback = function()
 			controller.refresh_current_view()
 		end,
@@ -197,7 +214,7 @@ function M.register(buf)
 
 	add("jira.toggle_issue_children", {
 		desc = "Toggle issue children",
-		index = 10,
+		index = 11,
 		callback = function()
 			controller.toggle_current_issue_collapsed()
 		end,
@@ -220,6 +237,7 @@ function M.remove(buf)
 	utils.insert_if(items, remove_item("jira.change_assignee"))
 	utils.insert_if(items, remove_item("jira.open_in_browser"))
 	utils.insert_if(items, remove_item("jira.create_issue"))
+	utils.insert_if(items, remove_item("jira.manage_templates"))
 	utils.insert_if(items, remove_item("jira.refresh_issue"))
 	utils.insert_if(items, remove_item("jira.refresh_view"))
 	utils.insert_if(items, remove_item("jira.show_details"))

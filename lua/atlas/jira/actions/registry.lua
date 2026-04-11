@@ -7,7 +7,9 @@ local projects_api = require("atlas.jira.api.projects")
 local jira_state = require("atlas.jira.state")
 local config = require("atlas.config")
 local issue_editor = require("atlas.jira.ui.issue")
+local markdown_editor = require("atlas.jira.ui.markdown_editor")
 local adf = require("atlas.jira.converted.adf")
+local template_store = require("atlas.jira.templates")
 local footer = require("atlas.ui.components.footer")
 local async_picker = require("atlas.ui.components.async_picker")
 local icons = require("atlas.ui.utils.icons")
@@ -48,6 +50,96 @@ local function open_issue_ui(opts, on_submit)
 	issue_editor.open(function(fields, submit_done)
 		on_submit(fields, submit_done or function() end)
 	end, opts)
+end
+
+---@param initial_markdown string|nil
+---@param done fun(result: JiraActionResult|nil, err: string|nil)
+local function open_create_template_editor(initial_markdown, done)
+	--- Just in case, to prevent multiple calls to done callback.
+	--- You could create an issue, press save, close the editor and enter the name after closing the picker, which would trigger the done callback twice.
+	local finalized = false
+	local function finish(result, err)
+		if finalized then
+			return
+		end
+		finalized = true
+		done(result, err)
+	end
+
+	markdown_editor.open({
+		key = string.format("template_new_%d", vim.loop.hrtime()),
+		title = " New Issue Template ",
+		initial_text = tostring(initial_markdown or ""),
+		on_save = function(text)
+			local markdown = tostring(text or "")
+
+			vim.ui.input({
+				prompt = "Template name: ",
+			}, function(name_input)
+				if name_input == nil then
+					finish({ changed_issue_key = nil, message = nil }, nil)
+					return
+				end
+
+				local name = vim.trim(tostring(name_input))
+				if name == "" then
+					finish(nil, "Template name is required")
+					return
+				end
+
+				local ok, write_err, existed, normalized_name =
+					template_store.write(name, markdown, { overwrite = false })
+				if ok then
+					finish({
+						changed_issue_key = nil,
+						message = string.format("Created template %s", tostring(normalized_name or name)),
+					}, nil)
+					return
+				end
+
+				if existed then
+					vim.ui.input({
+						prompt = string.format(
+							'Template "%s" exists. Overwrite? [y/N]: ',
+							tostring(normalized_name or name)
+						),
+					}, function(confirm)
+						if confirm == nil then
+							finish({ changed_issue_key = nil, message = nil }, nil)
+							return
+						end
+
+						local normalized = vim.trim(tostring(confirm)):lower()
+						if normalized ~= "y" and normalized ~= "yes" then
+							finish({ changed_issue_key = nil, message = nil }, nil)
+							return
+						end
+
+						local overwrite_ok, overwrite_err, _, final_name =
+							template_store.write(name, markdown, { overwrite = true })
+						if not overwrite_ok then
+							finish(nil, overwrite_err or "Failed to overwrite template")
+							return
+						end
+
+						finish({
+							changed_issue_key = nil,
+							message = string.format(
+								"Updated template %s",
+								tostring(final_name or normalized_name or name)
+							),
+						}, nil)
+					end)
+					return
+				end
+
+				finish(nil, write_err or "Failed to create template")
+			end)
+		end,
+		on_cancel = function()
+			finish({ changed_issue_key = nil, message = nil }, nil)
+		end,
+	})
 end
 
 ---@type JiraActionDef[]
@@ -643,13 +735,13 @@ local ACTIONS = {
 					if category_name ~= "" then
 						return string.format(
 							"%s %s - %s (%s)",
-							icons.entity("project"),
+							icons.jira_icon("jira.entity.project"),
 							item.label,
 							project.name,
 							category_name
 						)
 					end
-					return string.format("%s %s - %s", icons.entity("project"), item.label, project.name)
+					return string.format("%s %s - %s", icons.jira_icon("jira.entity.project"), item.label, project.name)
 				end,
 				fetch = function(fetch_ctx, fetch_done)
 					-- Already loaded — filter locally
@@ -743,6 +835,146 @@ local ACTIONS = {
 		end,
 	},
 	{
+		id = "create_template",
+		label = "Create Issue Template",
+		is_available = function()
+			return true, nil
+		end,
+		run = function(ctx, done)
+			open_create_template_editor(ctx.description, done)
+		end,
+	},
+	{
+		id = "manage_templates",
+		label = "Manage Issue Templates",
+		is_available = function()
+			return true, nil
+		end,
+		run = function(ctx, done)
+			local options = {
+				{ id = "create", label = "Create template" },
+				{ id = "edit", label = "Edit template" },
+			}
+
+			vim.ui.select(options, {
+				prompt = "Templates",
+				kind = "atlas_jira_template_actions",
+				format_item = function(item)
+					return tostring((item and item.label) or "")
+				end,
+			}, function(choice)
+				if choice == nil then
+					done({ changed_issue_key = nil, message = "Template action cancelled" }, nil)
+					return
+				end
+
+				if choice.id == "create" then
+					open_create_template_editor(ctx and ctx.description or nil, done)
+					return
+				end
+
+				local templates, list_err = template_store.list()
+				if list_err ~= nil then
+					done(nil, list_err)
+					return
+				end
+
+				if templates == nil or #templates == 0 then
+					done({ changed_issue_key = nil, message = "No templates found" }, nil)
+					return
+				end
+
+				vim.ui.select(templates, {
+					prompt = "Edit template",
+					kind = "atlas_jira_templates",
+					format_item = function(item)
+						return tostring((item and item.name) or "")
+					end,
+				}, function(selected)
+					if selected == nil then
+						done({ changed_issue_key = nil, message = "Template edit cancelled" }, nil)
+						return
+					end
+
+					local template_name = tostring(selected.name or "")
+					if template_name == "" then
+						done(nil, "Invalid template selected")
+						return
+					end
+
+					local content, read_err = template_store.read(template_name)
+					if read_err ~= nil then
+						done(nil, read_err)
+						return
+					end
+
+					local finalized = false
+					local function finish(result, err)
+						if finalized then
+							return
+						end
+						finalized = true
+						done(result, err)
+					end
+
+					local key = ("template_" .. template_name):gsub("[^%w%-_]+", "_")
+					markdown_editor.open({
+						key = key,
+						title = string.format(" Template: %s ", template_name),
+						initial_text = content,
+						actions = {
+							{
+								key = "<C-d>",
+								description = "delete",
+								callback = function(editor_ctx)
+									vim.ui.input({
+										prompt = string.format('Delete template "%s"? [y/N]: ', template_name),
+									}, function(confirm)
+										if confirm == nil then
+											return
+										end
+
+										local normalized = vim.trim(tostring(confirm)):lower()
+										if normalized ~= "y" and normalized ~= "yes" then
+											return
+										end
+
+										local deleted, delete_err = template_store.delete(template_name)
+										if not deleted then
+											finish(nil, delete_err or "Failed to delete template")
+											return
+										end
+
+										editor_ctx.close()
+										finish({
+											changed_issue_key = nil,
+											message = string.format("Deleted template %s", template_name),
+										}, nil)
+									end)
+								end,
+							},
+						},
+						on_save = function(text)
+							local ok, write_err = template_store.write(template_name, text, { overwrite = true })
+							if not ok then
+								finish(nil, write_err or "Failed to update template")
+								return
+							end
+
+							finish({
+								changed_issue_key = nil,
+								message = string.format("Updated template %s", template_name),
+							}, nil)
+						end,
+						on_cancel = function()
+							finish({ changed_issue_key = nil, message = "Template edit cancelled" }, nil)
+						end,
+					})
+				end)
+			end)
+		end,
+	},
+	{
 		id = "browse_issue",
 		label = "Open Issue In Browser",
 		is_available = has_issue_key,
@@ -799,7 +1031,8 @@ local ACTIONS = {
 
 			local base_url = tostring(((config.options and config.options.jira) or {}).base_url or ""):gsub("/$", "")
 			local issue_key = tostring(issue.key or "")
-			local url = (base_url ~= "" and issue_key ~= "") and string.format("%s/browse/%s", base_url, issue_key) or ""
+			local url = (base_url ~= "" and issue_key ~= "") and string.format("%s/browse/%s", base_url, issue_key)
+				or ""
 			if url == "" then
 				done(nil, "No URL found for issue")
 				return
