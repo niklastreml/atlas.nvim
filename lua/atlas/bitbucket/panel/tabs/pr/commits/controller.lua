@@ -40,6 +40,7 @@ local function fetch_commit_builds(pr, commits, force_load)
 	local pr_id = pr and pr.id or nil
 
 	state.commit_status_by_hash = {}
+	state.commit_build_url_by_hash = {}
 	if pr == nil or commits == nil or type(commits.entries) ~= "table" then
 		return
 	end
@@ -66,8 +67,10 @@ local function fetch_commit_builds(pr, commits, force_load)
 
 				if err ~= nil then
 					state.commit_status_by_hash[hash] = "unknown"
+					state.commit_build_url_by_hash[hash] = nil
 				else
 					state.commit_status_by_hash[hash] = helper.statuses.aggregate(statuses)
+					state.commit_build_url_by_hash[hash] = helper.statuses.first_url(statuses)
 				end
 			end)
 		end
@@ -84,6 +87,7 @@ function M.show(pr)
 		cancel_active_handle()
 		cancel_status_handles()
 		state.commit_status_by_hash = {}
+		state.commit_build_url_by_hash = {}
 	end
 
 	if same_pr and state.commits == "loading" then
@@ -149,6 +153,7 @@ function M.refresh(opts)
 	cancel_active_handle()
 	cancel_status_handles()
 	state.commit_status_by_hash = {}
+	state.commit_build_url_by_hash = {}
 	state.commits = "loading"
 
 	active_handle = pullrequests.fetch_commits(commits_url, { force_load = opts.force_load == true }, function(commits, err)
@@ -178,16 +183,6 @@ end
 
 function M.deactivate() end
 
----@return integer|nil
-local function detail_win()
-	local layout = require("atlas.ui.layout")
-	local win = layout.win_id("detail")
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return nil
-	end
-	return win
-end
-
 ---@param lnum integer
 ---@return boolean
 local function is_commit_line(lnum)
@@ -196,26 +191,33 @@ local function is_commit_line(lnum)
 		return false
 	end
 
-	return item.kind == "header" or item.kind == "thread_header"
+	return item.kind == "header"
+		or item.kind == "thread_header"
+		or item.kind == "content"
+		or item.kind == "thread_content"
 end
 
----@param win integer
----@param delta integer
 ---@return boolean
-local function jump_next_commit(win, delta)
-	local line = vim.api.nvim_win_get_cursor(win)[1]
-	local buf = vim.api.nvim_win_get_buf(win)
-	local max_line = vim.api.nvim_buf_line_count(buf)
-	local step = delta > 0 and 1 or -1
-
-	for lnum = line + step, (step > 0 and max_line or 1), step do
-		if is_commit_line(lnum) then
-			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
-			return true
-		end
+function M.open_current_line()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return false
 	end
 
-	return false
+	local lnum = vim.api.nvim_win_get_cursor(win)[1]
+	local entry = state.line_map[lnum]
+	if type(entry) ~= "table" then
+		return false
+	end
+
+	local url = tostring(entry.build_url or "")
+	if url == "" then
+		return false
+	end
+
+	vim.ui.open(url)
+	return true
 end
 
 ---@return boolean

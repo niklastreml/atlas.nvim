@@ -85,6 +85,23 @@ local function status_label(status)
 	return s:sub(1, 1):upper() .. s:sub(2)
 end
 
+---@param statuses BitbucketPRStatuses|nil
+---@return string|nil
+local function first_status_url(statuses)
+	if type(statuses) ~= "table" or type(statuses.entries) ~= "table" then
+		return nil
+	end
+
+	for _, entry in ipairs(statuses.entries) do
+		local url = tostring(entry.url or "")
+		if url ~= "" then
+			return url
+		end
+	end
+
+	return nil
+end
+
 -- Bitbucket comment/activity text often contains mentions as account IDs
 -- (e.g. "@{<account_id>}"), not display names. We best-effort resolve them
 -- using users known in the current PR detail (author/reviewers/participants).
@@ -96,6 +113,7 @@ M.mentions = {
 M.statuses = {
 	aggregate = aggregate_status,
 	label = status_label,
+	first_url = first_status_url,
 }
 
 return M

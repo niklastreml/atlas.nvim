@@ -133,7 +133,9 @@ function M.render(width)
 	for _, commit in ipairs(entries) do
 		local hash = tostring(commit.hash or "")
 		local build_state = state.commit_status_by_hash[hash]
+		local build_url = state.commit_build_url_by_hash[hash]
 		table.insert(items, to_thread_item(commit, build_state))
+		items[#items].line_map.build_url = build_url
 	end
 
 	local thread_lines, thread_spans, thread_map = threads.render(items, width, {
