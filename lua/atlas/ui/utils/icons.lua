@@ -47,6 +47,13 @@ local ICONS = {
 		low = "",
 		lowest = "",
 	},
+	bitbucket_status = {
+		successful = "",
+		failed = "",
+		inprogress = "",
+		stopped = "",
+		unknown = "",
+	},
 	fallback = "•",
 }
 
@@ -77,6 +84,12 @@ end
 function M.jira_icon(name)
 	local lower = (name or ""):lower():gsub("[-%s]", "")
 	return ICONS.jira_type[lower] or ICONS.fallback
+end
+
+---@param name "SUCCESSFUL"|"FAILED"|"INPROGRESS"|"STOPPED"|"unknown"|string|nil
+function M.bitbucket_status(name)
+	local key = tostring(name or ""):lower():gsub("[-%s_]", "")
+	return ICONS.bitbucket_status[key] or ICONS.bitbucket_status.unknown
 end
 
 function M.fallback()
