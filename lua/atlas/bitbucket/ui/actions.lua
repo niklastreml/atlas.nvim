@@ -37,9 +37,7 @@ function M.open_pr_actions_popup(pr)
 		end
 
 		if result ~= nil and result.changed_pr then
-			controller.refresh_pr(pr, function()
-				-- Keep cursor position after refresh
-			end)
+			controller.refresh_pr(pr)
 		end
 	end)
 end

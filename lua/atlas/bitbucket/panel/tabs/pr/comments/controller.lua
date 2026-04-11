@@ -108,7 +108,9 @@ function M.show(pr)
 	end)
 end
 
-function M.refresh()
+---@param opts? { force_load?: boolean }
+function M.refresh(opts)
+	opts = opts or {}
 	local pr = state.pr
 	if pr == nil then
 		return
@@ -122,7 +124,7 @@ function M.refresh()
 	cancel_active_handle()
 	state.comments = "loading"
 
-	active_handle = pullrequests.fetch_comments(comments_url, { force_load = true }, function(comments, err)
+	active_handle = pullrequests.fetch_comments(comments_url, { force_load = opts.force_load == true }, function(comments, err)
 		active_handle = nil
 
 		if state.pr == nil then

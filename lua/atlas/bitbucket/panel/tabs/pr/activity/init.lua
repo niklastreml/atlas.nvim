@@ -15,14 +15,19 @@ function M.deactivate()
 	controller.deactivate()
 end
 
+function M.reset()
+	controller.reset()
+end
+
 ---@param lnum integer
 ---@return boolean
 function M.is_selectable_line(lnum)
 	return controller.is_selectable_line(lnum)
 end
 
-function M.refresh()
-	controller.refresh()
+---@param opts? { force_load?: boolean }
+function M.refresh(opts)
+	controller.refresh(opts)
 end
 
 ---@return boolean

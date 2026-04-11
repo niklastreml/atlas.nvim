@@ -209,8 +209,6 @@ end
 
 ---@param on_done fun()|nil
 function M.refresh_current_view(on_done)
-	service.clear_memory_cache()
-
 	load_active_view({ force_load = true }, function()
 		navigation.focus_first_item()
 		if on_done ~= nil then
@@ -250,7 +248,7 @@ function M.refresh_pr(pr, on_done)
 	end
 
 	footer.notify("loading", string.format("Reloading PR #%s...", tostring(pr_id)))
-	pullrequests.fetch_pullrequest(workspace, repo, pr_id, function(fetched_pr, err)
+	pullrequests.fetch_pullrequest(workspace, repo, pr_id, { force_load = true }, function(fetched_pr, err)
 		if err ~= nil or fetched_pr == nil then
 			footer.notify("error", tostring(err or "Failed to reload PR"))
 			on_done()

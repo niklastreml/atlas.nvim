@@ -7,7 +7,7 @@ local M = {}
 ---@type table<string, MemoryCacheEntry>
 local store = {}
 local order = {}
-local MAX_ITEMS = 50
+local MAX_ITEMS = 20
 
 ---@param key string
 local function remove_from_order(key)

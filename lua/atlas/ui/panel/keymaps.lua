@@ -58,7 +58,7 @@ local function refresh_current_panel()
 
 	local panel = require("atlas.bitbucket.panel.init")
 	if type(panel.refresh_tab) == "function" then
-		panel.refresh_tab()
+		panel.refresh_tab({ force_load = true })
 		return
 	end
 	panel.refresh()

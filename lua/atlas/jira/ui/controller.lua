@@ -555,7 +555,7 @@ function M.refresh_issue(issue_key, on_done)
 			panel.on_select({
 				provider = "jira",
 				item = fetched_issue,
-			}, { force_refresh = true })
+			}, { force_refresh = false })
 		end
 
 		footer.notify("success", string.format("Reloaded %s", issue_key), 1200)

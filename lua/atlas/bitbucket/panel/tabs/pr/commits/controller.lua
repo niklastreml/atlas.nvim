@@ -50,7 +50,7 @@ function M.show(pr)
 	state.commits = "loading"
 	footer.notify("loading", "Loading commits...")
 
-	active_handle = pullrequests.fetch_commits(commits_url, function(commits, err)
+	active_handle = pullrequests.fetch_commits(commits_url, {}, function(commits, err)
 		active_handle = nil
 
 		if state.pr == nil or state.pr.id ~= next_id then
@@ -68,7 +68,9 @@ function M.show(pr)
 	end)
 end
 
-function M.refresh()
+---@param opts? { force_load?: boolean }
+function M.refresh(opts)
+	opts = opts or {}
 	local pr = state.pr
 	if pr == nil then
 		return
@@ -82,7 +84,7 @@ function M.refresh()
 	cancel_active_handle()
 	state.commits = "loading"
 
-	active_handle = pullrequests.fetch_commits(commits_url, function(commits, err)
+	active_handle = pullrequests.fetch_commits(commits_url, { force_load = opts.force_load == true }, function(commits, err)
 		active_handle = nil
 
 		if state.pr == nil then

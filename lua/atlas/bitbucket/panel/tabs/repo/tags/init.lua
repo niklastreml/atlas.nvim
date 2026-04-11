@@ -15,6 +15,10 @@ function M.deactivate()
 	controller.deactivate()
 end
 
+function M.reset()
+	controller.reset()
+end
+
 ---@param lnum integer
 ---@return boolean
 function M.is_selectable_line(lnum)

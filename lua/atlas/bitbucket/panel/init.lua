@@ -3,13 +3,15 @@ local M = {}
 local panel_state = require("atlas.bitbucket.panel.state")
 local keymaps = require("atlas.bitbucket.panel.keymaps")
 local layout = require("atlas.ui.layout")
+local api_service = require("atlas.bitbucket.api.service")
 
 ---@class BitbucketPanelTabsEntry
 ---@field render fun(width: integer): string[], table[], table|nil
 ---@field is_loading fun(): boolean
 ---@field set_item fun(item: BitbucketPR|BitbucketRepository|nil)
+---@field reset? fun()
 ---@field move fun(delta: integer)
----@field refresh fun()
+---@field refresh fun(opts?: { force_load?: boolean })
 ---@field next_tab fun()
 ---@field prev_tab fun()
 ---@field deactivate fun()
@@ -99,10 +101,16 @@ function M.on_select(panel_type, item, opts)
 
 	local entry = tab_entry(panel_type)
 	if entry ~= nil and item ~= nil then
-		entry.set_item(item)
 		if opts.force_refresh == true then
-			entry.refresh()
+			api_service.clear_cache()
+			if type(entry.reset) == "function" then
+				entry.reset()
+			end
+			entry.set_item(item)
+			M.render()
+			return
 		end
+		entry.set_item(item)
 	end
 
 	M.render()
@@ -198,12 +206,22 @@ function M.refresh()
 	M.render()
 end
 
-function M.refresh_tab()
+---@param opts? { force_load?: boolean }
+function M.refresh_tab(opts)
 	local entry = tab_entry(panel_state.panel_type)
 	if entry == nil then
 		return
 	end
-	entry.refresh()
+	if opts ~= nil and opts.force_load == true then
+		api_service.clear_cache()
+		if type(entry.reset) == "function" then
+			entry.reset()
+			entry.set_item(panel_state.current_item)
+			M.render()
+			return
+		end
+	end
+	entry.refresh(opts)
 	M.render()
 end
 

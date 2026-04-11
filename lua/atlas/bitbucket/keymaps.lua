@@ -177,9 +177,7 @@ function M.register(buf)
 		desc = "Refresh current Bitbucket view",
 		index = 9,
 		callback = function()
-			controller.refresh_current_view(function()
-				navigation.focus_first_item()
-			end)
+			controller.refresh_current_view()
 		end,
 	})
 

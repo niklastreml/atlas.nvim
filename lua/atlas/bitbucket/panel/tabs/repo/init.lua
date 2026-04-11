@@ -303,4 +303,14 @@ function M.deactivate()
 	deactivate_tab(active_tab_key())
 end
 
+function M.reset()
+	clear_detail()
+	for _, tab in ipairs(TABS) do
+		local mod = resolve_tab_module(tab.key)
+		if mod ~= nil and type(mod.reset) == "function" then
+			mod.reset()
+		end
+	end
+end
+
 return M

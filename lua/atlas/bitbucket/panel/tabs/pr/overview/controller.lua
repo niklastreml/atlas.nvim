@@ -69,7 +69,7 @@ function M.show(pr)
 	if needs_detail then
 		state.detail = "loading"
 
-		active_handle = pullrequests.fetch_pullrequest(workspace, repo_slug, pr_id, function(detail, err)
+		active_handle = pullrequests.fetch_pullrequest(workspace, repo_slug, pr_id, {}, function(detail, err)
 			active_handle = nil
 
 			if state.pr == nil or tostring(state.pr.id) ~= pr_id then
@@ -119,7 +119,10 @@ function M.show(pr)
 	end
 end
 
-function M.refresh()
+---@param opts? { force_load?: boolean }
+function M.refresh(opts)
+	opts = opts or {}
+	local force_load = opts.force_load == true
 	local pr = state.pr
 	if pr == nil then
 		return
@@ -137,7 +140,8 @@ function M.refresh()
 	state.detail = "loading"
 	state.diffstat = "loading"
 
-	active_handle = pullrequests.fetch_pullrequest(workspace, repo_slug, pr_id, function(detail, err)
+	active_handle =
+		pullrequests.fetch_pullrequest(workspace, repo_slug, pr_id, { force_load = force_load }, function(detail, err)
 		active_handle = nil
 
 		if state.pr == nil or tostring(state.pr.id) ~= pr_id then
@@ -159,7 +163,7 @@ function M.refresh()
 
 	local diffstat_url = pr.links.diffstat
 	if diffstat_url ~= "" then
-		diffstat_handle = pullrequests.fetch_diffstat(diffstat_url, { force_load = true }, function(diffstat, err)
+		diffstat_handle = pullrequests.fetch_diffstat(diffstat_url, { force_load = force_load }, function(diffstat, err)
 			diffstat_handle = nil
 
 			if state.pr == nil or tostring(state.pr.id) ~= pr_id then

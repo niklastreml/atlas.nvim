@@ -287,7 +287,7 @@ function M.render(width)
 	end
 	table.insert(lines, "")
 
-	-- Diffstat (above description)
+	-- Diffstat
 	local ds_lines, ds_spans = render_diffstat(diffstat, width)
 	utils.append_block(lines, spans, { lines = ds_lines, highlights = ds_spans })
 	table.insert(lines, "")

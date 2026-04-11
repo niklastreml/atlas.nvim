@@ -52,7 +52,7 @@ function M.show(pr)
 	else
 		state.diff = "loading"
 
-		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
+		diff_handle = pullrequests.fetch_diff(diff_url, {}, function(diff, err)
 			diff_handle = nil
 
 			if state.pr == nil or state.pr.id ~= next_id then
@@ -72,7 +72,9 @@ function M.show(pr)
 	footer.notify("loading", "Loading file changes...")
 end
 
-function M.refresh()
+---@param opts? { force_load?: boolean }
+function M.refresh(opts)
+	opts = opts or {}
 	if state.pr == nil then
 		return
 	end
@@ -84,7 +86,7 @@ function M.refresh()
 	state.diff = "loading"
 
 	if diff_url ~= "" then
-		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
+		diff_handle = pullrequests.fetch_diff(diff_url, { force_load = opts.force_load == true }, function(diff, err)
 			diff_handle = nil
 
 			if state.pr == nil then

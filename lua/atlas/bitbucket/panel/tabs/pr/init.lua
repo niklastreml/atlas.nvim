@@ -185,10 +185,11 @@ function M.move(delta)
 	vim.api.nvim_win_set_cursor(win, { target, 0 })
 end
 
-function M.refresh()
+---@param opts? { force_load?: boolean }
+function M.refresh(opts)
 	local tab = resolve_tab_module(active_tab_key())
 	if tab ~= nil and type(tab.refresh) == "function" then
-		tab.refresh()
+		tab.refresh(opts)
 	end
 end
 
@@ -216,6 +217,15 @@ end
 
 function M.deactivate()
 	deactivate_tab(active_tab_key())
+end
+
+function M.reset()
+	for _, tab in ipairs(TABS) do
+		local mod = resolve_tab_module(tab.key)
+		if mod ~= nil and type(mod.reset) == "function" then
+			mod.reset()
+		end
+	end
 end
 
 return M
