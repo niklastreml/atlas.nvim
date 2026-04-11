@@ -35,7 +35,7 @@ function M.setup()
 			end,
 		},
 		{
-			key = "a",
+			key = { "a", "i" },
 			desc = "Add comment",
 			opts = { silent = true, nowait = true },
 			callback = function()

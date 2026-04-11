@@ -1,6 +1,8 @@
 local M = {}
 
 local state = require("atlas.bitbucket.panel.tabs.pr.comments.state")
+local bitbucket_state = require("atlas.bitbucket.state")
+local comments_helper = require("atlas.bitbucket.panel.tabs.pr.comments.helper")
 local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
@@ -98,12 +100,20 @@ local function to_thread_item(node, file, mention_map)
 	local comment = node.comment
 	local is_deleted = comment.deleted == true
 	local is_pending = comment.pending == true
+	local can_manage = comments_helper.can_manage_comment(comment, bitbucket_state.current_user)
 	local text = is_deleted and "(deleted comment)" or first_line(comment.content.raw, mention_map)
 	if text == "" then
 		text = "(empty comment)"
 	end
 
 	local author = author_name(comment.author)
+	local footer_items = {
+		string.format("%s (c)", icons.jira_icon("jira.entity.reply")),
+	}
+	if can_manage then
+		table.insert(footer_items, string.format("%s (e)", icons.jira_icon("jira.entity.edit")))
+		table.insert(footer_items, string.format("%s (d)", icons.jira_icon("jira.entity.delete")))
+	end
 	local children = {}
 	for _, child in ipairs(node.children or {}) do
 		table.insert(children, to_thread_item(child, file, mention_map))
@@ -115,6 +125,7 @@ local function to_thread_item(node, file, mention_map)
 		additional = is_pending and "PENDING" or nil,
 		right_text = utils.relative_time(comment.created_on),
 		content = text,
+		footer_items = footer_items,
 		children = children,
 		line_map = {
 			comment = comment,
@@ -220,7 +231,7 @@ function M.render(width)
 	end
 
 	local file_groups = group_nodes_by_file(comment_nodes)
-	local mention_map = pr_helper.mentions.build_map()
+	local mention_map = pr_helper.mentions.build_map(comments_helper.collect_comment_authors(comment_nodes))
 	for group_index, group in ipairs(file_groups) do
 		local fh_line, fh_spans = render_file_header(group.file, #group.nodes, PADDING_X, max_width)
 		utils.append_block(lines, spans, { lines = { fh_line }, highlights = fh_spans })

@@ -258,8 +258,8 @@ function M.add_comment()
 		key = string.format("comment-add-%s", issue.key),
 		title = string.format("Add Comment %s", issue.key),
 		initial_text = "",
-
-		height_ratio = 0.65,
+		width_ratio = 0.22,
+		height_ratio = 0.22,
 		on_save = function(body)
 			if vim.trim(body) == "" then
 				footer.notify("warn", "Comment cannot be empty")
@@ -392,8 +392,8 @@ function M.edit_comment()
 		key = string.format("comment-%s-%s", issue.key, comment_id),
 		title = string.format("Edit Comment %s", comment_id),
 		initial_text = current_body,
-		width_ratio = 0.65,
-		height_ratio = 0.65,
+		width_ratio = 0.22,
+		height_ratio = 0.22,
 		on_save = function(body)
 			if vim.trim(body) == "" then
 				footer.notify("warn", "Comment cannot be empty")

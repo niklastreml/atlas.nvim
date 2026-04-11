@@ -1,12 +1,10 @@
 local M = {}
 
+---@param users? BitbucketPRAuthor[]
 ---@return table<string, string>
-local function build_map()
+local function build_map(users)
 	local overview_state = require("atlas.bitbucket.panel.tabs.pr.overview.state")
 	local detail = overview_state.detail
-	if type(detail) ~= "table" then
-		return {}
-	end
 
 	local map = {}
 
@@ -16,12 +14,18 @@ local function build_map()
 		end
 	end
 
-	add(detail.author)
-	for _, r in ipairs(detail.reviewers or {}) do
-		add(r)
+	if type(detail) == "table" then
+		add(detail.author)
+		for _, r in ipairs(detail.reviewers or {}) do
+			add(r)
+		end
+		for _, p in ipairs(detail.participants or {}) do
+			add(p)
+		end
 	end
-	for _, p in ipairs(detail.participants or {}) do
-		add(p)
+
+	for _, user in ipairs(users or {}) do
+		add(user)
 	end
 
 	return map
