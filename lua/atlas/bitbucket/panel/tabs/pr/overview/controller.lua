@@ -2,28 +2,10 @@ local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.overview.state")
 local panel_state = require("atlas.bitbucket.panel.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
-local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 
 local active_handle = nil
 local diffstat_handle = nil
-
-local panel_spinner
-panel_spinner = spinner.create({
-	interval_ms = 120,
-	on_tick = function()
-		if state.detail ~= "loading" and state.diffstat ~= "loading" then
-			panel_spinner:stop()
-			return
-		end
-
-		if panel_state.current_tab ~= "overview" then
-			return
-		end
-
-		require("atlas.bitbucket.panel.init").refresh()
-	end,
-})
 
 local function cancel_active_handle()
 	if active_handle ~= nil and active_handle.cancel then
@@ -35,17 +17,6 @@ local function cancel_active_handle()
 		pcall(diffstat_handle.cancel)
 	end
 	diffstat_handle = nil
-end
-
-local function stop_spinner()
-	panel_spinner:stop()
-end
-
-local function start_spinner()
-	if panel_spinner:is_running() then
-		return
-	end
-	panel_spinner:start()
 end
 
 ---@param pr BitbucketPR|nil
@@ -64,12 +35,10 @@ function M.show(pr)
 	if same_pr and (detail_loading or diffstat_loading) then
 		state.pr = pr
 		state.line_map = {}
-		start_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
-	stop_spinner()
 	state.pr = pr
 	state.line_map = {}
 
@@ -97,7 +66,6 @@ function M.show(pr)
 		return
 	end
 
-	start_spinner()
 	footer.notify("loading", string.format("Loading PR #%s...", pr_id))
 	require("atlas.bitbucket.panel.init").refresh()
 
@@ -119,7 +87,6 @@ function M.show(pr)
 			end
 
 			if state.diffstat ~= "loading" then
-				stop_spinner()
 				footer.notify("success", string.format("PR #%s loaded", pr_id), 1200)
 			end
 
@@ -146,7 +113,6 @@ function M.show(pr)
 				end
 
 				if state.detail ~= "loading" then
-					stop_spinner()
 					footer.notify("success", string.format("PR #%s loaded", pr_id), 1200)
 				end
 
@@ -175,7 +141,6 @@ function M.refresh()
 	cancel_active_handle()
 	state.detail = "loading"
 	state.diffstat = "loading"
-	start_spinner()
 	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_pullrequest(workspace, repo_slug, pr_id, function(detail, err)
@@ -193,7 +158,6 @@ function M.refresh()
 		end
 
 		if state.diffstat ~= "loading" then
-			stop_spinner()
 			footer.notify("success", string.format("PR #%s refreshed", pr_id), 1200)
 		end
 
@@ -216,7 +180,6 @@ function M.refresh()
 			end
 
 			if state.detail ~= "loading" then
-				stop_spinner()
 				footer.notify("success", string.format("PR #%s refreshed", pr_id), 1200)
 			end
 
@@ -229,12 +192,15 @@ end
 
 function M.reset()
 	cancel_active_handle()
-	stop_spinner()
 	state.reset()
 end
 
 function M.deactivate()
-	stop_spinner()
+end
+
+---@return boolean
+function M.is_loading()
+	return state.detail == "loading" or state.diffstat == "loading"
 end
 
 ---@param delta integer

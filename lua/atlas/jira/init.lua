@@ -54,6 +54,9 @@ function M.setup(opts)
 
 	local views = (config.options.jira and config.options.jira.views) or {}
 	register_keymaps(target_buf, views)
+
+	require("atlas.ui.state").current_view = "jira"
+	require("atlas.jira.ui").render()
 	require("atlas.jira.ui").init()
 end
 

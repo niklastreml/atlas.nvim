@@ -4,44 +4,15 @@ local panel_state = require("atlas.bitbucket.panel.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local actions = require("atlas.bitbucket.actions")
 local diff_parser = require("atlas.core.git.diff_parser")
-local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 
 local diff_handle = nil
-
-local panel_spinner
-panel_spinner = spinner.create({
-	interval_ms = 120,
-	on_tick = function()
-		if state.diff ~= "loading" then
-			panel_spinner:stop()
-			return
-		end
-
-		if panel_state.current_tab ~= "files" then
-			return
-		end
-
-		require("atlas.bitbucket.panel.init").refresh()
-	end,
-})
 
 local function cancel_handles()
 	if diff_handle ~= nil and diff_handle.cancel then
 		pcall(diff_handle.cancel)
 	end
 	diff_handle = nil
-end
-
-local function stop_spinner()
-	panel_spinner:stop()
-end
-
-local function start_spinner()
-	if panel_spinner:is_running() then
-		return
-	end
-	panel_spinner:start()
 end
 
 ---@param pr BitbucketPR|nil
@@ -58,12 +29,10 @@ function M.show(pr)
 	if same_pr and state.diff == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		start_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
-	stop_spinner()
 	state.pr = pr
 	state.line_map = {}
 
@@ -83,7 +52,6 @@ function M.show(pr)
 		footer.notify("error", "Missing diff URL")
 	else
 		state.diff = "loading"
-		start_spinner()
 
 		diff_handle = pullrequests.fetch_diff(diff_url, function(diff, err)
 			diff_handle = nil
@@ -97,7 +65,6 @@ function M.show(pr)
 				footer.notify("error", "Failed to load diff: " .. tostring(err))
 			else
 				state.diff = diff_parser.parse(diff)
-				stop_spinner()
 				footer.notify("success", "Files loaded", 1200)
 			end
 			require("atlas.bitbucket.panel.init").refresh()
@@ -118,7 +85,6 @@ function M.refresh()
 
 	cancel_handles()
 	state.diff = "loading"
-	start_spinner()
 	require("atlas.bitbucket.panel.init").refresh()
 
 	if diff_url ~= "" then
@@ -135,7 +101,6 @@ function M.refresh()
 				state.diff = diff_parser.parse(diff)
 			end
 
-			stop_spinner()
 			footer.notify("success", "Files refreshed", 1200)
 			require("atlas.bitbucket.panel.init").refresh()
 		end)
@@ -144,7 +109,6 @@ end
 
 function M.reset()
 	cancel_handles()
-	stop_spinner()
 	state.reset()
 end
 
@@ -268,7 +232,11 @@ function M.open_diffview()
 end
 
 function M.deactivate()
-	stop_spinner()
+end
+
+---@return boolean
+function M.is_loading()
+	return state.diff == "loading"
 end
 
 ---@param delta integer

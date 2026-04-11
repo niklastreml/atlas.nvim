@@ -9,7 +9,7 @@ local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 
 ---@param t BitbucketRepositoryTag
 ---@return AtlasThreadV2Item

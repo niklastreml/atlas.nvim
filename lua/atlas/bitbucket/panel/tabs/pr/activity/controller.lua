@@ -2,7 +2,6 @@ local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.activity.state")
 local panel_state = require("atlas.bitbucket.panel.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
-local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 
 local active_handle = nil
@@ -49,39 +48,11 @@ local function jump_next_activity(win, delta)
 	return false
 end
 
-local panel_spinner
-panel_spinner = spinner.create({
-	interval_ms = 120,
-	on_tick = function()
-		if state.activity ~= "loading" then
-			panel_spinner:stop()
-			return
-		end
-
-		if panel_state.current_tab ~= "activity" then
-			return
-		end
-
-		require("atlas.bitbucket.panel.init").refresh()
-	end,
-})
-
 local function cancel_active_handle()
 	if active_handle ~= nil and active_handle.cancel then
 		pcall(active_handle.cancel)
 	end
 	active_handle = nil
-end
-
-local function stop_spinner()
-	panel_spinner:stop()
-end
-
-local function start_spinner()
-	if panel_spinner:is_running() then
-		return
-	end
-	panel_spinner:start()
 end
 
 ---@param pr BitbucketPR|nil
@@ -97,12 +68,10 @@ function M.show(pr)
 	if same_pr and state.activity == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		start_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
-	stop_spinner()
 	state.pr = pr
 	state.line_map = {}
 
@@ -123,7 +92,6 @@ function M.show(pr)
 	end
 
 	state.activity = "loading"
-	start_spinner()
 	footer.notify("loading", "Loading activity...")
 	require("atlas.bitbucket.panel.init").refresh()
 
@@ -142,7 +110,6 @@ function M.show(pr)
 			footer.notify("success", "Activity loaded", 1200)
 		end
 
-		stop_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
@@ -160,7 +127,6 @@ function M.refresh()
 
 	cancel_active_handle()
 	state.activity = "loading"
-	start_spinner()
 	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_activity(activity_url, function(activity, err)
@@ -178,19 +144,21 @@ function M.refresh()
 			footer.notify("success", "Activity refreshed", 1200)
 		end
 
-		stop_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
 function M.reset()
 	cancel_active_handle()
-	stop_spinner()
 	state.reset()
 end
 
 function M.deactivate()
-	stop_spinner()
+end
+
+---@return boolean
+function M.is_loading()
+	return state.activity == "loading"
 end
 
 ---@param delta integer

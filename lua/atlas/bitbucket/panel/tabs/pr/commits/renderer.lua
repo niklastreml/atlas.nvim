@@ -7,7 +7,7 @@ local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local spinner = require("atlas.ui.components.spinner")
 
 ---@param commit BitbucketPRCommit

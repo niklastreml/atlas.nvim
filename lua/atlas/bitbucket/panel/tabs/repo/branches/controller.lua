@@ -3,56 +3,16 @@ local tab_state = require("atlas.bitbucket.panel.tabs.repo.branches.state")
 local state = require("atlas.bitbucket.panel.tabs.repo.state")
 local panel_state = require("atlas.bitbucket.panel.state")
 local repositories = require("atlas.bitbucket.api.repositories")
-local spinner = require("atlas.ui.components.spinner")
+local detail_loader = require("atlas.bitbucket.panel.tabs.repo.detail_loader")
 local footer = require("atlas.ui.components.footer")
 
 local branches_handle = nil
-
-local panel_spinner
-panel_spinner = spinner.create({
-	interval_ms = 120,
-	on_tick = function()
-		local waiting_for_detail = state.detail == "loading"
-		local branches_loading = tab_state.branches == "loading"
-		if not waiting_for_detail and not branches_loading then
-			panel_spinner:stop()
-			return
-		end
-
-		if panel_state.current_tab ~= "branches" then
-			return
-		end
-
-		if branches_handle == nil and tab_state.repo ~= nil and branches_loading and not waiting_for_detail then
-			if state.detail ~= nil and state.detail ~= "loading" then
-				M.show(tab_state.repo)
-			else
-				tab_state.branches = nil
-				panel_spinner:stop()
-			end
-			return
-		end
-
-		require("atlas.bitbucket.panel.init").refresh()
-	end,
-})
 
 local function cancel_handles()
 	if branches_handle ~= nil and branches_handle.cancel then
 		pcall(branches_handle.cancel)
 	end
 	branches_handle = nil
-end
-
-local function stop_spinner()
-	panel_spinner:stop()
-end
-
-local function start_spinner()
-	if panel_spinner:is_running() then
-		return
-	end
-	panel_spinner:start()
 end
 
 ---@param repo BitbucketRepository|nil
@@ -65,16 +25,13 @@ function M.show(repo)
 		cancel_handles()
 	end
 
-	local branches_loading = tab_state.branches == "loading"
-	if same_repo and branches_loading and (state.detail == "loading" or branches_handle ~= nil) then
+	if same_repo and tab_state.branches == "loading" then
 		tab_state.repo = repo
 		tab_state.line_map = {}
-		start_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
-	stop_spinner()
 	tab_state.repo = repo
 	tab_state.line_map = {}
 
@@ -88,52 +45,48 @@ function M.show(repo)
 		return
 	end
 
-	-- We need the repo detail to get the branches URL
-	local detail = state.detail
-	if detail == "loading" then
-		tab_state.branches = "loading"
-		start_spinner()
-		require("atlas.bitbucket.panel.init").refresh()
-		return
-	end
-
-	if detail == nil then
-		tab_state.branches = nil
-		footer.notify("warn", "Repository detail not loaded yet")
-		return
-	end
-
-	local branches_url = detail.links.branches
-	if branches_url == "" then
-		tab_state.branches = nil
-		footer.notify("error", "Missing branches URL")
-		return
-	end
-
 	tab_state.branches = "loading"
-	start_spinner()
+	footer.notify("loading", "Loading branches...")
+	require("atlas.bitbucket.panel.init").refresh()
 
-	branches_handle = repositories.fetch_branches(branches_url, {}, function(branches, err)
-		branches_handle = nil
-
+	detail_loader.ensure(repo, {}, function(detail, err)
 		if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
 			return
 		end
 
-		if err ~= nil then
+		if err ~= nil or detail == nil then
 			tab_state.branches = nil
 			footer.notify("error", "Failed to load branches: " .. tostring(err))
-		else
-			tab_state.branches = branches
-			footer.notify("success", "Branches loaded", 1200)
+			require("atlas.bitbucket.panel.init").refresh()
+			return
 		end
 
-		stop_spinner()
-		require("atlas.bitbucket.panel.init").refresh()
-	end)
+		local branches_url = detail.links.branches
+		if branches_url == "" then
+			tab_state.branches = nil
+			footer.notify("error", "Missing branches URL")
+			require("atlas.bitbucket.panel.init").refresh()
+			return
+		end
 
-	footer.notify("loading", "Loading branches...")
-	require("atlas.bitbucket.panel.init").refresh()
+		branches_handle = repositories.fetch_branches(branches_url, {}, function(branches, fetch_err)
+			branches_handle = nil
+
+			if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
+				return
+			end
+
+			if fetch_err ~= nil then
+				tab_state.branches = nil
+				footer.notify("error", "Failed to load branches: " .. tostring(fetch_err))
+			else
+				tab_state.branches = branches
+				footer.notify("success", "Branches loaded", 1200)
+			end
+
+			require("atlas.bitbucket.panel.init").refresh()
+		end)
+	end)
 end
 
 function M.refresh()
@@ -148,12 +101,15 @@ end
 
 function M.reset()
 	cancel_handles()
-	stop_spinner()
 	tab_state.reset()
 end
 
 function M.deactivate()
-	stop_spinner()
+end
+
+---@return boolean
+function M.is_loading()
+	return state.detail == "loading" or tab_state.branches == "loading"
 end
 
 ---@param delta integer

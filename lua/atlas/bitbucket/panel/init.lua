@@ -4,6 +4,8 @@ local panel_state = require("atlas.bitbucket.panel.state")
 local keymaps = require("atlas.bitbucket.panel.keymaps")
 local layout = require("atlas.ui.layout")
 local ns = vim.api.nvim_create_namespace("atlas.bitbucket.panel")
+local render_timer = nil
+local RENDER_INTERVAL_MS = 120
 
 -- Tab registries for each panel type
 local PR_TABS = {
@@ -68,6 +70,52 @@ local function get_tab_module_for(panel_type, tab_key)
 	end
 
 	return nil
+end
+
+local function stop_render_loop()
+	if render_timer ~= nil then
+		render_timer:stop()
+		render_timer:close()
+		render_timer = nil
+	end
+end
+
+local function get_active_tab()
+	return get_tab_module(panel_state.current_tab)
+end
+
+local function active_tab_is_loading()
+	local tab = get_active_tab()
+	return tab ~= nil and type(tab.is_loading) == "function" and tab.is_loading() == true
+end
+
+local function sync_render_loop()
+	if not active_tab_is_loading() then
+		stop_render_loop()
+		return
+	end
+
+	if render_timer ~= nil then
+		return
+	end
+
+	render_timer = vim.loop.new_timer()
+	if render_timer == nil then
+		return
+	end
+
+	render_timer:start(
+		0,
+		RENDER_INTERVAL_MS,
+		vim.schedule_wrap(function()
+			if not active_tab_is_loading() then
+				stop_render_loop()
+				return
+			end
+
+			M.render()
+		end)
+	)
 end
 
 ---@param panel_type "pr"|"repo"
@@ -162,9 +210,11 @@ function M.render()
 	local buf = layout.buf_id("detail")
 	local win = layout.win_id("detail")
 	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		stop_render_loop()
 		return
 	end
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		stop_render_loop()
 		return
 	end
 
@@ -212,6 +262,7 @@ function M.render()
 		end
 	end
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+	sync_render_loop()
 end
 
 function M.refresh()
@@ -219,6 +270,7 @@ function M.refresh()
 end
 
 function M.deactivate()
+	stop_render_loop()
 	local tab = get_tab_module(panel_state.current_tab)
 	if tab ~= nil and type(tab.deactivate) == "function" then
 		tab.deactivate()

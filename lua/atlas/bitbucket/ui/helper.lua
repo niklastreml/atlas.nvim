@@ -1,7 +1,7 @@
 local M = {}
 
-local highlights = require("atlas.ui.highlights")
-local icons = require("atlas.ui.icons")
+local highlights = require("atlas.ui.utils.highlights")
+local icons = require("atlas.ui.utils.icons")
 local utils = require("atlas.utils")
 
 ---@param name string|nil

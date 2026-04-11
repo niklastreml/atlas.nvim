@@ -6,7 +6,7 @@ local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local spinner = require("atlas.ui.components.spinner")
 
 local CONTENT_PADDING = 1

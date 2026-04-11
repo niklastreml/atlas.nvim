@@ -9,7 +9,7 @@ local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 
 local PADDING_X = 2
 

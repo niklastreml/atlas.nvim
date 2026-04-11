@@ -25,6 +25,10 @@ function M.refresh()
 	controller.refresh()
 end
 
+---@return boolean
+function M.is_loading()
+	return controller.is_loading()
+end
 
 ---@param width integer
 ---@return string[], table[], table|nil
