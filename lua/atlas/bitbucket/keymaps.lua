@@ -128,14 +128,11 @@ function M.register(buf)
 			end
 
 			local panel = require("atlas.ui.panel")
-			local panel_state = require("atlas.ui.panel.state")
-			local bb_panel_state = require("atlas.bitbucket.panel.state")
 			if panel.is_open() then
-				if panel_state.active_provider == "bitbucket" and bb_panel_state.panel_type == "repo" then
-					panel.close()
-					return
-				end
+				panel.close()
+				return
 			end
+
 			panel.show({
 				provider = "bitbucket",
 				panel_type = "repo",

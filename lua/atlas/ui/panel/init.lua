@@ -99,20 +99,8 @@ function M.on_select(selection, opts)
 			return
 		end
 
-		if selection.panel_type ~= nil then
-			bb_panel.on_select(selection.panel_type, selection.item)
-		else
-			bb_panel.on_select("pr", nil)
-		end
-		return
+		bb_panel.on_select(selection.panel_type, selection.item, { force_refresh = opts.force_refresh == true })
 	end
-
-	state.set_selection(selection)
-	if not M.is_open() then
-		return
-	end
-
-	require("atlas.ui.panel.renderer").render(provider)
 end
 
 function M.refresh()

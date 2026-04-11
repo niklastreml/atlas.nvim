@@ -8,6 +8,14 @@ local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 
+local CONTENT_PADDING_X = 2
+
+---@param text string
+---@return string
+local function with_content_padding(text)
+	return string.rep(" ", CONTENT_PADDING_X) .. tostring(text or "")
+end
+
 ---@param width integer
 ---@return string[] lines
 ---@return table[] spans
@@ -62,12 +70,13 @@ function M.render(width)
 
 	-- Readme content
 	if readme == "loading" then
-		local loading_line = spinner.with_text("Loading readme...")
+		local loading_text = spinner.with_text("Loading readme...")
+		local loading_line = with_content_padding(loading_text)
 		table.insert(lines, loading_line)
 		table.insert(spans, {
 			line = #lines - 1,
-			start_col = 0,
-			end_col = #loading_line,
+			start_col = CONTENT_PADDING_X,
+			end_col = CONTENT_PADDING_X + #loading_text,
 			hl_group = "AtlasTextMuted",
 		})
 		tab_state.line_map = line_map
@@ -75,15 +84,19 @@ function M.render(width)
 	end
 
 	if type(readme) == "string" and readme ~= "" then
+		local content_width = math.max(10, width - (CONTENT_PADDING_X * 2))
 		local readme_lines = utils.sanitize_lines(readme)
 		for _, line in ipairs(readme_lines) do
-			table.insert(lines, line)
+			local wrapped = utils.wrap_line(line, content_width)
+			for _, chunk in ipairs(wrapped) do
+				table.insert(lines, with_content_padding(chunk))
+			end
 		end
 		--- Some spacing
 		table.insert(lines, "")
 		table.insert(lines, "")
 	else
-		table.insert(lines, "No readme available.")
+		table.insert(lines, with_content_padding("No readme available."))
 	end
 
 	tab_state.line_map = line_map

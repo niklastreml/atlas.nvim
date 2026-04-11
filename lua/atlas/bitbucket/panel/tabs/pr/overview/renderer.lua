@@ -284,6 +284,7 @@ function M.render(width)
 	-- Description
 	local description_text = pr.description or ""
 	local description = utils.sanitize_lines(description_text)
+	local content_width = math.max(10, width - (CONTENT_PADDING * 2))
 	local description_header = "Description"
 	table.insert(lines, with_content_padding(description_header))
 	table.insert(spans, {
@@ -293,7 +294,10 @@ function M.render(width)
 		hl_group = "AtlasColumnHeader",
 	})
 	for _, line in ipairs(description) do
-		table.insert(lines, with_content_padding(line))
+		local wrapped = utils.wrap_line(line, content_width)
+		for _, chunk in ipairs(wrapped) do
+			table.insert(lines, with_content_padding(chunk))
+		end
 	end
 
 	state.line_map = line_map

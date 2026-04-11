@@ -128,7 +128,6 @@ local function fetch_detail(force)
 		if tab ~= nil and type(tab.refresh) == "function" then
 			tab.refresh()
 		end
-		require("atlas.bitbucket.panel").refresh()
 	end)
 end
 

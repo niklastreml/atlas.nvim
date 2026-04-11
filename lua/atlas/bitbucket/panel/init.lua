@@ -75,7 +75,9 @@ end
 
 ---@param panel_type "pr"|"repo"
 ---@param item BitbucketPR|BitbucketRepository|nil
-function M.on_select(panel_type, item)
+---@param opts? { force_refresh?: boolean }
+function M.on_select(panel_type, item, opts)
+	opts = opts or {}
 	local previous_panel_type = panel_state.panel_type
 
 	if previous_panel_type ~= panel_type then
@@ -99,6 +101,9 @@ function M.on_select(panel_type, item)
 	local entry = tab_entry(panel_type)
 	if entry ~= nil and item ~= nil then
 		entry.set_item(item)
+		if opts.force_refresh == true then
+			entry.refresh()
+		end
 	end
 
 	M.render()
