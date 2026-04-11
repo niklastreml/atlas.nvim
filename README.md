@@ -10,8 +10,8 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 > [!CAUTION]
 > **Still in early development, will have breaking changes!**
 
-<img src="https://github.com/user-attachments/assets/3da6e584-47a1-411e-91f6-110dbdc75293"/>
-<img src="https://github.com/user-attachments/assets/80eeb59a-4a04-40e0-90fb-92ac5d4da249"/>
+<img width="4566" height="2488" alt="Jira" src="https://github.com/user-attachments/assets/23a15b90-283c-45e2-8964-02970ec3b21a" />
+<img width="4566" height="2488" alt="Bitbucket" src="https://github.com/user-attachments/assets/06299ffc-b15b-4e2c-8f11-95a8ddde3b04" />
 
 ## Table of Contents
 
