@@ -263,7 +263,13 @@ function M.render(width)
 				table.sort(names)
 				local icon = decision_icon(status)
 				local label = table.concat(names, ", ")
-				local line_text = icon .. " " .. label
+				local icon_prefix = icon .. " "
+				local icon_prefix_width = vim.api.nvim_strwidth(icon_prefix)
+				local content_width = math.max(10, width - (CONTENT_PADDING * 2))
+				local label_width = math.max(1, content_width - icon_prefix_width)
+				local wrapped = utils.wrap_line(label, label_width)
+
+				local line_text = icon_prefix .. wrapped[1]
 				table.insert(lines, with_content_padding(line_text))
 				table.insert(spans, {
 					line = #lines - 1,
@@ -271,6 +277,11 @@ function M.render(width)
 					end_col = CONTENT_PADDING + #icon,
 					hl_group = decision_hl(status),
 				})
+
+				local continuation_prefix = string.rep(" ", icon_prefix_width)
+				for i = 2, #wrapped do
+					table.insert(lines, with_content_padding(continuation_prefix .. wrapped[i]))
+				end
 			end
 		end
 	end
