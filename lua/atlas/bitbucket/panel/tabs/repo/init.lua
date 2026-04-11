@@ -1,6 +1,7 @@
 local M = {}
 local repo_state = require("atlas.bitbucket.panel.tabs.repo.state")
 local repositories = require("atlas.bitbucket.api.repositories")
+local footer = require("atlas.ui.components.footer")
 
 local TABS = {
 	{ key = "overview", label = "Overview", mod = "atlas.bitbucket.panel.tabs.repo.overview" },
@@ -54,10 +55,11 @@ local function resolve_tab_module(tab_key)
 
 	for _, tab in ipairs(TABS) do
 		if tab.key == tab_key then
-			local ok, mod = pcall(require, tab.mod)
+			local ok, mod_or_err = pcall(require, tab.mod)
 			if ok then
-				return mod
+				return mod_or_err
 			end
+			footer.notify("error", "Failed to load tab: " .. tab.label)
 			return nil
 		end
 	end
@@ -94,6 +96,7 @@ local function fetch_detail(force)
 	local workspace = tostring(repo.workspace or "")
 	local repo_slug = tostring(repo.slug or "")
 	if key == "" or workspace == "" or repo_slug == "" then
+		footer.notify("error", "Failed to load repository detail: missing repository info")
 		repo_state.detail = nil
 		return
 	end

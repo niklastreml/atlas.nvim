@@ -42,7 +42,7 @@ local function selected_repo()
 	if node.kind == "pr" and type(node.pr) == "table" then
 		return {
 			workspace = node.pr.workspace,
-			repo_slug = node.pr.repo_slug or node.pr.repo,
+			slug = node.pr.repo_slug or node.pr.repo,
 			full_name = node.pr.repo_full_name,
 		}
 	end
