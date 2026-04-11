@@ -6,7 +6,7 @@ local chips = require("atlas.jira.panel.components.chips")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 
-local PADDING_X = 2
+local PADDING_X = 1
 
 ---@param width integer
 ---@return string[], table[], table|nil

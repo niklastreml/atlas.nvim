@@ -9,6 +9,7 @@ local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local icons = require("atlas.ui.utils.icons")
+local PADDING_X = 1
 
 ---@param t BitbucketRepositoryTag
 ---@return AtlasThreadV2Item
@@ -97,11 +98,12 @@ function M.render(width)
 	end
 
 	if tags == nil or tags.entries == nil or #tags.entries == 0 then
-		table.insert(lines, "No tags found.")
+		local empty_line = string.rep(" ", PADDING_X) .. "No tags found."
+		table.insert(lines, empty_line)
 		table.insert(spans, {
 			line = #lines - 1,
-			start_col = 0,
-			end_col = #lines[#lines],
+			start_col = PADDING_X,
+			end_col = #empty_line,
 			hl_group = "AtlasTextMuted",
 		})
 		state.line_map = line_map

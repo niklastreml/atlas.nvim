@@ -8,7 +8,7 @@ local tabs_component = require("atlas.bitbucket.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 
-local CONTENT_PADDING_X = 2
+local CONTENT_PADDING_X = 1
 
 ---@param text string
 ---@return string

@@ -11,7 +11,7 @@ local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local icons = require("atlas.ui.utils.icons")
 
-local PADDING_X = 2
+local PADDING_X = 1
 
 ---@class BitbucketCommentFileGroup
 ---@field file string
@@ -48,13 +48,15 @@ end
 ---@param mention_map table<string, string>
 ---@return string
 local function resolve_mentions(text, mention_map)
-	return (text:gsub("@{([^}]+)}", function(id)
-		local name = mention_map[id]
-		if name and name ~= "" then
-			return "@" .. name
-		end
-		return "@{" .. id .. "}"
-	end))
+	return (
+		text:gsub("@{([^}]+)}", function(id)
+			local name = mention_map[id]
+			if name and name ~= "" then
+				return "@" .. name
+			end
+			return "@{" .. id .. "}"
+		end)
+	)
 end
 
 ---@param value string|nil
@@ -101,9 +103,10 @@ end
 ---@param file string         File label (path or "PR")
 ---@param count integer       Number of comment threads in this group
 ---@param pad integer         Left padding
+---@param max_width integer
 ---@return string line
 ---@return table[] spans
-local function render_file_header(file, count, pad)
+local function render_file_header(file, count, pad, max_width)
 	local padding = string.rep(" ", pad)
 	local count_suffix = string.format(" (%d)", count)
 	local hdr_spans = {}
@@ -117,7 +120,13 @@ local function render_file_header(file, count, pad)
 	end
 
 	local icon = icons.entity("files")
-	local line = padding .. icon .. " " .. file .. count_suffix
+	local prefix = padding .. icon .. " "
+	local available = max_width - vim.api.nvim_strwidth(prefix) - vim.api.nvim_strwidth(count_suffix)
+	if available < 1 then
+		available = 1
+	end
+	local file_text = utils.truncate(file, available, true)
+	local line = prefix .. file_text .. count_suffix
 	table.insert(hdr_spans, { line = 0, start_col = pad, end_col = #line, hl_group = "AtlasTextMuted" })
 	return line, hdr_spans
 end
@@ -191,7 +200,7 @@ function M.render(width)
 	local lines = {}
 	local spans = {}
 	local line_map = {}
-	local max_width = math.max(20, width or 60)
+	local max_width = math.max(20, width)
 
 	local pr = state.pr
 	local comments = state.comments
@@ -219,7 +228,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs_component.render_pr(pr_state.tab, { width = width, padding_x = 1 })
+	local tab_lines, tab_spans = tabs_component.render_pr(pr_state.tab, { width = width, padding_x = PADDING_X })
 	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
@@ -239,7 +248,14 @@ function M.render(width)
 
 	local comment_nodes = comments or {}
 	if #comment_nodes == 0 then
-		table.insert(lines, "No comments yet.")
+		local empty_line = string.rep(" ", PADDING_X) .. "No comments yet."
+		table.insert(lines, empty_line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = 0,
+			end_col = #empty_line,
+			hl_group = "AtlasTextMuted",
+		})
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
@@ -247,7 +263,7 @@ function M.render(width)
 	local file_groups = group_nodes_by_file(comment_nodes)
 	local mention_map = build_mention_map()
 	for group_index, group in ipairs(file_groups) do
-		local fh_line, fh_spans = render_file_header(group.file, #group.nodes, PADDING_X)
+		local fh_line, fh_spans = render_file_header(group.file, #group.nodes, PADDING_X, max_width)
 		utils.append_block(lines, spans, { lines = { fh_line }, highlights = fh_spans })
 
 		local items = {}

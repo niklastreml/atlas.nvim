@@ -8,7 +8,7 @@ local threads = require("atlas.ui.components.threadsv2")
 local icons = require("atlas.ui.utils.icons")
 local highlights = require("atlas.ui.utils.highlights")
 local jira_ui_helper = require("atlas.jira.ui.helper")
-local PADDING_X = 2
+local PADDING_X = 1
 
 ---@param value string|nil
 ---@return string

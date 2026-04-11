@@ -10,7 +10,7 @@ local icons = require("atlas.ui.utils.icons")
 local threads = require("atlas.ui.components.threadsv2")
 local highlights = require("atlas.ui.utils.highlights")
 
-local PADDING_X = 2
+local PADDING_X = 1
 
 ---@param comments JiraComment[]
 ---@return JiraComment[]

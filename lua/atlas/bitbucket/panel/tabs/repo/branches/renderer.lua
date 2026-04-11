@@ -10,6 +10,7 @@ local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local icons = require("atlas.ui.utils.icons")
 local highlights = require("atlas.ui.utils.highlights")
+local PADDING_X = 1
 
 ---@param b BitbucketRepositoryBranch
 ---@return AtlasThreadV2Item
@@ -97,11 +98,12 @@ function M.render(width)
 	end
 
 	if branches == nil or branches.entries == nil or #branches.entries == 0 then
-		table.insert(lines, "No branches found.")
+		local empty_line = string.rep(" ", PADDING_X) .. "No branches found."
+		table.insert(lines, empty_line)
 		table.insert(spans, {
 			line = #lines - 1,
-			start_col = 0,
-			end_col = #lines[#lines],
+			start_col = PADDING_X,
+			end_col = #empty_line,
 			hl_group = "AtlasTextMuted",
 		})
 		state.line_map = line_map

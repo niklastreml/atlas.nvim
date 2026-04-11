@@ -9,6 +9,7 @@ local threads = require("atlas.ui.components.threadsv2")
 local utils = require("atlas.utils")
 local icons = require("atlas.ui.utils.icons")
 local spinner = require("atlas.ui.components.spinner")
+local PADDING_X = 1
 
 ---@param commit BitbucketPRCommit
 ---@return AtlasThreadV2Item
@@ -67,13 +68,13 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs_component.render_pr(pr_state.tab, { width = width, padding_x = 1 })
+	local tab_lines, tab_spans = tabs_component.render_pr(pr_state.tab, { width = width, padding_x = PADDING_X })
 	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
 	-- Commits content
 	if commits == "loading" then
-		local loading_line = spinner.with_text("Loading commits...")
+		local loading_line = string.rep(" ", PADDING_X) .. spinner.with_text("Loading commits...")
 		table.insert(lines, loading_line)
 		table.insert(spans, {
 			line = #lines - 1,
@@ -87,7 +88,14 @@ function M.render(width)
 
 	local entries = (commits ~= nil and commits.entries) or {}
 	if #entries == 0 then
-		table.insert(lines, "No commits yet.")
+		local empty_line = string.rep(" ", PADDING_X) .. "No commits yet."
+		table.insert(lines, empty_line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X,
+			end_col = #empty_line,
+			hl_group = "AtlasTextMuted",
+		})
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
@@ -98,7 +106,7 @@ function M.render(width)
 	end
 
 	local thread_lines, thread_spans, thread_map = threads.render(items, width, {
-		padding_x = 1,
+		padding_x = PADDING_X,
 		mode = "linked",
 		right_text_align = "right",
 		author_hl = function()

@@ -11,7 +11,7 @@ local highlights = require("atlas.ui.utils.highlights")
 local threads = require("atlas.ui.components.threadsv2")
 local icons = require("atlas.ui.utils.icons")
 
-local PADDING_X = 2
+local PADDING_X = 1
 
 ---@param actor {nickname:string?, name:string?}|nil
 ---@return string
@@ -228,13 +228,13 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Tabs
-	local tab_lines, tab_spans = tabs.render_pr(pr_state.tab, { width = width, padding_x = 1 })
+	local tab_lines, tab_spans = tabs.render_pr(pr_state.tab, { width = width, padding_x = PADDING_X })
 	utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 	table.insert(lines, "")
 
 	-- Activity content
 	if activity == "loading" then
-		local loading_line = spinner.with_text("Loading activity...")
+		local loading_line = string.rep(" ", PADDING_X) .. spinner.with_text("Loading activity...")
 		table.insert(lines, loading_line)
 		table.insert(spans, {
 			line = #lines - 1,
@@ -248,7 +248,14 @@ function M.render(width)
 
 	local entries = (activity ~= nil and activity.entries) or {}
 	if #entries == 0 then
-		table.insert(lines, "No activity yet.")
+		local empty_line = string.rep(" ", PADDING_X) .. "No activity yet."
+		table.insert(lines, empty_line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X,
+			end_col = #empty_line,
+			hl_group = "AtlasTextMuted",
+		})
 		state.line_map = line_map
 		return lines, spans, line_map
 	end
