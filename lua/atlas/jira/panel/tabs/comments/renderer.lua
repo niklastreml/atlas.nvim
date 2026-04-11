@@ -9,6 +9,7 @@ local comments_helper = require("atlas.jira.panel.tabs.comments.helper")
 local icons = require("atlas.ui.icons")
 local threads = require("atlas.ui.components.threadsv2")
 local highlights = require("atlas.ui.highlights")
+
 local PADDING_X = 2
 
 ---@param comments JiraComment[]
