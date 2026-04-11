@@ -17,11 +17,53 @@ local PADDING_X = 2
 ---@field file string
 ---@field nodes BitbucketPRCommentTreeNode[]
 
----@param value string|nil
+---@return table<string, string>
+local function build_mention_map()
+	local overview_state = require("atlas.bitbucket.panel.tabs.pr.overview.state")
+	local detail = overview_state.detail
+	if type(detail) ~= "table" then
+		return {}
+	end
+
+	local map = {}
+
+	local function add(user)
+		if type(user) == "table" and type(user.account_id) == "string" and user.account_id ~= "" then
+			map[user.account_id] = user.name or user.nickname or user.account_id
+		end
+	end
+
+	add(detail.author)
+	for _, r in ipairs(detail.reviewers or {}) do
+		add(r)
+	end
+	for _, p in ipairs(detail.participants or {}) do
+		add(p)
+	end
+
+	return map
+end
+
+---@param text string
+---@param mention_map table<string, string>
 ---@return string
-local function first_line(value)
+local function resolve_mentions(text, mention_map)
+	return (text:gsub("@{([^}]+)}", function(id)
+		local name = mention_map[id]
+		if name and name ~= "" then
+			return "@" .. name
+		end
+		return "@{" .. id .. "}"
+	end))
+end
+
+---@param value string|nil
+---@param mention_map table<string, string>
+---@return string
+local function first_line(value, mention_map)
 	local raw = tostring(value or ""):gsub("\r\n", "\n")
-	return raw:match("([^\n]+)") or raw
+	local line = raw:match("([^\n]+)") or raw
+	return resolve_mentions(line, mention_map)
 end
 
 ---@param author BitbucketPRAuthor|nil
@@ -82,12 +124,13 @@ end
 
 ---@param node BitbucketPRCommentTreeNode
 ---@param file string
+---@param mention_map table<string, string>
 ---@return AtlasThreadV2Item
-local function to_thread_item(node, file)
+local function to_thread_item(node, file, mention_map)
 	local comment = node.comment
 	local is_deleted = comment.deleted == true
 	local is_pending = comment.pending == true
-	local text = is_deleted and "(deleted comment)" or first_line(comment.content.raw)
+	local text = is_deleted and "(deleted comment)" or first_line(comment.content.raw, mention_map)
 	if text == "" then
 		text = "(empty comment)"
 	end
@@ -95,7 +138,7 @@ local function to_thread_item(node, file)
 	local author = author_name(comment.author)
 	local children = {}
 	for _, child in ipairs(node.children or {}) do
-		table.insert(children, to_thread_item(child, file))
+		table.insert(children, to_thread_item(child, file, mention_map))
 	end
 
 	return {
@@ -202,13 +245,14 @@ function M.render(width)
 	end
 
 	local file_groups = group_nodes_by_file(comment_nodes)
+	local mention_map = build_mention_map()
 	for group_index, group in ipairs(file_groups) do
 		local fh_line, fh_spans = render_file_header(group.file, #group.nodes, PADDING_X)
 		utils.append_block(lines, spans, { lines = { fh_line }, highlights = fh_spans })
 
 		local items = {}
 		for _, node in ipairs(group.nodes) do
-			table.insert(items, to_thread_item(node, group.file))
+			table.insert(items, to_thread_item(node, group.file, mention_map))
 		end
 
 		local item_lines, item_spans, item_map = threads.render(items, max_width, {
