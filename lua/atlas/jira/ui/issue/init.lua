@@ -8,6 +8,7 @@ local issue_helper = require("atlas.jira.ui.issue.helper")
 local issue_layout = require("atlas.jira.ui.issue.layout")
 local users_api = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
+local template_store = require("atlas.jira.templates")
 local spinner = require("atlas.ui.components.spinner")
 local spinner_popup = require("atlas.ui.popups.spinner")
 local async_picker = require("atlas.ui.components.async_picker")
@@ -99,6 +100,37 @@ local function get_description()
 	end
 	local lines = vim.api.nvim_buf_get_lines(state.layout.desc_buf, 0, -1, false)
 	return table.concat(lines, "\n")
+end
+
+---@return string
+local function get_active_markdown_description()
+	if state.preview_mode then
+		return tostring(state.original_markdown or "")
+	end
+
+	return get_description()
+end
+
+---@param markdown string
+---@return boolean
+local function set_description_markdown(markdown)
+	if not valid_buf(state.layout.desc_buf) then
+		return false
+	end
+
+	local text = tostring(markdown or "")
+	local lines = vim.split(text, "\n", { plain = true })
+	if #lines == 0 then
+		lines = { "" }
+	end
+
+	vim.api.nvim_set_option_value("modifiable", true, { buf = state.layout.desc_buf })
+	vim.api.nvim_buf_set_lines(state.layout.desc_buf, 0, -1, false, lines)
+	vim.api.nvim_set_option_value("filetype", "markdown", { buf = state.layout.desc_buf })
+
+	state.preview_mode = false
+	state.original_markdown = text
+	return true
 end
 
 local function is_modified()
@@ -221,6 +253,115 @@ local function confirm_close()
 		if normalized == "y" or normalized == "yes" then
 			close_ui()
 		end
+	end)
+end
+
+local function apply_template_from_picker()
+	local templates, list_err = template_store.list()
+	if list_err then
+		footer.notify("error", list_err)
+		return
+	end
+
+	if templates == nil or #templates == 0 then
+		footer.notify("warn", "No templates found")
+		return
+	end
+
+	vim.ui.select(templates, {
+		prompt = "Apply template",
+		kind = "atlas_jira_templates",
+		format_item = function(item)
+			return tostring((item and item.name) or "")
+		end,
+	}, function(selected)
+		if selected == nil then
+			return
+		end
+
+		local template_name = tostring(selected.name or "")
+		if template_name == "" then
+			footer.notify("warn", "Invalid template selected")
+			return
+		end
+
+		local template_content, read_err = template_store.read(template_name)
+		if read_err then
+			footer.notify("error", read_err)
+			return
+		end
+
+		local function apply_selected_template()
+			if not set_description_markdown(template_content or "") then
+				footer.notify("error", "Issue description buffer is not available")
+				return
+			end
+
+			footer.notify("success", string.format("Applied template: %s", template_name), 1200)
+		end
+
+		if vim.trim(get_active_markdown_description()) == "" then
+			apply_selected_template()
+			return
+		end
+
+		vim.ui.input({
+			prompt = "Description is not empty. Replace with template? [y/N]: ",
+		}, function(input)
+			if input == nil then
+				return
+			end
+
+			local normalized = vim.trim(tostring(input)):lower()
+			if normalized == "y" or normalized == "yes" then
+				apply_selected_template()
+			end
+		end)
+	end)
+end
+
+local function save_description_as_template()
+	local markdown = get_active_markdown_description()
+	local jira_actions = require("atlas.jira.actions")
+	jira_actions.run("create_template", {
+		issue = nil,
+		source = nil,
+		description = markdown,
+	}, function(result, err)
+		if err ~= nil then
+			footer.notify("error", tostring(err))
+			return
+		end
+
+		if result ~= nil and result.message ~= nil and result.message ~= "" then
+			footer.notify("info", result.message, 1200)
+		end
+	end)
+end
+
+local function open_templates_menu()
+	local items = {
+		{ id = "apply", label = "Apply template" },
+		{ id = "save", label = "Save current description as template" },
+	}
+
+	vim.ui.select(items, {
+		prompt = "Issue templates",
+		kind = "atlas_issue_templates_menu",
+		format_item = function(item)
+			return tostring((item and item.label) or "")
+		end,
+	}, function(selected)
+		if selected == nil then
+			return
+		end
+
+		if selected.id == "apply" then
+			apply_template_from_picker()
+			return
+		end
+
+		save_description_as_template()
 	end)
 end
 
@@ -581,6 +722,7 @@ function M.open(on_submit, opts)
 		show_assignee_picker = show_assignee_picker,
 		show_reporter_picker = show_reporter_picker,
 		show_issue_type_picker = show_issue_type_picker,
+		open_templates_menu = open_templates_menu,
 		create_issue = create_issue,
 	})
 
