@@ -114,7 +114,7 @@ function M.render(width)
 		table.insert(items, to_thread_item(b))
 	end
 
-	local thread_lines, thread_spans = threads.render(items, width, {
+	local thread_lines, thread_spans, thread_line_map = threads.render(items, width, {
 		padding_x = 1,
 		mode = "linked",
 		right_text_align = "right",
@@ -129,7 +129,11 @@ function M.render(width)
 			return { { start_col = 0, end_col = #row, hl_group = "AtlasTextMuted" } }
 		end,
 	})
+	local thread_base = #lines
 	utils.append_block(lines, spans, { lines = thread_lines, highlights = thread_spans })
+	for lnum, entry in pairs(thread_line_map or {}) do
+		line_map[thread_base + lnum] = entry
+	end
 
 	tab_state.line_map = line_map
 	return lines, spans, line_map

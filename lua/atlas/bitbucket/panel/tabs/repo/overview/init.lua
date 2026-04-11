@@ -8,7 +8,6 @@ local keymap = require("atlas.bitbucket.panel.tabs.repo.overview.keymap")
 function M.activate(repo)
 	keymap.setup()
 	controller.show(repo)
-	controller.move(0)
 
 	local layout = require("atlas.ui.layout")
 	local buf = layout.buf_id("detail")
@@ -31,9 +30,10 @@ function M.deactivate()
 	end
 end
 
----@param delta integer
-function M.move_cursor(delta)
-	controller.move(delta)
+---@param lnum integer
+---@return boolean
+function M.is_selectable_line(lnum)
+	return controller.is_selectable_line(lnum)
 end
 
 function M.refresh()

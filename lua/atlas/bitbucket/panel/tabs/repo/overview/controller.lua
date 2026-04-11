@@ -54,7 +54,7 @@ function M.show(repo, opts)
 	end
 
 	local workspace = repo.workspace
-	local repo_slug = repo.slug or repo.repo_slug
+	local repo_slug = repo.slug
 	if workspace == "" or repo_slug == "" then
 		repo_state.detail = nil
 		tab_state.readme = nil
@@ -123,35 +123,10 @@ function M.is_loading()
 	return repo_state.detail == "loading" or tab_state.readme == "loading"
 end
 
----@param delta integer
-function M.move(delta)
-	if repo_state.tab ~= "overview" then
-		return
-	end
-
-	local layout = require("atlas.ui.layout")
-	local win = layout.win_id("detail")
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return
-	end
-
-	local buf = vim.api.nvim_win_get_buf(win)
-	local max_line = vim.api.nvim_buf_line_count(buf)
-
-	if delta == 0 then
-		vim.api.nvim_win_set_cursor(win, { 1, 0 })
-		return
-	end
-
-	if delta == math.huge then
-		vim.api.nvim_win_set_cursor(win, { max_line, 0 })
-		return
-	end
-
-	local line = vim.api.nvim_win_get_cursor(win)[1]
-	local step = delta > 0 and 1 or -1
-	local target = math.max(1, math.min(max_line, line + step))
-	vim.api.nvim_win_set_cursor(win, { target, 0 })
+---@param _lnum integer
+---@return boolean
+function M.is_selectable_line(_lnum)
+	return true
 end
 
 return M
