@@ -101,7 +101,7 @@ M.options = {
 
 	keymaps = {
 		ui = {
-			help = "?",
+			help = "g?",
 			close = "q",
 			toggle_panel = "p",
 			previous_panel_tab = "<S-Tab>",
@@ -110,7 +110,7 @@ M.options = {
 		},
 		jira = {
 			open_actions = "A",
-			search = "/",
+			search = "?",
 			edit_issue = "ge",
 			transition_issue = "gs",
 			change_assignee = "ga",
@@ -125,7 +125,7 @@ M.options = {
 		},
 		bitbucket = {
 			open_actions = "A",
-			search = "/",
+			search = "?",
 			toggle_repo_panel = "o",
 			checkout_pr = "gc",
 			open_diffview = "gd",

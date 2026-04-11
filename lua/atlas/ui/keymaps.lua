@@ -38,25 +38,6 @@ end
 function M.register(buf)
 	local items = {
 		{
-			key = "q",
-			desc = "Close Atlas window",
-			opts = { nowait = true, silent = true },
-			callback = function()
-				if help.is_open() then
-					return
-				end
-				require("atlas.ui.layout").close()
-			end,
-		},
-		{
-			key = "?",
-			desc = "Toggle this help popup",
-			opts = { nowait = true, silent = true },
-			callback = function()
-				help.toggle({ buffer = buf })
-			end,
-		},
-		{
 			key = "j",
 			desc = "Next item",
 			hidden = true,
@@ -93,6 +74,25 @@ function M.register(buf)
 	local function add(action_id, map_item)
 		utils.insert_if(items, item(action_id, map_item))
 	end
+
+	add("ui.help", {
+		desc = "Toggle this help popup",
+		opts = { nowait = true, silent = true },
+		callback = function()
+			help.toggle({ buffer = buf })
+		end,
+	})
+
+	add("ui.close", {
+		desc = "Close Atlas window",
+		opts = { nowait = true, silent = true },
+		callback = function()
+			if help.is_open() then
+				return
+			end
+			require("atlas.ui.layout").close()
+		end,
+	})
 
 	add("ui.toggle_panel", {
 		desc = "Toggle detail pane",
@@ -165,13 +165,13 @@ end
 ---@param buf integer
 function M.remove(buf)
 	local items = {
-		{ key = "q" },
-		{ key = "?" },
 		{ key = "j" },
 		{ key = "k" },
 		{ key = "gg" },
 		{ key = "G" },
 	}
+	utils.insert_if(items, remove_item("ui.help"))
+	utils.insert_if(items, remove_item("ui.close"))
 	utils.insert_if(items, remove_item("ui.toggle_panel"))
 	utils.insert_if(items, remove_item("ui.previous_panel_tab"))
 	utils.insert_if(items, remove_item("ui.next_panel_tab"))

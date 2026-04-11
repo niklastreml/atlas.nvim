@@ -3,6 +3,7 @@ local M = {}
 local utils = require("atlas.utils")
 local icons = require("atlas.ui.utils.icons")
 local spinner = require("atlas.ui.components.spinner")
+local resolver = require("atlas.core.keymaps")
 local ns = vim.api.nvim_create_namespace("atlas.footer")
 
 ---@class AtlasFooterNotice
@@ -28,6 +29,17 @@ local loading = {
 }
 
 local items = {}
+
+---@param action_id AtlasKeymapActionId|string
+---@param fallback string
+---@return string
+local function key_label(action_id, fallback)
+	local keys = resolver.resolve(action_id)
+	if type(keys) == "table" and #keys > 0 then
+		return tostring(keys[1])
+	end
+	return fallback
+end
 
 local function stop_loading()
 	if loading.spinner ~= nil then
@@ -160,7 +172,11 @@ local function segments_for(left_items, current_notice)
 			align = "right",
 		},
 		{ text = string.format("atlas (%s)", utils.get_version()), hl_group = "AtlasTextMuted", align = "right" },
-		{ text = "? help", hl_group = "AtlasTextWarning", align = "right" },
+		{
+			text = string.format("%s help", key_label("ui.help", "g?")),
+			hl_group = "AtlasTextWarning",
+			align = "right",
+		},
 	}
 
 	for _, seg in ipairs(right) do
