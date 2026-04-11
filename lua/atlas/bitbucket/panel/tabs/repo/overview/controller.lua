@@ -1,9 +1,7 @@
 local M = {}
 local tab_state = require("atlas.bitbucket.panel.tabs.repo.overview.state")
-local state = require("atlas.bitbucket.panel.tabs.repo.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local repo_state = require("atlas.bitbucket.panel.tabs.repo.state")
 local repositories = require("atlas.bitbucket.api.repositories")
-local detail_loader = require("atlas.bitbucket.panel.tabs.repo.detail_loader")
 local footer = require("atlas.ui.components.footer")
 
 local readme_handle = nil
@@ -27,7 +25,7 @@ function M.show(repo, opts)
 		cancel_handles()
 	end
 
-	local detail_loading = state.detail == "loading"
+	local detail_loading = repo_state.detail == "loading"
 	local readme_loading = tab_state.readme == "loading"
 	if same_repo and (detail_loading or readme_loading) then
 		tab_state.repo = repo
@@ -40,7 +38,7 @@ function M.show(repo, opts)
 	tab_state.line_map = {}
 
 	if repo == nil then
-		state.reset()
+		repo_state.detail = nil
 		return
 	end
 
@@ -48,8 +46,8 @@ function M.show(repo, opts)
 		same_repo
 		and not opts.force_detail
 		and not opts.force_readme
-		and state.detail ~= nil
-		and state.detail ~= "loading"
+		and repo_state.detail ~= nil
+		and repo_state.detail ~= "loading"
 		and tab_state.readme ~= nil
 		and tab_state.readme ~= "loading"
 	then
@@ -58,59 +56,53 @@ function M.show(repo, opts)
 
 	local workspace = repo.workspace
 	local repo_slug = repo.slug or repo.repo_slug
-
 	if workspace == "" or repo_slug == "" then
-		detail_loader.reset()
+		repo_state.detail = nil
 		tab_state.readme = nil
 		footer.notify("error", "Missing repository info")
 		return
 	end
 
 	tab_state.readme = "loading"
-	detail_loader.ensure(repo, { force = opts.force_detail == true }, function(detail, err)
-
-		if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
-			return
-		end
-
-		if err ~= nil or not detail then
-			tab_state.readme = nil
-			footer.notify("error", "Failed to load repo detail: " .. tostring(err))
-		else
-			local ref = detail.mainbranch or "-"
-			local readme_path = repo.readme
-
-			tab_state.readme = "loading"
-			readme_handle = repositories.fetch_readme(
-				workspace,
-				repo_slug,
-				ref,
-				readme_path,
-				{},
-				function(readme, readme_err)
-					readme_handle = nil
-
-					if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
-						return
-					end
-
-					if readme_err ~= nil then
-						tab_state.readme = nil
-					else
-						tab_state.readme = readme
-					end
-
-					footer.notify("success", "Repository loaded", 1200)
-					require("atlas.bitbucket.panel.init").refresh()
-				end
-			)
-		end
-
-		require("atlas.bitbucket.panel.init").refresh()
-	end)
-
 	footer.notify("loading", "Loading repository...")
 	require("atlas.bitbucket.panel.init").refresh()
+
+	local detail = repo_state.detail
+	if detail == "loading" then
+		return
+	end
+	if detail == nil then
+		tab_state.readme = nil
+		footer.notify("error", "Failed to load repo detail")
+		require("atlas.bitbucket.panel.init").refresh()
+		return
+	end
+
+	local ref = detail.mainbranch or "-"
+	local readme_path = repo.readme
+	readme_handle = repositories.fetch_readme(
+		workspace,
+		repo_slug,
+		ref,
+		readme_path,
+		{ force_load = opts.force_readme == true },
+		function(readme, readme_err)
+			readme_handle = nil
+
+			if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
+				return
+			end
+
+			if readme_err ~= nil then
+				tab_state.readme = nil
+			else
+				tab_state.readme = readme
+			end
+
+			footer.notify("success", "Repository loaded", 1200)
+			require("atlas.bitbucket.panel.init").refresh()
+		end
+	)
 end
 
 function M.refresh()
@@ -125,7 +117,6 @@ end
 
 function M.reset()
 	cancel_handles()
-	detail_loader.reset()
 	tab_state.reset()
 end
 
@@ -134,12 +125,12 @@ end
 
 ---@return boolean
 function M.is_loading()
-	return state.detail == "loading" or tab_state.readme == "loading"
+	return repo_state.detail == "loading" or tab_state.readme == "loading"
 end
 
 ---@param delta integer
 function M.move(delta)
-	if panel_state.current_tab ~= "overview" then
+	if repo_state.tab ~= "overview" then
 		return
 	end
 

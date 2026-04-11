@@ -1,6 +1,6 @@
 local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.activity.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local footer = require("atlas.ui.components.footer")
 
@@ -163,7 +163,7 @@ end
 
 ---@param delta integer
 function M.move(delta)
-	if panel_state.current_tab ~= "activity" then
+	if pr_state.tab ~= "activity" then
 		return
 	end
 

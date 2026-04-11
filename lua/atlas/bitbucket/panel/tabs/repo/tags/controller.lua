@@ -1,9 +1,7 @@
 local M = {}
 local tab_state = require("atlas.bitbucket.panel.tabs.repo.tags.state")
-local state = require("atlas.bitbucket.panel.tabs.repo.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local repo_state = require("atlas.bitbucket.panel.tabs.repo.state")
 local repositories = require("atlas.bitbucket.api.repositories")
-local detail_loader = require("atlas.bitbucket.panel.tabs.repo.detail_loader")
 local footer = require("atlas.ui.components.footer")
 
 local tags_handle = nil
@@ -16,7 +14,9 @@ local function cancel_handles()
 end
 
 ---@param repo BitbucketRepository|nil
-function M.show(repo)
+---@param opts? { force_detail?: boolean, force_tags?: boolean }
+function M.show(repo, opts)
+	opts = opts or {}
 	local prev_name = tab_state.repo and tab_state.repo.full_name or nil
 	local next_name = repo and repo.full_name or nil
 	local same_repo = prev_name == next_name
@@ -40,7 +40,7 @@ function M.show(repo)
 		return
 	end
 
-	if same_repo and tab_state.tags ~= nil and tab_state.tags ~= "loading" then
+	if same_repo and not opts.force_tags and tab_state.tags ~= nil and tab_state.tags ~= "loading" then
 		return
 	end
 
@@ -48,43 +48,43 @@ function M.show(repo)
 	footer.notify("loading", "Loading tags...")
 	require("atlas.bitbucket.panel.init").refresh()
 
-	detail_loader.ensure(repo, {}, function(detail, err)
+	local detail = repo_state.detail
+	if detail == "loading" then
+		return
+	end
+	if detail == nil then
+		tab_state.tags = nil
+		footer.notify("error", "Failed to load tags: missing repo detail")
+		require("atlas.bitbucket.panel.init").refresh()
+		return
+	end
+
+	local tags_url = detail.links.tags
+	if tags_url == "" then
+		tab_state.tags = nil
+		footer.notify("error", "Missing tags URL")
+		require("atlas.bitbucket.panel.init").refresh()
+		return
+	end
+
+	tags_handle = repositories.fetch_tags(tags_url, {
+		force_load = opts.force_tags == true,
+	}, function(tags, fetch_err)
+		tags_handle = nil
+
 		if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
 			return
 		end
 
-		if err ~= nil or detail == nil then
+		if fetch_err ~= nil then
 			tab_state.tags = nil
-			footer.notify("error", "Failed to load tags: " .. tostring(err))
-			require("atlas.bitbucket.panel.init").refresh()
-			return
+			footer.notify("error", "Failed to load tags: " .. tostring(fetch_err))
+		else
+			tab_state.tags = tags
+			footer.notify("success", "Tags loaded", 1200)
 		end
 
-		local tags_url = detail.links.tags
-		if tags_url == "" then
-			tab_state.tags = nil
-			footer.notify("error", "Missing tags URL")
-			require("atlas.bitbucket.panel.init").refresh()
-			return
-		end
-
-		tags_handle = repositories.fetch_tags(tags_url, {}, function(tags, fetch_err)
-			tags_handle = nil
-
-			if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
-				return
-			end
-
-			if fetch_err ~= nil then
-				tab_state.tags = nil
-				footer.notify("error", "Failed to load tags: " .. tostring(fetch_err))
-			else
-				tab_state.tags = tags
-				footer.notify("success", "Tags loaded", 1200)
-			end
-
-			require("atlas.bitbucket.panel.init").refresh()
-		end)
+		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
@@ -95,7 +95,7 @@ function M.refresh()
 
 	cancel_handles()
 	tab_state.tags = nil
-	M.show(tab_state.repo)
+	M.show(tab_state.repo, { force_detail = true, force_tags = true })
 end
 
 function M.reset()
@@ -108,12 +108,12 @@ end
 
 ---@return boolean
 function M.is_loading()
-	return state.detail == "loading" or tab_state.tags == "loading"
+	return repo_state.detail == "loading" or tab_state.tags == "loading"
 end
 
 ---@param delta integer
 function M.move(delta)
-	if panel_state.current_tab ~= "tags" then
+	if repo_state.tab ~= "tags" then
 		return
 	end
 

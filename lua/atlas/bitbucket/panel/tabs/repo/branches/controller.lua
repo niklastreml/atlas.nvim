@@ -1,9 +1,7 @@
 local M = {}
 local tab_state = require("atlas.bitbucket.panel.tabs.repo.branches.state")
-local state = require("atlas.bitbucket.panel.tabs.repo.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local repo_state = require("atlas.bitbucket.panel.tabs.repo.state")
 local repositories = require("atlas.bitbucket.api.repositories")
-local detail_loader = require("atlas.bitbucket.panel.tabs.repo.detail_loader")
 local footer = require("atlas.ui.components.footer")
 
 local branches_handle = nil
@@ -16,7 +14,9 @@ local function cancel_handles()
 end
 
 ---@param repo BitbucketRepository|nil
-function M.show(repo)
+---@param opts? { force_detail?: boolean, force_branches?: boolean }
+function M.show(repo, opts)
+	opts = opts or {}
 	local prev_name = tab_state.repo and tab_state.repo.full_name or nil
 	local next_name = repo and repo.full_name or nil
 	local same_repo = prev_name == next_name
@@ -40,8 +40,16 @@ function M.show(repo)
 		return
 	end
 
-	-- If we already have branches for this repo, don't refetch
-	if same_repo and tab_state.branches ~= nil and tab_state.branches ~= "loading" then
+	if same_repo and not opts.force_branches and tab_state.branches ~= nil and tab_state.branches ~= "loading" then
+		return
+	end
+
+	local workspace = repo.workspace
+	local repo_slug = repo.slug or repo.repo_slug
+	if workspace == "" or repo_slug == "" then
+		tab_state.branches = nil
+		footer.notify("error", "Missing repository info")
+		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
@@ -49,43 +57,43 @@ function M.show(repo)
 	footer.notify("loading", "Loading branches...")
 	require("atlas.bitbucket.panel.init").refresh()
 
-	detail_loader.ensure(repo, {}, function(detail, err)
+	local detail = repo_state.detail
+	if detail == "loading" then
+		return
+	end
+	if detail == nil then
+		tab_state.branches = nil
+		footer.notify("error", "Failed to load branches: missing repo detail")
+		require("atlas.bitbucket.panel.init").refresh()
+		return
+	end
+
+	local branches_url = detail.links.branches
+	if branches_url == "" then
+		tab_state.branches = nil
+		footer.notify("error", "Missing branches URL")
+		require("atlas.bitbucket.panel.init").refresh()
+		return
+	end
+
+	branches_handle = repositories.fetch_branches(branches_url, {
+		force_load = opts.force_branches == true,
+	}, function(branches, fetch_err)
+		branches_handle = nil
+
 		if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
 			return
 		end
 
-		if err ~= nil or detail == nil then
+		if fetch_err ~= nil then
 			tab_state.branches = nil
-			footer.notify("error", "Failed to load branches: " .. tostring(err))
-			require("atlas.bitbucket.panel.init").refresh()
-			return
+			footer.notify("error", "Failed to load branches: " .. tostring(fetch_err))
+		else
+			tab_state.branches = branches
+			footer.notify("success", "Branches loaded", 1200)
 		end
 
-		local branches_url = detail.links.branches
-		if branches_url == "" then
-			tab_state.branches = nil
-			footer.notify("error", "Missing branches URL")
-			require("atlas.bitbucket.panel.init").refresh()
-			return
-		end
-
-		branches_handle = repositories.fetch_branches(branches_url, {}, function(branches, fetch_err)
-			branches_handle = nil
-
-			if tab_state.repo == nil or tab_state.repo.full_name ~= next_name then
-				return
-			end
-
-			if fetch_err ~= nil then
-				tab_state.branches = nil
-				footer.notify("error", "Failed to load branches: " .. tostring(fetch_err))
-			else
-				tab_state.branches = branches
-				footer.notify("success", "Branches loaded", 1200)
-			end
-
-			require("atlas.bitbucket.panel.init").refresh()
-		end)
+		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
@@ -96,7 +104,7 @@ function M.refresh()
 
 	cancel_handles()
 	tab_state.branches = nil
-	M.show(tab_state.repo)
+	M.show(tab_state.repo, { force_detail = true, force_branches = true })
 end
 
 function M.reset()
@@ -109,12 +117,12 @@ end
 
 ---@return boolean
 function M.is_loading()
-	return state.detail == "loading" or tab_state.branches == "loading"
+	return tab_state.branches == "loading"
 end
 
 ---@param delta integer
 function M.move(delta)
-	if panel_state.current_tab ~= "branches" then
+	if repo_state.tab ~= "branches" then
 		return
 	end
 

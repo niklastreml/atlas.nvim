@@ -129,9 +129,9 @@ function M.register(buf)
 
 			local panel = require("atlas.ui.panel")
 			local panel_state = require("atlas.ui.panel.state")
+			local bb_panel_state = require("atlas.bitbucket.panel.state")
 			if panel.is_open() then
-				local bb_panel = require("atlas.bitbucket.panel.init")
-				if panel_state.active_provider == "bitbucket" and bb_panel.get_panel_type() == "repo" then
+				if panel_state.active_provider == "bitbucket" and bb_panel_state.panel_type == "repo" then
 					panel.close()
 					return
 				end
@@ -172,16 +172,6 @@ function M.register(buf)
 		desc = "Refetch selected PR",
 		index = 8,
 		callback = function()
-			local panel = require("atlas.ui.panel")
-			local panel_state = require("atlas.ui.panel.state")
-			if panel.is_open() then
-				local bb_panel = require("atlas.bitbucket.panel.init")
-				if panel_state.active_provider == "bitbucket" and bb_panel.get_panel_type() == "repo" then
-					require("atlas.bitbucket.panel.tabs.repo.overview.controller").refresh()
-					return
-				end
-			end
-
 			actions.refresh_pr(selected_pr())
 		end,
 	})

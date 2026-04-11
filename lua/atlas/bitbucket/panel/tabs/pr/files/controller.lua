@@ -1,6 +1,6 @@
 local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.files.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local actions = require("atlas.bitbucket.actions")
 local diff_parser = require("atlas.core.git.diff_parser")
@@ -114,7 +114,7 @@ end
 
 --- Toggle fold on the hunk header under the cursor.
 function M.toggle_fold()
-	if panel_state.current_tab ~= "files" then
+	if pr_state.tab ~= "files" then
 		return
 	end
 
@@ -159,7 +159,7 @@ end
 --- Jump to the next (delta=1) or previous (delta=-1) hunk header.
 ---@param delta integer
 function M.jump_hunk(delta)
-	if panel_state.current_tab ~= "files" then
+	if pr_state.tab ~= "files" then
 		return
 	end
 
@@ -241,7 +241,7 @@ end
 
 ---@param delta integer
 function M.move(delta)
-	if panel_state.current_tab ~= "files" then
+	if pr_state.tab ~= "files" then
 		return
 	end
 

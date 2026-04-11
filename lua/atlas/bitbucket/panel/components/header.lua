@@ -1,6 +1,6 @@
 local M = {}
 
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local table_tree = require("atlas.ui.components.table_tree")
 local utils = require("atlas.utils")
 local helper = require("atlas.bitbucket.ui.helper")

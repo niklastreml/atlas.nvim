@@ -1,45 +1,16 @@
 local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.commits.state")
-local panel_state = require("atlas.bitbucket.panel.state")
+local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
-local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 
 local active_handle = nil
-
-local panel_spinner
-panel_spinner = spinner.create({
-	interval_ms = 120,
-	on_tick = function()
-		if state.commits ~= "loading" then
-			panel_spinner:stop()
-			return
-		end
-
-		if panel_state.current_tab ~= "commits" then
-			return
-		end
-
-		require("atlas.bitbucket.panel.init").refresh()
-	end,
-})
 
 local function cancel_active_handle()
 	if active_handle ~= nil and active_handle.cancel then
 		pcall(active_handle.cancel)
 	end
 	active_handle = nil
-end
-
-local function stop_spinner()
-	panel_spinner:stop()
-end
-
-local function start_spinner()
-	if panel_spinner:is_running() then
-		return
-	end
-	panel_spinner:start()
 end
 
 ---@param pr BitbucketPR|nil
@@ -55,12 +26,10 @@ function M.show(pr)
 	if same_pr and state.commits == "loading" then
 		state.pr = pr
 		state.line_map = {}
-		start_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 		return
 	end
 
-	stop_spinner()
 	state.pr = pr
 	state.line_map = {}
 
@@ -81,7 +50,6 @@ function M.show(pr)
 	end
 
 	state.commits = "loading"
-	start_spinner()
 	footer.notify("loading", "Loading commits...")
 	require("atlas.bitbucket.panel.init").refresh()
 
@@ -100,7 +68,6 @@ function M.show(pr)
 			footer.notify("success", "Commits loaded", 1200)
 		end
 
-		stop_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
@@ -118,7 +85,6 @@ function M.refresh()
 
 	cancel_active_handle()
 	state.commits = "loading"
-	start_spinner()
 	require("atlas.bitbucket.panel.init").refresh()
 
 	active_handle = pullrequests.fetch_commits(commits_url, function(commits, err)
@@ -136,30 +102,70 @@ function M.refresh()
 			footer.notify("success", "Commits refreshed", 1200)
 		end
 
-		stop_spinner()
 		require("atlas.bitbucket.panel.init").refresh()
 	end)
 end
 
 function M.reset()
 	cancel_active_handle()
-	stop_spinner()
 	state.reset()
 end
 
-function M.deactivate()
-	stop_spinner()
+function M.deactivate() end
+
+---@return integer|nil
+local function detail_win()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return nil
+	end
+	return win
+end
+
+---@param lnum integer
+---@return boolean
+local function is_commit_line(lnum)
+	local item = state.line_map[lnum]
+	if item == nil or item.commit == nil then
+		return false
+	end
+
+	return item.kind == "header" or item.kind == "thread_header"
+end
+
+---@param win integer
+---@param delta integer
+---@return boolean
+local function jump_next_commit(win, delta)
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local buf = vim.api.nvim_win_get_buf(win)
+	local max_line = vim.api.nvim_buf_line_count(buf)
+	local step = delta > 0 and 1 or -1
+
+	for lnum = line + step, (step > 0 and max_line or 1), step do
+		if is_commit_line(lnum) then
+			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			return true
+		end
+	end
+
+	return false
+end
+
+---@return boolean
+function M.is_loading()
+	return state.commits == "loading"
 end
 
 ---@param delta integer
 function M.move(delta)
-	if panel_state.current_tab ~= "commits" then
+	if pr_state.tab ~= "commits" then
 		return
 	end
 
-	local layout = require("atlas.ui.layout")
-	local win = layout.win_id("detail")
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
+	local win = detail_win()
+	if win == nil then
 		return
 	end
 
@@ -167,12 +173,26 @@ function M.move(delta)
 	local max_line = vim.api.nvim_buf_line_count(buf)
 
 	if delta == 0 then
-		vim.api.nvim_win_set_cursor(win, { 1, 0 })
+		for lnum = 1, max_line do
+			if is_commit_line(lnum) then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
 		return
 	end
 
 	if delta == math.huge then
-		vim.api.nvim_win_set_cursor(win, { max_line, 0 })
+		for lnum = max_line, 1, -1 do
+			if is_commit_line(lnum) then
+				vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+				return
+			end
+		end
+		return
+	end
+
+	if jump_next_commit(win, delta) then
 		return
 	end
 

@@ -1,5 +1,5 @@
 local M = {}
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local tabs = require("atlas.ui.components.tabs")
 
 local PR_TABS = {
