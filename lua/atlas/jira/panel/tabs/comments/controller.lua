@@ -444,7 +444,17 @@ function M.edit_comment()
 					return
 				end
 
-				state.comments = helper.remove_comment(state.comments, comment_id)
+				if type(state.comments) ~= "table" then
+					state.comments = {}
+				else
+					local next_comments = {}
+					for _, existing in ipairs(state.comments) do
+						if tostring((existing or {}).id or "") ~= tostring(comment_id) then
+							table.insert(next_comments, existing)
+						end
+					end
+					state.comments = next_comments
+				end
 				if updated_comment ~= nil then
 					table.insert(state.comments, updated_comment)
 				end
@@ -509,7 +519,15 @@ function M.delete_comment()
 				return
 			end
 
-			state.comments = helper.remove_comment(state.comments, comment_id)
+			if type(state.comments) == "table" then
+				local next_comments = {}
+				for _, existing in ipairs(state.comments) do
+					if tostring((existing or {}).id or "") ~= tostring(comment_id) then
+						table.insert(next_comments, existing)
+					end
+				end
+				state.comments = next_comments
+			end
 			state.comments = helper.normalize_comments(state.comments)
 
 			require("atlas.jira.panel.init").refresh()
