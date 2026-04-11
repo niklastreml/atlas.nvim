@@ -64,6 +64,12 @@
 --- @class AtlasConfig
 --- @field jira JiraConfig
 --- @field bitbucket BitbucketConfig
+--- @field keymaps? AtlasKeymapsConfig
+
+---@class AtlasKeymapsConfig
+---@field ui? AtlasUIKeymaps
+---@field jira? AtlasJiraKeymaps
+---@field bitbucket? AtlasBitbucketKeymaps
 
 local M = {}
 
@@ -91,6 +97,49 @@ M.options = {
 			paths = {},
 		},
 		custom_actions = {},
+	},
+
+	keymaps = {
+		ui = {
+			help = "?",
+			close = "q",
+			toggle_panel = "p",
+			previous_panel_tab = "<S-Tab>",
+			next_panel_tab = "<Tab>",
+			refresh = "r",
+		},
+		jira = {
+			open_actions = "A",
+			search = "/",
+			edit_issue = "ge",
+			transition_issue = "gs",
+			change_assignee = "ga",
+			open_in_browser = "gx",
+			create_issue = "c",
+			refresh_issue = "r",
+			refresh_view = "R",
+			show_details = "K",
+			copy_key = "y",
+			copy_url = "Y",
+			refresh_tab = "r",
+		},
+		bitbucket = {
+			open_actions = "A",
+			search = "/",
+			toggle_repo_panel = "o",
+			checkout_pr = "gc",
+			open_diffview = "gd",
+			open_in_browser = "gx",
+			refresh_pr = "r",
+			refresh_view = "R",
+			refresh_tab = "r",
+			show_details = "K",
+			copy_id = "y",
+			copy_url = "Y",
+			pr_files_toggle_fold = "za",
+			pr_files_next_hunk = "]h",
+			pr_files_previous_hunk = "[h",
+		},
 	},
 }
 

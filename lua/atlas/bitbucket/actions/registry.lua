@@ -14,7 +14,7 @@ local logger = require("atlas.core.logger")
 ---@field message string|nil
 
 ---@class BitbucketActionDef
----@field id string
+---@field id BitbucketActionId|string
 ---@field label string
 ---@field is_available fun(ctx: BitbucketActionContext): boolean, string|nil
 ---@field run fun(ctx: BitbucketActionContext, done: fun(result: BitbucketActionResult|nil, err: string|nil))
@@ -410,7 +410,7 @@ function M.available(ctx)
 	return out
 end
 
----@param id string
+---@param id BitbucketActionId|string
 ---@return BitbucketActionDef|nil
 function M.find(id)
 	for _, action in ipairs(ACTIONS) do

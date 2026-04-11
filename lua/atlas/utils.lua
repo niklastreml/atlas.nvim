@@ -202,6 +202,14 @@ function M.human_duration(seconds)
 	return string.format("%dd %dh", days, rem_hours)
 end
 
+---@param list table
+---@param value any
+function M.insert_if(list, value)
+	if value ~= nil then
+		table.insert(list, value)
+	end
+end
+
 ---@param value any
 ---@return string
 function M.encode_pretty_json(value)

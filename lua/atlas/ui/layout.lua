@@ -147,30 +147,6 @@ local function ensure_main()
 
 	apply_main_win_opts(state.main_win)
 
-	local help = require("atlas.ui.popups.help")
-	help.register("General", {
-		{
-			key = "q",
-			desc = "Close Atlas window",
-			opts = { nowait = true, silent = true },
-			callback = function()
-				if help.is_open() then
-					return
-				end
-				M.close()
-			end,
-		},
-	}, { buffer = main_buf })
-	help.register("General", {
-		{
-			key = "?",
-			desc = "Toggle this help popup",
-			opts = { nowait = true, silent = true },
-			callback = function()
-				help.toggle()
-			end,
-		},
-	}, { buffer = main_buf })
 end
 
 local function ensure_footer()
@@ -263,7 +239,10 @@ end
 function M.ensure_open()
 	ensure_main()
 	ensure_footer()
-	require("atlas.ui.navigation").register_keys()
+	local keymaps = require("atlas.ui.keymaps")
+	if state.main_buf ~= nil and valid_buf(state.main_buf) then
+		keymaps.register(state.main_buf)
+	end
 end
 
 function M.close()
@@ -278,6 +257,11 @@ function M.close()
 	state.footer_win = nil
 
 	if valid_win(state.main_win) then
+		local keymaps = require("atlas.ui.keymaps")
+		if state.main_buf ~= nil and valid_buf(state.main_buf) then
+			keymaps.remove(state.main_buf)
+		end
+
 		if state.tab_id ~= nil and vim.api.nvim_tabpage_is_valid(state.tab_id) then
 			local current_tab = vim.api.nvim_get_current_tabpage()
 			if current_tab ~= state.tab_id then

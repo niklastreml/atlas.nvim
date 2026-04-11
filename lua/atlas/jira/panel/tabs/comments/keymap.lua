@@ -9,7 +9,7 @@ function M.setup()
 		return
 	end
 
-	help.register("Jira", {
+	local items = {
 		{
 			key = "c",
 			desc = "Reply to comment",
@@ -42,7 +42,8 @@ function M.setup()
 				controller.add_comment()
 			end,
 		},
-	}, { index = 220, buffer = buf })
+	}
+	help.register("Jira", items, { index = 220, buffer = buf })
 end
 
 function M.teardown()
@@ -51,12 +52,13 @@ function M.teardown()
 		return
 	end
 
-	help.remove("Jira", {
+	local items = {
 		{ key = "c" },
 		{ key = "e" },
 		{ key = "d" },
 		{ key = "a" },
-	}, { buffer = buf })
+	}
+	help.remove("Jira", items, { buffer = buf })
 end
 
 return M

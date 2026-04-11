@@ -146,14 +146,17 @@ local function build_segments_line(segments, line_index)
 	return line, highlights
 end
 
+---@param left_items table[]|nil
+---@param current_notice AtlasFooterNotice|nil
 ---@return table[]
-local function segments_for()
-	local left = clone_segments(items)
+local function segments_for(left_items, current_notice)
+	local snapshot_notice = current_notice or notice
+	local left = clone_segments(left_items or items)
 
 	local right = {
 		{
-			text = notice.text ~= "" and notice.text or "",
-			hl_group = notice.text ~= "" and notice.hl_group or "AtlasTextMuted",
+			text = snapshot_notice.text ~= "" and snapshot_notice.text or "",
+			hl_group = snapshot_notice.text ~= "" and snapshot_notice.hl_group or "AtlasTextMuted",
 			align = "right",
 		},
 		{ text = string.format("atlas (%s)", utils.get_version()), hl_group = "AtlasTextMuted", align = "right" },
@@ -283,6 +286,31 @@ function M.render(opts)
 	}
 end
 
+---@param lines string[]
+---@param span table
+---@return table|nil
+local function clamp_span(lines, span)
+	local line = tonumber(span.line) or 0
+	local text = lines[line + 1]
+	if text == nil then
+		return nil
+	end
+
+	local line_len = #text
+	local start_col = math.max(0, math.min(tonumber(span.start_col) or 0, line_len))
+	local end_col = math.max(start_col, math.min(tonumber(span.end_col) or line_len, line_len))
+	if end_col <= start_col then
+		return nil
+	end
+
+	return {
+		line = line,
+		start_col = start_col,
+		end_col = end_col,
+		hl_group = span.hl_group,
+	}
+end
+
 function M.refresh()
 	local layout = require("atlas.ui.layout")
 	local win = layout.win_id("footer")
@@ -295,27 +323,44 @@ function M.refresh()
 		return
 	end
 
+	local refresh_token = notice.token
+	local items_snapshot = clone_segments(items)
+	local notice_snapshot = {
+		text = notice.text,
+		hl_group = notice.hl_group,
+		token = notice.token,
+	}
+
 	local width = vim.api.nvim_win_get_width(win)
 	local block = M.render({
 		width = width,
-		segments = segments_for(),
+		segments = segments_for(items_snapshot, notice_snapshot),
 	})
 
 	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, block.lines)
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 
+	if refresh_token ~= notice.token then
+		return
+	end
+
 	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 	for _, span in ipairs(block.highlights or {}) do
-		vim.api.nvim_buf_set_extmark(buf, ns, span.line, span.start_col, {
-			end_row = span.line,
-			end_col = span.end_col,
-			hl_group = span.hl_group,
-		})
+		if refresh_token ~= notice.token then
+			return
+		end
+		local clamped = clamp_span(block.lines, span)
+		if clamped ~= nil then
+			vim.api.nvim_buf_set_extmark(buf, ns, clamped.line, clamped.start_col, {
+				end_row = clamped.line,
+				end_col = clamped.end_col,
+				hl_group = clamped.hl_group,
+			})
+		end
 	end
 end
 
-function M.setup()
-end
+function M.setup() end
 
 return M

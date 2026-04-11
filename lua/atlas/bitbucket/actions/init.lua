@@ -4,7 +4,14 @@ local registry = require("atlas.bitbucket.actions.registry")
 local logger = require("atlas.core.logger")
 local footer = require("atlas.ui.components.footer")
 
----@param id string
+---@alias BitbucketActionId
+---| "checkout"
+---| "open_diffview"
+---| "merge"
+---| "approve"
+---| "request_changes"
+
+---@param id BitbucketActionId|string
 ---@param ctx BitbucketActionContext
 ---@param on_done fun(result: BitbucketActionResult|nil, err: string|nil)
 function M.run(id, ctx, on_done)

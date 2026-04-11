@@ -21,7 +21,7 @@ local icons = require("atlas.ui.icons")
 ---@field message string|nil
 
 ---@class JiraActionDef
----@field id string
+---@field id JiraActionId
 ---@field label string
 ---@field is_available fun(ctx: JiraActionContext): boolean, string|nil
 ---@field run fun(ctx: JiraActionContext, done: fun(result: JiraActionResult|nil, err: string|nil))
@@ -757,7 +757,7 @@ function M.available(ctx)
 	return out
 end
 
----@param id string
+---@param id JiraActionId|string
 ---@return JiraActionDef|nil
 function M.find(id)
 	for _, action in ipairs(ACTIONS) do

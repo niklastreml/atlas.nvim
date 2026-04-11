@@ -1,6 +1,7 @@
 local M = {}
 
 local layout = require("atlas.ui.layout")
+local keymaps = require("atlas.ui.panel.keymaps")
 local state = require("atlas.ui.panel.state")
 local ui_state = require("atlas.ui.main.state")
 
@@ -16,86 +17,6 @@ local function deactivate_provider(provider)
 	end
 end
 
-local function current_panel_controller()
-	local provider = state.active_provider
-	if provider == "jira" then
-		return require("atlas.jira.panel.init")
-	end
-
-	return require("atlas.bitbucket.panel.init")
-end
-
-local function refresh_current_panel()
-	local provider = state.active_provider
-	if provider == "jira" then
-		require("atlas.jira.panel.init").refresh()
-		return
-	end
-
-	require("atlas.bitbucket.panel.init").refresh()
-end
-
-local function register_panel_keys()
-	local buf = layout.buf_id("detail")
-	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-
-	local help = require("atlas.ui.popups.help")
-	help.register("General", {
-		{
-			key = "?",
-			desc = "Toggle this help popup",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				help.toggle({ buffer = buf })
-			end,
-		},
-		{
-			key = "q",
-			desc = "Close detail pane",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				if help.is_open() then
-					return
-				end
-				M.close()
-			end,
-		},
-		{
-			key = "p",
-			desc = "Toggle detail pane",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				M.toggle()
-			end,
-		},
-		{
-			key = { "[", "<S-Tab>" },
-			desc = "Previous panel tab",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				current_panel_controller().prev_tab()
-			end,
-		},
-		{
-			key = { "]", "<Tab>" },
-			desc = "Next panel tab",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				current_panel_controller().next_tab()
-			end,
-		},
-		{
-			key = "r",
-			desc = "Refresh current panel",
-			opts = { silent = true, nowait = true },
-			callback = function()
-				refresh_current_panel()
-			end,
-		},
-	}, { index = 210, buffer = buf })
-end
 
 function M.open()
 	if M.is_open() then
@@ -106,7 +27,10 @@ function M.open()
 	state.open = M.is_open()
 
 	if state.open then
-		register_panel_keys()
+		local buf = layout.buf_id("detail")
+		if buf ~= nil and vim.api.nvim_buf_is_valid(buf) then
+			keymaps.register(buf)
+		end
 	end
 end
 
@@ -124,6 +48,10 @@ function M.close()
 		return
 	end
 
+	local buf = layout.buf_id("detail")
+	if buf ~= nil and vim.api.nvim_buf_is_valid(buf) then
+		keymaps.remove(buf)
+	end
 	layout.toggle_detail()
 	state.open = false
 end
