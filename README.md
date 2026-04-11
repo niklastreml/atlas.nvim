@@ -326,7 +326,6 @@ require("atlas").setup({
 | Atlas   | `K`       | Show issue/pr details     |
 | Atlas   | `R`       | Refresh current view      |
 | Atlas   | `r`       | Refresh selected issue/pr |
-| Atlas   | `gx`      | Open issue/pr in browser  |
 
 #### Jira
 
@@ -338,6 +337,7 @@ require("atlas").setup({
 | Jira            | `gs`                  | Transition Issue                    |
 | Jira            | `ga` / `gr`           | Change Assignee and reporter        |
 | Jira            | `gt`                  | Change issue type                   |
+| Jira            | `gx`                  | Open issue in browser               |
 | Jira            | `c`                   | Create issue                        |
 | Jira            | `y` / `Y`             | Copy issue key / URL                |
 | Jira            | `m`                   | Toggle ADF / markdown view          |
@@ -345,16 +345,17 @@ require("atlas").setup({
 
 #### Bitbucket
 
-| Context                   | Key         | Action                  |
-| ------------------------- | ----------- | ----------------------- |
-| Bitbucket                 | `A`         | Open PR actions         |
-| Bitbucket                 | `/`         | Search repositories     |
-| Bitbucket                 | `o`         | Toggle repository panel |
-| Bitbucket                 | `gc`        | Checkout selected PR    |
-| Bitbucket                 | `gd`        | Open selected PR diff   |
-| Bitbucket                 | `y` / `Y`   | Copy PR id / URL        |
-| Bitbucket (Files changes) | `za`        | Toggle hunk fold        |
-| Bitbucket (File changes)  | `]h` / `[h` | Next / previous hunk    |
+| Context                   | Key         | Action                   |
+| ------------------------- | ----------- | ------------------------ |
+| Bitbucket                 | `A`         | Open PR actions          |
+| Bitbucket                 | `/`         | Search repositories      |
+| Bitbucket                 | `o`         | Toggle repository panel  |
+| Bitbucket                 | `gc`        | Checkout selected PR     |
+| Bitbucket                 | `gd`        | Open selected PR diff    |
+| Bitbucket                 | `gx`        | Open pr/build in browser |
+| Bitbucket                 | `y` / `Y`   | Copy PR id / URL         |
+| Bitbucket (Files changes) | `za`        | Toggle hunk fold         |
+| Bitbucket (File changes)  | `]h` / `[h` | Next / previous hunk     |
 
 ## Contributors ✨
 
