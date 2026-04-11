@@ -94,78 +94,6 @@ local function check_jira_base_url()
 	vim.health.ok("jira.base_url looks valid")
 end
 
-local function check_jira_views()
-	local jira = (config.options and config.options.jira) or {}
-	local views = jira.views
-	if type(views) ~= "table" or #views == 0 then
-		vim.health.warn("jira.views is empty")
-		return
-	end
-
-	local seen_keys = {}
-	local has_problems = false
-	for i, view in ipairs(views) do
-		local key = tostring((type(view) == "table" and view.key) or "")
-		if key == "" then
-			has_problems = true
-			vim.health.warn(string.format("jira.views[%d] is missing key", i))
-		elseif seen_keys[key] ~= nil then
-			has_problems = true
-			vim.health.warn(
-				string.format("jira.views[%d] key duplicates jira.views[%d]: %s", i, seen_keys[key], tostring(key))
-			)
-		else
-			seen_keys[key] = i
-		end
-
-		local jql = tostring((type(view) == "table" and view.jql) or "")
-		if jql == "" then
-			has_problems = true
-			vim.health.warn(string.format("jira.views[%d] has empty jql", i))
-		end
-	end
-
-	if not has_problems then
-		vim.health.ok(string.format("jira.views configured (%d view%s)", #views, #views == 1 and "" or "s"))
-	end
-end
-
-local function check_bitbucket_views()
-	local bitbucket = (config.options and config.options.bitbucket) or {}
-	local views = bitbucket.views
-	if type(views) ~= "table" or #views == 0 then
-		vim.health.warn("bitbucket.views is empty")
-		return
-	end
-
-	local seen_keys = {}
-	local has_problems = false
-	for i, view in ipairs(views) do
-		local key = tostring((type(view) == "table" and view.key) or "")
-		if key == "" then
-			has_problems = true
-			vim.health.warn(string.format("bitbucket.views[%d] is missing key", i))
-		elseif seen_keys[key] ~= nil then
-			has_problems = true
-			vim.health.warn(
-				string.format("bitbucket.views[%d] key duplicates bitbucket.views[%d]: %s", i, seen_keys[key], key)
-			)
-		else
-			seen_keys[key] = i
-		end
-
-		local repos = (type(view) == "table" and view.repos) or nil
-		if type(repos) ~= "table" or #repos == 0 then
-			has_problems = true
-			vim.health.warn(string.format("bitbucket.views[%d] has no repos", i))
-		end
-	end
-
-	if not has_problems then
-		vim.health.ok(string.format("bitbucket.views configured (%d view%s)", #views, #views == 1 and "" or "s"))
-	end
-end
-
 local function validate_keymaps()
 	local by_context = keymaps.validate()
 	local context_names = { "ui", "jira", "bitbucket" }
@@ -205,12 +133,10 @@ function M.check()
 	check_repo_paths()
 	check_credentials("bitbucket", "user", "token", "Bitbucket")
 	check_diff_open_command()
-	check_bitbucket_views()
 
 	vim.health.start("Jira")
 	check_credentials("jira", "email", "token", "Jira")
 	check_jira_base_url()
-	check_jira_views()
 
 	vim.health.start("Keymaps")
 	validate_keymaps()
