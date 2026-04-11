@@ -2,14 +2,76 @@ local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.commits.state")
 local pullrequests = require("atlas.bitbucket.api.pullrequests")
 local footer = require("atlas.ui.components.footer")
+local helper = require("atlas.bitbucket.panel.tabs.pr.helper")
 
 local active_handle = nil
+local status_handles = {}
+local status_batch = 0
+local MAX_STATUS_COMMITS = 5
 
 local function cancel_active_handle()
 	if active_handle ~= nil and active_handle.cancel then
 		pcall(active_handle.cancel)
 	end
 	active_handle = nil
+end
+
+local function cancel_status_handles()
+	for key, handle in pairs(status_handles) do
+		if handle ~= nil and handle.cancel then
+			pcall(handle.cancel)
+		end
+		status_handles[key] = nil
+	end
+end
+
+---@return boolean
+local function has_status_requests()
+	return next(status_handles) ~= nil
+end
+
+---@param pr BitbucketPR|nil
+---@param commits BitbucketPRCommits|nil
+---@param force_load boolean
+local function fetch_commit_builds(pr, commits, force_load)
+	cancel_status_handles()
+	status_batch = status_batch + 1
+	local batch = status_batch
+	local pr_id = pr and pr.id or nil
+
+	state.commit_status_by_hash = {}
+	if pr == nil or commits == nil or type(commits.entries) ~= "table" then
+		return
+	end
+
+	local count = math.min(MAX_STATUS_COMMITS, #commits.entries)
+	for i = 1, count do
+		local commit = commits.entries[i]
+		local hash = tostring(commit.hash or "")
+		local statuses_url = tostring(commit.statuses_url or "")
+		if hash ~= "" and statuses_url ~= "" then
+			state.commit_status_by_hash[hash] = "loading"
+			status_handles[hash] = pullrequests.fetch_commit_statuses(statuses_url, {
+				force_load = force_load == true,
+			}, function(statuses, err)
+				if batch ~= status_batch then
+					return
+				end
+				status_handles[hash] = nil
+
+				local current = state.pr
+				if current == nil or current.id ~= pr_id then
+					return
+				end
+
+				if err ~= nil then
+					state.commit_status_by_hash[hash] = "unknown"
+				else
+					state.commit_status_by_hash[hash] = helper.statuses.aggregate(statuses)
+				end
+			end)
+		end
+	end
 end
 
 ---@param pr BitbucketPR|nil
@@ -20,6 +82,8 @@ function M.show(pr)
 
 	if not same_pr then
 		cancel_active_handle()
+		cancel_status_handles()
+		state.commit_status_by_hash = {}
 	end
 
 	if same_pr and state.commits == "loading" then
@@ -62,6 +126,7 @@ function M.show(pr)
 			footer.notify("error", "Failed to load commits: " .. tostring(err))
 		else
 			state.commits = commits
+			fetch_commit_builds(pr, commits, false)
 			footer.notify("success", "Commits loaded", 1200)
 		end
 
@@ -82,6 +147,8 @@ function M.refresh(opts)
 	end
 
 	cancel_active_handle()
+	cancel_status_handles()
+	state.commit_status_by_hash = {}
 	state.commits = "loading"
 
 	active_handle = pullrequests.fetch_commits(commits_url, { force_load = opts.force_load == true }, function(commits, err)
@@ -96,6 +163,7 @@ function M.refresh(opts)
 			footer.notify("error", "Failed to refresh commits")
 		else
 			state.commits = commits
+			fetch_commit_builds(state.pr, commits, opts.force_load == true)
 			footer.notify("success", "Commits refreshed", 1200)
 		end
 
@@ -104,6 +172,7 @@ end
 
 function M.reset()
 	cancel_active_handle()
+	cancel_status_handles()
 	state.reset()
 end
 
@@ -151,7 +220,7 @@ end
 
 ---@return boolean
 function M.is_loading()
-	return state.commits == "loading"
+	return state.commits == "loading" or has_status_requests()
 end
 
 ---@param lnum integer

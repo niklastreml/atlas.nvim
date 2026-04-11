@@ -61,6 +61,7 @@ Accept: application/json
   const commentsUrl = pr?.links?.comments?.href;
   const activityUrl = pr?.links?.activity?.href;
   const commitsUrl = pr?.links?.commits?.href;
+  const statusesUrl = pr?.links?.statuses?.href;
   const mergeUrl = pr?.links?.merge?.href;
   const approveUrl = pr?.links?.approve?.href;
   const requestChangesUrl = pr?.links?.["request-changes"]?.href;
@@ -80,6 +81,9 @@ Accept: application/json
   }
   if (commitsUrl) {
     client.global.set("bitbucket_commits_url", String(commitsUrl));
+  }
+  if (statusesUrl) {
+    client.global.set("bitbucket_pr_statuses_url", String(statusesUrl));
   }
   if (mergeUrl) {
     client.global.set("bitbucket_merge_url", String(mergeUrl));
@@ -137,6 +141,12 @@ Accept: application/json
 
 ### Pull request commits
 GET {{bitbucket_commits_url}}
+Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+### Pull request statuses
+GET {{bitbucket_pr_statuses_url}}
 Authorization: Basic {{BITBUCKET_USER}}:{{BITBUCKET_TOKEN}}
 Content-Type: application/json
 Accept: application/json

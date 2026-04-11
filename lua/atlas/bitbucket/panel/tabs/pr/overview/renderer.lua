@@ -5,6 +5,7 @@ local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
 local header = require("atlas.bitbucket.panel.components.header")
 local chips = require("atlas.bitbucket.panel.components.chips")
 local tabs = require("atlas.bitbucket.panel.components.tabs")
+local pr_helper = require("atlas.bitbucket.panel.tabs.pr.helper")
 local utils = require("atlas.utils")
 local icons = require("atlas.ui.utils.icons")
 local spinner = require("atlas.ui.components.spinner")
@@ -105,8 +106,8 @@ local function render_diffstat(diffstat, width)
 		columns = {
 			{ key = "marker", can_grow = false, max_width = 1 },
 			{ key = "path", can_grow = true, truncate_from = "start" },
-			{ key = "added", can_grow = false },
-			{ key = "removed", can_grow = false },
+			{ key = "added", can_grow = false, align = "center" },
+			{ key = "removed", can_grow = false, align = "center" },
 		},
 		rows = rows,
 		cell_hl = function(row, col)
@@ -154,6 +155,24 @@ local function decision_hl(decision)
 	return "AtlasTextMuted"
 end
 
+---@param status string
+---@return string
+local function status_hl(status)
+	if status == "SUCCESSFUL" then
+		return "AtlasBuildLinkSuccess"
+	end
+	if status == "FAILED" then
+		return "AtlasBuildLinkFailed"
+	end
+	if status == "INPROGRESS" then
+		return "AtlasBuildLinkInProgress"
+	end
+	if status == "STOPPED" then
+		return "AtlasBuildLinkMuted"
+	end
+	return "AtlasBuildLinkMuted"
+end
+
 ---@param width integer
 ---@return string[] lines
 ---@return table[] spans
@@ -176,7 +195,7 @@ function M.render(width)
 	utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 
 	-- Chips
-	local chip_line, chip_spans = chips.render(pr)
+	local chip_line, chip_spans = chips.render(pr, pr_state.statuses)
 	table.insert(lines, chip_line)
 	local chip_base = #lines - 1
 	for _, span in ipairs(chip_spans) do
@@ -287,15 +306,68 @@ function M.render(width)
 	end
 	table.insert(lines, "")
 
-	-- Diffstat
-	local ds_lines, ds_spans = render_diffstat(diffstat, width)
-	utils.append_block(lines, spans, { lines = ds_lines, highlights = ds_spans })
+	local content_width = math.max(10, width - (CONTENT_PADDING * 2))
+
+	-- Builds (pipelines)
+	local statuses = pr_state.statuses
+	local checks_header = "Builds"
+	table.insert(lines, with_content_padding(checks_header))
+	table.insert(spans, {
+		line = #lines - 1,
+		start_col = CONTENT_PADDING,
+		end_col = CONTENT_PADDING + #checks_header,
+		hl_group = "AtlasColumnHeader",
+	})
+
+	if statuses == "loading" then
+		push(lines, spans, spinner.with_text("Loading builds..."), "AtlasTextMuted")
+	elseif type(statuses) ~= "table" or type(statuses.entries) ~= "table" or #statuses.entries == 0 then
+		push(lines, spans, "No builds found", "AtlasTextMuted")
+	else
+		for _, entry in ipairs(statuses.entries) do
+			local status = tostring(entry.state or "UNKNOWN")
+			local status_label = pr_helper.statuses.label(status)
+			local icon = icons.bitbucket_status(status)
+			local name = tostring(entry.name or "")
+			if name == "" then
+				name = tostring(entry.key or "")
+			end
+			if name == "" then
+				name = "Check"
+			end
+
+			local text = string.format("%s %s (%s)", icon, name, status_label)
+			local wrapped = utils.wrap_line(text, content_width)
+			for i, chunk in ipairs(wrapped) do
+				table.insert(lines, with_content_padding(chunk))
+				line_map[#lines] = {
+					kind = "build",
+					build = entry,
+					url = tostring(entry.url or ""),
+				}
+				if i == 1 then
+					table.insert(spans, {
+						line = #lines - 1,
+						start_col = CONTENT_PADDING,
+						end_col = CONTENT_PADDING + #chunk,
+						hl_group = status_hl(status),
+					})
+				elseif tostring(entry.url or "") ~= "" then
+					table.insert(spans, {
+						line = #lines - 1,
+						start_col = CONTENT_PADDING,
+						end_col = CONTENT_PADDING + #chunk,
+						hl_group = "AtlasBuildLinkMuted",
+					})
+				end
+			end
+		end
+	end
 	table.insert(lines, "")
 
 	-- Description
 	local description_text = pr.description or ""
 	local description = utils.sanitize_lines(description_text)
-	local content_width = math.max(10, width - (CONTENT_PADDING * 2))
 	local description_header = "Description"
 	table.insert(lines, with_content_padding(description_header))
 	table.insert(spans, {
@@ -310,6 +382,10 @@ function M.render(width)
 			table.insert(lines, with_content_padding(chunk))
 		end
 	end
+
+	-- Diffstat
+	local ds_lines, ds_spans = render_diffstat(diffstat, width)
+	utils.append_block(lines, spans, { lines = ds_lines, highlights = ds_spans })
 
 	state.line_map = line_map
 	return lines, spans, line_map

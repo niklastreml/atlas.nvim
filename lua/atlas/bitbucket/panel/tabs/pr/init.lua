@@ -1,5 +1,7 @@
 local M = {}
 local pr_state = require("atlas.bitbucket.panel.tabs.pr.state")
+local pullrequests = require("atlas.bitbucket.api.pullrequests")
+local footer = require("atlas.ui.components.footer")
 
 local TABS = {
 	{ key = "overview", label = "Overview", mod = "atlas.bitbucket.panel.tabs.pr.overview" },
@@ -8,6 +10,68 @@ local TABS = {
 	{ key = "commits", label = "Commits", mod = "atlas.bitbucket.panel.tabs.pr.commits" },
 	{ key = "files", label = "Files", mod = "atlas.bitbucket.panel.tabs.pr.files" },
 }
+
+local statuses_handle = nil
+local statuses_key = nil
+
+local function cancel_statuses_request()
+	if statuses_handle ~= nil and statuses_handle.cancel then
+		pcall(statuses_handle.cancel)
+	end
+	statuses_handle = nil
+end
+
+local function clear_statuses()
+	cancel_statuses_request()
+	statuses_key = nil
+	pr_state.statuses = nil
+end
+
+---@param force boolean
+local function fetch_statuses(force)
+	local pr = pr_state.item
+	if pr == nil then
+		clear_statuses()
+		return
+	end
+
+	local statuses_url = tostring((pr.links or {}).statuses or "")
+	if statuses_url == "" then
+		pr_state.statuses = nil
+		return
+	end
+
+	if not force and statuses_key == statuses_url and pr_state.statuses ~= nil and pr_state.statuses ~= "loading" then
+		return
+	end
+	if not force and statuses_key == statuses_url and pr_state.statuses == "loading" then
+		return
+	end
+
+	cancel_statuses_request()
+	statuses_key = statuses_url
+	pr_state.statuses = "loading"
+
+	statuses_handle = pullrequests.fetch_statuses(statuses_url, {
+		force_load = force == true,
+	}, function(statuses, err)
+		statuses_handle = nil
+
+		local current = pr_state.item
+		local current_key = current and tostring((current.links or {}).statuses or "") or ""
+
+		if current_key ~= statuses_url then
+			return
+		end
+
+		if err ~= nil then
+			pr_state.statuses = nil
+			footer.notify("error", "Failed to load PR statuses: " .. tostring(err))
+		else
+			pr_state.statuses = statuses
+		end
+	end)
+end
 
 ---@param tab_key string
 ---@return string
@@ -187,6 +251,9 @@ end
 
 ---@param opts? { force_load?: boolean }
 function M.refresh(opts)
+	opts = opts or {}
+	fetch_statuses(opts.force_load == true)
+
 	local tab = resolve_tab_module(active_tab_key())
 	if tab ~= nil and type(tab.refresh) == "function" then
 		tab.refresh(opts)
@@ -204,6 +271,13 @@ end
 ---@param item BitbucketPR|nil
 function M.set_item(item)
 	pr_state.item = item
+	if item == nil then
+		clear_statuses()
+		select_tab(active_tab_key())
+		return
+	end
+
+	fetch_statuses(false)
 	select_tab(active_tab_key())
 end
 
@@ -216,10 +290,12 @@ function M.prev_tab()
 end
 
 function M.deactivate()
+	clear_statuses()
 	deactivate_tab(active_tab_key())
 end
 
 function M.reset()
+	clear_statuses()
 	for _, tab in ipairs(TABS) do
 		local mod = resolve_tab_module(tab.key)
 		if mod ~= nil and type(mod.reset) == "function" then

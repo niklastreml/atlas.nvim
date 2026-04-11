@@ -380,6 +380,76 @@ function M.fetch_comments(comments_url, opts, on_done)
 	end)
 end
 
+---@param statuses_url string
+---@param opts? { force_load?: boolean, pagelen?: number }
+---@param on_done fun(statuses: BitbucketPRStatuses|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_statuses(statuses_url, opts, on_done)
+	opts = opts or {}
+
+	if type(statuses_url) ~= "string" or statuses_url == "" then
+		on_done(nil, "Missing Bitbucket statuses URL")
+		return nil
+	end
+
+	local sep = statuses_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", statuses_url, sep, tonumber(opts.pagelen) or 30)
+	local key = "bitbucket:pr:statuses:" .. url
+	if opts.force_load ~= true then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
+	return service.request("GET", url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		local statuses = pr_normalizer.pr_statuses(result)
+		service.set_cache(key, statuses, service.cache_ttl())
+		on_done(statuses, nil)
+	end)
+end
+
+---@param statuses_url string
+---@param opts? { force_load?: boolean, pagelen?: number }
+---@param on_done fun(statuses: BitbucketPRStatuses|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_commit_statuses(statuses_url, opts, on_done)
+	opts = opts or {}
+
+	if type(statuses_url) ~= "string" or statuses_url == "" then
+		on_done(nil, "Missing Bitbucket commit statuses URL")
+		return nil
+	end
+
+	local sep = statuses_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", statuses_url, sep, tonumber(opts.pagelen) or 30)
+	local key = "bitbucket:commit:statuses:" .. url
+	if opts.force_load ~= true then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
+	return service.request("GET", url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		local statuses = pr_normalizer.pr_statuses(result)
+		service.set_cache(key, statuses, service.cache_ttl())
+		on_done(statuses, nil)
+	end)
+end
+
 ---@param merge_url string
 ---@param opts { message?: string, close_source_branch?: boolean, merge_strategy?: string }|nil
 ---@param on_done fun(result: table|nil, err: string|nil)

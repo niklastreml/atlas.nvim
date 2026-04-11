@@ -42,12 +42,60 @@ local function resolve(text, mention_map)
 	)
 end
 
+---@param statuses BitbucketPRStatuses|nil
+---@return "successful"|"failed"|"inprogress"|"stopped"|"unknown"
+local function aggregate_status(statuses)
+	if type(statuses) ~= "table" or type(statuses.entries) ~= "table" then
+		return "unknown"
+	end
+
+	local has_success = false
+	local has_stopped = false
+	for _, entry in ipairs(statuses.entries) do
+		local s = tostring(entry.state or "UNKNOWN")
+		if s == "FAILED" then
+			return "failed"
+		end
+		if s == "INPROGRESS" then
+			return "inprogress"
+		end
+		if s == "STOPPED" then
+			has_stopped = true
+		elseif s == "SUCCESSFUL" then
+			has_success = true
+		end
+	end
+
+	if has_stopped then
+		return "stopped"
+	end
+	if has_success then
+		return "successful"
+	end
+	return "unknown"
+end
+
+---@param status string|nil
+---@return string
+local function status_label(status)
+	local s = tostring(status or ""):lower()
+	if s == "" then
+		return "Unknown"
+	end
+	return s:sub(1, 1):upper() .. s:sub(2)
+end
+
 -- Bitbucket comment/activity text often contains mentions as account IDs
 -- (e.g. "@{<account_id>}"), not display names. We best-effort resolve them
 -- using users known in the current PR detail (author/reviewers/participants).
 M.mentions = {
 	build_map = build_map,
 	resolve = resolve,
+}
+
+M.statuses = {
+	aggregate = aggregate_status,
+	label = status_label,
 }
 
 return M
