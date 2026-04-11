@@ -2,7 +2,7 @@
 local M = {}
 
 local utils = require("atlas.utils")
-local highlights = require("atlas.ui.highlights")
+local highlights = require("atlas.ui.utils.highlights")
 
 -------------------------------------------------------------------------------
 -- Types

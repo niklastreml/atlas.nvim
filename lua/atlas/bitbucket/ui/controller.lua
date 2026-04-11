@@ -274,7 +274,11 @@ function M.refresh_pr(pr, on_done)
 			local current_panel_id = type(current_panel_pr) == "table" and current_panel_pr.id or nil
 
 			if ui_panel_state.active_provider == "bitbucket" and current_panel_id == pr_id then
-				panel.on_select("bitbucket", fetched_pr)
+				panel.on_select({
+					provider = "bitbucket",
+					panel_type = "pr",
+					item = fetched_pr,
+				})
 			end
 		end
 

@@ -4,7 +4,6 @@ local resolver = require("atlas.core.keymaps")
 local help = require("atlas.ui.popups.help")
 local utils = require("atlas.utils")
 local controller = require("atlas.jira.ui.controller")
-local actions = require("atlas.jira.ui.actions")
 local jira_actions = require("atlas.jira.actions")
 local navigation = require("atlas.ui.navigation")
 local footer = require("atlas.ui.components.footer")
@@ -138,7 +137,7 @@ function M.register(buf)
 		desc = "Open issue in browser",
 		index = 6,
 		callback = function()
-			actions.browse_issue(selected_issue())
+			run_selected_issue_action("browse_issue", "Open issue")
 		end,
 	})
 
@@ -146,7 +145,16 @@ function M.register(buf)
 		desc = "Create Jira issue",
 		index = 7,
 		callback = function()
-			actions.create_issue()
+			jira_actions.run("create_issue", { issue = nil, source = "main", description = nil }, function(result, err)
+				if err ~= nil then
+					footer.notify("error", tostring(err))
+					return
+				end
+
+				if result ~= nil and result.changed_issue_key ~= nil and result.changed_issue_key ~= "" then
+					controller.refresh_issue(result.changed_issue_key)
+				end
+			end)
 		end,
 	})
 
@@ -162,9 +170,7 @@ function M.register(buf)
 		desc = "Refresh current view",
 		index = 9,
 		callback = function()
-			controller.refresh_current_view(function()
-				navigation.focus_first_item()
-			end)
+			controller.refresh_current_view()
 		end,
 	})
 
@@ -178,14 +184,14 @@ function M.register(buf)
 	add("jira.copy_key", {
 		desc = "Copy issue key",
 		callback = function()
-			actions.copy_issue_key(selected_issue())
+			run_selected_issue_action("copy_issue_key", "Copy issue key")
 		end,
 	})
 
 	add("jira.copy_url", {
 		desc = "Copy issue URL",
 		callback = function()
-			actions.copy_issue_url(selected_issue())
+			run_selected_issue_action("copy_issue_url", "Copy issue URL")
 		end,
 	})
 

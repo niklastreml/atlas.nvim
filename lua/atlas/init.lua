@@ -8,7 +8,7 @@ function M.setup(opts)
 end
 
 local function bootstrap_common()
-	require("atlas.ui.highlights").setup()
+	require("atlas.ui.utils.highlights").setup()
 	require("atlas.ui.components.footer").setup()
 
 	require("atlas.ui.popups.help").register_command("Commands", {
@@ -44,8 +44,9 @@ function M.open(view, opts)
 
 	layout.ensure_open()
 	bootstrap_common()
+
+	layout.open()
 	bootstrap_provider(view, opts)
-	layout.open(view)
 end
 
 return M

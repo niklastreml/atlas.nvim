@@ -48,4 +48,30 @@ function M.setup()
 	register_dynamic_keys(target_buf, views)
 end
 
+---@param item table|nil
+---@return AtlasBitbucketPanelSelection|nil
+function M.panel_selection_from_item(item)
+	if type(item) ~= "table" then
+		return nil
+	end
+
+	if (item.kind == "pr" or item.kind == "pr_meta") and type(item.pr) == "table" then
+		return {
+			provider = "bitbucket",
+			panel_type = "pr",
+			item = item.pr,
+		}
+	end
+
+	if type(item._repo) == "table" then
+		return {
+			provider = "bitbucket",
+			panel_type = "repo",
+			item = item._repo,
+		}
+	end
+
+	return nil
+end
+
 return M

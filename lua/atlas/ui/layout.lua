@@ -1,7 +1,7 @@
 local M = {}
 
 local footer = require("atlas.ui.components.footer")
-local ui_state = require("atlas.ui.main.state")
+local ui_state = require("atlas.ui.state")
 
 local state = {
 	main_win = nil,
@@ -146,7 +146,6 @@ local function ensure_main()
 	end
 
 	apply_main_win_opts(state.main_win)
-
 end
 
 local function ensure_footer()
@@ -230,9 +229,8 @@ function M.reflow()
 	footer.refresh()
 end
 
-function M.open(view)
+function M.open()
 	M.ensure_open()
-	require("atlas.ui.main.renderer").render(view, { autofocus = true })
 	footer.refresh()
 end
 
@@ -312,8 +310,12 @@ vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
 			return
 		end
 		M.reflow()
-		require("atlas.ui.main.renderer").render(ui_state.current_view)
-		require("atlas.ui.panel.init").refresh()
+		if ui_state.current_view == "jira" then
+			require("atlas.jira.ui").render()
+		elseif ui_state.current_view == "bitbucket" then
+			require("atlas.bitbucket.ui").render()
+		end
+		require("atlas.ui.panel").refresh()
 	end,
 })
 
@@ -327,8 +329,13 @@ vim.api.nvim_create_autocmd("TabEnter", {
 			return
 		end
 		M.reflow()
-		require("atlas.ui.main.renderer").render(ui_state.current_view)
-		require("atlas.ui.panel.init").refresh()
+
+		if ui_state.current_view == "jira" then
+			require("atlas.jira.ui").render()
+		elseif ui_state.current_view == "bitbucket" then
+			require("atlas.bitbucket.ui").render()
+		end
+		require("atlas.ui.panel").refresh()
 	end,
 })
 

@@ -4,7 +4,6 @@ local config = require("atlas.config")
 local controller = require("atlas.jira.ui.controller")
 local keymaps = require("atlas.jira.keymaps")
 local help = require("atlas.ui.popups.help")
-local navigation = require("atlas.ui.navigation")
 local layout = require("atlas.ui.layout")
 local footer = require("atlas.ui.components.footer")
 local state = require("atlas.jira.state")
@@ -21,9 +20,7 @@ local function register_keymaps(buf, views)
 				desc = string.format("Switch to %s", v.name),
 				hidden = true,
 				callback = function()
-					controller.switch_view(v, function()
-						navigation.focus_first_item()
-					end)
+					controller.switch_view(v)
 				end,
 			})
 		end
@@ -38,8 +35,14 @@ end
 ---@param opts { initial_view?: JiraViewConfig }|nil
 function M.setup(opts)
 	opts = opts or {}
+
 	if opts.initial_view ~= nil then
 		state.active_view = opts.initial_view
+	else
+		local views = (config.options.jira and config.options.jira.views) or {}
+		if state.active_view == nil then
+			state.active_view = views[1]
+		end
 	end
 
 	footer.clear_items()
@@ -51,6 +54,20 @@ function M.setup(opts)
 
 	local views = (config.options.jira and config.options.jira.views) or {}
 	register_keymaps(target_buf, views)
+	require("atlas.jira.ui").init()
+end
+
+---@param item table|nil
+---@return AtlasJiraPanelSelection|nil
+function M.panel_selection_from_item(item)
+	if type(item) ~= "table" or type(item._issue) ~= "table" then
+		return nil
+	end
+
+	return {
+		provider = "jira",
+		item = item._issue,
+	}
 end
 
 return M

@@ -66,7 +66,9 @@ local function sync_render_loop()
 end
 
 ---@param issue JiraIssue|nil
-function M.on_select(issue)
+---@param opts? { force_refresh?: boolean }
+function M.on_select(issue, opts)
+	opts = opts or {}
 	local target_tab = panel_state.current_tab
 	if get_tab_module(target_tab) == nil then
 		target_tab = "overview"
@@ -78,7 +80,7 @@ function M.on_select(issue)
 	end
 
 	if issue ~= nil then
-		M.select_tab(target_tab)
+		M.select_tab(target_tab, { force_refresh = opts.force_refresh == true })
 	else
 		M.render()
 	end

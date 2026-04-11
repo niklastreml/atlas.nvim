@@ -1,6 +1,6 @@
 local M = {}
 
-local highlights = require("atlas.ui.highlights")
+local highlights = require("atlas.ui.utils.highlights")
 
 ---@param issue_type string|nil
 ---@return string

@@ -5,7 +5,7 @@ local footer = require("atlas.ui.components.footer")
 local navigation = require("atlas.ui.navigation")
 local jql_api = require("atlas.jira.completion.jql")
 local layout = require("atlas.ui.layout")
-local ui_state = require("atlas.ui.main.state")
+local ui_state = require("atlas.ui.state")
 local autocomplete_fetch_started = false
 
 local function is_jira_open()
@@ -26,9 +26,7 @@ function M.run(query)
 	}
 
 	if is_jira_open() then
-		controller.switch_view(search_view, function()
-			navigation.focus_first_item()
-		end)
+		controller.switch_view(search_view)
 	else
 		require("atlas").open("jira", { initial_view = search_view })
 		vim.schedule(function()

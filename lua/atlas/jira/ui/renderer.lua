@@ -1,7 +1,7 @@
 local M = {}
 
 local config = require("atlas.config")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 local state = require("atlas.jira.state")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")

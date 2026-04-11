@@ -5,11 +5,12 @@ local users_api = require("atlas.jira.api.users")
 local issues_api = require("atlas.jira.api.issues")
 local projects_api = require("atlas.jira.api.projects")
 local jira_state = require("atlas.jira.state")
+local config = require("atlas.config")
 local issue_editor = require("atlas.jira.ui.issue")
 local adf = require("atlas.jira.converted.adf")
 local footer = require("atlas.ui.components.footer")
 local async_picker = require("atlas.ui.components.async_picker")
-local icons = require("atlas.ui.icons")
+local icons = require("atlas.ui.utils.icons")
 
 ---@class JiraActionContext
 ---@field issue JiraIssue|nil
@@ -541,9 +542,7 @@ local ACTIONS = {
 						jql = string.format('key = "%s"', issue_key),
 					}
 
-					require("atlas.jira.ui.controller").switch_view(search_view, function()
-						require("atlas.ui.navigation").focus_first_item()
-					end)
+					require("atlas.jira.ui.controller").switch_view(search_view)
 					done({ changed_issue_key = issue_key, message = string.format("Opened %s", issue_key) }, nil)
 				end,
 				on_cancel = function()
@@ -741,6 +740,74 @@ local ACTIONS = {
 					done({ changed_issue_key = nil, message = "Create issue cancelled" }, nil)
 				end,
 			})
+		end,
+	},
+	{
+		id = "browse_issue",
+		label = "Open Issue In Browser",
+		is_available = has_issue_key,
+		run = function(ctx, done)
+			local issue = ctx.issue
+			if not has_issue_key(ctx) or issue == nil then
+				done(nil, "No issue selected")
+				return
+			end
+
+			local base_url = tostring(((config.options and config.options.jira) or {}).base_url or ""):gsub("/$", "")
+			local issue_key = tostring(issue.key or "")
+			if base_url == "" or issue_key == "" then
+				done(nil, "No URL found for issue")
+				return
+			end
+
+			vim.ui.open(string.format("%s/browse/%s", base_url, issue_key))
+			done({ changed_issue_key = nil, message = string.format("Opened %s in browser", issue_key) }, nil)
+		end,
+	},
+	{
+		id = "copy_issue_key",
+		label = "Copy Issue Key",
+		is_available = has_issue_key,
+		run = function(ctx, done)
+			local issue = ctx.issue
+			if not has_issue_key(ctx) or issue == nil then
+				done(nil, "No issue selected")
+				return
+			end
+
+			local issue_key = tostring(issue.key or "")
+			if issue_key == "" then
+				done(nil, "Nothing to copy")
+				return
+			end
+
+			vim.fn.setreg("+", issue_key)
+			vim.fn.setreg('"', issue_key)
+			done({ changed_issue_key = nil, message = "Copied issue key" }, nil)
+		end,
+	},
+	{
+		id = "copy_issue_url",
+		label = "Copy Issue URL",
+		is_available = has_issue_key,
+		run = function(ctx, done)
+			local issue = ctx.issue
+			if not has_issue_key(ctx) or issue == nil then
+				done(nil, "No issue selected")
+				return
+			end
+
+			local base_url = tostring(((config.options and config.options.jira) or {}).base_url or ""):gsub("/$", "")
+			local issue_key = tostring(issue.key or "")
+			local url = (base_url ~= "" and issue_key ~= "") and string.format("%s/browse/%s", base_url, issue_key) or ""
+			if url == "" then
+				done(nil, "No URL found for issue")
+				return
+			end
+
+			vim.fn.setreg("+", url)
+			vim.fn.setreg('"', url)
+			done({ changed_issue_key = nil, message = "Copied issue URL" }, nil)
 		end,
 	},
 }

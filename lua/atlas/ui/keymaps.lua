@@ -100,16 +100,25 @@ function M.register(buf)
 			local panel = require("atlas.ui.panel")
 			local navigation = require("atlas.ui.navigation")
 			local panel_state = require("atlas.ui.panel.state")
-			local ui_state = require("atlas.ui.main.state")
+			local ui_state = require("atlas.ui.state")
 			local current = navigation.current_item()
 			if panel.is_open() then
-				local selected = panel_state.selected_item
-				if type(selected) == "table" and (selected.kind == "pr" or selected.kind == "issue") then
+				if panel_state.active_provider == ui_state.current_view then
 					panel.close()
 					return
 				end
 			end
-			panel.show(ui_state.current_view, current)
+
+			local selection = nil
+			if ui_state.current_view == "jira" then
+				selection = require("atlas.jira").panel_selection_from_item(current)
+			elseif ui_state.current_view == "bitbucket" then
+				selection = require("atlas.bitbucket").panel_selection_from_item(current)
+			end
+
+			if selection ~= nil then
+				panel.show(selection)
+			end
 		end,
 	})
 
@@ -122,7 +131,7 @@ function M.register(buf)
 				return
 			end
 
-			local ui_state = require("atlas.ui.main.state")
+			local ui_state = require("atlas.ui.state")
 			if ui_state.current_view == "jira" then
 				require("atlas.jira.panel.init").prev_tab()
 			elseif ui_state.current_view == "bitbucket" then
@@ -140,7 +149,7 @@ function M.register(buf)
 				return
 			end
 
-			local ui_state = require("atlas.ui.main.state")
+			local ui_state = require("atlas.ui.state")
 			if ui_state.current_view == "jira" then
 				require("atlas.jira.panel.init").next_tab()
 			elseif ui_state.current_view == "bitbucket" then

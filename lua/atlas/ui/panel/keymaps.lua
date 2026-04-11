@@ -76,7 +76,7 @@ function M.register(buf)
 			if help.is_open() then
 				return
 			end
-			require("atlas.ui.panel.init").close()
+			require("atlas.ui.panel").close()
 		end,
 	})
 
@@ -84,7 +84,7 @@ function M.register(buf)
 		desc = "Toggle detail pane",
 		opts = { silent = true, nowait = true },
 		callback = function()
-			require("atlas.ui.panel.init").toggle()
+			require("atlas.ui.panel").toggle()
 		end,
 	})
 

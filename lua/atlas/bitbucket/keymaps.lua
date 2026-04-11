@@ -130,13 +130,17 @@ function M.register(buf)
 			local panel = require("atlas.ui.panel")
 			local panel_state = require("atlas.ui.panel.state")
 			if panel.is_open() then
-				local selected = panel_state.selected_item
-				if type(selected) == "table" and selected.kind == "repo" then
+				local bb_panel = require("atlas.bitbucket.panel.init")
+				if panel_state.active_provider == "bitbucket" and bb_panel.get_panel_type() == "repo" then
 					panel.close()
 					return
 				end
 			end
-			panel.show("bitbucket", repo)
+			panel.show({
+				provider = "bitbucket",
+				panel_type = "repo",
+				item = repo,
+			})
 		end,
 	})
 
@@ -171,8 +175,8 @@ function M.register(buf)
 			local panel = require("atlas.ui.panel")
 			local panel_state = require("atlas.ui.panel.state")
 			if panel.is_open() then
-				local selected = panel_state.selected_item
-				if type(selected) == "table" and selected.kind == "repo" then
+				local bb_panel = require("atlas.bitbucket.panel.init")
+				if panel_state.active_provider == "bitbucket" and bb_panel.get_panel_type() == "repo" then
 					require("atlas.bitbucket.panel.tabs.repo.overview.controller").refresh()
 					return
 				end

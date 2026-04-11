@@ -6,12 +6,32 @@ local M = {}
 
 ---@type table<string, MemoryCacheEntry>
 local store = {}
+local order = {}
+local MAX_ITEMS = 50
+
+---@param key string
+local function remove_from_order(key)
+	for i, existing_key in ipairs(order) do
+		if existing_key == key then
+			table.remove(order, i)
+			return
+		end
+	end
+end
 
 local function prune_expired()
 	local now = os.time()
 	for key, entry in pairs(store) do
 		if entry.expires_at and now > entry.expires_at then
 			store[key] = nil
+			remove_from_order(key)
+		end
+	end
+
+	while #order > MAX_ITEMS do
+		local oldest_key = table.remove(order, 1)
+		if oldest_key ~= nil then
+			store[oldest_key] = nil
 		end
 	end
 end
@@ -21,16 +41,20 @@ end
 ---@param ttl number|nil
 function M.set(key, value, ttl)
 	prune_expired()
+	local now = os.time()
 
 	local expires_at = nil
 	if ttl ~= nil and ttl > 0 then
-		expires_at = os.time() + ttl
+		expires_at = now + ttl
 	end
 
+	remove_from_order(key)
+	table.insert(order, key)
 	store[key] = {
 		value = value,
 		expires_at = expires_at,
 	}
+	prune_expired()
 end
 
 ---@param key string
@@ -49,10 +73,12 @@ end
 ---@param key string
 function M.delete(key)
 	store[key] = nil
+	remove_from_order(key)
 end
 
 function M.clear_all()
 	store = {}
+	order = {}
 end
 
 return M
