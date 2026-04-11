@@ -1,11 +1,5 @@
 local M = {}
 
----@param s string
----@return string
-local function escape_lua_pattern(s)
-	return (tostring(s):gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
-end
-
 ---@class JiraMentionUser
 ---@field id string
 ---@field label string

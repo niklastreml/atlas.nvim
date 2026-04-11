@@ -161,6 +161,9 @@ function M.register(buf)
 		desc = "Open PR in browser",
 		index = 6,
 		callback = function()
+			if require("atlas.bitbucket.panel.init").open_current_line() then
+				return
+			end
 			actions.browse_current_pr(selected_pr())
 		end,
 	})

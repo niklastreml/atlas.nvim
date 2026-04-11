@@ -126,19 +126,19 @@ function M.build_completion()
 			if start_after_at == nil then
 				return nil
 			end
-			return start_after_at - 1
+			return start_after_at - 2
 		end,
 		complete = function(base)
 			local users = to_mentions(build_map())
-			local query = vim.trim(tostring(base or "")):lower()
+			local query = vim.trim(tostring(base or "")):gsub("^@", ""):lower()
 			local matches = {}
 			for _, user in ipairs(users) do
 				local id = tostring(user.id or "")
 				local label = tostring(user.label or "")
 				if id ~= "" and label ~= "" and (query == "" or label:lower():find(query, 1, true) == 1) then
 					table.insert(matches, {
-						word = "{" .. id .. "}",
-						abbr = label,
+						word = "@{" .. id .. "}",
+						abbr = "@" .. label,
 						menu = "mention",
 					})
 				end

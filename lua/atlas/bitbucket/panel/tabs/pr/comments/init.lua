@@ -31,6 +31,11 @@ function M.refresh(opts)
 end
 
 ---@return boolean
+function M.open_current_line()
+	return controller.open_current_line() == true
+end
+
+---@return boolean
 function M.is_loading()
 	return controller.is_loading()
 end

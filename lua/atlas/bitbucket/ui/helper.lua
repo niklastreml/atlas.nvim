@@ -120,6 +120,22 @@ function M.cell_hl(row, col, ctx)
 		}
 	end
 
+	if col.key == "name" and row.kind == "pr" then
+		local pr_icon = icons.bitbucket_icon("bitbucket.entity.pr")
+		local start_col = 0
+		local icon_start, icon_end = string.find(ctx.text or "", pr_icon, 1, true)
+		if icon_start ~= nil and icon_end ~= nil then
+			start_col = icon_start - 1
+			return {
+				{ start_col = start_col, end_col = start_col + #pr_icon, hl_group = "AtlasTextPositive" },
+			}
+		end
+
+		return {
+			{ start_col = 0, end_col = #pr_icon, hl_group = "AtlasTextPositive" },
+		}
+	end
+
 	if col.key == "pr_icon" then
 		local hl_group = row.kind == "pr" and "AtlasTextPositive" or "AtlasTextMuted"
 		return {

@@ -189,6 +189,22 @@ function M.is_selectable_line(lnum)
 	return is_comment_line(lnum)
 end
 
+---@return boolean
+function M.open_current_line()
+	local comment = current_comment_under_cursor()
+	if comment == nil then
+		return false
+	end
+
+	local comment_url = tostring(((comment.links or {}).html) or "")
+	if comment_url == "" then
+		return false
+	end
+
+	vim.ui.open(comment_url)
+	return true
+end
+
 function M.add_comment()
 	local comments_url = current_comments_url()
 	if comments_url == nil then
