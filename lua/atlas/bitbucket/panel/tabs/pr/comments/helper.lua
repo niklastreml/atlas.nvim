@@ -13,6 +13,19 @@ function M.can_manage_comment(comment, current_user)
 	return author_id ~= "" and current_user_id ~= "" and author_id == current_user_id
 end
 
+---@param task BitbucketPRTask|nil
+---@param current_user BitbucketCurrentUser|nil
+---@return boolean
+function M.can_manage_task(task, current_user)
+	if type(task) ~= "table" then
+		return false
+	end
+
+	local author_id = tostring((task.creator or {}).account_id or "")
+	local current_user_id = tostring((current_user or {}).account_id or "")
+	return author_id ~= "" and current_user_id ~= "" and author_id == current_user_id
+end
+
 ---@param a BitbucketPRCommentEntry
 ---@param b BitbucketPRCommentEntry
 ---@return boolean

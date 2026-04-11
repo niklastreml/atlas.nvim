@@ -20,6 +20,10 @@ local PADDING_X = 1
 ---@field file string
 ---@field nodes BitbucketPRCommentTreeNode[]
 
+---@class BitbucketTaskMap
+---@field by_comment_id table<number, BitbucketPRTask[]>
+---@field global BitbucketPRTask[]
+
 ---@param value string|nil
 ---@return string
 local function first_line(value)
@@ -93,8 +97,9 @@ end
 
 ---@param node BitbucketPRCommentTreeNode
 ---@param file string
+---@param task_map BitbucketTaskMap
 ---@return AtlasThreadV2Item
-local function to_thread_item(node, file)
+local function to_thread_item(node, file, task_map)
 	local comment = node.comment
 	local is_deleted = comment.deleted == true
 	local is_pending = comment.pending == true
@@ -114,7 +119,44 @@ local function to_thread_item(node, file)
 	end
 	local children = {}
 	for _, child in ipairs(node.children or {}) do
-		table.insert(children, to_thread_item(child, file))
+		table.insert(children, to_thread_item(child, file, task_map))
+	end
+
+	for _, task in ipairs((task_map.by_comment_id or {})[tonumber(comment.id) or -1] or {}) do
+		local is_resolved = tostring(task.state or "") == "RESOLVED"
+		local task_author = author_name(task.creator)
+		local task_title = first_line(task.content_raw)
+		if task_title == "" then
+			task_title = "(empty task)"
+		end
+		local checkbox = is_resolved and "[x]" or "[ ]"
+		local can_manage_task = comments_helper.can_manage_task(task, bitbucket_state.current_user)
+		local footer_items = {
+			string.format("%s (t)", is_resolved and icons.entity("refresh") or icons.entity("success")),
+		}
+		if can_manage_task then
+			table.insert(footer_items, string.format("%s (e)", icons.jira_icon("jira.entity.edit")))
+			table.insert(footer_items, string.format("%s (d)", icons.jira_icon("jira.entity.delete")))
+		end
+		table.insert(children, {
+			icon = "",
+			author = string.format("%s %s", checkbox, task_title),
+			additional = string.format("by @%s", task_author),
+			right_text = utils.relative_time(task.updated_on ~= "" and task.updated_on or task.created_on),
+			content = nil,
+			footer_items = footer_items,
+			line_map = {
+				task = task,
+				entity_kind = "task",
+				file = file,
+			},
+			meta = {
+				task = task,
+				author_hl_name = task_author,
+				is_task = true,
+				is_resolved = is_resolved,
+			},
+		})
 	end
 
 	return {
@@ -127,13 +169,74 @@ local function to_thread_item(node, file)
 		children = children,
 		line_map = {
 			comment = comment,
+			entity_kind = "comment",
 			file = file,
 		},
 		meta = {
 			comment = comment,
-			author_hl_name = tostring((comment.author and comment.author.name) or ""),
+			author_hl_name = author,
 			is_deleted = is_deleted,
 			is_pending = is_pending,
+		},
+	}
+end
+
+---@param tasks BitbucketPRTask[]|nil
+---@return BitbucketTaskMap
+local function build_task_map(tasks)
+	local by_comment_id = {}
+	local global = {}
+
+	for _, task in ipairs(tasks or {}) do
+		local comment_id = tonumber(task.comment_id)
+		if comment_id ~= nil then
+			by_comment_id[comment_id] = by_comment_id[comment_id] or {}
+			table.insert(by_comment_id[comment_id], task)
+		else
+			table.insert(global, task)
+		end
+	end
+
+	return {
+		by_comment_id = by_comment_id,
+		global = global,
+	}
+end
+
+---@param task BitbucketPRTask
+---@return AtlasThreadV2Item
+local function to_global_task_item(task)
+	local is_resolved = tostring(task.state or "") == "RESOLVED"
+	local checkbox = is_resolved and "[x]" or "[ ]"
+	local title = first_line(task.content_raw)
+	if title == "" then
+		title = "(empty task)"
+	end
+	local can_manage_task = comments_helper.can_manage_task(task, bitbucket_state.current_user)
+	local footer_items = {
+		string.format("%s (t)", is_resolved and icons.entity("refresh") or icons.entity("success")),
+	}
+	if can_manage_task then
+		table.insert(footer_items, string.format("%s (e)", icons.jira_icon("jira.entity.edit")))
+		table.insert(footer_items, string.format("%s (d)", icons.jira_icon("jira.entity.delete")))
+	end
+	return {
+		icon = "",
+		author = string.format("%s %s", checkbox, title),
+		additional = string.format("by @%s", author_name(task.creator)),
+		right_text = utils.relative_time(task.updated_on ~= "" and task.updated_on or task.created_on),
+		content = nil,
+		footer_items = footer_items,
+		line_map = {
+			task = task,
+			entity_kind = "task",
+			file = "PR",
+		},
+		meta = {
+			task = task,
+			author_hl_name = author_name(task.creator),
+			is_task = true,
+			is_resolved = is_resolved,
 		},
 	}
 end
@@ -172,6 +275,7 @@ function M.render(width)
 
 	local pr = state.pr
 	local comments = state.comments
+	local tasks = state.tasks
 
 	if pr == nil then
 		return { "", "  No PR selected..." }, {}, nil
@@ -201,7 +305,7 @@ function M.render(width)
 	table.insert(lines, "")
 
 	-- Comments content
-	if comments == "loading" then
+	if comments == "loading" or tasks == "loading" then
 		local loading_line = string.rep(" ", PADDING_X) .. spinner.with_text("Loading comments...")
 		table.insert(lines, loading_line)
 		table.insert(spans, {
@@ -215,7 +319,8 @@ function M.render(width)
 	end
 
 	local comment_entries = type(comments) == "table" and comments or {}
-	if #comment_entries == 0 then
+	local task_entries = type(tasks) == "table" and tasks or {}
+	if #comment_entries == 0 and #task_entries == 0 then
 		local empty_line = string.rep(" ", PADDING_X) .. "No comments yet."
 		table.insert(lines, empty_line)
 		table.insert(spans, {
@@ -229,6 +334,73 @@ function M.render(width)
 	end
 
 	local comment_nodes = comments_helper.normalize_comments(comment_entries)
+	local task_map = build_task_map(task_entries)
+
+	if #task_entries > 0 then
+		local resolved_count = 0
+		local unresolved_count = 0
+		for _, task in ipairs(task_entries) do
+			if tostring(task.state or "") == "RESOLVED" then
+				resolved_count = resolved_count + 1
+			else
+				unresolved_count = unresolved_count + 1
+			end
+		end
+
+		local task_header = string.format("Tasks (%d/%d)", resolved_count, unresolved_count)
+		table.insert(lines, string.rep(" ", PADDING_X) .. task_header)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X,
+			end_col = PADDING_X + #task_header,
+			hl_group = "AtlasColumnHeader",
+		})
+
+		local global_items = {}
+		for _, task in ipairs(task_entries) do
+			table.insert(global_items, to_global_task_item(task))
+		end
+
+		local item_lines, item_spans, item_map = threads.render(global_items, max_width, {
+			padding_x = PADDING_X,
+			separator = "",
+			author_hl = function(item, author)
+				local meta = item and item.meta or nil
+				if meta and meta.is_task == true then
+					return nil
+				end
+				local meta = item and item.meta or nil
+				local task = meta and meta.task or nil
+				local name = task and author_name(task.creator) or author
+				return bitbucket_helper.author_hl(name)
+			end,
+			additional_hl = function(item, additional)
+				local meta = item and item.meta or nil
+				if meta and meta.is_task == true then
+					local name = tostring(meta.author_hl_name or "")
+					if name ~= "" then
+						return bitbucket_helper.author_hl(name)
+					end
+				end
+				return nil
+			end,
+			icon_hl_fn = function(item)
+				local meta = item and item.meta or nil
+				local task = meta and meta.task or nil
+				local name = task and author_name(task.creator) or tostring(item.author or "")
+				return bitbucket_helper.author_hl(name)
+			end,
+		})
+
+		local offset = #lines
+		utils.append_block(lines, spans, { lines = item_lines, highlights = item_spans })
+		for lnum, entry in pairs(item_map or {}) do
+			line_map[offset + lnum] = entry
+		end
+
+		table.insert(lines, "")
+	end
+
 	local file_groups = group_nodes_by_file(comment_nodes)
 	for group_index, group in ipairs(file_groups) do
 		local fh_line, fh_spans = render_file_header(group.file, #group.nodes, PADDING_X, max_width)
@@ -236,13 +408,20 @@ function M.render(width)
 
 		local items = {}
 		for _, node in ipairs(group.nodes) do
-			table.insert(items, to_thread_item(node, group.file))
+			table.insert(items, to_thread_item(node, group.file, task_map))
 		end
 
 		local item_lines, item_spans, item_map = threads.render(items, max_width, {
 			padding_x = PADDING_X,
 			additional_hl = function(item)
 				local meta = item and item.meta or {}
+				if meta.is_task == true then
+					local name = tostring(meta.author_hl_name or "")
+					if name ~= "" then
+						return bitbucket_helper.author_hl(name)
+					end
+					return "AtlasTextMuted"
+				end
 				if meta.is_pending then
 					return "AtlasLogWarn"
 				end
@@ -250,6 +429,9 @@ function M.render(width)
 			end,
 			author_hl = function(item, author)
 				local meta = item and item.meta or nil
+				if meta and meta.is_task == true then
+					return nil
+				end
 				local author_hl_name = meta and meta.author_hl_name or ""
 				if type(author_hl_name) ~= "string" or vim.trim(author_hl_name) == "" then
 					author_hl_name = author
@@ -266,6 +448,9 @@ function M.render(width)
 			end,
 			content_hl = function(item, row)
 				local meta = item and item.meta or {}
+				if meta.is_task == true then
+					return nil
+				end
 				if meta.is_deleted then
 					return {
 						{ start_col = 0, end_col = #row, hl_group = "AtlasTextMutedItalic" },

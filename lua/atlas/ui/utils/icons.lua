@@ -25,6 +25,7 @@ local ICONS = {
 			pr = "",
 			comments = "󰅺",
 			tasks = "󰄱",
+			check = "",
 			commit = "󰜘",
 			files = "󰈔",
 			activity = "󱐋",
@@ -34,9 +35,9 @@ local ICONS = {
 		status = {
 			successful = "",
 			failed = "",
-			inprogress = "",
-			stopped = "",
-			unknown = "",
+			inprogress = "󰦖",
+			stopped = "",
+			unknown = "",
 		},
 	},
 	jira = {

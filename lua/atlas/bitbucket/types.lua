@@ -183,6 +183,30 @@
 ---@field next string|nil
 
 --------------------------------------------------------------------------------
+-- Tasks
+--------------------------------------------------------------------------------
+
+---@class BitbucketPRTask
+---@field id number
+---@field state "RESOLVED"|"UNRESOLVED"|string
+---@field content_raw string
+---@field created_on string
+---@field updated_on string
+---@field resolved_on string|nil
+---@field pending boolean
+---@field creator BitbucketPRAuthor
+---@field comment_id number|nil
+---@field links { self: string, html: string }
+---@field comment_html string|nil
+
+---@class BitbucketPRTasks
+---@field entries BitbucketPRTask[]
+---@field size number|nil
+---@field page number|nil
+---@field pagelen number|nil
+---@field next string|nil
+
+--------------------------------------------------------------------------------
 -- Commits
 --------------------------------------------------------------------------------
 

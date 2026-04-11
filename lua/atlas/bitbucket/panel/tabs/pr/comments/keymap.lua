@@ -28,8 +28,16 @@ function M.setup()
 			end,
 		},
 		{
+			key = "t",
+			desc = "Toggle task resolved",
+			opts = { silent = true, nowait = true },
+			callback = function()
+				controller.toggle_task()
+			end,
+		},
+		{
 			key = "e",
-			desc = "Edit comment",
+			desc = "Edit comment/task",
 			opts = { silent = true, nowait = true },
 			callback = function()
 				controller.edit_comment()
@@ -37,7 +45,7 @@ function M.setup()
 		},
 		{
 			key = "d",
-			desc = "Delete comment",
+			desc = "Delete comment/task",
 			opts = { silent = true, nowait = true },
 			callback = function()
 				controller.delete_comment()
@@ -57,6 +65,7 @@ function M.teardown()
 	help.remove("Bitbucket", {
 		{ key = "a" },
 		{ key = "c" },
+		{ key = "t" },
 		{ key = "e" },
 		{ key = "d" },
 	}, { buffer = buf })

@@ -409,4 +409,44 @@ function M.pr_comments(result)
 	}
 end
 
+---@param result table|nil
+---@return BitbucketPRTasks
+function M.pr_tasks(result)
+	local payload = as_table(result) or {}
+	local entries = {}
+
+	for _, item in ipairs(payload.values or {}) do
+		local task = as_table(item) or {}
+		local content = as_table(task.content) or {}
+		local links = as_table(task.links) or {}
+		local comment = as_table(task.comment)
+		local comment_links = as_table(comment and comment.links or nil) or {}
+
+		table.insert(entries, {
+			id = tonumber(task.id) or 0,
+			state = tostring(task.state or ""),
+			content_raw = tostring(content.raw or ""),
+			created_on = tostring(task.created_on or ""),
+			updated_on = tostring(task.updated_on or ""),
+			resolved_on = task.resolved_on ~= nil and tostring(task.resolved_on) or nil,
+			pending = task.pending == true,
+			creator = actor(task.creator),
+			comment_id = comment ~= nil and tonumber(comment.id) or nil,
+			links = {
+				self = tostring((as_table(links.self) or {}).href or ""),
+				html = tostring((as_table(links.html) or {}).href or ""),
+			},
+			comment_html = tostring((as_table(comment_links.html) or {}).href or ""),
+		})
+	end
+
+	return {
+		entries = entries,
+		size = payload.size ~= nil and tonumber(payload.size) or nil,
+		page = payload.page ~= nil and tonumber(payload.page) or nil,
+		pagelen = payload.pagelen ~= nil and tonumber(payload.pagelen) or nil,
+		next = payload.next ~= nil and tostring(payload.next) or nil,
+	}
+end
+
 return M
