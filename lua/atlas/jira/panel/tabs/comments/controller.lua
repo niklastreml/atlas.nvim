@@ -28,7 +28,10 @@ local function is_comment_line(lnum)
 	if item == nil or item.comment == nil then
 		return false
 	end
-	return item.kind == "content" or item.kind == "thread_content"
+	return item.kind == "header"
+		or item.kind == "thread_header"
+		or item.kind == "content"
+		or item.kind == "thread_content"
 end
 
 ---@return JiraComment|nil
@@ -43,7 +46,11 @@ local function current_comment_under_cursor()
 	if item == nil then
 		return nil
 	end
-	if item.kind ~= "content" and item.kind ~= "thread_content" then
+	if item.kind ~= "header"
+		and item.kind ~= "thread_header"
+		and item.kind ~= "content"
+		and item.kind ~= "thread_content"
+	then
 		return nil
 	end
 	if item.comment == nil then
