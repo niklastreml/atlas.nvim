@@ -35,6 +35,11 @@ function M.is_loading()
 	return controller.is_loading()
 end
 
+---@return boolean
+function M.open_current_line()
+	return controller.open_current_line()
+end
+
 ---@param width integer
 ---@return string[], table[], table|nil
 function M.render(width)

@@ -260,6 +260,15 @@ function M.refresh(opts)
 	end
 end
 
+---@return boolean
+function M.open_current_line()
+	local tab = resolve_tab_module(active_tab_key())
+	if tab ~= nil and type(tab.open_current_line) == "function" then
+		return tab.open_current_line() == true
+	end
+	return false
+end
+
 ---@param tab_key string
 local function select_tab(tab_key)
 	deactivate_tab(pr_state.tab)
