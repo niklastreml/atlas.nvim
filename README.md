@@ -86,6 +86,8 @@ use {
 - [x] JQL support and completion
 - [x] Support for custom fields
 - [x] Create and edit issue templates
+- [ ] Save JQL queries as custom views
+- [ ] Save and filter issues
 
 > [!ATTENTION]
 > The markdown editor for issue descriptions and comments is still experimental and may not work perfectly in all cases. You can toggle between markdown and ADF view in the overview tab to see the raw ADF content and how it translates to markdown. If you encounter any issues with the markdown editor, please open an issue with details.
@@ -166,6 +168,7 @@ Examples:
 - [x] Multiple Bitbucket views
 - [x] PR tabs: overview, activity, comments, commits, files
 - [x] PR actions: merge, approve, request changes
+- [x] Comment workflows (create, reply, edit, delete)
 - [x] Add custom actions to PRs
 - [x] Resolve and checkout PR branches locally
 - [x] Open PR diff in given command
@@ -173,7 +176,9 @@ Examples:
 - [ ] Pagination for API results (PRs, comments, commits, files, activity)
 - [ ] Switch between open, merged and superseded PRs
 - [ ] Bulk actions: approve/request changes on multiple PRs at once
-- [ ] PR files: fuzzy filter changed files by path
+- [ ] Shows pull request checks
+- [ ] Support for Bitbucket Server
+- [ ] Save and filter pull requests
 
 ### Configuration
 
@@ -317,33 +322,33 @@ require("atlas").setup({
 
 #### General
 
-| Context | Key       | Action                    |
-| ------- | --------- | ------------------------- |
-| Atlas   | `q`       | Close Atlas               |
-| Atlas   | `?`       | Toggle help popup         |
-| Atlas   | `p`       | Toggle detail pane        |
-| Atlas   | `<S-Tab>` | Previous panel tab        |
-| Atlas   | `<Tab>`   | Next panel tab            |
-| Atlas   | `K`       | Show issue/pr details     |
-| Atlas   | `R`       | Refresh current view      |
-| Atlas   | `r`       | Refresh selected issue/pr |
+| Context | Key                     | Action                              |
+| ------- | ----------------------- | ----------------------------------- |
+| Atlas   | `q`                     | Close Atlas                         |
+| Atlas   | `?`                     | Toggle help popup                   |
+| Atlas   | `p`                     | Toggle detail pane                  |
+| Atlas   | `<S-Tab>`               | Previous panel tab                  |
+| Atlas   | `<Tab>`                 | Next panel tab                      |
+| Atlas   | `K`                     | Show issue/pr details               |
+| Atlas   | `R`                     | Refresh current view                |
+| Atlas   | `r`                     | Refresh selected issue/pr           |
+| Atlas   | `a/i` / `c` / `e` / `d` | Add / reply / edit / delete comment |
 
 #### Jira
 
-| Context         | Key                   | Action                              |
-| --------------- | --------------------- | ----------------------------------- |
-| Jira            | `A`                   | Open Jira actions                   |
-| Jira            | `/`                   | Search issues                       |
-| Jira            | `ge`                  | Edit Issue                          |
-| Jira            | `gs`                  | Transition Issue                    |
-| Jira            | `ga` / `gr`           | Change Assignee and reporter        |
-| Jira            | `gt`                  | Change issue type                   |
-| Jira            | `gT`                  | Open template editor                |
-| Jira            | `gx`                  | Open issue in browser               |
-| Jira            | `c`                   | Create issue                        |
-| Jira            | `y` / `Y`             | Copy issue key / URL                |
-| Jira            | `m`                   | Toggle ADF / markdown view          |
-| Jira (Comments) | `a` / `c` / `e` / `d` | Add / reply / edit / delete comment |
+| Context | Key         | Action                       |
+| ------- | ----------- | ---------------------------- |
+| Jira    | `A`         | Open Jira actions            |
+| Jira    | `/`         | Search issues                |
+| Jira    | `ge`        | Edit Issue                   |
+| Jira    | `gs`        | Transition Issue             |
+| Jira    | `ga` / `gr` | Change Assignee and reporter |
+| Jira    | `gt`        | Change issue type            |
+| Jira    | `gT`        | Open template editor         |
+| Jira    | `gx`        | Open issue in browser        |
+| Jira    | `c`         | Create issue                 |
+| Jira    | `y` / `Y`   | Copy issue key / URL         |
+| Jira    | `m`         | Toggle ADF / markdown view   |
 
 #### Bitbucket
 

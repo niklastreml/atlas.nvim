@@ -4,7 +4,7 @@
 
 ---@class BitbucketPRCommentsTabState
 ---@field pr BitbucketPR|nil
----@field comments BitbucketPRCommentTreeNode[]|"loading"|nil
+---@field comments BitbucketPRCommentEntry[]|"loading"|nil
 ---@field line_map table<number, table>
 
 ---@class BitbucketPRCommentsTabState

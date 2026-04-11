@@ -12,7 +12,7 @@ local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local icons = require("atlas.ui.utils.icons")
-local pr_helper = require("atlas.bitbucket.panel.tabs.pr.helper")
+local mention_completions = require("atlas.bitbucket.completion.author")
 
 local PADDING_X = 1
 
@@ -21,12 +21,11 @@ local PADDING_X = 1
 ---@field nodes BitbucketPRCommentTreeNode[]
 
 ---@param value string|nil
----@param mention_map table<string, string>
 ---@return string
-local function first_line(value, mention_map)
+local function first_line(value)
 	local raw = tostring(value or ""):gsub("\r\n", "\n")
 	local line = raw:match("([^\n]+)") or raw
-	return pr_helper.mentions.resolve(line, mention_map)
+	return mention_completions.resolve(line)
 end
 
 ---@param author BitbucketPRAuthor|nil
@@ -94,14 +93,13 @@ end
 
 ---@param node BitbucketPRCommentTreeNode
 ---@param file string
----@param mention_map table<string, string>
 ---@return AtlasThreadV2Item
-local function to_thread_item(node, file, mention_map)
+local function to_thread_item(node, file)
 	local comment = node.comment
 	local is_deleted = comment.deleted == true
 	local is_pending = comment.pending == true
 	local can_manage = comments_helper.can_manage_comment(comment, bitbucket_state.current_user)
-	local text = is_deleted and "(deleted comment)" or first_line(comment.content.raw, mention_map)
+	local text = is_deleted and "(deleted comment)" or first_line(comment.content.raw)
 	if text == "" then
 		text = "(empty comment)"
 	end
@@ -116,7 +114,7 @@ local function to_thread_item(node, file, mention_map)
 	end
 	local children = {}
 	for _, child in ipairs(node.children or {}) do
-		table.insert(children, to_thread_item(child, file, mention_map))
+		table.insert(children, to_thread_item(child, file))
 	end
 
 	return {
@@ -216,8 +214,8 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
-	local comment_nodes = comments or {}
-	if #comment_nodes == 0 then
+	local comment_entries = type(comments) == "table" and comments or {}
+	if #comment_entries == 0 then
 		local empty_line = string.rep(" ", PADDING_X) .. "No comments yet."
 		table.insert(lines, empty_line)
 		table.insert(spans, {
@@ -230,15 +228,15 @@ function M.render(width)
 		return lines, spans, line_map
 	end
 
+	local comment_nodes = comments_helper.normalize_comments(comment_entries)
 	local file_groups = group_nodes_by_file(comment_nodes)
-	local mention_map = pr_helper.mentions.build_map(comments_helper.collect_comment_authors(comment_nodes))
 	for group_index, group in ipairs(file_groups) do
 		local fh_line, fh_spans = render_file_header(group.file, #group.nodes, PADDING_X, max_width)
 		utils.append_block(lines, spans, { lines = { fh_line }, highlights = fh_spans })
 
 		local items = {}
 		for _, node in ipairs(group.nodes) do
-			table.insert(items, to_thread_item(node, group.file, mention_map))
+			table.insert(items, to_thread_item(node, group.file))
 		end
 
 		local item_lines, item_spans, item_map = threads.render(items, max_width, {

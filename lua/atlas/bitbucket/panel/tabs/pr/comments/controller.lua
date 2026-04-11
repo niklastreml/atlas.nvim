@@ -2,9 +2,10 @@ local M = {}
 local state = require("atlas.bitbucket.panel.tabs.pr.comments.state")
 local comments_api = require("atlas.bitbucket.api.comments")
 local helper = require("atlas.bitbucket.panel.tabs.pr.comments.helper")
+local mention_completions = require("atlas.bitbucket.completion.author")
 local footer = require("atlas.ui.components.footer")
 local bitbucket_state = require("atlas.bitbucket.state")
-local markdown_editor = require("atlas.jira.ui.markdown_editor")
+local markdown_editor = require("atlas.ui.popups.markdown_editor")
 
 local active_handle = nil
 
@@ -127,7 +128,7 @@ function M.show(pr)
 			state.comments = nil
 			footer.notify("error", "Failed to load comments: " .. tostring(err))
 		else
-			state.comments = helper.normalize_comments(comments.entries)
+			state.comments = comments.entries
 			footer.notify("success", "Comments loaded", 1200)
 		end
 	end)
@@ -163,7 +164,7 @@ function M.refresh(opts)
 				state.comments = nil
 				footer.notify("error", "Failed to refresh comments")
 			else
-				state.comments = helper.normalize_comments(comments.entries)
+				state.comments = comments.entries
 				footer.notify("success", "Comments refreshed", 1200)
 			end
 		end
@@ -194,7 +195,6 @@ function M.add_comment()
 		footer.notify("error", "Missing comments URL")
 		return
 	end
-
 	local pr_id = tostring((state.pr or {}).id or "")
 	markdown_editor.open({
 		key = string.format("bitbucket-comment-add-%s", pr_id),
@@ -202,14 +202,16 @@ function M.add_comment()
 		initial_text = "",
 		width_ratio = 0.22,
 		height_ratio = 0.22,
+		completion = mention_completions.build_completion(),
 		on_save = function(body)
-			if vim.trim(body) == "" then
+			local final_body = tostring(body or "")
+			if vim.trim(final_body) == "" then
 				footer.notify("warn", "Comment cannot be empty")
 				return
 			end
 
 			footer.notify("loading", "Adding comment...")
-			comments_api.create_comment(comments_url, body, nil, function(_, err)
+			comments_api.create_comment(comments_url, final_body, nil, function(_, err)
 				if err ~= nil then
 					footer.notify("error", tostring(err))
 					return
@@ -235,21 +237,22 @@ function M.reply_to_comment()
 		footer.notify("error", "Missing comments URL")
 		return
 	end
-
 	markdown_editor.open({
 		key = string.format("bitbucket-comment-reply-%s", tostring(comment.id or "")),
 		title = "Reply to Comment",
 		initial_text = "",
 		width_ratio = 0.22,
 		height_ratio = 0.22,
+		completion = mention_completions.build_completion(),
 		on_save = function(body)
-			if vim.trim(body) == "" then
+			local final_body = tostring(body or "")
+			if vim.trim(final_body) == "" then
 				footer.notify("warn", "Reply cannot be empty")
 				return
 			end
 
 			footer.notify("loading", "Adding reply...")
-			comments_api.reply_comment(comments_url, comment.id, body, nil, function(_, err)
+			comments_api.reply_comment(comments_url, comment.id, final_body, nil, function(_, err)
 				if err ~= nil then
 					footer.notify("error", tostring(err))
 					return
@@ -280,21 +283,22 @@ function M.edit_comment()
 		footer.notify("error", "Missing comment URL")
 		return
 	end
-
 	markdown_editor.open({
 		key = string.format("bitbucket-comment-edit-%s", tostring(comment.id or "")),
 		title = "Edit Comment",
 		initial_text = tostring((comment.content or {}).raw or ""),
 		width_ratio = 0.22,
 		height_ratio = 0.22,
+		completion = mention_completions.build_completion(),
 		on_save = function(body)
-			if vim.trim(body) == "" then
+			local final_body = tostring(body or "")
+			if vim.trim(final_body) == "" then
 				footer.notify("warn", "Comment cannot be empty")
 				return
 			end
 
 			footer.notify("loading", "Updating comment...")
-			comments_api.update_comment(comment_url, body, nil, function(_, err)
+			comments_api.update_comment(comment_url, final_body, nil, function(_, err)
 				if err ~= nil then
 					footer.notify("error", tostring(err))
 					return

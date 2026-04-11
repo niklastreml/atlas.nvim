@@ -82,46 +82,4 @@ function M.normalize_comments(comments)
 	return roots
 end
 
----@param nodes BitbucketPRCommentTreeNode[]|nil
----@return BitbucketPRAuthor[]
-function M.collect_comment_authors(nodes)
-	local out = {}
-	local seen = {}
-
-	local function add_author(author)
-		if type(author) ~= "table" then
-			return
-		end
-
-		local account_id = tostring(author.account_id or "")
-		if account_id == "" or seen[account_id] == true then
-			return
-		end
-
-		seen[account_id] = true
-		table.insert(out, author)
-	end
-
-	local function walk(node)
-		if type(node) ~= "table" then
-			return
-		end
-
-		local comment = node.comment
-		if type(comment) == "table" then
-			add_author(comment.author)
-		end
-
-		for _, child in ipairs(node.children or {}) do
-			walk(child)
-		end
-	end
-
-	for _, node in ipairs(nodes or {}) do
-		walk(node)
-	end
-
-	return out
-end
-
 return M

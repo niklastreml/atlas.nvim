@@ -1,14 +1,50 @@
 local M = {}
 
 local footer = require("atlas.ui.components.footer")
+local completion_provider_by_buf = {}
 
----@class JiraMarkdownEditorAction
+---@class AtlasMarkdownCompletionProvider
+---@field trigger string|nil
+---@field find_start fun(before: string, line: string, col: integer): integer|nil
+---@field complete fun(base: string, line: string, col: integer): table[]|nil
+
+---@param findstart integer
+---@param base string
+---@return integer|table[]
+function _G.__atlas_markdown_complete(findstart, base)
+	local buf = vim.api.nvim_get_current_buf()
+	local provider = completion_provider_by_buf[buf]
+	if type(provider) ~= "table" then
+		return findstart == 1 and -2 or {}
+	end
+
+	if findstart == 1 then
+		local line = vim.api.nvim_get_current_line()
+		local col = vim.api.nvim_win_get_cursor(0)[2]
+		local before = line:sub(1, col)
+		local start = provider.find_start(before, line, col)
+		if type(start) ~= "number" then
+			return -2
+		end
+		return start
+	end
+
+	local line = vim.api.nvim_get_current_line()
+	local col = vim.api.nvim_win_get_cursor(0)[2]
+	local items = provider.complete(tostring(base or ""), line, col)
+	if type(items) ~= "table" then
+		return {}
+	end
+	return items
+end
+
+---@class AtlasMarkdownEditorAction
 ---@field key string|string[]
 ---@field description string|nil
 ---@field callback fun(ctx: { buf: integer, win: integer, close: fun(), get_text: fun(): string })
 ---@field mode string|string[]|nil
 
----@class JiraMarkdownEditorOptions
+---@class AtlasMarkdownEditorOptions
 ---@field key string
 ---@field title string|nil
 ---@field initial_text string|nil
@@ -16,9 +52,10 @@ local footer = require("atlas.ui.components.footer")
 ---@field height_ratio number|nil
 ---@field on_save fun(text: string)|nil
 ---@field on_cancel fun()|nil
----@field actions JiraMarkdownEditorAction[]|nil
+---@field actions AtlasMarkdownEditorAction[]|nil
+---@field completion AtlasMarkdownCompletionProvider|nil
 
----@param opts JiraMarkdownEditorOptions
+---@param opts AtlasMarkdownEditorOptions
 ---@return integer|nil, integer|nil
 function M.open(opts)
 	if type(opts) ~= "table" then
@@ -59,10 +96,10 @@ function M.open(opts)
 	local col = math.floor((vim.o.columns - width) / 2)
 	local footer_items = { "q quit", "<C-s> save+close" }
 	for _, action in ipairs(type(opts.actions) == "table" and opts.actions or {}) do
-		local key = action and action.key or nil
+		local action_key = action and action.key or nil
 		local description = action and action.description or nil
-		if type(key) == "string" and key ~= "" and type(description) == "string" and description ~= "" then
-			table.insert(footer_items, string.format("%s %s", key, description))
+		if type(action_key) == "string" and action_key ~= "" and type(description) == "string" and description ~= "" then
+			table.insert(footer_items, string.format("%s %s", action_key, description))
 		end
 	end
 
@@ -81,11 +118,40 @@ function M.open(opts)
 		footer = footer_text,
 		footer_pos = "center",
 	})
+	vim.api.nvim_set_option_value(
+		"winhighlight",
+		"Normal:NormalFloat,NormalNC:NormalFloat,EndOfBuffer:NormalFloat,FloatBorder:FloatBorder",
+		{ win = win }
+	)
 
 	vim.api.nvim_set_option_value("number", false, { win = win })
 	vim.api.nvim_set_option_value("relativenumber", false, { win = win })
 	vim.api.nvim_set_option_value("wrap", true, { win = win })
 	vim.api.nvim_set_option_value("cursorline", false, { win = win })
+
+	if type(opts.completion) == "table"
+		and type(opts.completion.find_start) == "function"
+		and type(opts.completion.complete) == "function"
+	then
+		local completion = opts.completion
+		completion_provider_by_buf[buf] = completion
+		vim.api.nvim_set_option_value("completeopt", "menu,menuone,noselect,noinsert", { buf = buf })
+		vim.api.nvim_set_option_value("completefunc", "v:lua.__atlas_markdown_complete", { buf = buf })
+
+		if type(completion.trigger) == "string" and completion.trigger ~= "" then
+			vim.keymap.set("i", completion.trigger, function()
+				return completion.trigger .. "<C-x><C-u>"
+			end, { buffer = buf, silent = true, nowait = true, expr = true })
+		end
+
+		vim.api.nvim_create_autocmd("BufWipeout", {
+			buffer = buf,
+			once = true,
+			callback = function()
+				completion_provider_by_buf[buf] = nil
+			end,
+		})
+	end
 
 	local function close_editor()
 		if vim.api.nvim_win_is_valid(win) then
