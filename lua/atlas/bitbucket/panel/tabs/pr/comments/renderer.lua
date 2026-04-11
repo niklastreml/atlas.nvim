@@ -257,7 +257,6 @@ function M.render(width)
 
 		local item_lines, item_spans, item_map = threads.render(items, max_width, {
 			padding_x = PADDING_X,
-			mode = "linked",
 			additional_hl = function(item)
 				local meta = item and item.meta or {}
 				if meta.is_pending then
