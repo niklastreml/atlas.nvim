@@ -9,6 +9,7 @@ local table_tree = require("atlas.ui.components.table_tree")
 local utils = require("atlas.utils")
 local footer = require("atlas.ui.components.footer")
 local helper = require("atlas.jira.ui.helper")
+local resolver = require("atlas.core.keymaps")
 
 ---@param row table
 ---@param col table
@@ -200,6 +201,18 @@ local function issues_to_rows(issue_groups)
 	return rows
 end
 
+---@param issue_groups JiraIssueGroup[]
+---@return boolean
+local function should_show_indicator(issue_groups)
+	for _, group in ipairs(issue_groups or {}) do
+		local children = type(group) == "table" and group.children or nil
+		if type(children) == "table" and #children > 0 then
+			return true
+		end
+	end
+	return false
+end
+
 ---@param issue JiraIssue
 ---@return string[], table[]
 function M.issue_popup_content(issue)
@@ -331,7 +344,7 @@ function M.render(opts)
 	end
 
 	local actions = {
-		{ label = "Refresh (R)", hl_group = "AtlasTextMuted" },
+		{ label = string.format("Refresh (%s)", key_label("jira.refresh_view", "R")), hl_group = "AtlasTextMuted" },
 	}
 
 	local lines, spans = {}, {}

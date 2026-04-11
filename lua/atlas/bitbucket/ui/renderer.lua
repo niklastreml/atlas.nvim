@@ -9,6 +9,7 @@ local navbar = require("atlas.ui.components.navbar")
 local table_tree = require("atlas.ui.components.table_tree")
 local utils = require("atlas.utils")
 local footer = require("atlas.ui.components.footer")
+local resolver = require("atlas.core.keymaps")
 
 ---@param table_lines string[]
 ---@param table_map table<number, table>
@@ -28,6 +29,17 @@ local function add_pr_id_spans(table_lines, table_map, table_spans)
 			end
 		end
 	end
+end
+
+---@param action_id AtlasKeymapActionId|string
+---@param fallback string
+---@return string
+local function key_label(action_id, fallback)
+	local keys = resolver.resolve(action_id)
+	if type(keys) == "table" and #keys > 0 then
+		return tostring(keys[1])
+	end
+	return fallback
 end
 
 -- Layout: compact
@@ -136,7 +148,7 @@ local function render_header(lines, spans, width, views)
 	end
 
 	local actions = {
-		{ label = string.format("Refresh (R)"), hl_group = "AtlasTextMuted" },
+		{ label = string.format("Refresh (%s)", key_label("bitbucket.refresh_view", "R")), hl_group = "AtlasTextMuted" },
 	}
 
 	utils.append_block(
