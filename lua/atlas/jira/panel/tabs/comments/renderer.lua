@@ -6,6 +6,7 @@ local tabs = require("atlas.jira.panel.components.tabs")
 local utils = require("atlas.utils")
 local spinner = require("atlas.ui.components.spinner")
 local comments_helper = require("atlas.jira.panel.tabs.comments.helper")
+local mention_completions = require("atlas.jira.completion.author")
 local icons = require("atlas.ui.utils.icons")
 local threads = require("atlas.ui.components.threadsv2")
 local highlights = require("atlas.ui.utils.highlights")
@@ -36,7 +37,7 @@ end
 local function to_thread_item(comment)
 	local author = (comment.author ~= nil and comment.author.display_name) or "Unknown"
 	local when = utils.relative_time_text(comment.created)
-	local body = comment.body
+	local body = mention_completions.resolve(comment.body)
 	local can_edit = comments_helper.can_manage_comment(comment, jira_state.current_user)
 
 	local footer_items = {

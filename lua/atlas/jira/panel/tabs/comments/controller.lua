@@ -2,10 +2,12 @@ local M = {}
 local state = require("atlas.jira.panel.tabs.comments.state")
 local panel_state = require("atlas.jira.panel.state")
 local jira_state = require("atlas.jira.state")
+local config = require("atlas.config")
 local footer = require("atlas.ui.components.footer")
 local comments_api = require("atlas.jira.api.comments")
 local helper = require("atlas.jira.panel.tabs.comments.helper")
-local markdown_editor = require("atlas.jira.ui.markdown_editor")
+local mention_completions = require("atlas.jira.completion.author")
+local markdown_editor = require("atlas.ui.popups.markdown_editor")
 
 local active_handle = nil
 local COMMENTS_PAGE_SIZE = 20
@@ -19,6 +21,15 @@ local function detail_win()
 		return nil
 	end
 	return win
+end
+
+---@param user JiraUser|nil
+---@return string
+local function mention_prefix_for_user(user)
+	if user == nil or user.account_id == "" or user.display_name == "" then
+		return ""
+	end
+	return string.format("[@%s](atlas-mention:%s) ", user.display_name, user.account_id)
 end
 
 ---@param lnum integer
@@ -73,13 +84,22 @@ local function find_comment_by_id(comment_id)
 	return nil
 end
 
----@param user JiraUser|nil
----@return string
-local function mention_prefix_for_user(user)
-	if user == nil or user.account_id == "" or user.display_name == "" then
-		return ""
+---@return boolean
+function M.open_current_line()
+	local comment = current_comment_under_cursor()
+	if comment == nil then
+		return false
 	end
-	return string.format("[@%s]{mention:%s} ", user.display_name, user.account_id)
+
+	local issue_key = tostring(((state.issue or {}).key) or "")
+	local comment_id = tostring(comment.id or "")
+	local base_url = tostring(((config.options and config.options.jira) or {}).base_url or ""):gsub("/$", "")
+	if issue_key == "" or comment_id == "" or base_url == "" then
+		return false
+	end
+
+	vim.ui.open(string.format("%s/browse/%s?focusedCommentId=%s", base_url, issue_key, comment_id))
+	return true
 end
 
 ---@param win integer
@@ -267,14 +287,17 @@ function M.add_comment()
 		initial_text = "",
 		width_ratio = 0.22,
 		height_ratio = 0.22,
+		completion = mention_completions.build_completion(),
 		on_save = function(body)
-			if vim.trim(body) == "" then
+			local raw_body = tostring(body or "")
+			if vim.trim(raw_body) == "" then
 				footer.notify("warn", "Comment cannot be empty")
 				return
 			end
+			local final_body = raw_body
 
 			footer.notify("loading", "Adding comment...")
-			comments_api.add_comment(issue.key, body, function(comment, err)
+			comments_api.add_comment(issue.key, final_body, function(comment, err)
 				if err ~= nil then
 					footer.notify("error", err)
 					return
@@ -331,42 +354,46 @@ function M.reply_to_comment()
 		or "unknown user"
 	local initial_text = mention_prefix_for_user(reply_target.author)
 
-	vim.ui.input({
-		prompt = string.format("Reply to %s: ", parent_label),
-		default = initial_text,
-	}, function(input)
-		if input == nil then
-			footer.notify("info", "Reply cancelled")
-			return
-		end
-
-		local body = tostring(input)
-		if vim.trim(body) == "" then
-			footer.notify("warn", "Reply cannot be empty")
-			return
-		end
-
-		footer.notify("loading", string.format("Replying to %s...", parent_label))
-		comments_api.add_comment(issue.key, body, { parent_id = parent_id }, function(comment, err)
-			if err ~= nil then
-				footer.notify("error", err)
+	markdown_editor.open({
+		key = string.format("comment-reply-%s-%s", issue.key, parent_id),
+		title = string.format("Reply to %s", parent_label),
+		initial_text = initial_text,
+		width_ratio = 0.22,
+		height_ratio = 0.22,
+		completion = mention_completions.build_completion(),
+		on_save = function(body)
+			local raw_body = tostring(body or "")
+			if vim.trim(raw_body) == "" then
+				footer.notify("warn", "Reply cannot be empty")
 				return
 			end
+			local final_body = raw_body
 
-			if state.comments == nil then
-				state.comments = {}
-			end
-			if comment ~= nil then
-				table.insert(state.comments, comment)
-			end
+			footer.notify("loading", string.format("Replying to %s...", parent_label))
+			comments_api.add_comment(issue.key, final_body, { parent_id = parent_id }, function(comment, err)
+				if err ~= nil then
+					footer.notify("error", err)
+					return
+				end
 
-			state.comments = helper.normalize_comments(state.comments)
+				if state.comments == nil then
+					state.comments = {}
+				end
+				if comment ~= nil then
+					table.insert(state.comments, comment)
+				end
 
-			require("atlas.jira.panel.init").refresh()
-			M.move(0)
-			footer.notify("success", "Reply added", 1200)
-		end)
-	end)
+				state.comments = helper.normalize_comments(state.comments)
+
+				require("atlas.jira.panel.init").refresh()
+				M.move(0)
+				footer.notify("success", "Reply added", 1200)
+			end)
+		end,
+		on_cancel = function()
+			footer.notify("info", "Reply cancelled")
+		end,
+	})
 end
 
 function M.edit_comment()
@@ -401,14 +428,17 @@ function M.edit_comment()
 		initial_text = current_body,
 		width_ratio = 0.22,
 		height_ratio = 0.22,
+		completion = mention_completions.build_completion(),
 		on_save = function(body)
-			if vim.trim(body) == "" then
+			local raw_body = tostring(body or "")
+			if vim.trim(raw_body) == "" then
 				footer.notify("warn", "Comment cannot be empty")
 				return
 			end
+			local final_body = raw_body
 
 			footer.notify("loading", string.format("Updating comment %s...", comment_id))
-			comments_api.edit_comment(issue.key, comment_id, body, function(updated_comment, err)
+			comments_api.edit_comment(issue.key, comment_id, final_body, function(updated_comment, err)
 				if err ~= nil then
 					footer.notify("error", err)
 					return

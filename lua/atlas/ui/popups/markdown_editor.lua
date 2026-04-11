@@ -98,7 +98,12 @@ function M.open(opts)
 	for _, action in ipairs(type(opts.actions) == "table" and opts.actions or {}) do
 		local action_key = action and action.key or nil
 		local description = action and action.description or nil
-		if type(action_key) == "string" and action_key ~= "" and type(description) == "string" and description ~= "" then
+		if
+			type(action_key) == "string"
+			and action_key ~= ""
+			and type(description) == "string"
+			and description ~= ""
+		then
 			table.insert(footer_items, string.format("%s %s", action_key, description))
 		end
 	end
@@ -129,18 +134,57 @@ function M.open(opts)
 	vim.api.nvim_set_option_value("wrap", true, { win = win })
 	vim.api.nvim_set_option_value("cursorline", false, { win = win })
 
-	if type(opts.completion) == "table"
-		and type(opts.completion.find_start) == "function"
-		and type(opts.completion.complete) == "function"
-	then
-		local completion = opts.completion
+	local completion = opts.completion
+	if completion ~= nil then
 		completion_provider_by_buf[buf] = completion
 		vim.api.nvim_set_option_value("completeopt", "menu,menuone,noselect,noinsert", { buf = buf })
 		vim.api.nvim_set_option_value("completefunc", "v:lua.__atlas_markdown_complete", { buf = buf })
 
-		if type(completion.trigger) == "string" and completion.trigger ~= "" then
-			vim.keymap.set("i", completion.trigger, function()
-				return completion.trigger .. "<C-x><C-u>"
+		local function open_completion_popup()
+			local provider = completion_provider_by_buf[buf]
+			if provider == nil then
+				return
+			end
+
+			if not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_get_current_buf() ~= buf then
+				return
+			end
+			if vim.fn.mode() ~= "i" or vim.fn.pumvisible() == 1 then
+				return
+			end
+
+			local cursor = vim.api.nvim_win_get_cursor(0)
+			local cursor_row = tonumber(cursor[1]) or 1
+			local cursor_col = tonumber(cursor[2]) or 0
+			local line = vim.api.nvim_buf_get_lines(buf, cursor_row - 1, cursor_row, false)[1] or ""
+			if type(line) ~= "string" then
+				return
+			end
+
+			local before = line:sub(1, cursor_col)
+			local start = provider.find_start(before, line, cursor_col)
+			if type(start) ~= "number" then
+				return
+			end
+
+			local base = before:sub(start + 1)
+			local items = provider.complete(tostring(base or ""), line, cursor_col)
+			if type(items) ~= "table" or #items == 0 then
+				return
+			end
+
+			vim.fn.complete(start + 1, items)
+		end
+
+		local trigger = completion.trigger
+		if type(trigger) == "string" and trigger ~= "" then
+			vim.keymap.set("i", trigger, function()
+				local provider = completion_provider_by_buf[buf]
+				if provider == nil then
+					return trigger
+				end
+				vim.schedule(open_completion_popup)
+				return trigger
 			end, { buffer = buf, silent = true, nowait = true, expr = true })
 		end
 
