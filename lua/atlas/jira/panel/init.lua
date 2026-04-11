@@ -200,6 +200,15 @@ function M.refresh()
 	M.render()
 end
 
+---@return boolean
+function M.open_current_line()
+	local tab = get_tab_module(panel_state.current_tab)
+	if tab ~= nil and type(tab.open_current_line) == "function" then
+		return tab.open_current_line() == true
+	end
+	return false
+end
+
 function M.refresh_tab()
 	local tab = get_tab_module(panel_state.current_tab)
 	if tab ~= nil and type(tab.refresh) == "function" then

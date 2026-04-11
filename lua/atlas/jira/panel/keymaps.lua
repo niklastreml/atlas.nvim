@@ -142,6 +142,33 @@ function M.register(buf)
 		end,
 	})
 
+	add("jira.open_in_browser", {
+		desc = "Open issue/comment in browser",
+		opts = { silent = true, nowait = true },
+		callback = function()
+			if require("atlas.jira.panel").open_current_line() then
+				return
+			end
+
+			local issue = panel_state.current_issue
+			if type(issue) ~= "table" then
+				footer.notify("warn", "No issue selected")
+				return
+			end
+
+			jira_actions.run("browse_issue", { issue = issue, source = "panel" }, function(result, err)
+				if err ~= nil then
+					footer.notify("error", tostring(err))
+					return
+				end
+
+				if result ~= nil and result.message ~= nil and result.message ~= "" then
+					footer.notify("info", result.message, 1200)
+				end
+			end)
+		end,
+	})
+
 	M.remove(buf)
 	help.register("Navigation", navigation_items, { index = 999, buffer = buf })
 	help.register("Jira", jira_items, { index = 220, buffer = buf })
@@ -158,6 +185,7 @@ function M.remove(buf)
 
 	local jira_items = {}
 	utils.insert_if(jira_items, remove_item("jira.open_actions"))
+	utils.insert_if(jira_items, remove_item("jira.open_in_browser"))
 	help.remove("Jira", jira_items, { buffer = buf })
 end
 

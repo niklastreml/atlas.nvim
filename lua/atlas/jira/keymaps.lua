@@ -137,6 +137,9 @@ function M.register(buf)
 		desc = "Open issue in browser",
 		index = 6,
 		callback = function()
+			if require("atlas.jira.panel").open_current_line() then
+				return
+			end
 			run_selected_issue_action("browse_issue", "Open issue")
 		end,
 	})

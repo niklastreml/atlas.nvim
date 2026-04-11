@@ -89,7 +89,7 @@ use {
 - [ ] Save JQL queries as custom views
 - [ ] Save and filter issues
 
-> [!ATTENTION]
+> [!IMPORTANT]
 > The markdown editor for issue descriptions and comments is still experimental and may not work perfectly in all cases. You can toggle between markdown and ADF view in the overview tab to see the raw ADF content and how it translates to markdown. If you encounter any issues with the markdown editor, please open an issue with details.
 
 <div>
@@ -229,7 +229,7 @@ return {
             end,
           },
           {
-            name = "Others",
+            name = "Team",
             key = "O",
             layout = "plain", -- "compact" or "plain"
             repos = {
