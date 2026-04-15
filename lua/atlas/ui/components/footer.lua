@@ -1,7 +1,7 @@
 local M = {}
 
-local utils = require("atlas.utils")
-local icons = require("atlas.ui.utils.icons")
+local utils = require("atlas.shared.utils")
+local icons = require("atlas.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
 local resolver = require("atlas.core.keymaps")
 local ns = vim.api.nvim_create_namespace("atlas.footer")
@@ -79,16 +79,16 @@ end
 
 local function notice_icon(level)
 	if level == "success" then
-		return icons.entity("success")
+		return icons.general("success")
 	end
 	if level == "warn" then
-		return icons.entity("warning")
+		return icons.general("warning")
 	end
 	if level == "error" then
-		return icons.entity("error")
+		return icons.general("error")
 	end
 	if level == "info" then
-		return icons.entity("info")
+		return icons.general("info")
 	end
 	if level == "loading" then
 		return "" -- spinner will be used instead of a static icon for loading state
@@ -113,11 +113,8 @@ local function notice_hl(level)
 	return "AtlasTextMuted"
 end
 
----@param text string|nil
----@return number
-local function text_width(text)
-	return vim.fn.strdisplaywidth(text or "")
-end
+local ui_utils = require("atlas.ui.utils")
+local text_width = ui_utils.text_width
 
 ---@param list table[]|nil
 ---@return table[]
@@ -305,27 +302,7 @@ end
 ---@param lines string[]
 ---@param span table
 ---@return table|nil
-local function clamp_span(lines, span)
-	local line = tonumber(span.line) or 0
-	local text = lines[line + 1]
-	if text == nil then
-		return nil
-	end
-
-	local line_len = #text
-	local start_col = math.max(0, math.min(tonumber(span.start_col) or 0, line_len))
-	local end_col = math.max(start_col, math.min(tonumber(span.end_col) or line_len, line_len))
-	if end_col <= start_col then
-		return nil
-	end
-
-	return {
-		line = line,
-		start_col = start_col,
-		end_col = end_col,
-		hl_group = span.hl_group,
-	}
-end
+local clamp_span = ui_utils.clamp_span
 
 function M.refresh()
 	local layout = require("atlas.ui.layout")

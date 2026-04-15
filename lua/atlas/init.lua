@@ -1,4 +1,5 @@
 local M = {}
+
 local logger = require("atlas.core.logger")
 
 ---@param opts AtlasConfig|nil
@@ -8,45 +9,51 @@ function M.setup(opts)
 end
 
 local function bootstrap_common()
-	require("atlas.ui.utils.highlights").setup()
+	require("atlas.shared.highlights").setup()
 	require("atlas.ui.components.footer").setup()
 
 	require("atlas.ui.popups.help").register_command("Commands", {
-		{ name = "AtlasBitbucket", desc = "Open Bitbucket picker" },
-		{ name = "AtlasJira", desc = "Open Jira picker" },
-		{ name = "AtlasJqlSearch", desc = "Start JQL Search" },
+		{ name = "AtlasPulls", desc = "Open pulls domain" },
 		{ name = "AtlasClearCache", desc = "Clear Atlas cache" },
 		{ name = "AtlasLogs", desc = "Open Atlas logs" },
 	}, { index = 999, buffer = require("atlas.ui.layout").buf_id("main") })
 end
 
----@param view "jira"|"bitbucket"
----@param opts table|nil
-local function bootstrap_provider(view, opts)
-	if view == "bitbucket" then
-		require("atlas.bitbucket").setup()
-		return
+---@param provider_id AtlasPullsProviderId|nil
+---@return PullsProvider|nil
+local function resolve_pulls_provider(provider_id)
+	local id = provider_id or "mock"
+	if id == "mock" then
+		return require("atlas.pulls.providers.mock")
 	end
 
-	require("atlas.jira").setup(opts)
+	vim.notify(string.format("[Atlas] Unknown pulls provider: %s", id), vim.log.levels.ERROR)
+	return nil
 end
 
----@param view "jira"|"bitbucket"
----@param opts table|nil
-function M.open(view, opts)
-	logger.loginfo("Atlas open requested", { view = view })
+---@param domain "pulls"|"issues"
+---@param provider_id AtlasPullsProviderId|AtlasIssuesProviderId|nil
+function M.open(domain, provider_id)
+	logger.loginfo("Atlas open requested", { domain = domain, provider_id = provider_id })
 
 	local layout = require("atlas.ui.layout")
-	local panel = require("atlas.ui.panel")
-	if panel.is_open() then
-		panel.close()
-	end
 
 	layout.ensure_open()
 	bootstrap_common()
-
 	layout.open()
-	bootstrap_provider(view, opts)
+
+	if domain == "pulls" then
+		local provider = resolve_pulls_provider(provider_id)
+		if provider == nil then
+			return
+		end
+
+		layout.set_render_callback(function()
+			require("atlas.pulls").render()
+		end)
+
+		require("atlas.pulls").init(provider)
+	end
 end
 
 return M

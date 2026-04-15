@@ -1,13 +1,6 @@
 local M = {}
 
-local function center_text(text, width)
-	local content_width = vim.fn.strdisplaywidth(text)
-	if content_width >= width then
-		return text, 0
-	end
-	local left_pad = math.floor((width - content_width) / 2)
-	return string.rep(" ", left_pad) .. text, left_pad
-end
+local ui_utils = require("atlas.ui.utils")
 
 function M.render(opts)
 	local width = opts.width or vim.o.columns
@@ -16,7 +9,7 @@ function M.render(opts)
 	local hl_group = opts.hl_group or "Title"
 
 	local text = string.format("  %s  %s  ", icon, title)
-	local line, start_col = center_text(text, math.max(width - 2, 20))
+	local line, start_col = ui_utils.center_text(text, math.max(width - 2, 20))
 
 	return {
 		lines = { line, "" },

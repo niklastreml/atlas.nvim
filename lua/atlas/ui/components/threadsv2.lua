@@ -1,8 +1,8 @@
 --- Thanks to claude code. Seems to work for now..
 local M = {}
 
-local utils = require("atlas.utils")
-local highlights = require("atlas.ui.utils.highlights")
+local utils = require("atlas.shared.utils")
+local highlights = require("atlas.shared.highlights")
 
 -------------------------------------------------------------------------------
 -- Types

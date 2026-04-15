@@ -2,11 +2,11 @@ local M = {}
 
 local help = require("atlas.ui.popups.help")
 local resolver = require("atlas.core.keymaps")
-local utils = require("atlas.utils")
+local utils = require("atlas.shared.utils")
 
 ---@param action_id AtlasKeymapActionId|string
 ---@param map_item table
----@return AtlasHelpKeyItem|nil
+---@return table|nil
 local function item(action_id, map_item)
 	local keys = resolver.resolve(action_id)
 	if keys == nil then
@@ -20,7 +20,7 @@ end
 
 ---@param action_id AtlasKeymapActionId|string
 ---@param mode string|string[]|nil
----@return { key: string|string[], mode?: string|string[] }|nil
+---@return table|nil
 local function remove_item(action_id, mode)
 	local keys = resolver.resolve(action_id)
 	if keys == nil then
@@ -55,7 +55,7 @@ function M.register(buf)
 		},
 		{
 			key = "gg",
-			desc = "Go to first PR",
+			desc = "Go to first item",
 			hidden = true,
 			callback = function()
 				require("atlas.ui.navigation").focus_first_item()
@@ -63,7 +63,7 @@ function M.register(buf)
 		},
 		{
 			key = "G",
-			desc = "Go to last PR",
+			desc = "Go to last item",
 			hidden = true,
 			callback = function()
 				require("atlas.ui.navigation").focus_last_item()
@@ -71,19 +71,15 @@ function M.register(buf)
 		},
 	}
 
-	local function add(action_id, map_item)
-		utils.insert_if(items, item(action_id, map_item))
-	end
-
-	add("ui.help", {
+	utils.insert_if(items, item("ui.help", {
 		desc = "Toggle this help popup",
 		opts = { nowait = true, silent = true },
 		callback = function()
 			help.toggle({ buffer = buf })
 		end,
-	})
+	}))
 
-	add("ui.close", {
+	utils.insert_if(items, item("ui.close", {
 		desc = "Close Atlas window",
 		opts = { nowait = true, silent = true },
 		callback = function()
@@ -92,71 +88,7 @@ function M.register(buf)
 			end
 			require("atlas.ui.layout").close()
 		end,
-	})
-
-	add("ui.toggle_panel", {
-		desc = "Toggle detail pane",
-		callback = function()
-			local panel = require("atlas.ui.panel")
-			local navigation = require("atlas.ui.navigation")
-			local panel_state = require("atlas.ui.panel.state")
-			local ui_state = require("atlas.ui.state")
-			local current = navigation.current_item()
-			if panel.is_open() then
-				if panel_state.active_provider == ui_state.current_view then
-					panel.close()
-					return
-				end
-			end
-
-			local selection = nil
-			if ui_state.current_view == "jira" then
-				selection = require("atlas.jira").panel_selection_from_item(current)
-			elseif ui_state.current_view == "bitbucket" then
-				selection = require("atlas.bitbucket").panel_selection_from_item(current)
-			end
-
-			if selection ~= nil then
-				panel.show(selection)
-			end
-		end,
-	})
-
-	add("ui.previous_panel_tab", {
-		desc = "Previous panel tab",
-		opts = { silent = true, nowait = true },
-		callback = function()
-			local panel = require("atlas.ui.panel")
-			if not panel.is_open() then
-				return
-			end
-
-			local ui_state = require("atlas.ui.state")
-			if ui_state.current_view == "jira" then
-				require("atlas.jira.panel.init").prev_tab()
-			elseif ui_state.current_view == "bitbucket" then
-				require("atlas.bitbucket.panel.init").prev_tab()
-			end
-		end,
-	})
-
-	add("ui.next_panel_tab", {
-		desc = "Next panel tab",
-		opts = { silent = true, nowait = true },
-		callback = function()
-			local panel = require("atlas.ui.panel")
-			if not panel.is_open() then
-				return
-			end
-
-			local ui_state = require("atlas.ui.state")
-			if ui_state.current_view == "jira" then
-				require("atlas.jira.panel.init").next_tab()
-			elseif ui_state.current_view == "bitbucket" then
-				require("atlas.bitbucket.panel.init").next_tab()
-			end
-		end,
-	})
+	}))
 
 	M.remove(buf)
 	help.register("General", items, { index = 210, buffer = buf })
@@ -172,9 +104,6 @@ function M.remove(buf)
 	}
 	utils.insert_if(items, remove_item("ui.help"))
 	utils.insert_if(items, remove_item("ui.close"))
-	utils.insert_if(items, remove_item("ui.toggle_panel"))
-	utils.insert_if(items, remove_item("ui.previous_panel_tab"))
-	utils.insert_if(items, remove_item("ui.next_panel_tab"))
 
 	help.remove("General", items, { buffer = buf })
 end

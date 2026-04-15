@@ -6,39 +6,20 @@ local M = {}
 ---@field toggle_panel? AtlasKeymapValue
 ---@field previous_panel_tab? AtlasKeymapValue
 ---@field next_panel_tab? AtlasKeymapValue
+
+---@class AtlasPullsKeymaps
 ---@field refresh? AtlasKeymapValue
-
----@class AtlasJiraKeymaps
----@field open_actions? AtlasKeymapValue
----@field search? AtlasKeymapValue
----@field edit_issue? AtlasKeymapValue
----@field transition_issue? AtlasKeymapValue
----@field change_assignee? AtlasKeymapValue
----@field open_in_browser? AtlasKeymapValue
----@field create_issue? AtlasKeymapValue
----@field manage_templates? AtlasKeymapValue
----@field refresh_issue? AtlasKeymapValue
 ---@field refresh_view? AtlasKeymapValue
----@field toggle_issue_children? AtlasKeymapValue
----@field show_details? AtlasKeymapValue
----@field copy_key? AtlasKeymapValue
----@field copy_url? AtlasKeymapValue
-
----@class AtlasBitbucketKeymaps
 ---@field open_actions? AtlasKeymapValue
----@field search? AtlasKeymapValue
----@field toggle_repo_panel? AtlasKeymapValue
----@field checkout_pr? AtlasKeymapValue
----@field open_diffview? AtlasKeymapValue
----@field open_in_browser? AtlasKeymapValue
----@field refresh_pr? AtlasKeymapValue
+
+---@class AtlasIssuesKeymaps
+---@field refresh? AtlasKeymapValue
 ---@field refresh_view? AtlasKeymapValue
----@field show_details? AtlasKeymapValue
----@field copy_id? AtlasKeymapValue
----@field copy_url? AtlasKeymapValue
----@field pr_files_toggle_fold? AtlasKeymapValue
----@field pr_files_next_hunk? AtlasKeymapValue
----@field pr_files_previous_hunk? AtlasKeymapValue
+
+---@class AtlasKeymapsConfig
+---@field ui? AtlasUIKeymaps
+---@field pulls? AtlasPullsKeymaps
+---@field issues? AtlasIssuesKeymaps
 
 ---@alias AtlasKeymapActionId
 ---| "ui.help"
@@ -46,37 +27,12 @@ local M = {}
 ---| "ui.toggle_panel"
 ---| "ui.previous_panel_tab"
 ---| "ui.next_panel_tab"
----| "ui.refresh"
----| "jira.open_actions"
----| "jira.search"
----| "jira.edit_issue"
----| "jira.transition_issue"
----| "jira.change_assignee"
----| "jira.open_in_browser"
----| "jira.create_issue"
----| "jira.manage_templates"
----| "jira.refresh_issue"
----| "jira.refresh_view"
----| "jira.toggle_issue_children"
----| "jira.show_details"
----| "jira.copy_key"
----| "jira.copy_url"
----| "bitbucket.open_actions"
----| "bitbucket.search"
----| "bitbucket.toggle_repo_panel"
----| "bitbucket.checkout_pr"
----| "bitbucket.open_diffview"
----| "bitbucket.open_in_browser"
----| "bitbucket.refresh_pr"
----| "bitbucket.refresh_view"
----| "bitbucket.show_details"
----| "bitbucket.copy_id"
----| "bitbucket.copy_url"
----| "bitbucket.pr_files_toggle_fold"
----| "bitbucket.pr_files_next_hunk"
----| "bitbucket.pr_files_previous_hunk"
+---| "pulls.refresh"
+---| "pulls.refresh_view"
+---| "pulls.open_actions"
+---| "issues.refresh"
+---| "issues.refresh_view"
 
----@alias AtlasKeymapValue string|string[]|false|nil
 
 ---@param value AtlasKeymapValue
 ---@return string[]|nil
@@ -178,39 +134,15 @@ function M.validate()
 			"ui.toggle_panel",
 			"ui.previous_panel_tab",
 			"ui.next_panel_tab",
-			"ui.refresh",
 		}, { "j", "k", "gg", "G" }),
-		jira = conflicts_for({
-			"jira.open_actions",
-			"jira.search",
-			"jira.edit_issue",
-			"jira.transition_issue",
-			"jira.change_assignee",
-			"jira.open_in_browser",
-			"jira.create_issue",
-			"jira.manage_templates",
-			"jira.refresh_issue",
-			"jira.refresh_view",
-			"jira.toggle_issue_children",
-			"jira.show_details",
-			"jira.copy_key",
-			"jira.copy_url",
+		pulls = conflicts_for({
+			"pulls.refresh",
+			"pulls.refresh_view",
+			"pulls.open_actions",
 		}, { "j", "k", "gg", "G" }),
-		bitbucket = conflicts_for({
-			"bitbucket.open_actions",
-			"bitbucket.search",
-			"bitbucket.toggle_repo_panel",
-			"bitbucket.checkout_pr",
-			"bitbucket.open_diffview",
-			"bitbucket.open_in_browser",
-			"bitbucket.refresh_pr",
-			"bitbucket.refresh_view",
-			"bitbucket.show_details",
-			"bitbucket.copy_id",
-			"bitbucket.copy_url",
-			"bitbucket.pr_files_toggle_fold",
-			"bitbucket.pr_files_next_hunk",
-			"bitbucket.pr_files_previous_hunk",
+		issues = conflicts_for({
+			"issues.refresh",
+			"issues.refresh_view",
 		}, { "j", "k", "gg", "G" }),
 	}
 end

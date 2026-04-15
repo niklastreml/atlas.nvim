@@ -1,8 +1,7 @@
 local M = {}
 
-local function text_width(text)
-	return vim.fn.strdisplaywidth(text)
-end
+local ui_utils = require("atlas.ui.utils")
+local text_width = ui_utils.text_width
 
 function M.render(opts)
 	local width = opts.width or vim.o.columns
