@@ -22,6 +22,13 @@ local ICONS = {
 		repo = "",
 		pr = "",
 		tasks = "󰄱",
+		status = {
+			successful = "",
+			failed = "",
+			inprogress = "󰦖",
+			stopped = "",
+			unknown = "",
+		},
 
 		providers = {
 			bitbucket = {
@@ -60,6 +67,16 @@ end
 ---@return string
 function M.pulls(name)
 	return ICONS.pulls[name] or ICONS.general[name] or ICONS.fallback
+end
+
+---@param status string
+---@return string
+function M.pulls_status(status)
+	local tbl = ICONS.pulls.status
+	if tbl and tbl[status] then
+		return tbl[status]
+	end
+	return ICONS.fallback
 end
 
 ---@param provider_id AtlasPullsProviderId

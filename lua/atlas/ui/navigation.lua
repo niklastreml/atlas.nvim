@@ -19,6 +19,13 @@ function M.current_item()
 	return (ui_state.line_map or {})[line]
 end
 
+local function on_cursor_moved()
+	local item = M.current_item()
+	if ui_state.on_select then
+		ui_state.on_select(item)
+	end
+end
+
 function M.move_cursor(direction)
 	local layout = require("atlas.ui.layout")
 	local win = layout.win_id("main")
@@ -41,6 +48,7 @@ function M.move_cursor(direction)
 		for lnum = line + step, (direction == "up" and 1 or max_line), step do
 			if is_selectable(line_map[lnum]) then
 				vim.api.nvim_win_set_cursor(win, { lnum, col })
+				on_cursor_moved()
 				return
 			end
 		end
@@ -48,6 +56,7 @@ function M.move_cursor(direction)
 
 	local fallback = math.max(1, math.min(max_line, line + step))
 	vim.api.nvim_win_set_cursor(win, { fallback, col })
+	on_cursor_moved()
 end
 
 function M.focus_first_item()
@@ -66,6 +75,7 @@ function M.focus_first_item()
 	for lnum = 1, max_line do
 		if is_selectable(line_map[lnum]) then
 			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			on_cursor_moved()
 			return
 		end
 	end
@@ -87,6 +97,7 @@ function M.focus_last_item()
 	for lnum = max_line, 1, -1 do
 		if is_selectable(line_map[lnum]) then
 			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			on_cursor_moved()
 			return
 		end
 	end

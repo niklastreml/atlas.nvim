@@ -67,6 +67,42 @@ function M.init(provider)
 		keymaps.register(buf, views)
 	end
 
+	ui_state.on_select = function(item)
+		if type(item) ~= "table" then
+			return
+		end
+		if (item.kind == "pr" or item.kind == "pr_meta") and type(item.pr) == "table" then
+			local panel = require("atlas.pulls.ui.panel")
+			if panel.is_open() then
+				panel.on_select(item.pr, item.repo)
+			end
+		end
+	end
+
+	ui_state.on_panel_open = function()
+		local panel = require("atlas.pulls.ui.panel")
+		local navigation = require("atlas.ui.navigation")
+		local current = navigation.current_item()
+		if type(current) == "table" and (current.kind == "pr" or current.kind == "pr_meta") and type(current.pr) == "table" then
+			panel.on_select(current.pr, current.repo)
+		end
+	end
+
+	ui_state.on_panel_close = function()
+		local panel = require("atlas.pulls.ui.panel")
+		panel.close()
+	end
+
+	ui_state.on_panel_next_tab = function()
+		local panel = require("atlas.pulls.ui.panel")
+		panel.next_tab()
+	end
+
+	ui_state.on_panel_prev_tab = function()
+		local panel = require("atlas.pulls.ui.panel")
+		panel.prev_tab()
+	end
+
 	ui_state.current_view = provider and provider.id or "pulls"
 	M.render()
 	controller.switch_view(state.active_view)

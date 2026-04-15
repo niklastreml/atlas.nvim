@@ -93,7 +93,43 @@ function M.register(buf)
 	utils.insert_if(items, item("ui.toggle_panel", {
 		desc = "Toggle detail panel",
 		callback = function()
-			require("atlas.ui.layout").toggle_detail()
+			local layout_mod = require("atlas.ui.layout")
+			local ui_st = require("atlas.ui.state")
+			local was_open = layout_mod.win_id("detail") ~= nil
+			layout_mod.toggle_detail()
+			if was_open then
+				if ui_st.on_panel_close then
+					ui_st.on_panel_close()
+				end
+			else
+				if ui_st.on_panel_open then
+					ui_st.on_panel_open()
+				end
+			end
+		end,
+	}))
+
+	utils.insert_if(items, item("ui.next_panel_tab", {
+		desc = "Next panel tab",
+		opts = { nowait = true },
+		callback = function()
+			local layout_mod = require("atlas.ui.layout")
+			local ui_st = require("atlas.ui.state")
+			if layout_mod.win_id("detail") ~= nil and ui_st.on_panel_next_tab then
+				ui_st.on_panel_next_tab()
+			end
+		end,
+	}))
+
+	utils.insert_if(items, item("ui.previous_panel_tab", {
+		desc = "Previous panel tab",
+		opts = { nowait = true },
+		callback = function()
+			local layout_mod = require("atlas.ui.layout")
+			local ui_st = require("atlas.ui.state")
+			if layout_mod.win_id("detail") ~= nil and ui_st.on_panel_prev_tab then
+				ui_st.on_panel_prev_tab()
+			end
 		end,
 	}))
 
@@ -112,6 +148,8 @@ function M.remove(buf)
 	utils.insert_if(items, remove_item("ui.help"))
 	utils.insert_if(items, remove_item("ui.close"))
 	utils.insert_if(items, remove_item("ui.toggle_panel"))
+	utils.insert_if(items, remove_item("ui.next_panel_tab"))
+	utils.insert_if(items, remove_item("ui.previous_panel_tab"))
 
 	help.remove("General", items, { buffer = buf })
 end

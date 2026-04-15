@@ -26,6 +26,10 @@
 ---@field open_diff fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
 ---@field checkout fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
 ---
+--- Panel customisation:
+---@field panel_header_rows fun(pr: PullRequest): PullsPanelHeaderRow[]|nil
+---@field panel_chips fun(pr: PullRequest): PullsPanelChip[]|nil
+---
 --- Healthcheck:
 ---@field health fun()|nil
 
@@ -36,3 +40,19 @@
 ---@class PullsActionResult
 ---@field changed_pr boolean
 ---@field message string|nil
+
+--------------------------------------------------------------------------------
+-- Panel types
+--------------------------------------------------------------------------------
+
+---@class PullsPanelHeaderRow
+---@field k1 string
+---@field v1 string
+---@field v1_hl string
+---@field k2 string
+---@field v2 string
+---@field v2_hl string
+
+---@class PullsPanelChip
+---@field label string
+---@field hl string|nil

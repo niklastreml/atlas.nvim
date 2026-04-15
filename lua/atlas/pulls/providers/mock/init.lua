@@ -144,6 +144,52 @@ function M.checkout(pr, on_done)
 	on_done(false)
 end
 
+---@param pr PullRequest
+---@return PullsPanelHeaderRow[]
+function M.panel_header_rows(pr)
+	return {
+		{
+			k1 = "Close source:",
+			v1 = pr.close_source_branch and "yes" or "no",
+			v1_hl = pr.close_source_branch and "AtlasTextPositive" or "AtlasLogError",
+			k2 = "",
+			v2 = "",
+			v2_hl = "AtlasTextMuted",
+		},
+	}
+end
+
+---@param pr PullRequest
+---@return PullsPanelChip[]
+function M.panel_chips(pr)
+	local mock_state = require("atlas.pulls.providers.mock.state")
+	local chips = {}
+
+	local build = mock_state.get_build(pr)
+	if build == nil then
+		local icon = icons.pulls_status("inprogress")
+		table.insert(chips, { label = string.format("%s Loading builds", icon), hl = "AtlasTextMuted" })
+		mock_state.fetch_build(pr, function()
+			local panel = require("atlas.pulls.ui.panel")
+			if panel.is_open() then
+				panel.render()
+			end
+		end)
+	else
+		local status_hl_map = {
+			successful = "AtlasTextPositive",
+			failed = "AtlasLogError",
+			inprogress = "AtlasTextWarning",
+			stopped = "AtlasTextMuted",
+		}
+		local icon = icons.pulls_status(build.status)
+		local label = string.format("%s %s", icon, build.name)
+		table.insert(chips, { label = label, hl = status_hl_map[build.status] or "AtlasTextMuted" })
+	end
+
+	return chips
+end
+
 ---@param pr PullRequest|nil
 ---@param opts table
 ---@param on_done fun(result: PullsActionResult|nil)
