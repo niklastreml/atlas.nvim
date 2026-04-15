@@ -90,6 +90,13 @@ function M.register(buf)
 		end,
 	}))
 
+	utils.insert_if(items, item("ui.toggle_panel", {
+		desc = "Toggle detail panel",
+		callback = function()
+			require("atlas.ui.layout").toggle_detail()
+		end,
+	}))
+
 	M.remove(buf)
 	help.register("General", items, { index = 210, buffer = buf })
 end
@@ -104,6 +111,7 @@ function M.remove(buf)
 	}
 	utils.insert_if(items, remove_item("ui.help"))
 	utils.insert_if(items, remove_item("ui.close"))
+	utils.insert_if(items, remove_item("ui.toggle_panel"))
 
 	help.remove("General", items, { buffer = buf })
 end

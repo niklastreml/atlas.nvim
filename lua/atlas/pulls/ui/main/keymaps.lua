@@ -54,6 +54,7 @@ end
 ---@param views PullsView[]
 function M.register(buf, views)
 	local help = require("atlas.ui.popups.help")
+	local layout = require("atlas.ui.layout")
 	local controller = require("atlas.pulls.ui.main.controller")
 	local state = require("atlas.pulls.state")
 	local provider_name = state.provider and state.provider.name or "Pulls"
@@ -90,6 +91,109 @@ function M.register(buf, views)
 						controller.refresh_pr(pr)
 					end
 				end)
+			end,
+		}))
+	end
+
+	utils.insert_if(items, item("pulls.open_in_browser", {
+		desc = "Open PR in browser",
+		opts = { nowait = true },
+		callback = function()
+			local pr = selected_pr()
+			if pr == nil then
+				footer.notify("warn", "No PR selected")
+				return
+			end
+			local url = pr.link and pr.link.html
+			if url == nil or url == "" then
+				footer.notify("warn", "No URL available")
+				return
+			end
+			vim.ui.open(url)
+			footer.notify("info", "Opened in browser")
+		end,
+	}))
+
+	utils.insert_if(items, item("pulls.copy_url", {
+		desc = "Copy PR URL",
+		opts = { nowait = true },
+		callback = function()
+			local pr = selected_pr()
+			if pr == nil then
+				footer.notify("warn", "No PR selected")
+				return
+			end
+			local url = pr.link and pr.link.html
+			if url == nil or url == "" then
+				footer.notify("warn", "No URL available")
+				return
+			end
+			vim.fn.setreg("+", url)
+			footer.notify("success", "Copied URL to clipboard", 1200)
+		end,
+	}))
+
+	utils.insert_if(items, item("pulls.copy_id", {
+		desc = "Copy PR ID",
+		opts = { nowait = true },
+		callback = function()
+			local pr = selected_pr()
+			if pr == nil then
+				footer.notify("warn", "No PR selected")
+				return
+			end
+			vim.fn.setreg("+", tostring(pr.id))
+			footer.notify("success", string.format("Copied #%s to clipboard", tostring(pr.id)), 1200)
+		end,
+	}))
+
+	utils.insert_if(items, item("pulls.show_details", {
+		desc = "Show PR details",
+		opts = { nowait = true },
+		callback = function()
+			local pr = selected_pr()
+			if pr == nil then
+				footer.notify("warn", "No PR selected")
+				return
+			end
+
+			local helper = require("atlas.pulls.ui.main.helper")
+			local info_popup = require("atlas.ui.popups.info")
+			local lines, highlights = helper.pr_popup_content(pr)
+			info_popup.show({
+				lines = lines,
+				highlights = highlights,
+				source_buf = buf,
+			})
+		end,
+	}))
+
+	if state.provider and state.provider.open_diff then
+		utils.insert_if(items, item("pulls.open_diff", {
+			desc = "Open PR diff",
+			opts = { nowait = true },
+			callback = function()
+				local pr = selected_pr()
+				if pr == nil then
+					footer.notify("warn", "No PR selected")
+					return
+				end
+				state.provider.open_diff(pr, function() end)
+			end,
+		}))
+	end
+
+	if state.provider and state.provider.checkout then
+		utils.insert_if(items, item("pulls.checkout", {
+			desc = "Checkout PR branch",
+			opts = { nowait = true },
+			callback = function()
+				local pr = selected_pr()
+				if pr == nil then
+					footer.notify("warn", "No PR selected")
+					return
+				end
+				state.provider.checkout(pr, function() end)
 			end,
 		}))
 	end

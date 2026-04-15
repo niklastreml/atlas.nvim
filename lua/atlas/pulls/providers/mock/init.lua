@@ -20,7 +20,7 @@ end
 ---@return PullsLink
 local function build_link(repo_slug, pr_num)
 	return {
-		html = ("https://example.dev/%s/pull-requests/%s"):format(repo_slug, pr_num),
+		html = "https://github.com/emrearmagan/atlas.nvim/tree/main",
 	}
 end
 
@@ -126,6 +126,22 @@ function M.views()
 		{ name = "Compact", key = "1", provider_id = "mock", layout = "compact", provider_view = {} },
 		{ name = "Plain", key = "2", provider_id = "mock", layout = "plain", provider_view = {} },
 	}
+end
+
+---@param pr PullRequest
+---@param on_done fun(ok: boolean)
+function M.open_diff(pr, on_done)
+	local footer = require("atlas.ui.components.footer")
+	footer.notify("info", "Diff view not available for mock provider")
+	on_done(false)
+end
+
+---@param pr PullRequest
+---@param on_done fun(ok: boolean)
+function M.checkout(pr, on_done)
+	local footer = require("atlas.ui.components.footer")
+	footer.notify("info", "Checkout not available for mock provider")
+	on_done(false)
 end
 
 ---@param pr PullRequest|nil

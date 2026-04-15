@@ -22,6 +22,10 @@
 --- Actions (provider owns the full UX: picker, execution, result handling):
 ---@field open_actions fun(pr: PullRequest|nil, opts: table, on_done: fun(result: PullsActionResult|nil))|nil
 ---
+--- Provider-specific operations:
+---@field open_diff fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
+---@field checkout fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
+---
 --- Healthcheck:
 ---@field health fun()|nil
 

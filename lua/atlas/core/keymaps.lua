@@ -11,6 +11,12 @@ local M = {}
 ---@field refresh? AtlasKeymapValue
 ---@field refresh_view? AtlasKeymapValue
 ---@field open_actions? AtlasKeymapValue
+---@field open_in_browser? AtlasKeymapValue
+---@field copy_url? AtlasKeymapValue
+---@field copy_id? AtlasKeymapValue
+---@field open_diff? AtlasKeymapValue
+---@field checkout? AtlasKeymapValue
+---@field show_details? AtlasKeymapValue
 
 ---@class AtlasIssuesKeymaps
 ---@field refresh? AtlasKeymapValue
@@ -30,6 +36,12 @@ local M = {}
 ---| "pulls.refresh"
 ---| "pulls.refresh_view"
 ---| "pulls.open_actions"
+---| "pulls.open_in_browser"
+---| "pulls.copy_url"
+---| "pulls.copy_id"
+---| "pulls.open_diff"
+---| "pulls.checkout"
+---| "pulls.show_details"
 ---| "issues.refresh"
 ---| "issues.refresh_view"
 
@@ -139,6 +151,12 @@ function M.validate()
 			"pulls.refresh",
 			"pulls.refresh_view",
 			"pulls.open_actions",
+			"pulls.open_in_browser",
+			"pulls.copy_url",
+			"pulls.copy_id",
+			"pulls.open_diff",
+			"pulls.checkout",
+			"pulls.show_details",
 		}, { "j", "k", "gg", "G" }),
 		issues = conflicts_for({
 			"issues.refresh",

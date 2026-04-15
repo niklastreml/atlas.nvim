@@ -45,6 +45,12 @@ M.options = {
 			refresh = "r",
 			refresh_view = "R",
 			open_actions = "A",
+			open_in_browser = "gx",
+			copy_url = "Y",
+			copy_id = "y",
+			open_diff = "gd",
+			checkout = "gc",
+			show_details = "K",
 		},
 		issues = {
 			refresh = "r",
