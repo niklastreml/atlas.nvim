@@ -2,6 +2,25 @@ local M = {}
 
 local _cached_version = nil
 
+---@param lines string[]
+---@param spans table[]
+---@param text string
+---@param hl_group string|nil
+---@param padding integer|nil
+function M.push(lines, spans, text, hl_group, padding)
+	local pad = padding or 0
+	local prefix = pad > 0 and string.rep(" ", pad) or ""
+	table.insert(lines, prefix .. text)
+	if hl_group then
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = pad,
+			end_col = pad + #text,
+			hl_group = hl_group,
+		})
+	end
+end
+
 function M.append_block(lines, spans, block)
 	local base = #lines
 	for _, line in ipairs(block.lines or {}) do

@@ -73,6 +73,40 @@
 -- View
 --------------------------------------------------------------------------------
 
+--------------------------------------------------------------------------------
+-- Reviewer
+--------------------------------------------------------------------------------
+
+---@class PullsReviewer
+---@field name string
+---@field nickname string|nil
+---@field decision "approved"|"changes_requested"|"pending"
+
+--------------------------------------------------------------------------------
+-- Build
+--------------------------------------------------------------------------------
+
+---@class PullsBuild
+---@field name string
+---@field state string
+---@field url string|nil
+---@field key string|nil
+
+--------------------------------------------------------------------------------
+-- Diffstat
+--------------------------------------------------------------------------------
+
+---@class PullsDiffstatEntry
+---@field status "added"|"removed"|"renamed"|"modified"|"deleted"
+---@field path string
+---@field old_path string|nil
+---@field lines_added number
+---@field lines_removed number
+
+--------------------------------------------------------------------------------
+-- View
+--------------------------------------------------------------------------------
+
 ---@class PullsView
 ---@field name string
 ---@field key string|nil

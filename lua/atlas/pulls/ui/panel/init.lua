@@ -2,23 +2,143 @@ local M = {}
 
 local layout = require("atlas.ui.layout")
 local panel_state = require("atlas.pulls.ui.panel.state")
+local renderer = require("atlas.pulls.ui.panel.renderer")
+local icons = require("atlas.shared.icons")
 
-local ns = vim.api.nvim_create_namespace("atlas.panel")
+local SPINNER_INTERVAL_MS = 100
 
-local TABS = {
-	{ key = "overview", mod = "atlas.pulls.ui.panel.tabs.overview" },
+local DEFAULT_TABS = {
+	{ key = "overview", label = "Overview", icon = icons.general("overview"), mod = require("atlas.pulls.ui.panel.tabs.overview") },
 }
 
+--------------------------------------------------------------------------------
+-- Loading spinner
+--------------------------------------------------------------------------------
+
+local spinner_timer = nil
+
+local function stop_spinner()
+	if spinner_timer ~= nil then
+		spinner_timer:stop()
+		spinner_timer:close()
+		spinner_timer = nil
+	end
+end
+
+local function is_loading()
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return false
+	end
+	local state = require("atlas.pulls.state")
+	local provider = state.provider
+	if provider and type(provider.panel_is_loading) == "function" then
+		return provider.panel_is_loading(pr)
+	end
+	return false
+end
+
+local function start_spinner()
+	if spinner_timer ~= nil then
+		return
+	end
+	spinner_timer = vim.loop.new_timer()
+	if spinner_timer == nil then
+		return
+	end
+	spinner_timer:start(SPINNER_INTERVAL_MS, SPINNER_INTERVAL_MS, vim.schedule_wrap(function()
+		if not M.is_open() or not is_loading() then
+			stop_spinner()
+			return
+		end
+		M.render()
+	end))
+end
+
+local function update_spinner()
+	if is_loading() then
+		start_spinner()
+	else
+		stop_spinner()
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Tabs
+--------------------------------------------------------------------------------
+
+---@return PullsPanelTab[]
+local function get_tabs()
+	local state = require("atlas.pulls.state")
+	local provider = state.provider
+	if provider and provider.panel_tabs then
+		local tabs = provider.panel_tabs()
+		if type(tabs) == "table" and #tabs > 0 then
+			return tabs
+		end
+	end
+	return DEFAULT_TABS
+end
+
 ---@param tab_key string
----@return table|nil
+---@return PullsPanelTabModule|nil
 local function get_tab_module(tab_key)
-	for _, tab in ipairs(TABS) do
+	for _, tab in ipairs(get_tabs()) do
 		if tab.key == tab_key then
-			return require(tab.mod)
+			return tab.mod
 		end
 	end
 	return nil
 end
+
+--------------------------------------------------------------------------------
+-- Fetch lifecycle
+--------------------------------------------------------------------------------
+
+---@return string
+local function current_pr_key()
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return ""
+	end
+	return tostring(pr.repo_id or "") .. "/" .. tostring(pr.id or "")
+end
+
+---@return fun()
+local function make_done()
+	local key = current_pr_key()
+	return function()
+		if current_pr_key() ~= key then
+			return
+		end
+		update_spinner()
+		if M.is_open() then
+			M.render()
+		end
+	end
+end
+
+---@param pr PullRequest
+local function dispatch_provider_fetches(pr)
+	local state = require("atlas.pulls.state")
+	local provider = state.provider
+	if provider and type(provider.panel_fetches) == "function" then
+		provider.panel_fetches(pr, make_done())
+	end
+end
+
+---@param pr PullRequest
+---@param repo PullsRepo|nil
+local function notify_tab(pr, repo)
+	local tab_mod = get_tab_module(panel_state.current_tab)
+	if tab_mod and type(tab_mod.on_select) == "function" then
+		tab_mod.on_select(pr, repo, make_done())
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Public API
+--------------------------------------------------------------------------------
 
 ---@return boolean
 function M.is_open()
@@ -26,52 +146,7 @@ function M.is_open()
 end
 
 function M.render()
-	local buf = layout.buf_id("detail")
-	local win = layout.win_id("detail")
-	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return
-	end
-
-	local lines = {}
-	local spans = {}
-
-	if panel_state.current_pr == nil then
-		lines = { "", "  Nothing selected..." }
-		panel_state.line_map = {}
-	else
-		local tab = get_tab_module(panel_state.current_tab)
-		if tab and type(tab.render) == "function" then
-			local tab_line_map
-			lines, spans, tab_line_map = tab.render(vim.api.nvim_win_get_width(win))
-			panel_state.line_map = tab_line_map or {}
-		else
-			lines = { "", "  Unknown tab: " .. tostring(panel_state.current_tab) }
-			panel_state.line_map = {}
-		end
-	end
-
-	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-
-	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
-	for _, span in ipairs(spans or {}) do
-		if type(span) == "table" and span.line ~= nil and span.line_hl_group ~= nil then
-			vim.api.nvim_buf_set_extmark(buf, ns, span.line, 0, {
-				line_hl_group = span.line_hl_group,
-			})
-		elseif type(span) == "table" and span.line ~= nil and span.start_col ~= nil and span.end_col ~= nil and span.hl_group ~= nil then
-			vim.api.nvim_buf_set_extmark(buf, ns, span.line, span.start_col, {
-				end_row = span.line,
-				end_col = span.end_col,
-				hl_group = span.hl_group,
-			})
-		end
-	end
-
-	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+	renderer.render(get_tabs(), get_tab_module)
 end
 
 ---@param pr PullRequest|nil
@@ -89,7 +164,13 @@ function M.on_select(pr, repo)
 	panel_state.current_repo = repo
 
 	if not same_pr then
-		panel_state.current_tab = "overview"
+		if panel_state.current_tab == nil then
+			panel_state.current_tab = get_tabs()[1].key
+		end
+		stop_spinner()
+		dispatch_provider_fetches(pr)
+		notify_tab(pr, repo)
+		update_spinner()
 	end
 
 	if M.is_open() then
@@ -98,8 +179,9 @@ function M.on_select(pr, repo)
 end
 
 function M.next_tab()
+	local tabs = get_tabs()
 	local idx = 1
-	for i, tab in ipairs(TABS) do
+	for i, tab in ipairs(tabs) do
 		if tab.key == panel_state.current_tab then
 			idx = i
 			break
@@ -107,17 +189,24 @@ function M.next_tab()
 	end
 
 	local next_idx = idx + 1
-	if next_idx > #TABS then
+	if next_idx > #tabs then
 		next_idx = 1
 	end
 
-	panel_state.current_tab = TABS[next_idx].key
+	panel_state.current_tab = tabs[next_idx].key
+
+	if panel_state.current_pr then
+		notify_tab(panel_state.current_pr, panel_state.current_repo)
+		update_spinner()
+	end
+
 	M.render()
 end
 
 function M.prev_tab()
+	local tabs = get_tabs()
 	local idx = 1
-	for i, tab in ipairs(TABS) do
+	for i, tab in ipairs(tabs) do
 		if tab.key == panel_state.current_tab then
 			idx = i
 			break
@@ -126,14 +215,21 @@ function M.prev_tab()
 
 	local prev_idx = idx - 1
 	if prev_idx < 1 then
-		prev_idx = #TABS
+		prev_idx = #tabs
 	end
 
-	panel_state.current_tab = TABS[prev_idx].key
+	panel_state.current_tab = tabs[prev_idx].key
+
+	if panel_state.current_pr then
+		notify_tab(panel_state.current_pr, panel_state.current_repo)
+		update_spinner()
+	end
+
 	M.render()
 end
 
 function M.close()
+	stop_spinner()
 	panel_state.reset()
 end
 
