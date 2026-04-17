@@ -125,6 +125,7 @@
 ---@field created_on string
 ---@field deleted boolean|nil
 ---@field inline {path: string, to: number|nil, from: number|nil}|nil
+---@field url string|nil
 
 --------------------------------------------------------------------------------
 -- Commit
@@ -166,4 +167,3 @@
 ---@field provider_id AtlasPullsProviderId
 ---@field layout string|nil
 ---@field provider_view table
-

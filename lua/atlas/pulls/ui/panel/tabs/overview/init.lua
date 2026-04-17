@@ -401,4 +401,21 @@ function M.render(pr, width)
 	return lines, spans, line_map
 end
 
+---@param _lnum integer
+---@param entry table
+---@return boolean
+function M.is_selectable_line(_lnum, entry)
+	return entry.kind == "build"
+end
+
+---@param _pr PullRequest
+---@param entry table
+---@return boolean|nil
+function M.on_enter(_pr, entry)
+	if entry.kind == "build" and entry.url and entry.url ~= "" then
+		vim.ui.open(entry.url)
+		return true
+	end
+end
+
 return M

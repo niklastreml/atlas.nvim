@@ -268,4 +268,12 @@ function M.render(pr, width)
 	return lines, spans, line_map
 end
 
+---@param _lnum integer
+---@param entry table
+---@return boolean
+function M.is_selectable_line(_lnum, entry)
+	local k = entry.kind
+	return k == "header" or k == "content"
+end
+
 return M

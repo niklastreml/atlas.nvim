@@ -156,4 +156,53 @@ function M.render(pr, width)
 	return lines, spans, line_map
 end
 
+---@param _pr PullRequest
+---@param entry table
+---@return boolean|nil
+function M.on_enter(_pr, entry)
+	if entry.type == "hunk_header" then
+		state.collapsed_hunks[entry.hunk_idx] = not state.collapsed_hunks[entry.hunk_idx]
+		return true
+	end
+end
+
+---@param entry table|nil
+function M.toggle_hunk(entry)
+	if entry and entry.type == "hunk_header" then
+		state.collapsed_hunks[entry.hunk_idx] = not state.collapsed_hunks[entry.hunk_idx]
+	end
+end
+
+---@param direction "next"|"prev"
+function M.jump_hunk(direction)
+	local layout = require("atlas.ui.layout")
+	local panel_state = require("atlas.pulls.ui.panel.state")
+	local win = layout.win_id("detail")
+	local buf = layout.buf_id("detail")
+	if not win or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+	if not buf or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	local line = vim.api.nvim_win_get_cursor(win)[1]
+	local max_line = vim.api.nvim_buf_line_count(buf)
+	local step = direction == "next" and 1 or -1
+	local bound = direction == "next" and max_line or 1
+	local line_map = panel_state.line_map or {}
+
+	for lnum = line + step, bound, step do
+		local entry = line_map[lnum]
+		if entry and entry.type == "hunk_header" then
+			vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+			return
+		end
+	end
+end
+
+local keymaps = require("atlas.pulls.ui.panel.tabs.files.keymaps")
+M.setup_keymaps = keymaps.setup
+M.teardown_keymaps = keymaps.teardown
+
 return M

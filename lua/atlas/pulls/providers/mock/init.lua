@@ -50,7 +50,7 @@ local FAKE_ACTIVITY = {
 	},
 }
 
-local FAKE_COMMENTS = {
+local FAKE_COMMENTS_TEMPLATE = {
 	{
 		id = 1,
 		parent_id = nil,
@@ -89,6 +89,20 @@ local FAKE_COMMENTS = {
 		created_on = "2026-04-16T10:00:00+00:00",
 	},
 }
+
+---@type table<string, PullsComment[]>
+local comment_store = {}
+local next_comment_id = 100
+
+---@param pr PullRequest
+---@return PullsComment[]
+local function get_comments(pr)
+	local key = tostring(pr.repo_id) .. "/" .. tostring(pr.id)
+	if not comment_store[key] then
+		comment_store[key] = vim.deepcopy(FAKE_COMMENTS_TEMPLATE)
+	end
+	return comment_store[key]
+end
 
 local FAKE_COMMITS = {
 	{
@@ -368,7 +382,7 @@ function M.fetch_builds(pr, on_done)
 				name = BUILD_NAMES[((i - 1) % #BUILD_NAMES) + 1],
 				state = BUILD_STATUSES[math.random(#BUILD_STATUSES)],
 				key = "build-" .. i,
-				url = "https://example.com/build/" .. i,
+				url = "https://github.com/emrearmagan/atlas.nvim",
 			})
 		end
 		on_done(entries, nil)
@@ -430,7 +444,7 @@ function M.fetch_comments(pr, on_done)
 		if cancelled then
 			return
 		end
-		on_done(vim.deepcopy(FAKE_COMMENTS), nil)
+		on_done(vim.deepcopy(get_comments(pr)), nil)
 	end, 600 + math.random(600))
 	return {
 		cancel = function()
@@ -486,7 +500,7 @@ function M.fetch_commit_status(pr, commit_hash, on_done)
 			return
 		end
 		local status = BUILD_STATUSES[math.random(#BUILD_STATUSES)]:lower()
-		local url = "https://example.com/build/" .. commit_hash:sub(1, 8)
+		local url = "https://github.com/emrearmagan/atlas.nvim"
 		on_done(status, url, nil)
 	end, 300 + math.random(500))
 	return {
@@ -623,6 +637,122 @@ function M.open_actions(pr, opts, on_done)
 
 		action.run(on_done)
 	end)
+end
+
+--------------------------------------------------------------------------------
+-- Comment actions
+--------------------------------------------------------------------------------
+
+---@param pr PullRequest
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.add_comment(pr, content, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		next_comment_id = next_comment_id + 1
+		local comment = {
+			id = next_comment_id,
+			parent_id = nil,
+			author = { name = "Mock User", nickname = "mockuser" },
+			content_raw = content,
+			created_on = os.date("!%Y-%m-%dT%H:%M:%S+00:00"),
+		}
+		table.insert(get_comments(pr), comment)
+		on_done(vim.deepcopy(comment), nil)
+	end, 300)
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param pr PullRequest
+---@param parent_id number
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.reply_comment(pr, parent_id, content, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		next_comment_id = next_comment_id + 1
+		local comment = {
+			id = next_comment_id,
+			parent_id = parent_id,
+			author = { name = "Mock User", nickname = "mockuser" },
+			content_raw = content,
+			created_on = os.date("!%Y-%m-%dT%H:%M:%S+00:00"),
+		}
+		table.insert(get_comments(pr), comment)
+		on_done(vim.deepcopy(comment), nil)
+	end, 300)
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param pr PullRequest
+---@param comment_id number
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.edit_comment(pr, comment_id, content, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		local comments = get_comments(pr)
+		for _, c in ipairs(comments) do
+			if c.id == comment_id then
+				c.content_raw = content
+				on_done(vim.deepcopy(c), nil)
+				return
+			end
+		end
+		on_done(nil, "Comment not found")
+	end, 300)
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param pr PullRequest
+---@param comment_id number
+---@param on_done fun(ok: boolean, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.delete_comment(pr, comment_id, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		local comments = get_comments(pr)
+		for i, c in ipairs(comments) do
+			if c.id == comment_id then
+				table.remove(comments, i)
+				on_done(true, nil)
+				return
+			end
+		end
+		on_done(false, "Comment not found")
+	end, 300)
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
 end
 
 return M

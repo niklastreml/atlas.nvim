@@ -100,6 +100,44 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
+local function cursor_entry()
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return nil
+	end
+	local lnum = vim.api.nvim_win_get_cursor(win)[1]
+	return (panel_state.line_map or {})[lnum]
+end
+
+local function done()
+	if M.is_open() then
+		M.render()
+	end
+end
+
+---@param old_key string|nil
+---@param new_key string|nil
+local function switch_tab_keymaps(old_key, new_key)
+	local buf = layout.buf_id("detail")
+	if buf == nil or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+
+	if old_key then
+		local old_mod = get_tab_module(old_key)
+		if old_mod and type(old_mod.teardown_keymaps) == "function" then
+			old_mod.teardown_keymaps(buf)
+		end
+	end
+
+	if new_key then
+		local new_mod = get_tab_module(new_key)
+		if new_mod and type(new_mod.setup_keymaps) == "function" then
+			new_mod.setup_keymaps(buf, cursor_entry, done)
+		end
+	end
+end
+
 ---@return string
 local function current_pr_key()
 	local pr = panel_state.current_pr
@@ -154,6 +192,18 @@ function M.render()
 	renderer.render(get_tabs(), get_tab_module)
 end
 
+function M.refresh_tab()
+	local pr = panel_state.current_pr
+	if pr == nil then
+		return
+	end
+	notify_tab(pr, panel_state.current_repo)
+	update_spinner()
+	if M.is_open() then
+		M.render()
+	end
+end
+
 ---@param pr PullRequest|nil
 ---@param repo PullsRepo|nil
 function M.on_select(pr, repo)
@@ -169,9 +219,11 @@ function M.on_select(pr, repo)
 	panel_state.current_repo = repo
 
 	if not same_pr then
+		local old_key = panel_state.current_tab
 		if panel_state.current_tab == nil then
 			panel_state.current_tab = get_tabs()[1].key
 		end
+		switch_tab_keymaps(old_key, panel_state.current_tab)
 		stop_spinner()
 		dispatch_provider_fetches(pr)
 		notify_tab(pr, repo)
@@ -185,9 +237,10 @@ end
 
 function M.next_tab()
 	local tabs = get_tabs()
+	local old_key = panel_state.current_tab
 	local idx = 1
 	for i, tab in ipairs(tabs) do
-		if tab.key == panel_state.current_tab then
+		if tab.key == old_key then
 			idx = i
 			break
 		end
@@ -199,6 +252,7 @@ function M.next_tab()
 	end
 
 	panel_state.current_tab = tabs[next_idx].key
+	switch_tab_keymaps(old_key, panel_state.current_tab)
 
 	if panel_state.current_pr then
 		notify_tab(panel_state.current_pr, panel_state.current_repo)
@@ -210,9 +264,10 @@ end
 
 function M.prev_tab()
 	local tabs = get_tabs()
+	local old_key = panel_state.current_tab
 	local idx = 1
 	for i, tab in ipairs(tabs) do
-		if tab.key == panel_state.current_tab then
+		if tab.key == old_key then
 			idx = i
 			break
 		end
@@ -224,6 +279,7 @@ function M.prev_tab()
 	end
 
 	panel_state.current_tab = tabs[prev_idx].key
+	switch_tab_keymaps(old_key, panel_state.current_tab)
 
 	if panel_state.current_pr then
 		notify_tab(panel_state.current_pr, panel_state.current_repo)
@@ -234,6 +290,7 @@ function M.prev_tab()
 end
 
 function M.close()
+	switch_tab_keymaps(panel_state.current_tab, nil)
 	stop_spinner()
 	panel_state.reset()
 end

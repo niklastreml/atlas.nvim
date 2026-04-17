@@ -84,10 +84,17 @@ function M.render(tab_items, get_tab_module)
 
 		-- Tab content
 		local tab_mod = get_tab_module(panel_state.current_tab)
+		local content_offset = #lines
 		if tab_mod and type(tab_mod.render) == "function" then
 			local tab_lines_c, tab_spans_c, tab_line_map = tab_mod.render(pr, width)
 			utils.append_block(lines, spans, { lines = tab_lines_c, highlights = tab_spans_c })
-			panel_state.line_map = tab_line_map or {}
+
+			-- Offset line_map keys to match buffer line numbers (1-indexed)
+			local adjusted = {}
+			for lnum, entry in pairs(tab_line_map or {}) do
+				adjusted[content_offset + lnum] = entry
+			end
+			panel_state.line_map = adjusted
 		else
 			table.insert(lines, "  Unknown tab: " .. tostring(panel_state.current_tab))
 			panel_state.line_map = {}

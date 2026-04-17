@@ -7,6 +7,7 @@ local highlights = require("atlas.ui.shared.highlights")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local helper = require("atlas.pulls.ui.main.helper")
+local md_editor = require("atlas.ui.popups.markdown_editor")
 local state = require("atlas.pulls.ui.panel.tabs.comments.state")
 
 local PADDING_X = 1
@@ -136,6 +137,16 @@ local function render_file_header(file, count, pad, max_width)
 	return line, hdr_spans
 end
 
+---@param comment PullsComment
+---@return boolean
+local function is_own_comment(comment)
+	local current_user = require("atlas.pulls.state").current_user
+	if not current_user or not comment.author then
+		return false
+	end
+	return comment.author.nickname == current_user.username or comment.author.name == current_user.name
+end
+
 ---@param node PullsCommentTreeNode
 ---@param file string
 ---@return AtlasThreadV2Item
@@ -153,12 +164,21 @@ local function to_thread_item(node, file)
 		table.insert(children, to_thread_item(child, file))
 	end
 
+	local footer_items = {
+		string.format("%s (c)", icons.general("reply")),
+	}
+	if not is_deleted and is_own_comment(comment) then
+		table.insert(footer_items, string.format("%s (e)", icons.general("edit")))
+		table.insert(footer_items, string.format("%s (d)", icons.general("delete")))
+	end
+
 	return {
 		icon = icons.general("user"),
 		author = tostring(author),
 		right_text = utils.relative_time(comment.created_on),
 		content = text,
 		children = children,
+		footer_items = footer_items,
 		line_map = {
 			comment = comment,
 			entity_kind = "comment",
@@ -316,6 +336,182 @@ function M.render(pr, width)
 	end
 
 	return lines, spans, line_map
+end
+
+---@param _lnum integer
+---@param entry table
+---@return boolean
+function M.is_selectable_line(_lnum, entry)
+	local k = entry.kind
+	return k == "header" or k == "content" or k == "thread_header" or k == "thread_content"
+end
+
+local keymaps = require("atlas.pulls.ui.panel.tabs.comments.keymaps")
+M.setup_keymaps = keymaps.setup
+M.teardown_keymaps = keymaps.teardown
+
+
+---@param pr PullRequest
+---@param done fun()
+function M.add_comment(pr, done)
+	local footer = require("atlas.ui.components.footer")
+	local provider = get_provider()
+	if not provider or type(provider.add_comment) ~= "function" then
+		return
+	end
+
+	md_editor.open({
+		key = "pr-comment-add",
+		title = " Add Comment ",
+		width_ratio = 0.5,
+		height_ratio = 0.18,
+		completion = get_completion(pr),
+		on_save = function(text)
+			if not text or vim.trim(text) == "" then
+				return
+			end
+			footer.notify("loading", "Adding comment...")
+			track(provider.add_comment(pr, text, function(comment, err)
+				if err then
+					footer.notify("error", "Add comment failed: " .. err)
+					return
+				end
+				if comment and type(state.comments) == "table" then
+					table.insert(state.comments, comment)
+				end
+				footer.notify("success", "Comment added", 1200)
+				done()
+			end))
+		end,
+	})
+end
+
+---@param pr PullRequest
+---@param entry table
+---@param done fun()
+function M.reply_comment(pr, entry, done)
+	local footer = require("atlas.ui.components.footer")
+	local provider = get_provider()
+	if not provider or type(provider.reply_comment) ~= "function" then
+		return
+	end
+
+	local comment = entry.comment
+	if not comment then
+		return
+	end
+
+	md_editor.open({
+		key = "pr-comment-reply-" .. tostring(comment.id),
+		title = " Reply to Comment ",
+		width_ratio = 0.5,
+		height_ratio = 0.18,
+		completion = get_completion(pr),
+		on_save = function(text)
+			if not text or vim.trim(text) == "" then
+				return
+			end
+			footer.notify("loading", "Sending reply...")
+			track(provider.reply_comment(pr, comment.id, text, function(reply, err)
+				if err then
+					footer.notify("error", "Reply failed: " .. err)
+					return
+				end
+				if reply and type(state.comments) == "table" then
+					table.insert(state.comments, reply)
+				end
+				footer.notify("success", "Reply added", 1200)
+				done()
+			end))
+		end,
+	})
+end
+
+---@param pr PullRequest
+---@param entry table
+---@param done fun()
+function M.edit_comment(pr, entry, done)
+	local footer = require("atlas.ui.components.footer")
+	local provider = get_provider()
+	if not provider or type(provider.edit_comment) ~= "function" then
+		return
+	end
+
+	local comment = entry.comment
+	if not comment or not is_own_comment(comment) then
+		return
+	end
+
+	md_editor.open({
+		key = "pr-comment-edit-" .. tostring(comment.id),
+		title = " Edit Comment ",
+		width_ratio = 0.5,
+		height_ratio = 0.18,
+		initial_text = comment.content_raw or "",
+		completion = get_completion(pr),
+		on_save = function(text)
+			if not text or vim.trim(text) == "" then
+				return
+			end
+			footer.notify("loading", "Editing comment...")
+			track(provider.edit_comment(pr, comment.id, text, function(updated, err)
+				if err then
+					footer.notify("error", "Edit failed: " .. err)
+					return
+				end
+				if type(state.comments) == "table" then
+					for i, c in ipairs(state.comments) do
+						if c.id == comment.id then
+							state.comments[i].content_raw = text
+							break
+						end
+					end
+				end
+				footer.notify("success", "Comment updated", 1200)
+				done()
+			end))
+		end,
+	})
+end
+
+---@param pr PullRequest
+---@param entry table
+---@param done fun()
+function M.delete_comment(pr, entry, done)
+	local footer = require("atlas.ui.components.footer")
+	local provider = get_provider()
+	if not provider or type(provider.delete_comment) ~= "function" then
+		return
+	end
+
+	local comment = entry.comment
+	if not comment or not is_own_comment(comment) then
+		return
+	end
+
+	vim.ui.input({ prompt = "Delete comment? [y/N]: " }, function(input)
+		local confirmed = input and vim.trim(input):lower()
+		if confirmed ~= "y" and confirmed ~= "yes" then
+			return
+		end
+		footer.notify("loading", "Deleting comment...")
+		track(provider.delete_comment(pr, comment.id, function(ok, err)
+			if err then
+				footer.notify("error", "Delete failed: " .. err)
+				return
+			end
+			if ok and type(state.comments) == "table" then
+				for i, c in ipairs(state.comments) do
+					if c.id == comment.id then
+						table.remove(state.comments, i)
+						break
+					end
+				end
+			end
+			footer.notify("success", "Comment deleted", 1200)
+			done()
+		end))
+	end)
 end
 
 return M

@@ -225,4 +225,22 @@ function M.render(pr, width)
 	return lines, spans, line_map
 end
 
+---@param _lnum integer
+---@param entry table
+---@return boolean
+function M.is_selectable_line(_lnum, entry)
+	return entry.kind == "header"
+end
+
+---@param _pr PullRequest
+---@param entry table
+---@return boolean|nil
+function M.on_enter(_pr, entry)
+	local url = entry.build_url
+	if url and url ~= "" then
+		vim.ui.open(url)
+		return true
+	end
+end
+
 return M

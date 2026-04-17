@@ -32,6 +32,13 @@
 ---@field open_diff fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
 ---@field checkout fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
 ---
+--- Comment actions:
+---@field add_comment (fun(pr: PullRequest, content: string, on_done: fun(comment: PullsComment|nil, err: string|nil)): { cancel: fun() }|nil)|nil
+---@field reply_comment (fun(pr: PullRequest, parent_id: number, content: string, on_done: fun(comment: PullsComment|nil, err: string|nil)): { cancel: fun() }|nil)|nil
+---@field edit_comment (fun(pr: PullRequest, comment_id: number, content: string, on_done: fun(comment: PullsComment|nil, err: string|nil)): { cancel: fun() }|nil)|nil
+---@field delete_comment (fun(pr: PullRequest, comment_id: number, on_done: fun(ok: boolean, err: string|nil)): { cancel: fun() }|nil)|nil
+---@field comment_completion (fun(pr: PullRequest): AtlasMarkdownCompletionProvider|nil)|nil
+---
 --- Panel:
 ---@field panel PullsProviderPanel|nil
 ---
@@ -76,6 +83,10 @@
 ---@class PullsPanelTabModule
 ---@field render fun(pr: PullRequest, width: integer): string[], table[], table<integer, table>|nil
 ---@field on_select (fun(pr: PullRequest, repo: PullsRepo|nil, done: fun()))|nil
+---@field is_selectable_line (fun(lnum: integer, entry: table): boolean)|nil
+---@field on_enter (fun(pr: PullRequest, entry: table): boolean|nil)|nil
+---@field setup_keymaps (fun(buf: integer, cursor_entry: fun(): table|nil, done: fun()))|nil
+---@field teardown_keymaps (fun(buf: integer))|nil
 
 ---@class PullsPanelTab
 ---@field key string

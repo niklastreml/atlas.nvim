@@ -6,7 +6,7 @@
 local M = {
 	current_pr = nil,
 	current_repo = nil,
-	current_tab = "overview",
+	current_tab = nil,
 	line_map = {},
 }
 

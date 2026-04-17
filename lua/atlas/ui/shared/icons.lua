@@ -10,6 +10,9 @@ local ICONS = {
 		created = "󰃭",
 		updated = "󰥔",
 		user = "",
+		reply = "",
+		edit = "",
+		delete = "󰆴",
 	},
 
 	pulls = {

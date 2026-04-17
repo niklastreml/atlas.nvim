@@ -3,6 +3,20 @@ local M = {}
 local help = require("atlas.ui.popups.help")
 local resolver = require("atlas.core.keymaps")
 local utils = require("atlas.ui.shared.utils")
+local panel_state = require("atlas.pulls.ui.panel.state")
+
+---@return PullsPanelTabModule|nil
+local function current_tab_mod()
+	local provider = require("atlas.pulls.state").provider
+	if provider and provider.panel and type(provider.panel.tabs) == "function" then
+		for _, tab in ipairs(provider.panel.tabs() or {}) do
+			if tab.key == panel_state.current_tab then
+				return tab.mod
+			end
+		end
+	end
+	return nil
+end
 
 ---@param action_id AtlasKeymapActionId|string
 ---@param map_item table
@@ -31,24 +45,101 @@ end
 ---@param buf integer
 function M.register(buf)
 	local items = {}
+	local nav = require("atlas.pulls.ui.panel.navigation")
 
-	utils.insert_if(items, item("ui.close", {
-		desc = "Close panel",
+	table.insert(items, {
+		key = "j",
+		desc = "Next selectable item",
+		opts = { nowait = true, silent = true },
+		hidden = true,
+		callback = function()
+			nav.move_cursor("down")
+		end,
+	})
+	table.insert(items, {
+		key = "k",
+		desc = "Previous selectable item",
+		opts = { nowait = true, silent = true },
+		hidden = true,
+		callback = function()
+			nav.move_cursor("up")
+		end,
+	})
+	table.insert(items, {
+		key = "gg",
+		desc = "First selectable item",
+		opts = { nowait = true, silent = true },
+		hidden = true,
+		callback = function()
+			nav.focus_first()
+		end,
+	})
+	table.insert(items, {
+		key = "G",
+		desc = "Last selectable item",
+		opts = { nowait = true, silent = true },
+		hidden = true,
+		callback = function()
+			nav.focus_last()
+		end,
+	})
+
+	table.insert(items, {
+		key = "gx",
+		desc = "Open in browser",
 		opts = { nowait = true, silent = true },
 		callback = function()
-			if help.is_open() then
-				return
-			end
+			M.open_current_line()
+		end,
+	})
+
+	table.insert(items, {
+		key = "r",
+		desc = "Refresh tab",
+		opts = { nowait = true, silent = true },
+		callback = function()
+			require("atlas.pulls.ui.panel").refresh_tab()
+		end,
+	})
+
+	M.remove(buf)
+	help.register("Panel", items, { index = 211, buffer = buf })
+
+	local general = {}
+
+	utils.insert_if(general, item("ui.next_panel_tab", {
+		desc = "Next panel tab",
+		opts = { nowait = true },
+		callback = function()
 			local layout_mod = require("atlas.ui.layout")
 			local ui_st = require("atlas.ui.state")
-			layout_mod.toggle_detail()
-			if ui_st.on_panel_close then
-				ui_st.on_panel_close()
+			if layout_mod.win_id("detail") ~= nil and ui_st.on_panel_next_tab then
+				ui_st.on_panel_next_tab()
 			end
 		end,
 	}))
 
-	utils.insert_if(items, item("ui.toggle_panel", {
+	utils.insert_if(general, item("ui.previous_panel_tab", {
+		desc = "Previous panel tab",
+		opts = { nowait = true },
+		callback = function()
+			local layout_mod = require("atlas.ui.layout")
+			local ui_st = require("atlas.ui.state")
+			if layout_mod.win_id("detail") ~= nil and ui_st.on_panel_prev_tab then
+				ui_st.on_panel_prev_tab()
+			end
+		end,
+	}))
+
+	utils.insert_if(general, item("ui.help", {
+		desc = "Toggle help",
+		opts = { nowait = true, silent = true },
+		callback = function()
+			help.toggle({ buffer = buf })
+		end,
+	}))
+
+	utils.insert_if(general, item("ui.toggle_panel", {
 		desc = "Toggle detail panel",
 		callback = function()
 			local layout_mod = require("atlas.ui.layout")
@@ -67,43 +158,64 @@ function M.register(buf)
 		end,
 	}))
 
-	utils.insert_if(items, item("ui.next_panel_tab", {
-		desc = "Next panel tab",
-		opts = { nowait = true },
+	utils.insert_if(general, item("ui.close", {
+		desc = "Close panel",
+		opts = { nowait = true, silent = true },
 		callback = function()
+			if help.is_open() then
+				return
+			end
 			local layout_mod = require("atlas.ui.layout")
 			local ui_st = require("atlas.ui.state")
-			if layout_mod.win_id("detail") ~= nil and ui_st.on_panel_next_tab then
-				ui_st.on_panel_next_tab()
+			layout_mod.toggle_detail()
+			if ui_st.on_panel_close then
+				ui_st.on_panel_close()
 			end
 		end,
 	}))
 
-	utils.insert_if(items, item("ui.previous_panel_tab", {
-		desc = "Previous panel tab",
-		opts = { nowait = true },
-		callback = function()
-			local layout_mod = require("atlas.ui.layout")
-			local ui_st = require("atlas.ui.state")
-			if layout_mod.win_id("detail") ~= nil and ui_st.on_panel_prev_tab then
-				ui_st.on_panel_prev_tab()
-			end
-		end,
-	}))
+	help.register("General", general, { index = 300, buffer = buf })
+end
 
-	M.remove(buf)
-	help.register("Panel", items, { index = 211, buffer = buf })
+function M.open_current_line()
+	local layout = require("atlas.ui.layout")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+
+	local lnum = vim.api.nvim_win_get_cursor(win)[1]
+	local entry = (panel_state.line_map or {})[lnum]
+	local pr = panel_state.current_pr
+	if not entry or not pr then
+		return
+	end
+
+	local tab_mod = current_tab_mod()
+	if tab_mod and type(tab_mod.on_enter) == "function" then
+		tab_mod.on_enter(pr, entry)
+	end
 end
 
 ---@param buf integer
 function M.remove(buf)
-	local items = {}
-	utils.insert_if(items, remove_item("ui.close"))
-	utils.insert_if(items, remove_item("ui.toggle_panel"))
-	utils.insert_if(items, remove_item("ui.next_panel_tab"))
-	utils.insert_if(items, remove_item("ui.previous_panel_tab"))
-
+	local items = {
+		{ key = "j" },
+		{ key = "k" },
+		{ key = "gg" },
+		{ key = "G" },
+		{ key = "gx" },
+		{ key = "r" },
+	}
 	help.remove("Panel", items, { buffer = buf })
+
+	local general = {}
+	utils.insert_if(general, remove_item("ui.next_panel_tab"))
+	utils.insert_if(general, remove_item("ui.previous_panel_tab"))
+	utils.insert_if(general, remove_item("ui.help"))
+	utils.insert_if(general, remove_item("ui.toggle_panel"))
+	utils.insert_if(general, remove_item("ui.close"))
+	help.remove("General", general, { buffer = buf })
 end
 
 return M
