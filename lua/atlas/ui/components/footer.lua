@@ -1,7 +1,7 @@
 local M = {}
 
-local utils = require("atlas.shared.utils")
-local icons = require("atlas.shared.icons")
+local utils = require("atlas.ui.shared.utils")
+local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
 local resolver = require("atlas.core.keymaps")
 local ns = vim.api.nvim_create_namespace("atlas.footer")

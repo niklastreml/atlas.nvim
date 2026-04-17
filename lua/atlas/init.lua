@@ -9,7 +9,7 @@ function M.setup(opts)
 end
 
 local function bootstrap_common()
-	require("atlas.shared.highlights").setup()
+	require("atlas.ui.shared.highlights").setup()
 	require("atlas.ui.components.footer").setup()
 
 	require("atlas.ui.popups.help").register_command("Commands", {
@@ -50,6 +50,10 @@ function M.open(domain, provider_id)
 
 		layout.set_render_callback(function()
 			require("atlas.pulls").render()
+			local panel = require("atlas.pulls.ui.panel")
+			if panel.is_open() then
+				panel.render()
+			end
 		end)
 
 		require("atlas.pulls").init(provider)

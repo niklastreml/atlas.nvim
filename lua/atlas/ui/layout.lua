@@ -1,8 +1,8 @@
 local M = {}
 
 local footer = require("atlas.ui.components.footer")
-local buf_util = require("atlas.shared.buffer")
-local win_util = require("atlas.shared.window")
+local buf_util = require("atlas.ui.shared.buffer")
+local win_util = require("atlas.ui.shared.window")
 
 local state = {
 	main_win = nil,

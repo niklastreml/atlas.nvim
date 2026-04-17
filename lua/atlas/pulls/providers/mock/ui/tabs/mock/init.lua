@@ -1,8 +1,8 @@
 ---@class MockTab : PullsPanelTabModule
 local M = {}
 
-local utils = require("atlas.shared.utils")
-local icons = require("atlas.shared.icons")
+local utils = require("atlas.ui.shared.utils")
+local icons = require("atlas.ui.shared.icons")
 
 local PADDING_X = 1
 local PADDING = string.rep(" ", PADDING_X)
@@ -15,12 +15,10 @@ function M.render(pr, width)
 	local spans = {}
 	local content_width = math.max(10, width - (PADDING_X * 2))
 
-	-- Title
 	local title = icons.pulls_provider("mock", "provider") .. " Atlas Mock Provider"
 	utils.push(lines, spans, title, "AtlasColumnHeader", PADDING_X)
 	table.insert(lines, "")
 
-	-- About
 	utils.push(lines, spans, "About", "AtlasColumnHeader", PADDING_X)
 	local about = {
 		"This is the built-in mock provider for atlas.nvim.",
@@ -39,11 +37,14 @@ function M.render(pr, width)
 	end
 	table.insert(lines, "")
 
-	-- Features
 	utils.push(lines, spans, "What it demonstrates", "AtlasColumnHeader", PADDING_X)
 	local features = {
 		{ icon = icons.general("success"), text = "Provider-based architecture", hl = "AtlasTextPositive" },
-		{ icon = icons.general("success"), text = "Async data fetching with loading spinners", hl = "AtlasTextPositive" },
+		{
+			icon = icons.general("success"),
+			text = "Async data fetching with loading spinners",
+			hl = "AtlasTextPositive",
+		},
 		{ icon = icons.general("success"), text = "Tab navigation and per-tab state", hl = "AtlasTextPositive" },
 		{ icon = icons.general("success"), text = "Reviewers grouped by approval status", hl = "AtlasTextPositive" },
 		{ icon = icons.general("success"), text = "Build status with colored indicators", hl = "AtlasTextPositive" },
@@ -56,16 +57,26 @@ function M.render(pr, width)
 	end
 	table.insert(lines, "")
 
-	-- PR Info
 	utils.push(lines, spans, "Current PR", "AtlasColumnHeader", PADDING_X)
 	utils.push(lines, spans, string.format("ID:      %s", tostring(pr.id or "-")), "AtlasTextMuted", PADDING_X)
 	utils.push(lines, spans, string.format("Repo:    %s", tostring(pr.repo_name or "-")), "AtlasTextMuted", PADDING_X)
 	utils.push(lines, spans, string.format("State:   %s", tostring(pr.state or "-")), "AtlasTextMuted", PADDING_X)
-	utils.push(lines, spans, string.format("Author:  %s", tostring(pr.author and pr.author.name or "-")), "AtlasTextMuted", PADDING_X)
-	utils.push(lines, spans, string.format("Branch:  %s", tostring(pr.source and pr.source.branch or "-")), "AtlasTextMuted", PADDING_X)
+	utils.push(
+		lines,
+		spans,
+		string.format("Author:  %s", tostring(pr.author and pr.author.name or "-")),
+		"AtlasTextMuted",
+		PADDING_X
+	)
+	utils.push(
+		lines,
+		spans,
+		string.format("Branch:  %s", tostring(pr.source and pr.source.branch or "-")),
+		"AtlasTextMuted",
+		PADDING_X
+	)
 	table.insert(lines, "")
 
-	-- Getting started hint
 	utils.push(lines, spans, "Getting started", "AtlasColumnHeader", PADDING_X)
 	local hint = {
 		"To use a real provider, configure atlas.nvim with your",

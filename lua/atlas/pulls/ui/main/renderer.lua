@@ -6,7 +6,7 @@ local helper = require("atlas.pulls.ui.main.helper")
 local header = require("atlas.ui.components.header")
 local navbar = require("atlas.ui.components.navbar")
 local table_tree = require("atlas.ui.components.table_tree")
-local utils = require("atlas.shared.utils")
+local utils = require("atlas.ui.shared.utils")
 local footer = require("atlas.ui.components.footer")
 
 ---@param table_lines string[]

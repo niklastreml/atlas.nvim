@@ -1,8 +1,8 @@
 ---@class PullsOverviewTab : PullsPanelTabModule
 local M = {}
 
-local utils = require("atlas.shared.utils")
-local icons = require("atlas.shared.icons")
+local utils = require("atlas.ui.shared.utils")
+local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
 local table_view = require("atlas.ui.components.table_tree")
 local state = require("atlas.pulls.ui.panel.tabs.overview.state")

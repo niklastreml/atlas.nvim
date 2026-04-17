@@ -15,28 +15,20 @@
 ---@field fetch_user fun(on_done: fun(user: PullsUser|nil, err: string|nil))
 ---@field fetch_pullrequests fun(view: PullsView, opts: table, on_done: fun(groups: PullsGroup[], err: string[]|nil)): { cancel: fun() }|nil
 ---@field fetch_pullrequest fun(repo_id: string, pr_id: string|number, opts: table, on_done: fun(pr: PullRequest|nil, err: string|nil)): { cancel: fun() }|nil
+---@field fetch_reviewers (fun(pr: PullRequest, on_done: fun(reviewers: PullsReviewer[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
+---@field fetch_builds (fun(pr: PullRequest, on_done: fun(builds: PullsBuild[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
+---@field fetch_diffstat (fun(pr: PullRequest, on_done: fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---
 --- Views:
 ---@field views fun(): PullsView[]
 ---
---- Actions (provider owns the full UX: picker, execution, result handling):
+--- Actions:
 ---@field open_actions fun(pr: PullRequest|nil, opts: table, on_done: fun(result: PullsActionResult|nil))|nil
----
---- Provider-specific operations:
 ---@field open_diff fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
 ---@field checkout fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
 ---
---- Panel customisation:
----@field panel_header_rows fun(pr: PullRequest): PullsPanelHeaderRow[]|nil
----@field panel_chips fun(pr: PullRequest): PullsPanelChip[]|nil
----@field panel_tabs fun(): PullsPanelTab[]|nil
----@field panel_fetches fun(pr: PullRequest, done: fun())|nil
----@field panel_is_loading fun(pr: PullRequest): boolean|nil
----
---- Panel data fetches:
----@field fetch_reviewers (fun(pr: PullRequest, on_done: fun(reviewers: PullsReviewer[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
----@field fetch_builds (fun(pr: PullRequest, on_done: fun(builds: PullsBuild[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
----@field fetch_diffstat (fun(pr: PullRequest, on_done: fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
+--- Panel:
+---@field panel PullsProviderPanel|nil
 ---
 --- Healthcheck:
 ---@field health fun()|nil
@@ -48,6 +40,17 @@
 ---@class PullsActionResult
 ---@field changed_pr boolean
 ---@field message string|nil
+
+--------------------------------------------------------------------------------
+-- Provider Panel Interface
+--------------------------------------------------------------------------------
+
+---@class PullsProviderPanel
+---@field header_rows (fun(pr: PullRequest): PullsPanelHeaderRow[])|nil
+---@field chips (fun(pr: PullRequest): PullsPanelChip[])|nil
+---@field tabs (fun(): PullsPanelTab[])|nil
+---@field fetches (fun(pr: PullRequest, done: fun()))|nil
+---@field is_loading (fun(pr: PullRequest): boolean)|nil
 
 --------------------------------------------------------------------------------
 -- Panel types
@@ -74,4 +77,3 @@
 ---@field label string
 ---@field icon string|nil
 ---@field mod PullsPanelTabModule
-

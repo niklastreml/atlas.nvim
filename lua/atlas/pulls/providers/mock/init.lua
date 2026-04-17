@@ -1,6 +1,41 @@
-local icons = require("atlas.shared.icons")
+local icons = require("atlas.ui.shared.icons")
+local panel = require("atlas.pulls.providers.mock.ui.panel")
 
 local SCRIPT_DIR = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h")
+
+--------------------------------------------------------------------------------
+-- Mock data
+--------------------------------------------------------------------------------
+
+local BUILD_STATUSES = { "SUCCESSFUL", "FAILED", "INPROGRESS", "STOPPED" }
+local BUILD_NAMES = { "ci/build", "ci/lint", "ci/test", "deploy/staging" }
+
+local FAKE_REVIEWERS = {
+	{ name = "Alice", nickname = "alice", decision = "approved" },
+	{ name = "Bob", nickname = "bob", decision = "changes_requested" },
+	{ name = "Charlie", nickname = "charlie", decision = "pending" },
+	{ name = "Diana", nickname = "diana", decision = "approved" },
+	{ name = "Eve", nickname = "eve", decision = "pending" },
+}
+
+local FAKE_DIFFSTAT = {
+	{ status = "modified", path = "lua/atlas/pulls/ui/panel/init.lua", lines_added = 42, lines_removed = 18 },
+	{
+		status = "added",
+		path = "lua/atlas/pulls/ui/panel/tabs/overview/init.lua",
+		lines_added = 120,
+		lines_removed = 0,
+	},
+	{ status = "removed", path = "lua/atlas/pulls/old_panel.lua", lines_added = 0, lines_removed = 85 },
+	{
+		status = "renamed",
+		path = "lua/atlas/pulls/state.lua",
+		old_path = "lua/atlas/pulls/old_state.lua",
+		lines_added = 3,
+		lines_removed = 1,
+	},
+	{ status = "modified", path = "lua/atlas/ui/shared/utils.lua", lines_added = 15, lines_removed = 2 },
+}
 
 ---@param filename string
 ---@return table
@@ -53,12 +88,17 @@ local function find_pr(repo_id, pr_id)
 	return nil
 end
 
+--------------------------------------------------------------------------------
+-- Provider
+--------------------------------------------------------------------------------
+
 ---@class MockPullsProvider : PullsProvider
 local M = {
 	id = "mock",
 	name = "Mock",
 	icon = icons.pulls_provider("mock", "provider"),
 	hl_group = "AtlasMockTheme",
+	panel = panel,
 }
 
 function M.setup()
@@ -120,75 +160,6 @@ function M.fetch_pullrequest(repo_id, pr_id, opts, on_done)
 	}
 end
 
----@return PullsView[]
-function M.views()
-	return {
-		{ name = "Compact", key = "1", provider_id = "mock", layout = "compact", provider_view = {} },
-		{ name = "Plain", key = "2", provider_id = "mock", layout = "plain", provider_view = {} },
-	}
-end
-
----@param pr PullRequest
----@param on_done fun(ok: boolean)
-function M.open_diff(pr, on_done)
-	local footer = require("atlas.ui.components.footer")
-	footer.notify("info", "Diff view not available for mock provider")
-	on_done(false)
-end
-
----@param pr PullRequest
----@param on_done fun(ok: boolean)
-function M.checkout(pr, on_done)
-	local footer = require("atlas.ui.components.footer")
-	footer.notify("info", "Checkout not available for mock provider")
-	on_done(false)
-end
-
----@param pr PullRequest
----@return PullsPanelHeaderRow[]
-function M.panel_header_rows(pr)
-	return {
-		{
-			k1 = "Close source:",
-			v1 = pr.close_source_branch and "yes" or "no",
-			v1_hl = pr.close_source_branch and "AtlasTextPositive" or "AtlasLogError",
-			k2 = "",
-			v2 = "",
-			v2_hl = "AtlasTextMuted",
-		},
-	}
-end
-
-local BUILD_STATUSES = { "SUCCESSFUL", "FAILED", "INPROGRESS", "STOPPED" }
-local BUILD_NAMES = { "ci/build", "ci/lint", "ci/test", "deploy/staging" }
-
-local FAKE_REVIEWERS = {
-	{ name = "Alice", nickname = "alice", decision = "approved" },
-	{ name = "Bob", nickname = "bob", decision = "changes_requested" },
-	{ name = "Charlie", nickname = "charlie", decision = "pending" },
-	{ name = "Diana", nickname = "diana", decision = "approved" },
-	{ name = "Eve", nickname = "eve", decision = "pending" },
-}
-
-local FAKE_DIFFSTAT = {
-	{ status = "modified", path = "lua/atlas/pulls/ui/panel/init.lua", lines_added = 42, lines_removed = 18 },
-	{ status = "added", path = "lua/atlas/pulls/ui/panel/tabs/overview/init.lua", lines_added = 120, lines_removed = 0 },
-	{ status = "removed", path = "lua/atlas/pulls/old_panel.lua", lines_added = 0, lines_removed = 85 },
-	{ status = "renamed", path = "lua/atlas/pulls/state.lua", old_path = "lua/atlas/pulls/old_state.lua", lines_added = 3, lines_removed = 1 },
-	{ status = "modified", path = "lua/atlas/shared/utils.lua", lines_added = 15, lines_removed = 2 },
-}
-
-local BUILD_HL = {
-	successful = "AtlasTextPositive",
-	failed = "AtlasLogError",
-	inprogress = "AtlasTextWarning",
-	stopped = "AtlasTextMuted",
-}
-
---------------------------------------------------------------------------------
--- Panel data fetches
---------------------------------------------------------------------------------
-
 ---@param pr PullRequest
 ---@param on_done fun(reviewers: PullsReviewer[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
@@ -205,7 +176,11 @@ function M.fetch_reviewers(pr, on_done)
 		end
 		on_done(result, nil)
 	end, 600 + math.random(800))
-	return { cancel = function() cancelled = true end }
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
 end
 
 ---@param pr PullRequest
@@ -229,7 +204,11 @@ function M.fetch_builds(pr, on_done)
 		end
 		on_done(entries, nil)
 	end, 800 + math.random(600))
-	return { cancel = function() cancelled = true end }
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
 end
 
 ---@param pr PullRequest
@@ -248,95 +227,39 @@ function M.fetch_diffstat(pr, on_done)
 		end
 		on_done(result, nil)
 	end, 500 + math.random(700))
-	return { cancel = function() cancelled = true end }
-end
-
----@param pr PullRequest
----@param done fun()
-function M.panel_fetches(pr, done)
-	-- Provider-level fetches (non-tab). Currently none for mock.
-end
-
-local MAX_HASH_LEN = 12
-
----@param builds PullsBuild[]
----@return string status
-local function aggregate_build_status(builds)
-	local has_success = false
-	local has_stopped = false
-	for _, b in ipairs(builds) do
-		local s = tostring(b.state or ""):upper()
-		if s == "FAILED" then
-			return "failed"
-		end
-		if s == "INPROGRESS" then
-			return "inprogress"
-		end
-		if s == "STOPPED" then
-			has_stopped = true
-		elseif s == "SUCCESSFUL" then
-			has_success = true
-		end
-	end
-	if has_stopped then
-		return "stopped"
-	end
-	if has_success then
-		return "successful"
-	end
-	return "unknown"
-end
-
----@param pr PullRequest
----@return PullsPanelChip[]
-function M.panel_chips(pr)
-	local chips = {}
-	local overview_state = require("atlas.pulls.ui.panel.tabs.overview.state")
-
-	-- Commit hash
-	local hash = tostring(pr.source and pr.source.commit_hash or "")
-	if hash ~= "" then
-		if #hash > MAX_HASH_LEN then
-			hash = hash:sub(1, MAX_HASH_LEN)
-		end
-		table.insert(chips, { label = hash, hl = "AtlasTabInactive" })
-	end
-
-	-- Aggregated build status
-	local s = require("atlas.ui.components.spinner")
-	if overview_state.builds == "loading" then
-		table.insert(chips, { label = s.with_text("Loading builds"), hl = "AtlasTextMuted" })
-	elseif type(overview_state.builds) == "table" and #overview_state.builds > 0 then
-		local status = aggregate_build_status(overview_state.builds)
-		if status ~= "unknown" then
-			local icon = icons.pulls_status(status)
-			local label = status:sub(1, 1):upper() .. status:sub(2)
-			table.insert(chips, { label = string.format("%s %s", icon, label), hl = BUILD_HL[status] or "AtlasTextMuted" })
-		end
-	end
-
-	return chips
-end
-
----@param pr PullRequest
----@return boolean
-function M.panel_is_loading(pr)
-	local overview_state = require("atlas.pulls.ui.panel.tabs.overview.state")
-	if overview_state.any_loading() then
-		return true
-	end
-
-	return false
-end
-
----@return PullsPanelTab[]
-function M.panel_tabs()
 	return {
-		{ key = "overview", label = "Overview", icon = icons.general("overview"), mod = require("atlas.pulls.ui.panel.tabs.overview") },
-		{ key = "mock", label = "Mock", icon = icons.pulls_provider("mock", "provider"), mod = require("atlas.pulls.providers.mock.tabs.mock") },
-		{ key = "activity", label = "Activity", icon = icons.general("updated"), mod = require("atlas.pulls.ui.panel.tabs.overview") },
-		{ key = "comments", label = "Comments", icon = icons.general("comment"), mod = require("atlas.pulls.ui.panel.tabs.overview") },
+		cancel = function()
+			cancelled = true
+		end,
 	}
+end
+
+---@return PullsView[]
+function M.views()
+	return {
+		{ name = "Compact", key = "1", provider_id = "mock", layout = "compact", provider_view = {} },
+		{ name = "Plain", key = "2", provider_id = "mock", layout = "plain", provider_view = {} },
+	}
+end
+
+--------------------------------------------------------------------------------
+-- Actions
+--------------------------------------------------------------------------------
+
+---@param pr PullRequest
+---@param on_done fun(ok: boolean)
+function M.open_diff(pr, on_done)
+	local footer = require("atlas.ui.components.footer")
+	footer.notify("info", "Diff view not available for mock provider")
+	on_done(false)
+end
+
+---@param pr PullRequest
+---@param on_done fun(ok: boolean)
+function M.checkout(pr, on_done)
+	local footer = require("atlas.ui.components.footer")
+	footer.notify("info", "Checkout not available for mock provider")
+	on_done(false)
 end
 
 ---@param pr PullRequest|nil

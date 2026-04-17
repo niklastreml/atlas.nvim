@@ -2,7 +2,7 @@ local M = {}
 
 local help = require("atlas.ui.popups.help")
 local resolver = require("atlas.core.keymaps")
-local utils = require("atlas.shared.utils")
+local utils = require("atlas.ui.shared.utils")
 
 ---@param action_id AtlasKeymapActionId|string
 ---@param map_item table

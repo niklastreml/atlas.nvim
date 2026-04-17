@@ -1,9 +1,9 @@
 local M = {}
 
-local icons = require("atlas.shared.icons")
-local highlights = require("atlas.shared.highlights")
+local icons = require("atlas.ui.shared.icons")
+local highlights = require("atlas.ui.shared.highlights")
 local table_tree = require("atlas.ui.components.table_tree")
-local utils = require("atlas.shared.utils")
+local utils = require("atlas.ui.shared.utils")
 local helper = require("atlas.pulls.ui.main.helper")
 
 ---@param spans table[]
@@ -35,7 +35,6 @@ end
 function M.render(pr, width, extra_rows)
 	local author_name = (pr.author and pr.author.name) or "Unknown"
 	local created_text = utils.relative_time_text(pr.created_on)
-	local updated_text = utils.relative_time_text(pr.updated_on)
 	local repo_name = tostring(pr.repo_name or "")
 	local src = tostring((pr.source or {}).branch or "?")
 	local dst = tostring((pr.destination or {}).branch or "?")
@@ -54,6 +53,8 @@ function M.render(pr, width, extra_rows)
 		byline,
 		"",
 	}
+
+	local updated_text = utils.relative_time_text(pr.updated_on)
 
 	local rows = {
 		{
@@ -82,12 +83,13 @@ function M.render(pr, width, extra_rows)
 		width = width,
 		margin = 1,
 		show_header = false,
-		column_gap = 2,
+		column_gap = 1,
+		fill = true,
 		columns = {
 			{ key = "k1", name = "", can_grow = false },
 			{ key = "v1", name = "", can_grow = true },
 			{ key = "k2", name = "", can_grow = false },
-			{ key = "v2", name = "", can_grow = true },
+			{ key = "v2", name = "", can_grow = true, grow_last = true },
 		},
 		rows = rows,
 		cell_hl = function(row, col, ctx)

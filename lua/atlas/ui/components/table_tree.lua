@@ -1,6 +1,6 @@
 local M = {}
 
-local utils = require("atlas.shared.utils")
+local utils = require("atlas.ui.shared.utils")
 local ui_utils = require("atlas.ui.utils")
 
 local display_width = ui_utils.text_width

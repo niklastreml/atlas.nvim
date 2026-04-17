@@ -1,7 +1,7 @@
 local M = {}
 
 local layout = require("atlas.ui.layout")
-local utils = require("atlas.shared.utils")
+local utils = require("atlas.ui.shared.utils")
 local panel_state = require("atlas.pulls.ui.panel.state")
 local header = require("atlas.pulls.ui.panel.components.header")
 local chips = require("atlas.pulls.ui.panel.components.chips")
@@ -55,8 +55,9 @@ function M.render(tab_items, get_tab_module)
 		local state = require("atlas.pulls.state")
 		local provider = state.provider
 
-		local extra_rows = provider and provider.panel_header_rows and provider.panel_header_rows(pr) or nil
-		local extra_chips = provider and provider.panel_chips and provider.panel_chips(pr) or nil
+		local panel = provider and provider.panel or nil
+		local extra_rows = panel and panel.header_rows and panel.header_rows(pr) or nil
+		local extra_chips = panel and panel.chips and panel.chips(pr) or nil
 
 		-- Header
 		local h_lines, h_spans = header.render(pr, width, extra_rows)

@@ -2,7 +2,7 @@ local M = {}
 
 local footer = require("atlas.ui.components.footer")
 local resolver = require("atlas.core.keymaps")
-local utils = require("atlas.shared.utils")
+local utils = require("atlas.ui.shared.utils")
 
 ---@return PullRequest|nil
 local function selected_pr()

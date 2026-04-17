@@ -3,12 +3,17 @@ local M = {}
 local layout = require("atlas.ui.layout")
 local panel_state = require("atlas.pulls.ui.panel.state")
 local renderer = require("atlas.pulls.ui.panel.renderer")
-local icons = require("atlas.shared.icons")
+local icons = require("atlas.ui.shared.icons")
 
 local SPINNER_INTERVAL_MS = 100
 
 local DEFAULT_TABS = {
-	{ key = "overview", label = "Overview", icon = icons.general("overview"), mod = require("atlas.pulls.ui.panel.tabs.overview") },
+	{
+		key = "overview",
+		label = "Overview",
+		icon = icons.general("overview"),
+		mod = require("atlas.pulls.ui.panel.tabs.overview"),
+	},
 }
 
 --------------------------------------------------------------------------------
@@ -32,8 +37,8 @@ local function is_loading()
 	end
 	local state = require("atlas.pulls.state")
 	local provider = state.provider
-	if provider and type(provider.panel_is_loading) == "function" then
-		return provider.panel_is_loading(pr)
+	if provider and provider.panel and type(provider.panel.is_loading) == "function" then
+		return provider.panel.is_loading(pr)
 	end
 	return false
 end
@@ -46,13 +51,17 @@ local function start_spinner()
 	if spinner_timer == nil then
 		return
 	end
-	spinner_timer:start(SPINNER_INTERVAL_MS, SPINNER_INTERVAL_MS, vim.schedule_wrap(function()
-		if not M.is_open() or not is_loading() then
-			stop_spinner()
-			return
-		end
-		M.render()
-	end))
+	spinner_timer:start(
+		SPINNER_INTERVAL_MS,
+		SPINNER_INTERVAL_MS,
+		vim.schedule_wrap(function()
+			if not M.is_open() or not is_loading() then
+				stop_spinner()
+				return
+			end
+			M.render()
+		end)
+	)
 end
 
 local function update_spinner()
@@ -64,15 +73,15 @@ local function update_spinner()
 end
 
 --------------------------------------------------------------------------------
--- Tabs
+-- Helper
 --------------------------------------------------------------------------------
 
 ---@return PullsPanelTab[]
 local function get_tabs()
 	local state = require("atlas.pulls.state")
 	local provider = state.provider
-	if provider and provider.panel_tabs then
-		local tabs = provider.panel_tabs()
+	if provider and provider.panel and provider.panel.tabs then
+		local tabs = provider.panel.tabs()
 		if type(tabs) == "table" and #tabs > 0 then
 			return tabs
 		end
@@ -90,10 +99,6 @@ local function get_tab_module(tab_key)
 	end
 	return nil
 end
-
---------------------------------------------------------------------------------
--- Fetch lifecycle
---------------------------------------------------------------------------------
 
 ---@return string
 local function current_pr_key()
@@ -122,8 +127,8 @@ end
 local function dispatch_provider_fetches(pr)
 	local state = require("atlas.pulls.state")
 	local provider = state.provider
-	if provider and type(provider.panel_fetches) == "function" then
-		provider.panel_fetches(pr, make_done())
+	if provider and provider.panel and type(provider.panel.fetches) == "function" then
+		provider.panel.fetches(pr, make_done())
 	end
 end
 

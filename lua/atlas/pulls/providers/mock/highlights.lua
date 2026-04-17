@@ -2,7 +2,7 @@ local M = {}
 
 ---@type table<string, table>
 local groups = {
-	AtlasMockTheme = { bg = "#6d28d9", bold = true },
+	AtlasMockTheme = { fg = "#0b1320", bg = "#7dd3fc", bold = true },
 }
 
 function M.setup()

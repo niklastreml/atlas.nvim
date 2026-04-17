@@ -1,8 +1,8 @@
 local M = {}
 
-local highlights = require("atlas.shared.highlights")
-local icons = require("atlas.shared.icons")
-local utils = require("atlas.shared.utils")
+local highlights = require("atlas.ui.shared.highlights")
+local icons = require("atlas.ui.shared.icons")
+local utils = require("atlas.ui.shared.utils")
 local state = require("atlas.pulls.state")
 
 local PR_ICON = icons.pulls("pr")
