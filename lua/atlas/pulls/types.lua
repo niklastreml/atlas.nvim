@@ -100,6 +100,63 @@
 ---@field lines_removed number
 
 --------------------------------------------------------------------------------
+-- Activity
+--------------------------------------------------------------------------------
+
+---@class PullsActivityEntry
+---@field kind "approval"|"comment"|"update"|string
+---@field actor {name: string, nickname: string|nil}|nil
+---@field date string
+---@field content_raw string|nil
+---@field deleted boolean|nil
+---@field changes table|nil
+---@field source_branch string|nil
+---@field target_branch string|nil
+
+--------------------------------------------------------------------------------
+-- Comment
+--------------------------------------------------------------------------------
+
+---@class PullsComment
+---@field id number
+---@field parent_id number|nil
+---@field author {name: string, nickname: string|nil}|nil
+---@field content_raw string
+---@field created_on string
+---@field deleted boolean|nil
+---@field inline {path: string, to: number|nil, from: number|nil}|nil
+
+--------------------------------------------------------------------------------
+-- Commit
+--------------------------------------------------------------------------------
+
+---@class PullsCommit
+---@field hash string
+---@field short_hash string|nil
+---@field message string
+---@field author_name string
+---@field author_nickname string|nil
+---@field date string
+
+--------------------------------------------------------------------------------
+-- Diff
+--------------------------------------------------------------------------------
+
+---@class PullsDiffFile
+---@field path string
+---@field old_path string|nil
+---@field status string
+---@field hunks PullsDiffHunk[]
+
+---@class PullsDiffHunk
+---@field header string
+---@field lines PullsDiffLine[]
+
+---@class PullsDiffLine
+---@field kind "add"|"remove"|"context"|"meta"
+---@field text string
+
+--------------------------------------------------------------------------------
 -- View
 --------------------------------------------------------------------------------
 

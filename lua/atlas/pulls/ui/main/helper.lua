@@ -275,7 +275,7 @@ local function plain_tree_columns()
 		},
 		{
 			key = "branch",
-			name = string.format("%s Branch", icons.general("branch")),
+			name = string.format("%s Branch", icons.pulls("branch")),
 			max_width = 28,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",

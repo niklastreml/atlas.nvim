@@ -73,7 +73,7 @@ function M.apply_detail_opts(win)
 	vim.api.nvim_set_option_value("diff", false, { win = win })
 	vim.api.nvim_set_option_value("winbar", " ", { win = win })
 	vim.api.nvim_set_option_value("statusline", " ", { win = win })
-	vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
+	vim.api.nvim_set_option_value("winfixwidth", false, { win = win })
 end
 
 return M

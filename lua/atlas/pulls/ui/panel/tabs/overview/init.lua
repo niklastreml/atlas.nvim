@@ -33,10 +33,6 @@ local function track(handle)
 	end
 end
 
---------------------------------------------------------------------------------
--- on_select — cancel previous, kick off new fetches
---------------------------------------------------------------------------------
-
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
 ---@param done fun()
@@ -81,9 +77,9 @@ end
 local DECISION_GROUPS = { "approved", "changes_requested", "pending" }
 
 local DECISION_ICONS = {
-	approved = { icon = icons.general("success"), hl = "AtlasTextPositive" },
-	changes_requested = { icon = icons.general("warning"), hl = "AtlasTextWarning" },
-	pending = { icon = icons.general("pending"), hl = "AtlasTextMuted" },
+	approved = { icon = icons.pulls_status("successful"), hl = "AtlasTextPositive" },
+	changes_requested = { icon = icons.pulls_status("failed"), hl = "AtlasTextWarning" },
+	pending = { icon = icons.pulls_status("inprogress"), hl = "AtlasTextMuted" },
 }
 
 ---@param pr PullRequest
@@ -387,10 +383,6 @@ local function render_diffstat(pr, width, lines, spans)
 
 	utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
 end
-
---------------------------------------------------------------------------------
--- Render
---------------------------------------------------------------------------------
 
 ---@param pr PullRequest
 ---@param width integer

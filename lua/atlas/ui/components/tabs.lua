@@ -19,6 +19,7 @@ function M.render(items, active_tab, width, opts)
 	local padding_x = math.max(0, tonumber(opts.padding_x) or 0)
 	local padding = string.rep(" ", padding_x)
 
+	local available = math.max(1, width - padding_x)
 	local line = ""
 	local spans = {}
 	local col = 0
@@ -46,6 +47,19 @@ function M.render(items, active_tab, width, opts)
 		if i < #items then
 			line = line .. gap
 			col = col + #gap
+		end
+	end
+
+	if vim.api.nvim_strwidth(line) > available then
+		local strcharpart = vim.fn.strcharpart
+		local strchars = vim.fn.strchars
+		local nchars = strchars(line)
+		for i = nchars - 1, 0, -1 do
+			local head = strcharpart(line, 0, i)
+			if vim.api.nvim_strwidth(head) <= available - 1 then
+				line = head .. "…"
+				break
+			end
 		end
 	end
 

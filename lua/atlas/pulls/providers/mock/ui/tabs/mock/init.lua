@@ -15,21 +15,21 @@ function M.render(pr, width)
 	local spans = {}
 	local content_width = math.max(10, width - (PADDING_X * 2))
 
-	local title = icons.pulls_provider("mock", "provider") .. " Atlas Mock Provider"
-	utils.push(lines, spans, title, "AtlasColumnHeader", PADDING_X)
+	-- Title
+	local title = icons.pulls_provider("mock", "provider") .. " Atlas.nvim"
+	utils.push(lines, spans, title, "AtlasMockTheme", PADDING_X)
 	table.insert(lines, "")
 
-	utils.push(lines, spans, "About", "AtlasColumnHeader", PADDING_X)
-	local about = {
-		"This is the built-in mock provider for atlas.nvim.",
-		"It generates fake pull requests, reviewers, builds, and",
-		"file changes so you can explore the UI without connecting",
-		"to a real service like Bitbucket or GitHub.",
+	-- Intro
+	local intro = {
+		"A Neovim plugin for managing pull requests and issues",
+		"without leaving your editor.",
 		"",
-		"All data is randomized on each load. Nothing is persisted",
-		"and no network requests are made.",
+		"This is the built-in mock provider. It generates fake data",
+		"so you can explore the UI without connecting to a real",
+		"service. No network requests are made.",
 	}
-	for _, line in ipairs(about) do
+	for _, line in ipairs(intro) do
 		local wrapped = utils.wrap_line(line, content_width)
 		for _, chunk in ipairs(wrapped) do
 			table.insert(lines, PADDING .. chunk)
@@ -37,53 +37,90 @@ function M.render(pr, width)
 	end
 	table.insert(lines, "")
 
-	utils.push(lines, spans, "What it demonstrates", "AtlasColumnHeader", PADDING_X)
+	-- Features
+	utils.push(lines, spans, "Features", "AtlasColumnHeader", PADDING_X)
 	local features = {
-		{ icon = icons.general("success"), text = "Provider-based architecture", hl = "AtlasTextPositive" },
-		{
-			icon = icons.general("success"),
-			text = "Async data fetching with loading spinners",
-			hl = "AtlasTextPositive",
-		},
-		{ icon = icons.general("success"), text = "Tab navigation and per-tab state", hl = "AtlasTextPositive" },
-		{ icon = icons.general("success"), text = "Reviewers grouped by approval status", hl = "AtlasTextPositive" },
-		{ icon = icons.general("success"), text = "Build status with colored indicators", hl = "AtlasTextPositive" },
-		{ icon = icons.general("success"), text = "Diffstat with file change summary", hl = "AtlasTextPositive" },
-		{ icon = icons.general("success"), text = "Actions menu (approve, merge, decline)", hl = "AtlasTextPositive" },
-		{ icon = icons.general("success"), text = "Header, chips, and panel customization", hl = "AtlasTextPositive" },
+		"Multiple provider support (Bitbucket, GitHub, ...)",
+		"PR tabs: overview, activity, comments, commits, files",
+		"PR actions: merge, approve, request changes, decline",
+		"Comment workflows (create, reply, edit, delete)",
+		"Async data fetching with loading spinners",
+		"Customizable views, keymaps, and layouts",
+		"Jira integration for issue management",
 	}
 	for _, f in ipairs(features) do
-		utils.push(lines, spans, string.format("%s %s", f.icon, f.text), f.hl, PADDING_X)
+		local text = string.format("%s %s", icons.pulls_status("successful"), f)
+		utils.push(lines, spans, text, "AtlasTextPositive", PADDING_X)
 	end
 	table.insert(lines, "")
 
-	utils.push(lines, spans, "Current PR", "AtlasColumnHeader", PADDING_X)
-	utils.push(lines, spans, string.format("ID:      %s", tostring(pr.id or "-")), "AtlasTextMuted", PADDING_X)
-	utils.push(lines, spans, string.format("Repo:    %s", tostring(pr.repo_name or "-")), "AtlasTextMuted", PADDING_X)
-	utils.push(lines, spans, string.format("State:   %s", tostring(pr.state or "-")), "AtlasTextMuted", PADDING_X)
-	utils.push(
-		lines,
-		spans,
-		string.format("Author:  %s", tostring(pr.author and pr.author.name or "-")),
-		"AtlasTextMuted",
-		PADDING_X
-	)
-	utils.push(
-		lines,
-		spans,
-		string.format("Branch:  %s", tostring(pr.source and pr.source.branch or "-")),
-		"AtlasTextMuted",
-		PADDING_X
-	)
+	-- Commands
+	utils.push(lines, spans, "Commands", "AtlasColumnHeader", PADDING_X)
+	local commands = {
+		{ cmd = ":AtlasPulls", desc = "Open pull request picker" },
+		{ cmd = ":AtlasClearCache", desc = "Clear Atlas cache" },
+		{ cmd = ":AtlasLogs", desc = "Toggle Atlas logs" },
+	}
+	for _, c in ipairs(commands) do
+		local line = string.format("  %-20s %s", c.cmd, c.desc)
+		table.insert(lines, PADDING .. line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X + 2,
+			end_col = PADDING_X + 2 + #c.cmd,
+			hl_group = "AtlasMockTheme",
+		})
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X + 22,
+			end_col = PADDING_X + 22 + #c.desc,
+			hl_group = "AtlasTextMuted",
+		})
+	end
 	table.insert(lines, "")
 
-	utils.push(lines, spans, "Getting started", "AtlasColumnHeader", PADDING_X)
-	local hint = {
-		"To use a real provider, configure atlas.nvim with your",
-		"Bitbucket or GitHub credentials. See :checkhealth atlas",
-		"for setup status and the README for configuration details.",
+	-- Keymaps
+	utils.push(lines, spans, "Keymaps", "AtlasColumnHeader", PADDING_X)
+	local keymaps = {
+		{ key = "q", desc = "Close Atlas / panel" },
+		{ key = "p", desc = "Toggle detail panel" },
+		{ key = "Tab / S-Tab", desc = "Next / previous panel tab" },
+		{ key = "?", desc = "Toggle help popup" },
+		{ key = "R", desc = "Refresh current view" },
+		{ key = "A", desc = "Open actions menu" },
 	}
-	for _, line in ipairs(hint) do
+	for _, k in ipairs(keymaps) do
+		local line = string.format("  %-20s %s", k.key, k.desc)
+		table.insert(lines, PADDING .. line)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X + 2,
+			end_col = PADDING_X + 2 + #k.key,
+			hl_group = "AtlasMockTheme",
+		})
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X + 22,
+			end_col = PADDING_X + 22 + #k.desc,
+			hl_group = "AtlasTextMuted",
+		})
+	end
+	table.insert(lines, "")
+
+	-- Getting started
+	utils.push(lines, spans, "Getting started", "AtlasColumnHeader", PADDING_X)
+	local getting_started = {
+		"To use a real provider, configure atlas.nvim with your",
+		"credentials in your Neovim config:",
+		"",
+		'  require("atlas").setup({',
+		"    pulls = { provider = \"bitbucket\" },",
+		"  })",
+		"",
+		"Run :checkhealth atlas to verify your setup.",
+		"See the README for full configuration details.",
+	}
+	for _, line in ipairs(getting_started) do
 		local wrapped = utils.wrap_line(line, content_width)
 		for _, chunk in ipairs(wrapped) do
 			table.insert(lines, PADDING .. chunk)

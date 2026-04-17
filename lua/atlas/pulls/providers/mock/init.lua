@@ -18,6 +18,175 @@ local FAKE_REVIEWERS = {
 	{ name = "Eve", nickname = "eve", decision = "pending" },
 }
 
+local FAKE_ACTIVITY = {
+	{
+		kind = "update",
+		actor = { name = "Alice", nickname = "alice" },
+		date = "2026-04-16T10:30:00+00:00",
+		changes = { description = { old = "old desc", new = "new desc" } },
+	},
+	{
+		kind = "approval",
+		actor = { name = "Diana", nickname = "diana" },
+		date = "2026-04-16T09:15:00+00:00",
+	},
+	{
+		kind = "comment",
+		actor = { name = "Bob", nickname = "bob" },
+		date = "2026-04-15T14:20:00+00:00",
+		content_raw = "Looks good overall, just a few nits on the error handling path.",
+	},
+	{
+		kind = "comment",
+		actor = { name = "Charlie", nickname = "charlie" },
+		date = "2026-04-15T11:00:00+00:00",
+		content_raw = "Can we add a test for the edge case?",
+	},
+	{
+		kind = "update",
+		actor = { name = "Mock User", nickname = "mockuser" },
+		date = "2026-04-14T16:45:00+00:00",
+		changes = { title = { old = "WIP: refactor", new = "Refactor panel system" } },
+	},
+}
+
+local FAKE_COMMENTS = {
+	{
+		id = 1,
+		parent_id = nil,
+		author = { name = "Bob", nickname = "bob" },
+		content_raw = "Looks good overall, just a few nits on the error handling path.",
+		created_on = "2026-04-15T14:20:00+00:00",
+	},
+	{
+		id = 2,
+		parent_id = 1,
+		author = { name = "Mock User", nickname = "mockuser" },
+		content_raw = "Good point, I'll fix that in the next push.",
+		created_on = "2026-04-15T15:00:00+00:00",
+	},
+	{
+		id = 3,
+		parent_id = nil,
+		author = { name = "Charlie", nickname = "charlie" },
+		content_raw = "Can we add a test for the edge case?",
+		created_on = "2026-04-15T11:00:00+00:00",
+		inline = { path = "lua/atlas/pulls/ui/panel/init.lua", to = 42 },
+	},
+	{
+		id = 4,
+		parent_id = 3,
+		author = { name = "Mock User", nickname = "mockuser" },
+		content_raw = "Added in the latest commit.",
+		created_on = "2026-04-15T12:30:00+00:00",
+		inline = { path = "lua/atlas/pulls/ui/panel/init.lua", to = 42 },
+	},
+	{
+		id = 5,
+		parent_id = nil,
+		author = { name = "Alice", nickname = "alice" },
+		content_raw = "Nice refactor! Much cleaner now.",
+		created_on = "2026-04-16T10:00:00+00:00",
+	},
+}
+
+local FAKE_COMMITS = {
+	{
+		hash = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+		short_hash = "a1b2c3d4",
+		message = "Refactor panel system to use provider-based architecture",
+		author_name = "Mock User",
+		author_nickname = "mockuser",
+		date = "2026-04-16T10:30:00+00:00",
+	},
+	{
+		hash = "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+		short_hash = "b2c3d4e5",
+		message = "Add shared overview tab with reviewers, builds, diffstat",
+		author_name = "Mock User",
+		author_nickname = "mockuser",
+		date = "2026-04-15T16:00:00+00:00",
+	},
+	{
+		hash = "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+		short_hash = "c3d4e5f6",
+		message = "Fix build highlights not showing in panel chips",
+		author_name = "Mock User",
+		author_nickname = "mockuser",
+		date = "2026-04-14T14:00:00+00:00",
+	},
+	{
+		hash = "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+		short_hash = "d4e5f6a1",
+		message = "Initial panel implementation with mock provider",
+		author_name = "Mock User",
+		author_nickname = "mockuser",
+		date = "2026-04-13T09:00:00+00:00",
+	},
+}
+
+local FAKE_DIFF = {
+	{
+		path = "lua/atlas/pulls/ui/panel/init.lua",
+		status = "modified",
+		hunks = {
+			{
+				header = "@@ -10,6 +10,12 @@",
+				lines = {
+					{ kind = "context", text = "local layout = require('atlas.ui.layout')" },
+					{ kind = "context", text = "local panel_state = require('atlas.pulls.ui.panel.state')" },
+					{ kind = "remove", text = "-local old_renderer = require('atlas.pulls.ui.old_renderer')" },
+					{ kind = "add", text = "+local renderer = require('atlas.pulls.ui.panel.renderer')" },
+					{ kind = "add", text = "+local icons = require('atlas.ui.shared.icons')" },
+					{ kind = "context", text = "" },
+					{ kind = "context", text = "local SPINNER_INTERVAL_MS = 100" },
+				},
+			},
+		},
+	},
+	{
+		path = "lua/atlas/pulls/ui/panel/tabs/overview/init.lua",
+		status = "added",
+		hunks = {
+			{
+				header = "@@ -0,0 +1,20 @@",
+				lines = {
+					{ kind = "add", text = "+local M = {}" },
+					{ kind = "add", text = "+" },
+					{ kind = "add", text = "+local utils = require('atlas.ui.shared.utils')" },
+					{ kind = "add", text = "+local icons = require('atlas.ui.shared.icons')" },
+					{ kind = "add", text = "+" },
+					{ kind = "add", text = "+function M.render(pr, width)" },
+					{ kind = "add", text = "+  local lines = {}" },
+					{ kind = "add", text = "+  local spans = {}" },
+					{ kind = "add", text = "+  return lines, spans, {}" },
+					{ kind = "add", text = "+end" },
+					{ kind = "add", text = "+" },
+					{ kind = "add", text = "+return M" },
+				},
+			},
+		},
+	},
+	{
+		path = "lua/atlas/pulls/old_panel.lua",
+		status = "removed",
+		hunks = {
+			{
+				header = "@@ -1,10 +0,0 @@",
+				lines = {
+					{ kind = "remove", text = "-local M = {}" },
+					{ kind = "remove", text = "-" },
+					{ kind = "remove", text = "-function M.render()" },
+					{ kind = "remove", text = "-  -- old implementation" },
+					{ kind = "remove", text = "-end" },
+					{ kind = "remove", text = "-" },
+					{ kind = "remove", text = "-return M" },
+				},
+			},
+		},
+	},
+}
+
 local FAKE_DIFFSTAT = {
 	{ status = "modified", path = "lua/atlas/pulls/ui/panel/init.lua", lines_added = 42, lines_removed = 18 },
 	{
@@ -227,6 +396,99 @@ function M.fetch_diffstat(pr, on_done)
 		end
 		on_done(result, nil)
 	end, 500 + math.random(700))
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param pr PullRequest
+---@param on_done fun(entries: PullsActivityEntry[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_activity(pr, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		on_done(vim.deepcopy(FAKE_ACTIVITY), nil)
+	end, 500 + math.random(500))
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param pr PullRequest
+---@param on_done fun(comments: PullsComment[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_comments(pr, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		on_done(vim.deepcopy(FAKE_COMMENTS), nil)
+	end, 600 + math.random(600))
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param pr PullRequest
+---@param on_done fun(commits: PullsCommit[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_commits(pr, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		on_done(vim.deepcopy(FAKE_COMMITS), nil)
+	end, 400 + math.random(600))
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param pr PullRequest
+---@param on_done fun(files: PullsDiffFile[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_diff(pr, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		on_done(vim.deepcopy(FAKE_DIFF), nil)
+	end, 700 + math.random(500))
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param pr PullRequest
+---@param commit_hash string
+---@param on_done fun(status: string|nil, url: string|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_commit_status(pr, commit_hash, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		local status = BUILD_STATUSES[math.random(#BUILD_STATUSES)]:lower()
+		local url = "https://example.com/build/" .. commit_hash:sub(1, 8)
+		on_done(status, url, nil)
+	end, 300 + math.random(500))
 	return {
 		cancel = function()
 			cancelled = true

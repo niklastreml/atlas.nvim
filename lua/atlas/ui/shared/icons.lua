@@ -9,19 +9,21 @@ local ICONS = {
 		comment = "󰍩",
 		created = "󰃭",
 		updated = "󰥔",
-		success = "",
-		warning = "",
-		info = "",
-		error = "",
-		pending = "",
-		branch = "",
 		user = "",
 	},
 
 	pulls = {
 		repo = "",
 		pr = "",
+		comments = "󰅺",
 		tasks = "󰄱",
+		check = "",
+		commit = "󰜘",
+		files = "󰈔",
+		activity = "󱐋",
+		tag = "",
+		branch = "",
+
 		status = {
 			successful = "",
 			failed = "",

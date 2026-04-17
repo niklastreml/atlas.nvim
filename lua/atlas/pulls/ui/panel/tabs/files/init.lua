@@ -1,0 +1,159 @@
+---@class PullsFilesTab : PullsPanelTabModule
+local M = {}
+
+local utils = require("atlas.ui.shared.utils")
+local spinner = require("atlas.ui.components.spinner")
+local state = require("atlas.pulls.ui.panel.tabs.files.state")
+
+local PADDING_X = 1
+
+---@type { cancel: fun() }[]
+local in_flight = {}
+
+---@return PullsProvider|nil
+local function get_provider()
+	local pulls_state = require("atlas.pulls.state")
+	return pulls_state.provider
+end
+
+local function cancel_all()
+	for _, handle in ipairs(in_flight) do
+		handle.cancel()
+	end
+	in_flight = {}
+end
+
+---@param handle { cancel: fun() }|nil
+local function track(handle)
+	if handle then
+		table.insert(in_flight, handle)
+	end
+end
+
+---@param text string
+---@return string
+local function pad(text)
+	return string.rep(" ", PADDING_X) .. tostring(text or "")
+end
+
+---@param lines string[]
+---@param spans table[]
+---@param text string
+---@param hl_group string|nil
+local function push(lines, spans, text, hl_group)
+	table.insert(lines, pad(text))
+	if hl_group then
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X,
+			end_col = PADDING_X + #text,
+			hl_group = hl_group,
+		})
+	end
+end
+
+---@param pr PullRequest
+---@param repo PullsRepo|nil
+---@param done fun()
+function M.on_select(pr, repo, done)
+	cancel_all()
+	state.reset()
+
+	local provider = get_provider()
+	if not provider then
+		return
+	end
+
+	if type(provider.fetch_diff) == "function" then
+		state.diff = "loading"
+		track(provider.fetch_diff(pr, function(files, err)
+			state.diff = err and err or (files or {})
+			done()
+		end))
+	end
+end
+
+---@param pr PullRequest
+---@param width integer
+---@return string[], table[], table<integer, table>|nil
+function M.render(pr, width)
+	local lines = {}
+	local spans = {}
+	local line_map = {}
+	local max_width = math.max(20, tonumber(width) or 60)
+
+	if state.diff == nil then
+		return lines, spans, line_map
+	end
+
+	-- Loading state
+	if state.diff == "loading" then
+		push(lines, spans, spinner.with_text("Loading file changes..."), "AtlasTextMuted")
+		return lines, spans, line_map
+	end
+
+	-- Error
+	if type(state.diff) == "string" then
+		push(lines, spans, state.diff, "AtlasLogError")
+		return lines, spans, line_map
+	end
+
+	-- Diff hunks
+	local files = state.diff
+	if #files == 0 then
+		push(lines, spans, "No diff available.", nil)
+		return lines, spans, line_map
+	end
+
+	local hunk_counter = 0
+
+	for _, file in ipairs(files) do
+		-- File path separator
+		local path_label = file.path
+		if file.status == "renamed" and file.old_path then
+			path_label = file.old_path .. " -> " .. file.path
+		end
+		local available = math.max(1, max_width - PADDING_X)
+		push(lines, spans, utils.truncate(path_label, available, false), "AtlasColumnHeader")
+
+		for _, hunk in ipairs(file.hunks) do
+			hunk_counter = hunk_counter + 1
+			local hunk_idx = hunk_counter
+			local is_collapsed = state.collapsed_hunks[hunk_idx] == true
+			local body_count = #hunk.lines
+
+			-- @@ header line
+			local display_header = is_collapsed and (hunk.header .. "  [+" .. body_count .. " lines]") or hunk.header
+			table.insert(lines, pad(display_header))
+			local buf_line = #lines
+			table.insert(spans, {
+				line = buf_line - 1,
+				start_col = PADDING_X,
+				end_col = PADDING_X + #display_header,
+				hl_group = "AtlasTextMuted",
+			})
+			line_map[buf_line] = { type = "hunk_header", hunk_idx = hunk_idx }
+
+			-- Body lines
+			if not is_collapsed then
+				for _, dl in ipairs(hunk.lines) do
+					local hl = nil
+					if dl.kind == "add" then
+						hl = "AtlasTextPositive"
+					elseif dl.kind == "remove" then
+						hl = "AtlasTextWarning"
+					elseif dl.kind == "meta" then
+						hl = "AtlasTextMuted"
+					end
+					push(lines, spans, dl.text, hl)
+				end
+			end
+		end
+
+		table.insert(lines, "")
+	end
+
+	return lines, spans, line_map
+end
+
+return M

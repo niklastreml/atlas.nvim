@@ -62,7 +62,7 @@ function M.render(pr, width, extra_rows)
 			v1 = string.format("%s %s", icons.pulls("repo"), repo_name),
 			v1_hl = highlights.dynamic_for(repo_name) or "AtlasTextMuted",
 			k2 = "Branch:",
-			v2 = string.format("%s %s → %s", icons.general("branch"), src, dst),
+			v2 = string.format("%s %s → %s", icons.pulls("branch"), src, dst),
 			v2_hl = "AtlasTextMuted",
 		},
 		{
