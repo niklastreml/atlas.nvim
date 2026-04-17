@@ -350,6 +350,15 @@ local keymaps = require("atlas.pulls.ui.panel.tabs.comments.keymaps")
 M.setup_keymaps = keymaps.setup
 M.teardown_keymaps = keymaps.teardown
 
+---@param pr PullRequest
+---@return AtlasMarkdownCompletionProvider|nil
+local function get_completion(pr)
+	local provider = get_provider()
+	if provider and type(provider.comment_completion) == "function" then
+		return provider.comment_completion(pr)
+	end
+	return nil
+end
 
 ---@param pr PullRequest
 ---@param done fun()
