@@ -35,7 +35,7 @@ end
 function M.render(pr, width, extra_rows)
 	local author_name = (pr.author and pr.author.name) or "Unknown"
 	local created_text = utils.relative_time_text(pr.created_on)
-	local repo_name = tostring(pr.repo_name or "")
+	local repo_name = tostring(pr.repo_full_name or "")
 	local src = tostring((pr.source or {}).branch or "?")
 	local dst = tostring((pr.destination or {}).branch or "?")
 

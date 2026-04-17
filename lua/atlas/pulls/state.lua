@@ -1,6 +1,6 @@
 ---@class PullsState
----@field active_view PullsView|nil
----@field current_view PullsView|nil
+---@field active_view AtlasPullsViewConfig|nil
+---@field current_view AtlasPullsViewConfig|nil
 ---@field is_loading boolean
 ---@field error string|nil
 ---@field current_user PullsUser|nil

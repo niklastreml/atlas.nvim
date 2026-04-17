@@ -2,6 +2,11 @@
 -- Provider Interface
 --------------------------------------------------------------------------------
 
+---@class PullsFetchOpts
+---@field force_load boolean|nil
+---@field pagelen number|nil
+
+
 ---@class PullsProvider
 ---@field id string
 ---@field name string
@@ -13,8 +18,8 @@
 ---
 --- Core data methods:
 ---@field fetch_user fun(on_done: fun(user: PullsUser|nil, err: string|nil))
----@field fetch_pullrequests fun(view: PullsView, opts: table, on_done: fun(groups: PullsGroup[], err: string[]|nil)): { cancel: fun() }|nil
----@field fetch_pullrequest fun(repo_id: string, pr_id: string|number, opts: table, on_done: fun(pr: PullRequest|nil, err: string|nil)): { cancel: fun() }|nil
+---@field fetch_pullrequests fun(view: AtlasPullsViewConfig, opts: PullsFetchOpts, on_done: fun(groups: PullsGroup[], err: string[]|nil)): { cancel: fun() }|nil
+---@field fetch_pullrequest fun(pr: PullRequest, opts: PullsFetchOpts, on_done: fun(pr: PullRequest|nil, err: string|nil)): { cancel: fun() }|nil
 ---@field fetch_reviewers (fun(pr: PullRequest, on_done: fun(reviewers: PullsReviewer[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_builds (fun(pr: PullRequest, on_done: fun(builds: PullsBuild[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_diffstat (fun(pr: PullRequest, on_done: fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
@@ -24,34 +29,19 @@
 ---@field fetch_diff (fun(pr: PullRequest, on_done: fun(files: PullsDiffFile[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_commit_status (fun(pr: PullRequest, commit_hash: string, on_done: fun(status: string|nil, url: string|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---
---- Views:
----@field views fun(): PullsView[]
----
---- Actions:
----@field open_actions fun(pr: PullRequest|nil, opts: table, on_done: fun(result: PullsActionResult|nil))|nil
----@field open_diff fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
----@field checkout fun(pr: PullRequest, on_done: fun(ok: boolean))|nil
----
---- Comment actions:
 ---@field add_comment (fun(pr: PullRequest, content: string, on_done: fun(comment: PullsComment|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field reply_comment (fun(pr: PullRequest, parent_id: number, content: string, on_done: fun(comment: PullsComment|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field edit_comment (fun(pr: PullRequest, comment_id: number, content: string, on_done: fun(comment: PullsComment|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field delete_comment (fun(pr: PullRequest, comment_id: number, on_done: fun(ok: boolean, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field comment_completion (fun(pr: PullRequest): AtlasMarkdownCompletionProvider|nil)|nil
 ---
---- Panel:
+---@field views fun(): AtlasPullsViewConfig[]
+---@field open_actions fun(pr: PullRequest|nil, source: "main"|"panel"|nil, on_done: fun(result: PullsActionResult|nil))|nil
+---@field search fun()|nil
+---
 ---@field panel PullsProviderPanel|nil
 ---
---- Healthcheck:
 ---@field health fun()|nil
-
---------------------------------------------------------------------------------
--- Action Result
---------------------------------------------------------------------------------
-
----@class PullsActionResult
----@field changed_pr boolean
----@field message string|nil
 
 --------------------------------------------------------------------------------
 -- Provider Panel Interface

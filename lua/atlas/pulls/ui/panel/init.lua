@@ -144,7 +144,7 @@ local function current_pr_key()
 	if pr == nil then
 		return ""
 	end
-	return tostring(pr.repo_id or "") .. "/" .. tostring(pr.id or "")
+	return tostring(pr.repo_full_name or "") .. "/" .. tostring(pr.id or "")
 end
 
 ---@return fun()
@@ -221,7 +221,7 @@ function M.on_select(pr, repo)
 
 	local same_pr = panel_state.current_pr ~= nil
 		and tostring(panel_state.current_pr.id) == tostring(pr.id)
-		and tostring(panel_state.current_pr.repo_id) == tostring(pr.repo_id)
+		and tostring(panel_state.current_pr.repo_full_name) == tostring(pr.repo_full_name)
 
 	panel_state.current_pr = pr
 	panel_state.current_repo = repo

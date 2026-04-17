@@ -13,6 +13,10 @@ local ICONS = {
 		reply = "",
 		edit = "",
 		delete = "󰆴",
+		success = "",
+		waring = "",
+		error = "",
+		info = "",
 	},
 
 	pulls = {

@@ -40,8 +40,9 @@
 ---@field updated_on string
 ---@field link PullsLink
 ---@field provider string
----@field repo_id string
----@field repo_name string
+---@field workspace string
+---@field repo string
+---@field repo_full_name string
 ---@field _raw table|nil
 
 --------------------------------------------------------------------------------
@@ -157,13 +158,3 @@
 ---@field kind "add"|"remove"|"context"|"meta"
 ---@field text string
 
---------------------------------------------------------------------------------
--- View
---------------------------------------------------------------------------------
-
----@class PullsView
----@field name string
----@field key string|nil
----@field provider_id AtlasPullsProviderId
----@field layout string|nil
----@field provider_view table

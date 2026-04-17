@@ -83,7 +83,7 @@ end
 ---@param spans table[]
 ---@param width integer
 local function render_header(lines, spans, width)
-	---@param v PullsView|nil
+	---@param v AtlasPullsViewConfig|nil
 	---@return string
 	local function view_id_str(v)
 		if v == nil then

@@ -139,6 +139,12 @@ local function load_active_view(opts, on_done)
 	end
 
 	local target_view = state.active_view
+	if target_view == nil then
+		footer.notify("error", "No active view selected")
+		on_done()
+		return
+	end
+
 	local target_view_id = helper.view_id(target_view)
 	local token = next_request_token()
 	state.latest_request_tokens[target_view_id] = token
@@ -261,19 +267,13 @@ function M.refresh_pr(pr, on_done)
 	end
 
 	local pr_id = pr.id
-	local repo_id = tostring(pr.repo_id or "")
-
-	if repo_id == "" then
-		footer.notify("warn", "PR missing repo info")
-		on_done()
-		return
-	end
+	local repo_id = tostring(pr.repo_full_name or "")
 
 	footer.notify("loading", string.format("Reloading PR #%s...", tostring(pr_id)))
 	begin_pr_reload(repo_id, pr_id)
 
 	local reload_handle = nil
-	reload_handle = provider.fetch_pullrequest(repo_id, pr_id, { force_load = true }, function(fetched_pr, err)
+	reload_handle = provider.fetch_pullrequest(pr, { force_load = true }, function(fetched_pr, err)
 		for i = #active_pr_reload_handles, 1, -1 do
 			if active_pr_reload_handles[i] == reload_handle then
 				table.remove(active_pr_reload_handles, i)
@@ -319,7 +319,7 @@ function M.refresh_pr(pr, on_done)
 	table.insert(active_pr_reload_handles, reload_handle)
 end
 
----@param view PullsView
+---@param view AtlasPullsViewConfig
 function M.switch_view(view)
 	state.active_view = view
 	load_active_view({ force_load = false }, function()

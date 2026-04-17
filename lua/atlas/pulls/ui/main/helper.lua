@@ -12,7 +12,7 @@ local TASKS_ICON = icons.pulls("tasks")
 ---@param pr PullRequest
 ---@return string
 local function pr_icon_or_spinner(pr)
-	if state.is_pr_reloading(pr.repo_id, pr.id) then
+	if state.is_pr_reloading(pr.repo_full_name, pr.id) then
 		return state.reload_spinner_frame or "⠋"
 	end
 	return PR_ICON
@@ -63,7 +63,7 @@ function M.pr_state_hl(state)
 	return "AtlasTextMuted"
 end
 
----@param view PullsView|nil
+---@param view AtlasPullsViewConfig|nil
 ---@return string
 function M.view_id(view)
 	if view == nil then
@@ -72,8 +72,8 @@ function M.view_id(view)
 	return view.key or view.name or "default"
 end
 
----@param a PullsView|nil
----@param b PullsView|nil
+---@param a AtlasPullsViewConfig|nil
+---@param b AtlasPullsViewConfig|nil
 ---@return boolean
 function M.same_view(a, b)
 	if a == nil and b == nil then
@@ -91,7 +91,7 @@ end
 ---@return table[]|nil
 function M.cell_hl(row, col, ctx)
 	if col.key == "name" and row.kind == "repo" then
-		local hl_group = highlights.dynamic_for(row.repo_name)
+		local hl_group = highlights.dynamic_for(row.repo_full_name)
 		return { { start_col = 0, end_col = #ctx.padded, hl_group = hl_group } }
 	end
 	if col.key == "name" and row.kind == "pr" then
@@ -210,7 +210,7 @@ function M.build_compact_table(groups)
 			local author_name = (pr.author and pr.author.name) and pr.author.name or ""
 			local src = (pr.source and pr.source.branch) or ""
 			local dst = (pr.destination and pr.destination.branch) or ""
-			local is_reloading = state.is_pr_reloading(pr.repo_id, pr.id)
+			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
 			table.insert(rows, {
 				kind = "pr",
 				pr_icon = pr_icon_or_spinner(pr),
@@ -299,7 +299,7 @@ function M.build_plain_tree_table(groups)
 			local src = (pr.source and pr.source.branch) or ""
 			local dst = (pr.destination and pr.destination.branch) or ""
 			local icon = pr_icon_or_spinner(pr)
-			local is_reloading = state.is_pr_reloading(pr.repo_id, pr.id)
+			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
 			table.insert(children, {
 				kind = "pr",
 				name = icon .. " #" .. id_str .. " " .. title,
@@ -322,7 +322,7 @@ function M.build_plain_tree_table(groups)
 		table.insert(roots, {
 			kind = "repo",
 			name = REPO_ICON .. " " .. repo_label,
-			repo_name = repo_label,
+			repo_full_name = repo_label,
 			comments = "",
 			tasks = "",
 			author = "",
@@ -355,7 +355,7 @@ function M.pr_popup_content(pr)
 	local id = tostring(pr.id or "")
 	local title = tostring(pr.title or "")
 	local author_name = tostring((pr.author and pr.author.name) or "Unknown")
-	local repo_name = tostring(pr.repo_name or "")
+	local repo_name = tostring(pr.repo_full_name or "")
 
 	local lines = {
 		string.format(" #%s: %s", id, title),

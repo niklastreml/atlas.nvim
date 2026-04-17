@@ -3,6 +3,7 @@ local M = {}
 local footer = require("atlas.ui.components.footer")
 local resolver = require("atlas.core.keymaps")
 local utils = require("atlas.ui.shared.utils")
+local actions = require("atlas.pulls.actions")
 
 ---@return PullRequest|nil
 local function selected_pr()
@@ -51,10 +52,9 @@ local function remove_item(action_id, mode)
 end
 
 ---@param buf integer
----@param views PullsView[]
+---@param views AtlasPullsViewConfig[]
 function M.register(buf, views)
 	local help = require("atlas.ui.popups.help")
-	local controller = require("atlas.pulls.ui.main.controller")
 	local state = require("atlas.pulls.state")
 	local provider_name = state.provider and state.provider.name or "Pulls"
 
@@ -68,6 +68,7 @@ function M.register(buf, views)
 				desc = string.format("Switch to %s", v.name),
 				hidden = true,
 				callback = function()
+					local controller = require("atlas.pulls.ui.main.controller")
 					controller.switch_view(v)
 				end,
 			})
@@ -86,12 +87,7 @@ function M.register(buf, views)
 						footer.notify("warn", "No PR selected")
 						return
 					end
-
-					state.provider.open_actions(pr, { source = "main" }, function(result)
-						if result ~= nil and result.changed_pr then
-							controller.refresh_pr(pr)
-						end
-					end)
+					actions.open_actions(pr, "main")
 				end,
 			})
 		)
@@ -108,13 +104,7 @@ function M.register(buf, views)
 					footer.notify("warn", "No PR selected")
 					return
 				end
-				local url = pr.link and pr.link.html
-				if url == nil or url == "" then
-					footer.notify("warn", "No URL available")
-					return
-				end
-				vim.ui.open(url)
-				footer.notify("info", "Opened in browser")
+				actions.open_in_browser(pr)
 			end,
 		})
 	)
@@ -130,13 +120,7 @@ function M.register(buf, views)
 					footer.notify("warn", "No PR selected")
 					return
 				end
-				local url = pr.link and pr.link.html
-				if url == nil or url == "" then
-					footer.notify("warn", "No URL available")
-					return
-				end
-				vim.fn.setreg("+", url)
-				footer.notify("success", "Copied URL to clipboard", 1200)
+				actions.copy_url(pr)
 			end,
 		})
 	)
@@ -152,8 +136,7 @@ function M.register(buf, views)
 					footer.notify("warn", "No PR selected")
 					return
 				end
-				vim.fn.setreg("+", tostring(pr.id))
-				footer.notify("success", string.format("Copied #%s to clipboard", tostring(pr.id)), 1200)
+				actions.copy_id(pr)
 			end,
 		})
 	)
@@ -169,53 +152,50 @@ function M.register(buf, views)
 					footer.notify("warn", "No PR selected")
 					return
 				end
-
-				local helper = require("atlas.pulls.ui.main.helper")
-				local info_popup = require("atlas.ui.popups.info")
-				local lines, highlights = helper.pr_popup_content(pr)
-				info_popup.show({
-					lines = lines,
-					highlights = highlights,
-					source_buf = buf,
-				})
+				actions.show_details(pr, buf)
 			end,
 		})
 	)
 
-	if state.provider and state.provider.open_diff then
-		utils.insert_if(
-			items,
-			item("pulls.open_diff", {
-				desc = "Open PR diff",
-				opts = { nowait = true },
-				callback = function()
-					local pr = selected_pr()
-					if pr == nil then
-						footer.notify("warn", "No PR selected")
-						return
-					end
-					state.provider.open_diff(pr, function() end)
-				end,
-			})
-		)
-	end
+	utils.insert_if(
+		items,
+		item("pulls.open_diff", {
+			desc = "Open PR diff",
+			opts = { nowait = true },
+			callback = function()
+				local pr = selected_pr()
+				if pr == nil then
+					footer.notify("warn", "No PR selected")
+					return
+				end
+				actions.open_diff(pr)
+			end,
+		})
+	)
 
-	if state.provider and state.provider.checkout then
-		utils.insert_if(
-			items,
-			item("pulls.checkout", {
-				desc = "Checkout PR branch",
-				opts = { nowait = true },
-				callback = function()
-					local pr = selected_pr()
-					if pr == nil then
-						footer.notify("warn", "No PR selected")
-						return
-					end
-					state.provider.checkout(pr, function() end)
-				end,
-			})
-		)
+	utils.insert_if(
+		items,
+		item("pulls.checkout", {
+			desc = "Checkout PR branch",
+			opts = { nowait = true },
+			callback = function()
+				local pr = selected_pr()
+				if pr == nil then
+					footer.notify("warn", "No PR selected")
+					return
+				end
+				actions.checkout(pr)
+			end,
+		})
+	)
+
+	if state.provider and state.provider.search then
+		utils.insert_if(items, item("pulls.search", {
+			desc = "Search repositories",
+			callback = function()
+				actions.search()
+			end,
+		}))
 	end
 
 	utils.insert_if(
@@ -228,7 +208,7 @@ function M.register(buf, views)
 					footer.notify("warn", "No PR selected")
 					return
 				end
-				controller.refresh_pr(pr)
+				actions.refresh(pr)
 			end,
 		})
 	)
@@ -238,7 +218,7 @@ function M.register(buf, views)
 		item("pulls.refresh_view", {
 			desc = "Refresh current view",
 			callback = function()
-				controller.refresh_current_view()
+				actions.refresh_view()
 			end,
 		})
 	)

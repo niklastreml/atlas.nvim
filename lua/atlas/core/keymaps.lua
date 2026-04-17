@@ -17,6 +17,7 @@ local M = {}
 ---@field open_diff? AtlasKeymapValue
 ---@field checkout? AtlasKeymapValue
 ---@field show_details? AtlasKeymapValue
+---@field search? AtlasKeymapValue
 
 ---@class AtlasIssuesKeymaps
 ---@field refresh? AtlasKeymapValue
@@ -42,9 +43,9 @@ local M = {}
 ---| "pulls.open_diff"
 ---| "pulls.checkout"
 ---| "pulls.show_details"
+---| "pulls.search"
 ---| "issues.refresh"
 ---| "issues.refresh_view"
-
 
 ---@param value AtlasKeymapValue
 ---@return string[]|nil

@@ -25,6 +25,8 @@ local function resolve_pulls_provider(provider_id)
 	local id = provider_id or "mock"
 	if id == "mock" then
 		return require("atlas.pulls.providers.mock")
+	elseif id == "bitbucket" then
+		return require("atlas.pulls.providers.bitbucket")
 	end
 
 	vim.notify(string.format("[Atlas] Unknown pulls provider: %s", id), vim.log.levels.ERROR)

@@ -4,6 +4,7 @@ local help = require("atlas.ui.popups.help")
 local resolver = require("atlas.core.keymaps")
 local utils = require("atlas.ui.shared.utils")
 local panel_state = require("atlas.pulls.ui.panel.state")
+local actions = require("atlas.pulls.actions")
 
 ---@return PullsPanelTabModule|nil
 local function current_tab_mod()
@@ -103,8 +104,6 @@ function M.register(buf)
 	})
 
 	local state = require("atlas.pulls.state")
-	local footer = require("atlas.ui.components.footer")
-
 	if state.provider and state.provider.open_actions then
 		utils.insert_if(items, item("pulls.open_actions", {
 			desc = "Open PR actions",
@@ -113,12 +112,7 @@ function M.register(buf)
 				if pr == nil then
 					return
 				end
-				state.provider.open_actions(pr, { source = "panel" }, function(result)
-					if result ~= nil and result.changed_pr then
-						local controller = require("atlas.pulls.ui.main.controller")
-						controller.refresh_pr(pr)
-					end
-				end)
+				actions.open_actions(pr, "panel")
 			end,
 		}))
 	end
@@ -131,43 +125,33 @@ function M.register(buf)
 			if pr == nil then
 				return
 			end
-			local url = pr.link and pr.link.html
-			if url == nil or url == "" then
-				footer.notify("warn", "No URL available")
-				return
-			end
-			vim.ui.open(url)
-			footer.notify("info", "Opened in browser")
+			actions.open_in_browser(pr)
 		end,
 	}))
 
-	if state.provider and state.provider.open_diff then
-		utils.insert_if(items, item("pulls.open_diff", {
-			desc = "Open PR diff",
-			opts = { nowait = true },
-			callback = function()
-				local pr = panel_state.current_pr
-				if pr == nil then
-					return
-				end
-				state.provider.open_diff(pr, function() end)
-			end,
-		}))
-	end
+	utils.insert_if(items, item("pulls.open_diff", {
+		desc = "Open PR diff",
+		opts = { nowait = true },
+		callback = function()
+			local pr = panel_state.current_pr
+			if pr == nil then
+				return
+			end
+			actions.open_diff(pr)
+		end,
+	}))
 
-	if state.provider and state.provider.checkout then
-		utils.insert_if(items, item("pulls.checkout", {
-			desc = "Checkout PR branch",
-			opts = { nowait = true },
-			callback = function()
-				local pr = panel_state.current_pr
-				if pr == nil then
-					return
-				end
-				state.provider.checkout(pr, function() end)
-			end,
-		}))
-	end
+	utils.insert_if(items, item("pulls.checkout", {
+		desc = "Checkout PR branch",
+		opts = { nowait = true },
+		callback = function()
+			local pr = panel_state.current_pr
+			if pr == nil then
+				return
+			end
+			actions.checkout(pr)
+		end,
+	}))
 
 	M.remove(buf)
 	help.register("Panel", items, { index = 211, buffer = buf })

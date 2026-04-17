@@ -8,12 +8,44 @@
 ---@alias AtlasIssuesProviderId "jira"
 
 --------------------------------------------------------------------------------
+-- Pulls Provider Config
+--------------------------------------------------------------------------------
+
+---@class AtlasPullsViewConfig
+---@field name string
+---@field key string|nil
+---@field layout "compact"|"plain"|nil
+
+---@class AtlasPullsRepoConfig
+---@field paths table<string, string>|nil
+
+---@class AtlasPullsDiffConfig
+---@field open_cmd "DiffviewOpen"|"CodeDiff"|string|nil
+
+---@class AtlasPullsCustomActionContext
+---@field repo_path string|nil
+---@field pr PullRequest
+---@field user PullsUser|nil
+
+---@class AtlasPullsCustomAction
+---@field id string
+---@field label string
+---@field confirmation boolean|nil
+---@field run fun(pr: PullRequest, ctx: AtlasPullsCustomActionContext, done: fun(ok: boolean|nil, message: string|nil))
+
+--------------------------------------------------------------------------------
 -- Domain Configs
 --------------------------------------------------------------------------------
 
----@class AtlasPullsConfig
----@field bitbucket AtlasBitbucketPullsConfig|nil
+---@class AtlasPullsProviders
+---@field bitbucket AtlasBitbucketConfig|nil
 ---@field github table|nil
+
+---@class AtlasPullsConfig
+---@field repo_config AtlasPullsRepoConfig|nil
+---@field diff AtlasPullsDiffConfig|nil
+---@field custom_actions AtlasPullsCustomAction[]|nil
+---@field providers AtlasPullsProviders|nil
 
 ---@class AtlasIssuesConfig
 ---@field jira AtlasJiraIssuesConfig|nil
@@ -51,6 +83,7 @@ M.options = {
 			open_diff = "gd",
 			checkout = "gc",
 			show_details = "K",
+			search = "?",
 		},
 		issues = {
 			refresh = "r",
@@ -75,9 +108,10 @@ local function migrate_legacy_config(opts)
 	end
 
 	if migrated.bitbucket and not migrated.pulls then
-		warn("Legacy config: move 'bitbucket' into 'pulls.bitbucket'.")
+		warn("Legacy config: move 'bitbucket' into 'pulls.providers.bitbucket'.")
 		migrated.pulls = migrated.pulls or {}
-		migrated.pulls.bitbucket = migrated.bitbucket
+		migrated.pulls.providers = migrated.pulls.providers or {}
+		migrated.pulls.providers.bitbucket = migrated.bitbucket
 		migrated.bitbucket = nil
 	end
 
@@ -123,14 +157,14 @@ local function register_commands()
 		require("atlas").open("issues", provider_id)
 	end, { desc = "Open Atlas issues domain", nargs = "?" })
 
-	if M.options.pulls then
-		if M.options.pulls.bitbucket then
+	if M.options.pulls and M.options.pulls.providers then
+		if M.options.pulls.providers.bitbucket then
 			vim.api.nvim_create_user_command("AtlasBitbucket", function()
 				require("atlas").open("pulls", "bitbucket")
 			end, { desc = "Open Atlas Bitbucket pulls" })
 		end
 
-		if M.options.pulls.github then
+		if M.options.pulls.providers.github then
 			vim.api.nvim_create_user_command("AtlasGithub", function()
 				require("atlas").open("pulls", "github")
 			end, { desc = "Open Atlas GitHub pulls" })

@@ -15,8 +15,7 @@
         "created_on": "2025-04-10T14:30:00Z",
         "updated_on": "2025-04-12T09:15:22Z",
         "provider": "mock",
-        "repo_id": "mock/acme",
-        "repo_name": "acme/backend"
+        "repo_full_name": "mock/acme"
       },
       {
         "id": 102,
@@ -31,8 +30,7 @@
         "created_on": "2025-03-28T11:05:41Z",
         "updated_on": "2025-04-02T16:40:00Z",
         "provider": "mock",
-        "repo_id": "mock/acme",
-        "repo_name": "acme/backend"
+        "repo_full_name": "mock/acme"
       },
       {
         "id": 103,
@@ -47,8 +45,7 @@
         "created_on": "2025-04-14T08:00:00Z",
         "updated_on": "2025-04-14T08:00:00Z",
         "provider": "mock",
-        "repo_id": "mock/acme",
-        "repo_name": "acme/backend"
+        "repo_full_name": "mock/acme"
       },
       {
         "id": 104,
@@ -63,8 +60,7 @@
         "created_on": "2025-02-01T10:20:30Z",
         "updated_on": "2025-02-15T17:55:00Z",
         "provider": "mock",
-        "repo_id": "mock/acme",
-        "repo_name": "acme/backend"
+        "repo_full_name": "mock/acme"
       }
     ]
   },
@@ -84,8 +80,7 @@
         "created_on": "2025-04-11T13:45:10Z",
         "updated_on": "2025-04-13T07:22:18Z",
         "provider": "mock",
-        "repo_id": "mock/widgets",
-        "repo_name": "widgets/ui"
+        "repo_full_name": "mock/widgets"
       },
       {
         "id": 202,
@@ -100,8 +95,7 @@
         "created_on": "2025-04-09T09:12:00Z",
         "updated_on": "2025-04-09T15:30:45Z",
         "provider": "mock",
-        "repo_id": "mock/widgets",
-        "repo_name": "widgets/ui"
+        "repo_full_name": "mock/widgets"
       },
       {
         "id": 203,
@@ -116,8 +110,7 @@
         "created_on": "2025-03-20T16:18:55Z",
         "updated_on": "2025-04-01T12:00:00Z",
         "provider": "mock",
-        "repo_id": "mock/widgets",
-        "repo_name": "widgets/ui"
+        "repo_full_name": "mock/widgets"
       },
       {
         "id": 204,
@@ -132,8 +125,7 @@
         "created_on": "2025-04-06T10:00:00Z",
         "updated_on": "2025-04-12T14:20:00Z",
         "provider": "mock",
-        "repo_id": "mock/widgets",
-        "repo_name": "widgets/ui"
+        "repo_full_name": "mock/widgets"
       }
     ]
   },
@@ -153,8 +145,7 @@
         "created_on": "2025-04-13T07:30:00Z",
         "updated_on": "2025-04-14T11:45:00Z",
         "provider": "mock",
-        "repo_id": "mock/infra",
-        "repo_name": "platform/infra"
+        "repo_full_name": "mock/infra"
       },
       {
         "id": 302,
@@ -169,8 +160,7 @@
         "created_on": "2025-04-08T15:00:00Z",
         "updated_on": "2025-04-11T09:30:00Z",
         "provider": "mock",
-        "repo_id": "mock/infra",
-        "repo_name": "platform/infra"
+        "repo_full_name": "mock/infra"
       },
       {
         "id": 303,
@@ -185,8 +175,7 @@
         "created_on": "2025-04-01T09:00:00Z",
         "updated_on": "2025-04-10T18:15:00Z",
         "provider": "mock",
-        "repo_id": "mock/infra",
-        "repo_name": "platform/infra"
+        "repo_full_name": "mock/infra"
       },
       {
         "id": 304,
@@ -201,8 +190,7 @@
         "created_on": "2025-04-14T12:00:00Z",
         "updated_on": "2025-04-14T12:00:00Z",
         "provider": "mock",
-        "repo_id": "mock/infra",
-        "repo_name": "platform/infra"
+        "repo_full_name": "mock/infra"
       }
     ]
   }

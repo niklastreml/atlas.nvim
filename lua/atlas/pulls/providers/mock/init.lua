@@ -97,7 +97,7 @@ local next_comment_id = 100
 ---@param pr PullRequest
 ---@return PullsComment[]
 local function get_comments(pr)
-	local key = tostring(pr.repo_id) .. "/" .. tostring(pr.id)
+	local key = tostring(pr.repo_full_name) .. "/" .. tostring(pr.id)
 	if not comment_store[key] then
 		comment_store[key] = vim.deepcopy(FAKE_COMMENTS_TEMPLATE)
 	end
@@ -246,7 +246,7 @@ end
 local function hydrate(groups)
 	for _, group in ipairs(groups) do
 		for _, pr in ipairs(group.prs) do
-			pr.link = build_link(pr.repo_name, pr.id)
+			pr.link = build_link(pr.repo_full_name, pr.id)
 			pr._raw = nil
 		end
 	end
@@ -299,8 +299,8 @@ function M.fetch_user(on_done)
 	end, 200)
 end
 
----@param view PullsView
----@param opts table
+---@param view AtlasPullsViewConfig
+---@param opts PullsFetchOpts
 ---@param on_done fun(groups: PullsGroup[], err: string[]|nil)
 ---@return { cancel: fun() }|nil
 function M.fetch_pullrequests(view, opts, on_done)
@@ -318,20 +318,19 @@ function M.fetch_pullrequests(view, opts, on_done)
 	}
 end
 
----@param repo_id string
----@param pr_id string|number
----@param opts table
+---@param pr PullRequest
+---@param opts PullsFetchOpts
 ---@param on_done fun(pr: PullRequest|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_pullrequest(repo_id, pr_id, opts, on_done)
+function M.fetch_pullrequest(pr, opts, on_done)
 	local cancelled = false
 	vim.defer_fn(function()
 		if cancelled then
 			return
 		end
-		local pr = find_pr(repo_id, pr_id)
-		if pr then
-			on_done(vim.deepcopy(pr), nil)
+		local found = find_pr(tostring(pr.repo_full_name or ""), pr.id)
+		if found then
+			on_done(vim.deepcopy(found), nil)
 		else
 			on_done(nil, "PR not found")
 		end
@@ -510,11 +509,11 @@ function M.fetch_commit_status(pr, commit_hash, on_done)
 	}
 end
 
----@return PullsView[]
+---@return AtlasPullsViewConfig[]
 function M.views()
 	return {
-		{ name = "Compact", key = "1", provider_id = "mock", layout = "compact", provider_view = {} },
-		{ name = "Plain", key = "2", provider_id = "mock", layout = "plain", provider_view = {} },
+		{ name = "Compact", key = "1", layout = "compact" },
+		{ name = "Plain", key = "2", layout = "plain" },
 	}
 end
 
@@ -539,9 +538,9 @@ function M.checkout(pr, on_done)
 end
 
 ---@param pr PullRequest|nil
----@param opts table
+---@param source "main"|"panel"|nil
 ---@param on_done fun(result: PullsActionResult|nil)
-function M.open_actions(pr, opts, on_done)
+function M.open_actions(pr, source, on_done)
 	local footer = require("atlas.ui.components.footer")
 
 	---@type { id: string, label: string, run: fun(done: fun(result: PullsActionResult|nil)) }[]
