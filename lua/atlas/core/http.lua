@@ -34,6 +34,7 @@ local function curl_fetch(method, url, headers, data, callback)
 
 	local out = {}
 	local err_out = {}
+	local cancelled = false
 
 	local job_id = vim.fn.jobstart(cmd, {
 		stdout_buffered = true,
@@ -50,6 +51,10 @@ local function curl_fetch(method, url, headers, data, callback)
 		end,
 		on_exit = function(_, code)
 			vim.schedule(function()
+				if cancelled then
+					return
+				end
+
 				local raw = table.concat(out, "\n")
 				local stderr_text = table.concat(err_out, "\n")
 
@@ -83,6 +88,7 @@ local function curl_fetch(method, url, headers, data, callback)
 	return {
 		job_id = job_id,
 		cancel = function()
+			cancelled = true
 			if job_id and job_id > 0 then
 				pcall(vim.fn.jobstop, job_id)
 			end

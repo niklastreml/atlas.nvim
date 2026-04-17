@@ -395,7 +395,6 @@ function M.render(pr, width)
 	render_reviewers(pr, width, lines, spans)
 	render_builds(pr, width, lines, spans, line_map)
 	render_description(pr, width, lines, spans)
-	table.insert(lines, "")
 	render_diffstat(pr, width, lines, spans)
 
 	return lines, spans, line_map

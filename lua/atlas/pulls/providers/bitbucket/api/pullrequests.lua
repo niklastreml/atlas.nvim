@@ -242,4 +242,120 @@ function M.request_changes(request_changes_url, on_done)
 	return service.request("POST", request_changes_url, nil, nil, on_done)
 end
 
+---@param pr PullRequest
+---@param on_done fun(reviewers: PullsReviewer[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_reviewers(pr, on_done)
+	local raw = pr._raw or {}
+	local self_url = tostring((raw.links or {}).self or "")
+	if self_url == "" then
+		on_done(nil, "No PR self link available")
+		return nil
+	end
+
+	return service.request("GET", self_url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		---@type PullsReviewer[]
+		local reviewers = {}
+		for _, item in ipairs((result or {}).participants or {}) do
+			local p = type(item) == "table" and item or {}
+			local user = type(p.user) == "table" and p.user or {}
+			if tostring(p.role or ""):upper() == "REVIEWER" then
+				local decision = "pending"
+				local s = tostring(p.state or "")
+				if s == "approved" then
+					decision = "approved"
+				elseif s == "changes_requested" then
+					decision = "changes_requested"
+				end
+				table.insert(reviewers, {
+					name = tostring(user.display_name or ""),
+					nickname = tostring(user.nickname or ""),
+					decision = decision,
+				})
+			end
+		end
+
+		on_done(reviewers, nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param on_done fun(builds: PullsBuild[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_builds(pr, on_done)
+	local raw = pr._raw or {}
+	local statuses_url = tostring((raw.links or {}).statuses or "")
+	if statuses_url == "" then
+		on_done({}, nil)
+		return nil
+	end
+
+	return service.request("GET", statuses_url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		---@type PullsBuild[]
+		local builds = {}
+		for _, item in ipairs((result or {}).values or {}) do
+			local b = type(item) == "table" and item or {}
+			table.insert(builds, {
+				name = tostring(b.name or b.key or ""),
+				state = tostring(b.state or ""):upper(),
+				url = tostring(b.url or ""),
+				key = tostring(b.key or ""),
+			})
+		end
+
+		on_done(builds, nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param on_done fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_diffstat(pr, on_done)
+	local raw = pr._raw or {}
+	local diffstat_url = tostring((raw.links or {}).diffstat or "")
+	if diffstat_url == "" then
+		on_done({}, nil)
+		return nil
+	end
+
+	return service.request("GET", diffstat_url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		---@type PullsDiffstatEntry[]
+		local entries = {}
+		for _, item in ipairs((result or {}).values or {}) do
+			local d = type(item) == "table" and item or {}
+			local new_file = type(d.new) == "table" and d.new or {}
+			local old_file = type(d.old) == "table" and d.old or {}
+			local status = tostring(d.status or ""):lower()
+			if status == "" then
+				status = "modified"
+			end
+
+			table.insert(entries, {
+				status = status,
+				path = tostring(new_file.path or old_file.path or ""),
+				old_path = old_file.path and tostring(old_file.path) or nil,
+				lines_added = tonumber(d.lines_added) or 0,
+				lines_removed = tonumber(d.lines_removed) or 0,
+			})
+		end
+
+		on_done(entries, nil)
+	end)
+end
+
 return M

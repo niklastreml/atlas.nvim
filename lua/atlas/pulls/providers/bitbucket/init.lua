@@ -7,6 +7,7 @@ local M = {
 	name = "Bitbucket",
 	icon = icons.pulls_provider("bitbucket", "provider"),
 	hl_group = "AtlasBitbucketTheme",
+	panel = require("atlas.pulls.providers.bitbucket.ui.panel"),
 }
 
 function M.setup()
@@ -90,6 +91,30 @@ function M.views()
 	end
 
 	return out
+end
+
+---@param pr PullRequest
+---@param on_done fun(reviewers: PullsReviewer[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_reviewers(pr, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.fetch_reviewers(pr, on_done)
+end
+
+---@param pr PullRequest
+---@param on_done fun(builds: PullsBuild[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_builds(pr, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.fetch_builds(pr, on_done)
+end
+
+---@param pr PullRequest
+---@param on_done fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_diffstat(pr, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.fetch_diffstat(pr, on_done)
 end
 
 ---@param pr PullRequest
