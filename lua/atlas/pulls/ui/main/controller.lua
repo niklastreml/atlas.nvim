@@ -308,6 +308,11 @@ function M.refresh_pr(pr, on_done)
 		state.pulls = groups
 		end_pr_reload(repo_id, pr_id)
 
+		local panel = require("atlas.pulls.ui.panel")
+		if panel.is_open() then
+			panel.refresh_tab({ pr = fetched_pr, force_refresh = true })
+		end
+
 		footer.notify("success", string.format("Reloaded PR #%s", tostring(pr_id)), 1200)
 		on_done()
 	end)

@@ -172,10 +172,13 @@ end
 
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
-local function notify_tab(pr, repo)
+---@param pr PullRequest
+---@param repo PullsRepo|nil
+---@param opts { pr: PullRequest|nil, force_refresh: boolean|nil }|nil
+local function notify_tab(pr, repo, opts)
 	local tab_mod = get_tab_module(panel_state.current_tab)
 	if tab_mod and type(tab_mod.on_select) == "function" then
-		tab_mod.on_select(pr, repo, make_done())
+		tab_mod.on_select(pr, repo, make_done(), opts)
 	end
 end
 
@@ -192,12 +195,17 @@ function M.render()
 	renderer.render(get_tabs(), get_tab_module)
 end
 
-function M.refresh_tab()
+---@param opts { pr: PullRequest|nil, force_refresh: boolean|nil }|nil
+function M.refresh_tab(opts)
+	opts = opts or {}
+	if opts.pr then
+		panel_state.current_pr = opts.pr
+	end
 	local pr = panel_state.current_pr
 	if pr == nil then
 		return
 	end
-	notify_tab(pr, panel_state.current_repo)
+	notify_tab(pr, panel_state.current_repo, opts)
 	update_spinner()
 	if M.is_open() then
 		M.render()

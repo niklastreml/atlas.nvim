@@ -82,7 +82,7 @@
 
 ---@class PullsPanelTabModule
 ---@field render fun(pr: PullRequest, width: integer): string[], table[], table<integer, table>|nil
----@field on_select (fun(pr: PullRequest, repo: PullsRepo|nil, done: fun()))|nil
+---@field on_select (fun(pr: PullRequest, repo: PullsRepo|nil, done: fun(), opts: { force_refresh: boolean|nil }|nil))|nil
 ---@field is_selectable_line (fun(lnum: integer, entry: table): boolean)|nil
 ---@field on_enter (fun(pr: PullRequest, entry: table): boolean|nil)|nil
 ---@field setup_keymaps (fun(buf: integer, cursor_entry: fun(): table|nil, done: fun()))|nil
