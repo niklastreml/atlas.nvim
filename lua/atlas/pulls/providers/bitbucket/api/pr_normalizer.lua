@@ -189,6 +189,101 @@ function M.pr_activity(result)
 	return entries
 end
 
+---@param raw_inline table|nil
+---@return {path: string, to: number|nil, from: number|nil}|nil
+local function comment_inline(raw_inline)
+	local inline = as_table(raw_inline)
+	if inline == nil then
+		return nil
+	end
+	local path = tostring(inline.path or "")
+	local from = tonumber(inline["from"])
+	local to = tonumber(inline["to"])
+	if path == "" and from == nil and to == nil then
+		return nil
+	end
+	return { path = path, ["from"] = from, ["to"] = to }
+end
+
+---@param result table|nil
+---@return PullsComment|nil
+function M.pr_comment(result)
+	local entry = as_table(result)
+	if entry == nil then
+		return nil
+	end
+	local content = as_table(entry.content) or {}
+	local links = as_table(entry.links) or {}
+	local parent = as_table(entry.parent)
+
+	return {
+		id = tonumber(entry.id) or 0,
+		parent_id = parent ~= nil and tonumber(parent.id) or nil,
+		author = actor(entry.user),
+		content_raw = tostring(content.raw or ""),
+		created_on = tostring(entry.created_on or ""),
+		deleted = entry.deleted == true,
+		inline = comment_inline(entry.inline),
+		url = tostring((as_table(links.self) or {}).href or ""),
+	}
+end
+
+---@param result table|nil
+---@return PullsComment[]
+function M.pr_comments(result)
+	local payload = as_table(result) or {}
+	local entries = {}
+
+	for _, item in ipairs(payload.values or {}) do
+		local entry = as_table(item) or {}
+		local content = as_table(entry.content) or {}
+		local links = as_table(entry.links) or {}
+		local parent = as_table(entry.parent)
+
+		table.insert(entries, {
+			id = tonumber(entry.id) or 0,
+			parent_id = parent ~= nil and tonumber(parent.id) or nil,
+			author = actor(entry.user),
+			content_raw = tostring(content.raw or ""),
+			created_on = tostring(entry.created_on or ""),
+			deleted = entry.deleted == true,
+			inline = comment_inline(entry.inline),
+			url = tostring((as_table(links.self) or {}).href or ""),
+		})
+	end
+
+	return entries
+end
+
+---@param result table|nil
+---@return PullsCommit[]
+function M.pr_commits(result)
+	local payload = as_table(result) or {}
+	local entries = {}
+
+	for _, item in ipairs(payload.values or {}) do
+		local entry = as_table(item) or {}
+		local author_raw = as_table(entry.author) or {}
+		local user = as_table(author_raw.user) or {}
+		local links = as_table(entry.links) or {}
+		local hash = tostring(entry.hash or "")
+		local message = tostring(entry.message or ""):gsub("\r\n", "\n"):gsub("\n+$", "")
+
+		table.insert(entries, {
+			hash = hash,
+			short_hash = (hash ~= "" and hash:sub(1, 12)) or "",
+			message = message,
+			author_name = tostring(user.display_name or "Unknown"),
+			author_nickname = tostring(user.nickname or ""),
+			date = tostring(entry.date or ""),
+			html_url = tostring((as_table(links.html) or {}).href or ""),
+			statuses_url = tostring((as_table(links.statuses) or {}).href or ""),
+		})
+	end
+
+	return entries
+end
+
 ---@param prs PullRequest[]
 ---@return PullsGroup[]
 function M.pull_request_groups(prs)

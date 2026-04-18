@@ -36,7 +36,8 @@ end
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
 ---@param done fun()
-function M.on_select(pr, repo, done)
+---@param opts { force_refresh: boolean|nil }|nil
+function M.on_select(pr, repo, done, opts)
 	cancel_all()
 	state.reviewers = nil
 	state.diffstat = nil
@@ -48,7 +49,7 @@ function M.on_select(pr, repo, done)
 
 	if type(provider.fetch_reviewers) == "function" then
 		state.reviewers = "loading"
-		track(provider.fetch_reviewers(pr, function(reviewers, err)
+		track(provider.fetch_reviewers(pr, opts, function(reviewers, err)
 			state.reviewers = err and err or (reviewers or {})
 			done()
 		end))
@@ -56,7 +57,7 @@ function M.on_select(pr, repo, done)
 
 	if type(provider.fetch_diffstat) == "function" then
 		state.diffstat = "loading"
-		track(provider.fetch_diffstat(pr, function(entries, err)
+		track(provider.fetch_diffstat(pr, opts, function(entries, err)
 			state.diffstat = err and err or (entries or {})
 			done()
 		end))

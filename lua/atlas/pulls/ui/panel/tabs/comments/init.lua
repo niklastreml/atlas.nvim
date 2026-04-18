@@ -8,6 +8,7 @@ local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local helper = require("atlas.pulls.ui.main.helper")
 local md_editor = require("atlas.ui.popups.markdown_editor")
+local footer = require("atlas.ui.components.footer")
 local state = require("atlas.pulls.ui.panel.tabs.comments.state")
 
 local PADDING_X = 1
@@ -102,6 +103,21 @@ local function build_comment_tree(comments)
 			table.insert(roots, node)
 		end
 	end
+
+	local function newest_in_tree(node)
+		local newest = node.comment.created_on or ""
+		for _, child in ipairs(node.children or {}) do
+			local child_newest = newest_in_tree(child)
+			if child_newest > newest then
+				newest = child_newest
+			end
+		end
+		return newest
+	end
+
+	table.sort(roots, function(a, b)
+		return newest_in_tree(a) > newest_in_tree(b)
+	end)
 
 	return roots
 end
@@ -217,7 +233,8 @@ end
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
 ---@param done fun()
-function M.on_select(pr, repo, done)
+---@param opts { force_refresh: boolean|nil }|nil
+function M.on_select(pr, repo, done, opts)
 	cancel_all()
 	state.reset()
 
@@ -226,10 +243,18 @@ function M.on_select(pr, repo, done)
 		return
 	end
 
+	local pr_id = tostring(pr.id or "")
 	if type(provider.fetch_comments) == "function" then
 		state.comments = "loading"
-		track(provider.fetch_comments(pr, function(comments, err)
-			state.comments = err and err or (comments or {})
+		footer.notify("loading", string.format("Loading comments for #%s...", pr_id))
+		track(provider.fetch_comments(pr, opts, function(comments, err)
+			if err then
+				state.comments = err
+				footer.notify("error", string.format("Failed to load comments for #%s", pr_id))
+			else
+				state.comments = comments or {}
+				footer.notify("success", string.format("Comments loaded for #%s", pr_id), 1200)
+			end
 			done()
 		end))
 	end

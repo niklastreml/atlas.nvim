@@ -6,6 +6,7 @@ local icons = require("atlas.ui.shared.icons")
 local highlights = require("atlas.ui.shared.highlights")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
+local footer = require("atlas.ui.components.footer")
 local state = require("atlas.pulls.ui.panel.tabs.activity.state")
 
 local PADDING_X = 1
@@ -197,7 +198,8 @@ end
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
 ---@param done fun()
-function M.on_select(pr, repo, done)
+---@param opts { force_refresh: boolean|nil }|nil
+function M.on_select(pr, repo, done, opts)
 	cancel_all()
 	state.reset()
 
@@ -206,10 +208,18 @@ function M.on_select(pr, repo, done)
 		return
 	end
 
+	local pr_id = tostring(pr.id or "")
 	if type(provider.fetch_activity) == "function" then
 		state.activity = "loading"
-		track(provider.fetch_activity(pr, function(entries, err)
-			state.activity = err and err or (entries or {})
+		footer.notify("loading", string.format("Loading activity for #%s...", pr_id))
+		track(provider.fetch_activity(pr, opts, function(entries, err)
+			if err then
+				state.activity = err
+				footer.notify("error", string.format("Failed to load activity for #%s", pr_id))
+			else
+				state.activity = entries or {}
+				footer.notify("success", string.format("Activity loaded for #%s", pr_id), 1200)
+			end
 			done()
 		end))
 	end

@@ -70,10 +70,7 @@ local ACTIONS = {
 				end
 
 				footer.notify("loading", "Starting Merge...")
-				pullrequests.merge(merge_url, {
-					close_source_branch = true,
-					merge_strategy = "merge_commit",
-				}, function(_, err)
+				pullrequests.merge(merge_url, {}, function(_, err)
 					if err ~= nil then
 						footer.notify("error", string.format("Merge failed: %s", tostring(err)))
 						done(nil, tostring(err))

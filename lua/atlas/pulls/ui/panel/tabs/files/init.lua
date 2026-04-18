@@ -3,6 +3,7 @@ local M = {}
 
 local utils = require("atlas.ui.shared.utils")
 local spinner = require("atlas.ui.components.spinner")
+local footer = require("atlas.ui.components.footer")
 local state = require("atlas.pulls.ui.panel.tabs.files.state")
 
 local PADDING_X = 1
@@ -55,7 +56,8 @@ end
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
 ---@param done fun()
-function M.on_select(pr, repo, done)
+---@param opts { force_refresh: boolean|nil }|nil
+function M.on_select(pr, repo, done, opts)
 	cancel_all()
 	state.reset()
 
@@ -64,10 +66,18 @@ function M.on_select(pr, repo, done)
 		return
 	end
 
+	local pr_id = tostring(pr.id or "")
 	if type(provider.fetch_diff) == "function" then
 		state.diff = "loading"
-		track(provider.fetch_diff(pr, function(files, err)
-			state.diff = err and err or (files or {})
+		footer.notify("loading", string.format("Loading changes for #%s...", pr_id))
+		track(provider.fetch_diff(pr, opts, function(files, err)
+			if err then
+				state.diff = err
+				footer.notify("error", string.format("Failed to load changes for #%s", pr_id))
+			else
+				state.diff = files or {}
+				footer.notify("success", string.format("Changes loaded for #%s", pr_id), 1200)
+			end
 			done()
 		end))
 	end

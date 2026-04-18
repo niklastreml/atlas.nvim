@@ -94,11 +94,12 @@ function M.views()
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(reviewers: PullsReviewer[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_reviewers(pr, on_done)
+function M.fetch_reviewers(pr, opts, on_done)
 	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
-	return pr_api.fetch_reviewers(pr, on_done)
+	return pr_api.fetch_reviewers(pr, opts, on_done)
 end
 
 ---@param pr PullRequest
@@ -110,19 +111,21 @@ function M.fetch_builds(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(entries: PullsActivityEntry[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_activity(pr, on_done)
+function M.fetch_activity(pr, opts, on_done)
 	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
-	return pr_api.fetch_activity(pr, on_done)
+	return pr_api.fetch_activity(pr, opts, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_diffstat(pr, on_done)
+function M.fetch_diffstat(pr, opts, on_done)
 	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
-	return pr_api.fetch_diffstat(pr, on_done)
+	return pr_api.fetch_diffstat(pr, opts, on_done)
 end
 
 ---@param pr PullRequest
@@ -147,6 +150,87 @@ end
 function M.search()
 	local actions = require("atlas.pulls.providers.bitbucket.actions")
 	actions.run("search", { source = "main" }, function() end)
+end
+
+---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(commits: PullsCommit[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_commits(pr, opts, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.fetch_commits(pr, opts, on_done)
+end
+
+---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(files: PullsDiffFile[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_diff(pr, opts, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.fetch_diff(pr, opts, on_done)
+end
+
+---@param pr PullRequest
+---@param commit PullsCommit
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(status: string|nil, url: string|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_commit_status(pr, commit, opts, on_done)
+	local statuses_url = tostring(commit.statuses_url or "")
+	if statuses_url == "" then
+		on_done("unknown", nil, nil)
+		return nil
+	end
+
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.fetch_commit_status(statuses_url, opts, on_done)
+end
+
+---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(comments: PullsComment[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_comments(pr, opts, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.fetch_comments(pr, opts, on_done)
+end
+
+---@param pr PullRequest
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.add_comment(pr, content, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.add_comment(pr, content, on_done)
+end
+
+---@param pr PullRequest
+---@param parent_id number
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.reply_comment(pr, parent_id, content, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.reply_comment(pr, parent_id, content, on_done)
+end
+
+---@param pr PullRequest
+---@param comment_id number
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.edit_comment(pr, comment_id, content, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.edit_comment(pr, comment_id, content, on_done)
+end
+
+---@param pr PullRequest
+---@param comment_id number
+---@param on_done fun(ok: boolean, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.delete_comment(pr, comment_id, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.delete_comment(pr, comment_id, on_done)
 end
 
 return M

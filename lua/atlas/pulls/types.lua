@@ -139,6 +139,8 @@
 ---@field author_name string
 ---@field author_nickname string|nil
 ---@field date string
+---@field html_url string|nil
+---@field statuses_url string|nil
 
 --------------------------------------------------------------------------------
 -- Diff

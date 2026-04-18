@@ -131,7 +131,14 @@ end
 function M.is_loading(pr)
 	local overview_state = require("atlas.pulls.ui.panel.tabs.overview.state")
 	local activity_state = require("atlas.pulls.ui.panel.tabs.activity.state")
-	return overview_state.any_loading() or activity_state.any_loading()
+	local comments_state = require("atlas.pulls.ui.panel.tabs.comments.state")
+	local commits_state = require("atlas.pulls.ui.panel.tabs.commits.state")
+	local files_state = require("atlas.pulls.ui.panel.tabs.files.state")
+	return overview_state.any_loading()
+		or activity_state.any_loading()
+		or comments_state.any_loading()
+		or commits_state.any_loading()
+		or files_state.any_loading()
 end
 
 ---@return PullsPanelTab[]
@@ -148,6 +155,24 @@ function M.tabs()
 			label = "Activity",
 			icon = icons.pulls("activity"),
 			mod = require("atlas.pulls.ui.panel.tabs.activity"),
+		},
+		{
+			key = "comments",
+			label = "Comments",
+			icon = icons.general("comment"),
+			mod = require("atlas.pulls.ui.panel.tabs.comments"),
+		},
+		{
+			key = "commits",
+			label = "Commits",
+			icon = icons.pulls("commit"),
+			mod = require("atlas.pulls.ui.panel.tabs.commits"),
+		},
+		{
+			key = "files",
+			label = "Changes",
+			icon = icons.pulls("files"),
+			mod = require("atlas.pulls.ui.panel.tabs.files"),
 		},
 	}
 end

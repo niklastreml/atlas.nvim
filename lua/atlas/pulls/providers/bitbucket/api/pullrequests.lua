@@ -216,15 +216,18 @@ end
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.merge(merge_url, opts, on_done)
 	opts = opts or {}
-	local payload = {
-		close_source_branch = opts.close_source_branch == true,
-		merge_strategy = tostring(opts.merge_strategy or "merge_commit"),
-	}
+	local payload = {}
+	if opts.close_source_branch ~= nil then
+		payload.close_source_branch = opts.close_source_branch == true
+	end
+	if type(opts.merge_strategy) == "string" and opts.merge_strategy ~= "" then
+		payload.merge_strategy = opts.merge_strategy
+	end
 	if type(opts.message) == "string" and opts.message ~= "" then
 		payload.message = opts.message
 	end
 
-	local body = vim.json.encode(payload)
+	local body = vim.fn.empty(payload) == 1 and nil or vim.json.encode(payload)
 	return service.request("POST", merge_url, nil, body, on_done)
 end
 
@@ -243,9 +246,10 @@ function M.request_changes(request_changes_url, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(reviewers: PullsReviewer[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_reviewers(pr, on_done)
+function M.fetch_reviewers(pr, opts, on_done)
 	local raw = pr._raw or {}
 	local self_url = tostring((raw.links or {}).self or "")
 	if self_url == "" then
@@ -318,9 +322,10 @@ function M.fetch_builds(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(entries: PullsActivityEntry[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_activity(pr, on_done)
+function M.fetch_activity(pr, opts, on_done)
 	local raw = pr._raw or {}
 	local activity_url = tostring((raw.links or {}).activity or "")
 	if activity_url == "" then
@@ -339,9 +344,10 @@ function M.fetch_activity(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_diffstat(pr, on_done)
+function M.fetch_diffstat(pr, opts, on_done)
 	local raw = pr._raw or {}
 	local diffstat_url = tostring((raw.links or {}).diffstat or "")
 	if diffstat_url == "" then
@@ -376,6 +382,326 @@ function M.fetch_diffstat(pr, on_done)
 		end
 
 		on_done(entries, nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(comments: PullsComment[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_comments(pr, opts, on_done)
+	local raw = pr._raw or {}
+	local comments_url = tostring((raw.links or {}).comments or "")
+	if comments_url == "" then
+		on_done({}, nil)
+		return nil
+	end
+
+	local force = (opts or {}).force_refresh == true
+	local sep = comments_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", comments_url, sep, 100)
+	local key = "bitbucket:pr:comments:" .. url
+	if not force then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
+	return service.request("GET", url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+		local comments = pr_normalizer.pr_comments(result)
+		service.set_cache(key, comments, service.cache_ttl())
+		on_done(comments, nil)
+	end)
+end
+
+---@param raw_content string
+---@param opts? { parent_id?: number|string|nil, inline?: { from?: number, to?: number, start_from?: number, start_to?: number, path?: string }|nil }
+---@return string
+local function encode_comment_payload(raw_content, opts)
+	opts = opts or {}
+	local payload = {
+		content = { raw = tostring(raw_content or "") },
+	}
+
+	if opts.parent_id ~= nil then
+		payload.parent = { id = tonumber(opts.parent_id) or opts.parent_id }
+	end
+
+	if type(opts.inline) == "table" then
+		payload.inline = {
+			from = opts.inline.from,
+			to = opts.inline.to,
+			start_from = opts.inline.start_from,
+			start_to = opts.inline.start_to,
+			path = opts.inline.path,
+		}
+	end
+
+	return vim.json.encode(payload)
+end
+
+---@param pr PullRequest
+---@param content string
+---@param opts? { inline?: { from?: number, to?: number, start_from?: number, start_to?: number, path?: string }|nil }
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.add_comment(pr, content, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+		opts = nil
+	end
+	local raw = pr._raw or {}
+	local comments_url = tostring((raw.links or {}).comments or "")
+	if comments_url == "" then
+		on_done(nil, "No comments URL available")
+		return nil
+	end
+
+	local body = encode_comment_payload(content, { inline = opts and opts.inline or nil })
+	return service.request("POST", comments_url, nil, body, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+		on_done(pr_normalizer.pr_comment(result), nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param parent_id number
+---@param content string
+---@param opts? { inline?: { from?: number, to?: number, start_from?: number, start_to?: number, path?: string }|nil }
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.reply_comment(pr, parent_id, content, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+		opts = nil
+	end
+	local raw = pr._raw or {}
+	local comments_url = tostring((raw.links or {}).comments or "")
+	if comments_url == "" then
+		on_done(nil, "No comments URL available")
+		return nil
+	end
+
+	local body = encode_comment_payload(content, {
+		parent_id = parent_id,
+		inline = opts and opts.inline or nil,
+	})
+	return service.request("POST", comments_url, nil, body, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+		on_done(pr_normalizer.pr_comment(result), nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param comment_id number
+---@param content string
+---@param opts? { inline?: { from?: number, to?: number, start_from?: number, start_to?: number, path?: string }|nil }
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.edit_comment(pr, comment_id, content, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+		opts = nil
+	end
+	local raw = pr._raw or {}
+	local comments_url = tostring((raw.links or {}).comments or "")
+	if comments_url == "" then
+		on_done(nil, "No comments URL available")
+		return nil
+	end
+
+	local url = comments_url .. "/" .. tostring(comment_id)
+	local body = encode_comment_payload(content, { inline = opts and opts.inline or nil })
+	return service.request("PUT", url, nil, body, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+		on_done(pr_normalizer.pr_comment(result), nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(commits: PullsCommit[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_commits(pr, opts, on_done)
+	local raw = pr._raw or {}
+	local commits_url = tostring((raw.links or {}).commits or "")
+	if commits_url == "" then
+		on_done({}, nil)
+		return nil
+	end
+
+	local force = (opts or {}).force_refresh == true
+	local sep = commits_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", commits_url, sep, 50)
+	local key = "bitbucket:pr:commits:" .. url
+	if not force then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
+	return service.request("GET", url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+		local commits = pr_normalizer.pr_commits(result)
+		service.set_cache(key, commits, service.cache_ttl())
+		on_done(commits, nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(files: PullsDiffFile[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_diff(pr, opts, on_done)
+	local raw = pr._raw or {}
+	local diff_url = tostring((raw.links or {}).diff or "")
+	if diff_url == "" then
+		on_done({}, nil)
+		return nil
+	end
+
+	local force = (opts or {}).force_refresh == true
+	local key = "bitbucket:pr:diff:" .. diff_url
+	if not force then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
+	local diff_parser = require("atlas.core.git.diff_parser")
+	return service.request_text("GET", diff_url, nil, nil, function(text, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+		local files = diff_parser.parse(text or "")
+		service.set_cache(key, files, service.cache_ttl())
+		on_done(files, nil)
+	end)
+end
+
+---@param statuses_url string
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(status: string|nil, url: string|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_commit_status(statuses_url, opts, on_done)
+	if type(statuses_url) ~= "string" or statuses_url == "" then
+		on_done("unknown", nil, nil)
+		return nil
+	end
+
+	local force = (opts or {}).force_refresh == true
+	local sep = statuses_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", statuses_url, sep, 30)
+	local key = "bitbucket:commit:statuses:" .. url
+	if not force then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			local entries = (cached or {}).values or cached or {}
+			local agg_status, first_url = M._aggregate_statuses(entries)
+			on_done(agg_status, first_url, nil)
+			return nil
+		end
+	end
+
+	return service.request("GET", url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, nil, err)
+			return
+		end
+
+		service.set_cache(key, result, service.cache_ttl())
+		local values = (result or {}).values or {}
+		local agg_status, first_url = M._aggregate_statuses(values)
+		on_done(agg_status, first_url, nil)
+	end)
+end
+
+---@param values table[]
+---@return string status
+---@return string|nil url
+function M._aggregate_statuses(values)
+	if #values == 0 then
+		return "unknown", nil
+	end
+
+	local has_failed = false
+	local has_inprogress = false
+	local has_stopped = false
+	local has_success = false
+	local first_url = nil
+
+	for _, item in ipairs(values) do
+		local s = tostring(item.state or ""):upper()
+		if not first_url and item.url and item.url ~= "" then
+			first_url = tostring(item.url)
+		end
+		if s == "FAILED" then
+			has_failed = true
+		elseif s == "INPROGRESS" then
+			has_inprogress = true
+		elseif s == "STOPPED" then
+			has_stopped = true
+		elseif s == "SUCCESSFUL" then
+			has_success = true
+		end
+	end
+
+	local status = "unknown"
+	if has_failed then
+		status = "failed"
+	elseif has_inprogress then
+		status = "inprogress"
+	elseif has_stopped then
+		status = "stopped"
+	elseif has_success then
+		status = "successful"
+	end
+
+	return status, first_url
+end
+
+---@param pr PullRequest
+---@param comment_id number
+---@param on_done fun(ok: boolean, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.delete_comment(pr, comment_id, on_done)
+	local raw = pr._raw or {}
+	local comments_url = tostring((raw.links or {}).comments or "")
+	if comments_url == "" then
+		on_done(false, "No comments URL available")
+		return nil
+	end
+
+	local url = comments_url .. "/" .. tostring(comment_id)
+	return service.request("DELETE", url, nil, nil, function(_, err)
+		if err then
+			on_done(false, err)
+			return
+		end
+		on_done(true, nil)
 	end)
 end
 

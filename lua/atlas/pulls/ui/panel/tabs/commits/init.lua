@@ -5,6 +5,7 @@ local utils = require("atlas.ui.shared.utils")
 local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
+local footer = require("atlas.ui.components.footer")
 local state = require("atlas.pulls.ui.panel.tabs.commits.state")
 
 local PADDING_X = 1
@@ -105,7 +106,8 @@ end
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
 ---@param done fun()
-function M.on_select(pr, repo, done)
+---@param opts { force_refresh: boolean|nil }|nil
+function M.on_select(pr, repo, done, opts)
 	cancel_all()
 	state.reset()
 
@@ -118,15 +120,19 @@ function M.on_select(pr, repo, done)
 		return
 	end
 
+	local pr_id = tostring(pr.id or "")
 	state.commits = "loading"
-	track(provider.fetch_commits(pr, function(commits, err)
+	footer.notify("loading", string.format("Loading commits for #%s...", pr_id))
+	track(provider.fetch_commits(pr, opts, function(commits, err)
 		if err then
 			state.commits = err
+			footer.notify("error", string.format("Failed to load commits for #%s", pr_id))
 			done()
 			return
 		end
 
 		state.commits = commits or {}
+		footer.notify("success", string.format("Commits loaded for #%s", pr_id), 1200)
 
 		-- Fetch build statuses for the first N commits
 		if type(provider.fetch_commit_status) == "function" and type(state.commits) == "table" then
@@ -136,7 +142,7 @@ function M.on_select(pr, repo, done)
 				local hash = tostring(commit.hash or "")
 				if hash ~= "" then
 					state.status_by_hash[hash] = "loading"
-					track(provider.fetch_commit_status(pr, hash, function(status, url, status_err)
+					track(provider.fetch_commit_status(pr, commit, opts, function(status, url, status_err)
 						if status_err then
 							state.status_by_hash[hash] = "unknown"
 						else
