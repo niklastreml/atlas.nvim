@@ -135,6 +135,60 @@ function M.pullrequests(result, workspace, repo)
 end
 
 
+---@param user table|nil
+---@return {name: string, nickname: string|nil}
+local function actor(user)
+	local u = as_table(user) or {}
+	return {
+		name = tostring(u.display_name or "Unknown"),
+		nickname = tostring(u.nickname or ""),
+	}
+end
+
+---@param result table|nil
+---@return PullsActivityEntry[]
+function M.pr_activity(result)
+	local payload = as_table(result) or {}
+	local entries = {}
+
+	for _, item in ipairs(payload.values or {}) do
+		local entry = as_table(item) or {}
+		local update = as_table(entry.update)
+		local approval = as_table(entry.approval)
+		local comment = as_table(entry.comment)
+
+		if update ~= nil then
+			local source = as_table(update.source) or {}
+			local destination = as_table(update.destination) or {}
+			table.insert(entries, {
+				kind = "update",
+				date = tostring(update.date or ""),
+				actor = actor(update.author),
+				source_branch = tostring(((source.branch or {}).name or "")),
+				target_branch = tostring(((destination.branch or {}).name or "")),
+				changes = as_table(update.changes) or {},
+			})
+		elseif approval ~= nil then
+			table.insert(entries, {
+				kind = "approval",
+				date = tostring(approval.date or ""),
+				actor = actor(approval.user),
+			})
+		elseif comment ~= nil then
+			local content = as_table(comment.content) or {}
+			table.insert(entries, {
+				kind = "comment",
+				date = tostring(comment.created_on or ""),
+				actor = actor(comment.user),
+				content_raw = tostring(content.raw or ""),
+				deleted = comment.deleted == true,
+			})
+		end
+	end
+
+	return entries
+end
+
 ---@param prs PullRequest[]
 ---@return PullsGroup[]
 function M.pull_request_groups(prs)

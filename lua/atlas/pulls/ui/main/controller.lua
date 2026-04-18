@@ -272,6 +272,11 @@ function M.refresh_pr(pr, on_done)
 	footer.notify("loading", string.format("Reloading PR #%s...", tostring(pr_id)))
 	begin_pr_reload(repo_id, pr_id)
 
+	local panel = require("atlas.pulls.ui.panel")
+	if panel.is_open() then
+		panel.on_select(nil, nil, { force_refresh = true })
+	end
+
 	local reload_handle = nil
 	reload_handle = provider.fetch_pullrequest(pr, { force_load = true }, function(fetched_pr, err)
 		for i = #active_pr_reload_handles, 1, -1 do
@@ -308,9 +313,8 @@ function M.refresh_pr(pr, on_done)
 		state.pulls = groups
 		end_pr_reload(repo_id, pr_id)
 
-		local panel = require("atlas.pulls.ui.panel")
 		if panel.is_open() then
-			panel.refresh_tab({ pr = fetched_pr, force_refresh = true })
+			panel.on_select(fetched_pr, nil)
 		end
 
 		footer.notify("success", string.format("Reloaded PR #%s", tostring(pr_id)), 1200)

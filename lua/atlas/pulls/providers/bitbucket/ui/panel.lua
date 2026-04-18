@@ -92,15 +92,46 @@ function M.chips(pr)
 	return chips
 end
 
+---@type { cancel: fun() }[]
+local panel_in_flight = {}
+
+local function cancel_panel_fetches()
+	for _, handle in ipairs(panel_in_flight) do
+		handle.cancel()
+	end
+	panel_in_flight = {}
+end
+
+---@param handle { cancel: fun() }|nil
+local function track_panel(handle)
+	if handle then
+		table.insert(panel_in_flight, handle)
+	end
+end
+
 ---@param pr PullRequest
 ---@param done fun()
-function M.fetches(pr, done) end
+function M.fetches(pr, done)
+	cancel_panel_fetches()
+
+	local overview_state = require("atlas.pulls.ui.panel.tabs.overview.state")
+	overview_state.builds = "loading"
+
+	local provider = require("atlas.pulls.state").provider
+	if provider and type(provider.fetch_builds) == "function" then
+		track_panel(provider.fetch_builds(pr, function(builds, err)
+			overview_state.builds = err and err or (builds or {})
+			done()
+		end))
+	end
+end
 
 ---@param pr PullRequest
 ---@return boolean
 function M.is_loading(pr)
 	local overview_state = require("atlas.pulls.ui.panel.tabs.overview.state")
-	return overview_state.any_loading()
+	local activity_state = require("atlas.pulls.ui.panel.tabs.activity.state")
+	return overview_state.any_loading() or activity_state.any_loading()
 end
 
 ---@return PullsPanelTab[]
@@ -111,6 +142,12 @@ function M.tabs()
 			label = "Overview",
 			icon = icons.general("overview"),
 			mod = require("atlas.pulls.ui.panel.tabs.overview"),
+		},
+		{
+			key = "activity",
+			label = "Activity",
+			icon = icons.pulls("activity"),
+			mod = require("atlas.pulls.ui.panel.tabs.activity"),
 		},
 	}
 end

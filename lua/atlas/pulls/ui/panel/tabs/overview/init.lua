@@ -38,7 +38,8 @@ end
 ---@param done fun()
 function M.on_select(pr, repo, done)
 	cancel_all()
-	state.reset()
+	state.reviewers = nil
+	state.diffstat = nil
 
 	local provider = get_provider()
 	if not provider then
@@ -49,14 +50,6 @@ function M.on_select(pr, repo, done)
 		state.reviewers = "loading"
 		track(provider.fetch_reviewers(pr, function(reviewers, err)
 			state.reviewers = err and err or (reviewers or {})
-			done()
-		end))
-	end
-
-	if type(provider.fetch_builds) == "function" then
-		state.builds = "loading"
-		track(provider.fetch_builds(pr, function(builds, err)
-			state.builds = err and err or (builds or {})
 			done()
 		end))
 	end

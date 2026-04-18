@@ -110,6 +110,14 @@ function M.fetch_builds(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param on_done fun(entries: PullsActivityEntry[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_activity(pr, on_done)
+	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
+	return pr_api.fetch_activity(pr, on_done)
+end
+
+---@param pr PullRequest
 ---@param on_done fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
 function M.fetch_diffstat(pr, on_done)

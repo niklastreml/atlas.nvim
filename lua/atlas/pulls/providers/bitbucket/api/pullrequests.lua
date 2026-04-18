@@ -318,6 +318,27 @@ function M.fetch_builds(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param on_done fun(entries: PullsActivityEntry[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_activity(pr, on_done)
+	local raw = pr._raw or {}
+	local activity_url = tostring((raw.links or {}).activity or "")
+	if activity_url == "" then
+		on_done({}, nil)
+		return nil
+	end
+
+	return service.request("GET", activity_url, nil, nil, function(result, err)
+		if err then
+			on_done(nil, err)
+			return
+		end
+
+		on_done(pr_normalizer.pr_activity(result), nil)
+	end)
+end
+
+---@param pr PullRequest
 ---@param on_done fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
 function M.fetch_diffstat(pr, on_done)

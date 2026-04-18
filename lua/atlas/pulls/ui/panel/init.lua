@@ -172,9 +172,7 @@ end
 
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
----@param pr PullRequest
----@param repo PullsRepo|nil
----@param opts { pr: PullRequest|nil, force_refresh: boolean|nil }|nil
+---@param opts { force_refresh: boolean|nil }|nil
 local function notify_tab(pr, repo, opts)
 	local tab_mod = get_tab_module(panel_state.current_tab)
 	if tab_mod and type(tab_mod.on_select) == "function" then
@@ -195,46 +193,42 @@ function M.render()
 	renderer.render(get_tabs(), get_tab_module)
 end
 
----@param opts { pr: PullRequest|nil, force_refresh: boolean|nil }|nil
-function M.refresh_tab(opts)
-	opts = opts or {}
-	if opts.pr then
-		panel_state.current_pr = opts.pr
-	end
-	local pr = panel_state.current_pr
-	if pr == nil then
-		return
-	end
-	notify_tab(pr, panel_state.current_repo, opts)
-	update_spinner()
-	if M.is_open() then
-		M.render()
-	end
-end
-
 ---@param pr PullRequest|nil
 ---@param repo PullsRepo|nil
-function M.on_select(pr, repo)
-	if pr == nil then
-		return
-	end
+---@param opts { force_refresh: boolean|nil }|nil
+function M.on_select(pr, repo, opts)
+	opts = opts or {}
 
-	local same_pr = panel_state.current_pr ~= nil
+	local same_pr = pr ~= nil
+		and panel_state.current_pr ~= nil
 		and tostring(panel_state.current_pr.id) == tostring(pr.id)
 		and tostring(panel_state.current_pr.repo_full_name) == tostring(pr.repo_full_name)
 
-	panel_state.current_pr = pr
-	panel_state.current_repo = repo
+	if pr then
+		panel_state.current_pr = pr
+	end
+	if repo then
+		panel_state.current_repo = repo
+	end
 
-	if not same_pr then
+	if panel_state.current_pr == nil then
+		return
+	end
+
+	local should_fetch = not same_pr or opts.force_refresh == true
+
+	if not same_pr and pr ~= nil then
 		local old_key = panel_state.current_tab
 		if panel_state.current_tab == nil then
 			panel_state.current_tab = get_tabs()[1].key
 		end
 		switch_tab_keymaps(old_key, panel_state.current_tab)
 		stop_spinner()
-		dispatch_provider_fetches(pr)
-		notify_tab(pr, repo)
+	end
+
+	if should_fetch then
+		dispatch_provider_fetches(panel_state.current_pr)
+		notify_tab(panel_state.current_pr, panel_state.current_repo, opts)
 		update_spinner()
 	end
 
