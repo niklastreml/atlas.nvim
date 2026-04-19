@@ -274,7 +274,17 @@ function M.refresh_pr(pr, on_done)
 
 	local panel = require("atlas.pulls.ui.panel")
 	if panel.is_open() then
-		panel.on_select(nil, nil, { force_refresh = true })
+		local root_panel_state = require("atlas.pulls.ui.panel.state")
+		local selected_repo = nil
+		local current_item = navigation.current_item()
+		if type(current_item) == "table" and type(current_item.repo) == "table" then
+			selected_repo = current_item.repo
+		end
+		if root_panel_state.current_panel == "repo" then
+			panel.on_select(pr, selected_repo, { force_refresh = true })
+		else
+			panel.on_select(nil, nil, { force_refresh = true })
+		end
 	end
 
 	local reload_handle = nil

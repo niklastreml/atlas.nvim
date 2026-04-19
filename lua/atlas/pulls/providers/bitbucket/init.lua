@@ -71,6 +71,32 @@ function M.fetch_repo_details(repo, opts, on_done)
 	return repositories_api.fetch_detail(repo, opts, on_done)
 end
 
+---@param repo PullsRepoDetails
+---@param opts PullsFetchOpts
+---@param on_done fun(branches: PullsRepoBranches|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_repo_branches(repo, opts, on_done)
+	local repositories_api = require("atlas.pulls.providers.bitbucket.api.repositories")
+	local raw = type(repo._raw) == "table" and repo._raw or {}
+	local links = type(raw.links) == "table" and raw.links or {}
+	local branches = type(links.branches) == "table" and links.branches or {}
+	local branches_url = tostring(branches.href or "")
+	return repositories_api.fetch_branches(branches_url, opts, on_done)
+end
+
+---@param repo PullsRepoDetails
+---@param opts PullsFetchOpts
+---@param on_done fun(tags: PullsRepoTags|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_repo_tags(repo, opts, on_done)
+	local repositories_api = require("atlas.pulls.providers.bitbucket.api.repositories")
+	local raw = type(repo._raw) == "table" and repo._raw or {}
+	local links = type(raw.links) == "table" and raw.links or {}
+	local tags = type(links.tags) == "table" and links.tags or {}
+	local tags_url = tostring(tags.href or "")
+	return repositories_api.fetch_tags(tags_url, opts, on_done)
+end
+
 ---@return AtlasBitbucketViewConfig[]
 function M.views()
 	local cfg = bb_config()

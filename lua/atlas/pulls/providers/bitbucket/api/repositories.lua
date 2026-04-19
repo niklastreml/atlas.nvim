@@ -3,6 +3,8 @@ local M = {}
 local service = require("atlas.pulls.providers.bitbucket.api.service")
 local logger = require("atlas.core.logger")
 local config = require("atlas.config")
+local api_utils = require("atlas.core.utils")
+local as_table = api_utils.as_table
 
 ---@param raw table|nil
 ---@param fallback_workspace string|nil
@@ -206,6 +208,115 @@ function M.fetch_detail(repo, opts, on_done)
 		job_id = current.job_id,
 		cancel = cancel,
 	}
+end
+
+---@param branches_url string
+---@param opts PullsFetchOpts
+---@param on_done fun(branches: PullsRepoBranches|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_branches(branches_url, opts, on_done)
+	opts = opts or {}
+
+	if type(branches_url) ~= "string" or branches_url == "" then
+		on_done(nil, "Missing branches URL")
+		return nil
+	end
+
+	local sep = branches_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", branches_url, sep, tonumber(opts.pagelen) or 100)
+	local key = "bitbucket:repo:branches:" .. url
+	if opts.force_load ~= true then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
+	return service.request("GET", url, nil, nil, function(result, err)
+		if err ~= nil then
+			on_done(nil, err)
+			return
+		end
+
+		local payload = as_table(result) or {}
+		local entries = {}
+		for _, item in ipairs(payload.values or {}) do
+			local branch = as_table(item) or {}
+			local target = as_table(branch.target) or {}
+			local author = as_table(target.author) or {}
+			local user = as_table(author.user) or {}
+			local name = user.nickname or user.display_name or author.raw or ""
+			table.insert(entries, {
+				name = tostring(branch.name or ""),
+				hash = tostring(target.hash or ""),
+				date = tostring(target.date or ""),
+				message = tostring(target.message or ""),
+				author = tostring(name),
+			})
+		end
+		local branches = { entries = entries }
+		service.set_cache(key, branches, service.cache_ttl())
+		on_done(branches, nil)
+	end)
+end
+
+---@param tags_url string
+---@param opts PullsFetchOpts
+---@param on_done fun(tags: PullsRepoTags|nil, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.fetch_tags(tags_url, opts, on_done)
+	opts = opts or {}
+
+	if type(tags_url) ~= "string" or tags_url == "" then
+		on_done(nil, "Missing tags URL")
+		return nil
+	end
+
+	local sep = tags_url:find("?") and "&" or "?"
+	local url = string.format("%s%spagelen=%d", tags_url, sep, tonumber(opts.pagelen) or 100)
+	local key = "bitbucket:repo:tags:" .. url
+	if opts.force_load ~= true then
+		local cached, ok = service.get_cache(key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
+	return service.request("GET", url, nil, nil, function(result, err)
+		if err ~= nil then
+			on_done(nil, err)
+			return
+		end
+
+		local values = (as_table(result) or {}).values or {}
+		local first = as_table(values[1]) or {}
+		logger.loginfo("Bitbucket repo tags fetched", {
+			url = url,
+			count = #values,
+			first_tag = tostring(first.name or ""),
+		})
+
+		local entries = {}
+		for _, item in ipairs(values) do
+			local tag = as_table(item) or {}
+			local target = as_table(tag.target) or {}
+			local author = as_table(target.author) or {}
+			local user = as_table(author.user) or {}
+			local name = user.nickname or user.display_name or author.raw or ""
+			table.insert(entries, {
+				name = tostring(tag.name or ""),
+				hash = tostring(target.hash or ""),
+				date = tostring(target.date or ""),
+				message = tostring(target.message or ""),
+				author = tostring(name),
+			})
+		end
+		local tags = { entries = entries }
+		service.set_cache(key, tags, service.cache_ttl())
+		on_done(tags, nil)
+	end)
 end
 
 return M

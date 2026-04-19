@@ -378,6 +378,113 @@ function M.fetch_repo_details(repo, opts, on_done)
 	}
 end
 
+---@param repo PullsRepoDetails
+---@param opts PullsFetchOpts
+---@param on_done fun(branches: PullsRepoBranches|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_repo_branches(repo, opts, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		on_done({
+			entries = {
+				{
+					name = tostring(repo.default_branch or "main"),
+					hash = "abc1234",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - 3600),
+					message = "Initial mock branch commit",
+					author = "Mock Author",
+				},
+				{
+					name = "feature/demo",
+					hash = "def5678",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - 86400),
+					message = "Add repository panel preview",
+					author = "Mock Author",
+				},
+				{
+					name = "feature/repo-tabs",
+					hash = "98ab321",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - (86400 * 2)),
+					message = "Implement repository branches and tags tabs",
+					author = "Atlas Dev",
+				},
+				{
+					name = "fix/mock-data",
+					hash = "76cd890",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - (86400 * 4)),
+					message = "Expand mock provider data for panel testing",
+					author = "Atlas Dev",
+				},
+				{
+					name = "release/0.2",
+					hash = "45ef123",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - (86400 * 6)),
+					message = "Prepare next mock release branch",
+					author = "Release Bot",
+				},
+			},
+		}, nil)
+	end, 120)
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
+---@param repo PullsRepoDetails
+---@param opts PullsFetchOpts
+---@param on_done fun(tags: PullsRepoTags|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_repo_tags(repo, opts, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		on_done({
+			entries = {
+				{
+					name = "v0.1.0",
+					hash = "abc1234",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - 172800),
+					message = "First mock release",
+					author = "Mock Release Bot",
+				},
+				{
+					name = "v0.2.0",
+					hash = "def5678",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - (86400 * 5)),
+					message = "Add repository overview and tabs",
+					author = "Mock Release Bot",
+				},
+				{
+					name = "v0.2.1",
+					hash = "98ab321",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - (86400 * 3)),
+					message = "Fix repo panel loading indicators",
+					author = "Mock Release Bot",
+				},
+				{
+					name = "nightly-2026-04-19",
+					hash = "76cd890",
+					date = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - 43200),
+					message = "Nightly build for repo tab development",
+					author = "Nightly Bot",
+				},
+			},
+		}, nil)
+	end, 120)
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
 ---@param pr PullRequest
 ---@param on_done fun(reviewers: PullsReviewer[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil

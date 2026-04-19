@@ -1,15 +1,8 @@
 local M = {}
 
 local service = require("atlas.pulls.providers.bitbucket.api.service")
-
----@param v any
----@return table|nil
-local function as_table(v)
-	if type(v) == "table" then
-		return v
-	end
-	return nil
-end
+local api_utils = require("atlas.core.utils")
+local as_table = api_utils.as_table
 
 ---@param user table|nil
 ---@return {name: string, nickname: string|nil, id: string}

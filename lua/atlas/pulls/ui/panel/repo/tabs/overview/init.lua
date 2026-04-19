@@ -49,8 +49,8 @@ function M.render(repo, width)
 		return { "", "  No repository selected..." }, {}, {}
 	end
 
-	local details = state.current_repo_details
-	if state.loading_details and details == nil then
+	local details = type(state.current_repo_details) == "table" and state.current_repo_details or nil
+	if state.current_repo_details == "loading" and details == nil then
 		utils.push(lines, spans, spinner.with_text("Loading repository..."), "AtlasTextMuted", PADDING_X)
 		return lines, spans, {}
 	end
@@ -63,7 +63,7 @@ function M.render(repo, width)
 
 	render_text_block("Description", details.description, width, lines, spans)
 
-	if state.loading_details then
+	if state.current_repo_details == "loading" then
 		utils.push(lines, spans, "README", "AtlasColumnHeader", PADDING_X)
 		utils.push(lines, spans, spinner.with_text("Loading readme..."), "AtlasTextMuted", PADDING_X)
 		return lines, spans, {}

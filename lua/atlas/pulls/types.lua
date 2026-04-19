@@ -77,6 +77,26 @@
 ---@field readme string|nil
 ---@field _raw table|nil
 
+---@class PullsRepoBranch
+---@field name string
+---@field hash string
+---@field date string
+---@field message string
+---@field author string
+
+---@class PullsRepoBranches
+---@field entries PullsRepoBranch[]
+
+---@class PullsRepoTag
+---@field name string
+---@field hash string
+---@field date string
+---@field message string
+---@field author string
+
+---@class PullsRepoTags
+---@field entries PullsRepoTag[]
+
 --------------------------------------------------------------------------------
 -- Group (PRs grouped by repository)
 --------------------------------------------------------------------------------

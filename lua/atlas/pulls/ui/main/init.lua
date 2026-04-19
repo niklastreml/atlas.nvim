@@ -81,7 +81,7 @@ function M.init(provider)
 
 	ui_state.on_panel_open = function()
 		local panel = require("atlas.pulls.ui.panel")
-		local panel_keymaps = require("atlas.pulls.ui.panel.pr.keymaps")
+		local panel_keymaps = require("atlas.pulls.ui.panel.keymaps")
 		local detail_buf = require("atlas.ui.layout").buf_id("detail")
 		if detail_buf then
 			panel_keymaps.register(detail_buf)
@@ -95,7 +95,7 @@ function M.init(provider)
 
 	ui_state.on_panel_close = function()
 		local panel = require("atlas.pulls.ui.panel")
-		local panel_keymaps = require("atlas.pulls.ui.panel.pr.keymaps")
+		local panel_keymaps = require("atlas.pulls.ui.panel.keymaps")
 		local detail_buf = require("atlas.ui.layout").buf_id("detail")
 		if detail_buf then
 			panel_keymaps.remove(detail_buf)

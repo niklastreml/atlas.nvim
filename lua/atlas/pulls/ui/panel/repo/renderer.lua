@@ -42,7 +42,7 @@ function M.render(tab_items, get_tab_module)
 	end
 
 	local repo = panel_state.current_repo
-	local repo_details = panel_state.current_repo_details
+	local repo_details = type(panel_state.current_repo_details) == "table" and panel_state.current_repo_details or nil
 	local width = vim.api.nvim_win_get_width(win)
 	local lines = {}
 	local spans = {}
@@ -55,7 +55,7 @@ function M.render(tab_items, get_tab_module)
 		utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 
 		local chip_line, chip_spans
-		if panel_state.loading_details and repo_details == nil then
+		if panel_state.current_repo_details == "loading" and repo_details == nil then
 			chip_line, chip_spans = panel_chips.render_loading("Loading repo details...", { padding_x = PADDING_X })
 		elseif repo_details ~= nil then
 			chip_line, chip_spans = panel_chips.render_repo(repo_details, { padding_x = PADDING_X })

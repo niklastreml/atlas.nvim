@@ -1,13 +1,6 @@
 local M = {}
-
----@param v any
----@return table|nil
-local function as_table(v)
-	if type(v) == "table" then
-		return v
-	end
-	return nil
-end
+local api_utils = require("atlas.core.utils")
+local as_table = api_utils.as_table
 
 ---@param bb_state string
 ---@param is_draft boolean

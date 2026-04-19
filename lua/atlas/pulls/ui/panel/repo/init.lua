@@ -21,7 +21,7 @@ local DEFAULT_TABS = {
 	{
 		key = "tags",
 		label = "Tags",
-		icon = icons.general("tag"),
+		icon = icons.pulls("tag"),
 		mod = require("atlas.pulls.ui.panel.repo.tabs.tags"),
 	},
 }
@@ -36,42 +36,6 @@ local function stop_spinner()
 		spinner_timer:close()
 		spinner_timer = nil
 	end
-end
-
-local function start_spinner()
-	if spinner_timer ~= nil then
-		return
-	end
-	spinner_timer = vim.loop.new_timer()
-	if spinner_timer == nil then
-		return
-	end
-	spinner_timer:start(
-		SPINNER_INTERVAL_MS,
-		SPINNER_INTERVAL_MS,
-		vim.schedule_wrap(function()
-			if not M.is_open() or not panel_state.loading_details then
-				stop_spinner()
-				return
-			end
-			M.render()
-		end)
-	)
-end
-
-local function update_spinner()
-	if panel_state.loading_details then
-		start_spinner()
-	else
-		stop_spinner()
-	end
-end
-
-local function stop_request()
-	if detail_request ~= nil and type(detail_request.cancel) == "function" then
-		detail_request.cancel()
-	end
-	detail_request = nil
 end
 
 ---@return PullsRepoPanelTab[]
@@ -98,6 +62,56 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
+---@return boolean
+local function is_tab_loading()
+	local tab_mod = get_tab_module(panel_state.current_tab)
+	if tab_mod and type(tab_mod.is_loading) == "function" then
+		return tab_mod.is_loading()
+	end
+	return false
+end
+
+---@return boolean
+local function is_any_loading()
+	return panel_state.current_repo_details == "loading" or is_tab_loading()
+end
+
+local function start_spinner()
+	if spinner_timer ~= nil then
+		return
+	end
+	spinner_timer = vim.loop.new_timer()
+	if spinner_timer == nil then
+		return
+	end
+	spinner_timer:start(
+		SPINNER_INTERVAL_MS,
+		SPINNER_INTERVAL_MS,
+		vim.schedule_wrap(function()
+			if not M.is_open() or not is_any_loading() then
+				stop_spinner()
+				return
+			end
+			M.render()
+		end)
+	)
+end
+
+local function update_spinner()
+	if is_any_loading() then
+		start_spinner()
+	else
+		stop_spinner()
+	end
+end
+
+local function stop_request()
+	if detail_request ~= nil and type(detail_request.cancel) == "function" then
+		detail_request.cancel()
+	end
+	detail_request = nil
+end
+
 local function cursor_entry()
 	local win = layout.win_id("detail")
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
@@ -108,6 +122,7 @@ local function cursor_entry()
 end
 
 local function done()
+	update_spinner()
 	if M.is_open() then
 		M.render()
 	end
@@ -188,11 +203,11 @@ function M.on_select(repo, opts)
 
 	activate_current_tab()
 
-	local should_fetch = opts.force_refresh == true or panel_state.current_repo_details == nil
+	local should_fetch = opts.force_refresh == true or type(panel_state.current_repo_details) ~= "table"
 	if provider and type(provider.fetch_repo_details) == "function" and should_fetch then
 		local repo_key = tostring(panel_state.current_repo.id or "")
 		stop_request()
-		panel_state.loading_details = true
+		panel_state.current_repo_details = "loading"
 		update_spinner()
 		detail_request = provider.fetch_repo_details(panel_state.current_repo, {
 			force_load = opts.force_refresh == true,
@@ -201,23 +216,21 @@ function M.on_select(repo, opts)
 			if panel_state.current_repo == nil or tostring(panel_state.current_repo.id or "") ~= repo_key then
 				return
 			end
-			panel_state.loading_details = false
 			if err == nil and details ~= nil then
 				panel_state.current_repo_details = details
+			else
+				panel_state.current_repo_details = nil
 			end
 			update_spinner()
+			notify_tab(panel_state.current_repo, opts)
 			if M.is_open() then
 				M.render()
 			end
 		end)
-	else
-		panel_state.loading_details = false
-		update_spinner()
 	end
+	update_spinner()
 
-	if opts.force_refresh == true then
-		notify_tab(panel_state.current_repo, opts)
-	end
+	notify_tab(panel_state.current_repo, opts)
 	if M.is_open() then
 		M.render()
 	end
@@ -239,6 +252,9 @@ function M.next_tab()
 	end
 	panel_state.current_tab = tabs[next_idx].key
 	switch_tab_keymaps(old_key, panel_state.current_tab)
+	if panel_state.current_repo ~= nil then
+		notify_tab(panel_state.current_repo, nil)
+	end
 	M.render()
 end
 
@@ -258,6 +274,9 @@ function M.prev_tab()
 	end
 	panel_state.current_tab = tabs[prev_idx].key
 	switch_tab_keymaps(old_key, panel_state.current_tab)
+	if panel_state.current_repo ~= nil then
+		notify_tab(panel_state.current_repo, nil)
+	end
 	M.render()
 end
 
@@ -279,6 +298,7 @@ function M.deactivate()
 	if tab_mod and type(tab_mod.deactivate) == "function" then
 		tab_mod.deactivate()
 	end
+	panel_state.reset()
 end
 
 return M
