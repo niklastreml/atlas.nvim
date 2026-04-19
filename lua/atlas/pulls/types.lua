@@ -6,6 +6,7 @@
 ---@field name string
 ---@field id string
 ---@field username string
+---@field nickname string|nil
 
 --------------------------------------------------------------------------------
 -- Refs
@@ -106,7 +107,7 @@
 
 ---@class PullsActivityEntry
 ---@field kind "approval"|"comment"|"update"|string
----@field actor {name: string, nickname: string|nil}|nil
+---@field actor PullsAuthor|nil
 ---@field date string
 ---@field content_raw string|nil
 ---@field deleted boolean|nil
@@ -121,12 +122,13 @@
 ---@class PullsComment
 ---@field id number
 ---@field parent_id number|nil
----@field author {name: string, nickname: string|nil}|nil
+---@field author {name: string, nickname: string|nil, id: string|nil}|nil
 ---@field content_raw string
 ---@field created_on string
 ---@field deleted boolean|nil
 ---@field inline {path: string, to: number|nil, from: number|nil}|nil
 ---@field url string|nil
+---@field html_url string|nil
 
 --------------------------------------------------------------------------------
 -- Commit

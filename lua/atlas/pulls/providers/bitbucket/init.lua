@@ -191,8 +191,8 @@ end
 ---@param on_done fun(comments: PullsComment[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
 function M.fetch_comments(pr, opts, on_done)
-	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
-	return pr_api.fetch_comments(pr, opts, on_done)
+	local comments_api = require("atlas.pulls.providers.bitbucket.api.comments")
+	return comments_api.fetch_comments(pr, opts, on_done)
 end
 
 ---@param pr PullRequest
@@ -200,8 +200,8 @@ end
 ---@param on_done fun(comment: PullsComment|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
 function M.add_comment(pr, content, on_done)
-	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
-	return pr_api.add_comment(pr, content, on_done)
+	local comments_api = require("atlas.pulls.providers.bitbucket.api.comments")
+	return comments_api.add_comment(pr, content, on_done)
 end
 
 ---@param pr PullRequest
@@ -210,8 +210,8 @@ end
 ---@param on_done fun(comment: PullsComment|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
 function M.reply_comment(pr, parent_id, content, on_done)
-	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
-	return pr_api.reply_comment(pr, parent_id, content, on_done)
+	local comments_api = require("atlas.pulls.providers.bitbucket.api.comments")
+	return comments_api.reply_comment(pr, parent_id, content, on_done)
 end
 
 ---@param pr PullRequest
@@ -220,8 +220,8 @@ end
 ---@param on_done fun(comment: PullsComment|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
 function M.edit_comment(pr, comment_id, content, on_done)
-	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
-	return pr_api.edit_comment(pr, comment_id, content, on_done)
+	local comments_api = require("atlas.pulls.providers.bitbucket.api.comments")
+	return comments_api.edit_comment(pr, comment_id, content, on_done)
 end
 
 ---@param pr PullRequest
@@ -229,8 +229,8 @@ end
 ---@param on_done fun(ok: boolean, err: string|nil)
 ---@return { cancel: fun() }|nil
 function M.delete_comment(pr, comment_id, on_done)
-	local pr_api = require("atlas.pulls.providers.bitbucket.api.pullrequests")
-	return pr_api.delete_comment(pr, comment_id, on_done)
+	local comments_api = require("atlas.pulls.providers.bitbucket.api.comments")
+	return comments_api.delete_comment(pr, comment_id, on_done)
 end
 
 return M

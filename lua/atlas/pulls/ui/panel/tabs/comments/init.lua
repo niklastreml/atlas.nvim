@@ -376,16 +376,6 @@ M.setup_keymaps = keymaps.setup
 M.teardown_keymaps = keymaps.teardown
 
 ---@param pr PullRequest
----@return AtlasMarkdownCompletionProvider|nil
-local function get_completion(pr)
-	local provider = get_provider()
-	if provider and type(provider.comment_completion) == "function" then
-		return provider.comment_completion(pr)
-	end
-	return nil
-end
-
----@param pr PullRequest
 ---@param done fun()
 function M.add_comment(pr, done)
 	local footer = require("atlas.ui.components.footer")
@@ -399,7 +389,7 @@ function M.add_comment(pr, done)
 		title = " Add Comment ",
 		width_ratio = 0.5,
 		height_ratio = 0.18,
-		completion = get_completion(pr),
+		completion = nil,
 		on_save = function(text)
 			if not text or vim.trim(text) == "" then
 				return
@@ -410,7 +400,7 @@ function M.add_comment(pr, done)
 					footer.notify("error", "Add comment failed: " .. err)
 					return
 				end
-				if comment and type(state.comments) == "table" then
+				if type(comment) == "table" and type(state.comments) == "table" then
 					table.insert(state.comments, comment)
 				end
 				footer.notify("success", "Comment added", 1200)
@@ -440,7 +430,7 @@ function M.reply_comment(pr, entry, done)
 		title = " Reply to Comment ",
 		width_ratio = 0.5,
 		height_ratio = 0.18,
-		completion = get_completion(pr),
+		completion = nil,
 		on_save = function(text)
 			if not text or vim.trim(text) == "" then
 				return
@@ -451,7 +441,7 @@ function M.reply_comment(pr, entry, done)
 					footer.notify("error", "Reply failed: " .. err)
 					return
 				end
-				if reply and type(state.comments) == "table" then
+				if type(reply) == "table" and type(state.comments) == "table" then
 					table.insert(state.comments, reply)
 				end
 				footer.notify("success", "Reply added", 1200)
@@ -482,7 +472,7 @@ function M.edit_comment(pr, entry, done)
 		width_ratio = 0.5,
 		height_ratio = 0.18,
 		initial_text = comment.content_raw or "",
-		completion = get_completion(pr),
+		completion = nil,
 		on_save = function(text)
 			if not text or vim.trim(text) == "" then
 				return
@@ -512,7 +502,6 @@ end
 ---@param entry table
 ---@param done fun()
 function M.delete_comment(pr, entry, done)
-	local footer = require("atlas.ui.components.footer")
 	local provider = get_provider()
 	if not provider or type(provider.delete_comment) ~= "function" then
 		return
