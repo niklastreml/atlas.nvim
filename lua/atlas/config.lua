@@ -84,6 +84,9 @@ M.options = {
 			checkout = "gc",
 			show_details = "K",
 			search = "?",
+			pr_files_toggle_fold = "za",
+			pr_files_next_hunk = "]h",
+			pr_files_previous_hunk = "[h",
 		},
 		issues = {
 			refresh = "r",

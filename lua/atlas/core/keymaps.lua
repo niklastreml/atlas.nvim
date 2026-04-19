@@ -18,6 +18,9 @@ local M = {}
 ---@field checkout? AtlasKeymapValue
 ---@field show_details? AtlasKeymapValue
 ---@field search? AtlasKeymapValue
+---@field pr_files_toggle_fold? AtlasKeymapValue
+---@field pr_files_next_hunk? AtlasKeymapValue
+---@field pr_files_previous_hunk? AtlasKeymapValue
 
 ---@class AtlasIssuesKeymaps
 ---@field refresh? AtlasKeymapValue
@@ -44,6 +47,9 @@ local M = {}
 ---| "pulls.checkout"
 ---| "pulls.show_details"
 ---| "pulls.search"
+---| "pulls.pr_files_toggle_fold"
+---| "pulls.pr_files_next_hunk"
+---| "pulls.pr_files_previous_hunk"
 ---| "issues.refresh"
 ---| "issues.refresh_view"
 
@@ -158,6 +164,10 @@ function M.validate()
 			"pulls.open_diff",
 			"pulls.checkout",
 			"pulls.show_details",
+			"pulls.search",
+			"pulls.pr_files_toggle_fold",
+			"pulls.pr_files_next_hunk",
+			"pulls.pr_files_previous_hunk",
 		}, { "j", "k", "gg", "G" }),
 		issues = conflicts_for({
 			"issues.refresh",
