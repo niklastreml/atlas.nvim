@@ -7,6 +7,7 @@ local highlights = require("atlas.ui.shared.highlights")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local helper = require("atlas.pulls.ui.main.helper")
+local core_utils = require("atlas.core.utils")
 local md_editor = require("atlas.ui.popups.markdown_editor")
 local footer = require("atlas.ui.components.footer")
 local state = require("atlas.pulls.ui.panel.pr.tabs.comments.state")
@@ -232,9 +233,9 @@ end
 
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
----@param done fun()
+---@param refresh fun()
 ---@param opts { force_refresh: boolean|nil }|nil
-function M.on_select(pr, repo, done, opts)
+function M.on_select(pr, repo, refresh, opts)
 	cancel_all()
 	state.reset()
 
@@ -255,7 +256,7 @@ function M.on_select(pr, repo, done, opts)
 				state.comments = comments or {}
 				footer.notify("success", string.format("Comments loaded for #%s", pr_id), 1200)
 			end
-			done()
+			refresh()
 		end))
 	end
 end
@@ -372,13 +373,16 @@ function M.is_selectable_line(_lnum, entry)
 end
 
 local keymaps = require("atlas.pulls.ui.panel.pr.tabs.comments.keymaps")
-M.setup_keymaps = keymaps.setup
-M.teardown_keymaps = keymaps.teardown
+function M.activate(buf, refresh)
+	if buf == nil or refresh == nil then
+		return
+	end
+	keymaps.setup(buf, refresh)
+end
 
 ---@param pr PullRequest
----@param done fun()
-function M.add_comment(pr, done)
-	local footer = require("atlas.ui.components.footer")
+---@param refresh fun()
+function M.add_comment(pr, refresh)
 	local provider = get_provider()
 	if not provider or type(provider.add_comment) ~= "function" then
 		return
@@ -404,7 +408,7 @@ function M.add_comment(pr, done)
 					table.insert(state.comments, comment)
 				end
 				footer.notify("success", "Comment added", 1200)
-				done()
+				refresh()
 			end))
 		end,
 	})
@@ -412,8 +416,8 @@ end
 
 ---@param pr PullRequest
 ---@param entry table
----@param done fun()
-function M.reply_comment(pr, entry, done)
+---@param refresh fun()
+function M.reply_comment(pr, entry, refresh)
 	local footer = require("atlas.ui.components.footer")
 	local provider = get_provider()
 	if not provider or type(provider.reply_comment) ~= "function" then
@@ -445,7 +449,7 @@ function M.reply_comment(pr, entry, done)
 					table.insert(state.comments, reply)
 				end
 				footer.notify("success", "Reply added", 1200)
-				done()
+				refresh()
 			end))
 		end,
 	})
@@ -453,8 +457,8 @@ end
 
 ---@param pr PullRequest
 ---@param entry table
----@param done fun()
-function M.edit_comment(pr, entry, done)
+---@param refresh fun()
+function M.edit_comment(pr, entry, refresh)
 	local footer = require("atlas.ui.components.footer")
 	local provider = get_provider()
 	if not provider or type(provider.edit_comment) ~= "function" then
@@ -483,16 +487,15 @@ function M.edit_comment(pr, entry, done)
 					footer.notify("error", "Edit failed: " .. err)
 					return
 				end
-				if type(state.comments) == "table" then
-					for i, c in ipairs(state.comments) do
-						if c.id == comment.id then
-							state.comments[i].content_raw = text
-							break
-						end
+				local comments = core_utils.as_table(state.comments) or {}
+				for i, c in ipairs(comments) do
+					if c.id == comment.id then
+						comments[i].content_raw = text
+						break
 					end
 				end
 				footer.notify("success", "Comment updated", 1200)
-				done()
+				refresh()
 			end))
 		end,
 	})
@@ -500,8 +503,8 @@ end
 
 ---@param pr PullRequest
 ---@param entry table
----@param done fun()
-function M.delete_comment(pr, entry, done)
+---@param refresh fun()
+function M.delete_comment(pr, entry, refresh)
 	local provider = get_provider()
 	if not provider or type(provider.delete_comment) ~= "function" then
 		return
@@ -523,21 +526,25 @@ function M.delete_comment(pr, entry, done)
 				footer.notify("error", "Delete failed: " .. err)
 				return
 			end
-			if ok and type(state.comments) == "table" then
-				for i, c in ipairs(state.comments) do
+			if ok then
+				local comments = core_utils.as_table(state.comments) or {}
+				for i, c in ipairs(comments) do
 					if c.id == comment.id then
-						table.remove(state.comments, i)
+						table.remove(comments, i)
 						break
 					end
 				end
 			end
 			footer.notify("success", "Comment deleted", 1200)
-			done()
+			refresh()
 		end))
 	end)
 end
 
-function M.deactivate()
+function M.deactivate(buf)
+	if buf ~= nil then
+		keymaps.teardown(buf)
+	end
 	cancel_all()
 end
 

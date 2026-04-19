@@ -100,16 +100,7 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
-local function cursor_entry()
-	local win = layout.win_id("detail")
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return nil
-	end
-	local lnum = vim.api.nvim_win_get_cursor(win)[1]
-	return (panel_state.line_map or {})[lnum]
-end
-
-local function done()
+local function refresh_panel()
 	if M.is_open() then
 		M.render()
 	end
@@ -133,38 +124,29 @@ local function switch_tab_keymaps(old_key, new_key)
 	if old_key then
 		local old_mod = get_tab_module(old_key)
 		if old_mod and type(old_mod.deactivate) == "function" and old_key ~= new_key then
-			old_mod.deactivate()
-		end
-		if old_mod and type(old_mod.teardown_keymaps) == "function" then
-			old_mod.teardown_keymaps(buf)
+			old_mod.deactivate(buf)
 		end
 	end
 
 	if new_key then
 		local new_mod = get_tab_module(new_key)
 		if new_mod and type(new_mod.activate) == "function" and old_key ~= new_key then
-			new_mod.activate()
-		end
-		if new_mod and type(new_mod.setup_keymaps) == "function" then
-			new_mod.setup_keymaps(buf, cursor_entry, done)
+			new_mod.activate(buf, refresh_panel)
 		end
 	end
 end
 
----@return string
-local function current_pr_key()
-	local pr = panel_state.current_pr
-	if pr == nil then
-		return ""
-	end
-	return tostring(pr.repo_full_name or "") .. "/" .. tostring(pr.id or "")
-end
-
+---@param pr PullRequest|nil
 ---@return fun()
-local function make_done()
-	local key = current_pr_key()
+local function make_refresh_callback(pr)
+	local expected_id = tostring(pr and pr.id or "")
+	local expected_repo = tostring(pr and pr.repo_full_name or "")
 	return function()
-		if current_pr_key() ~= key then
+		local active = panel_state.current_pr
+		if active == nil then
+			return
+		end
+		if tostring(active.id or "") ~= expected_id or tostring(active.repo_full_name or "") ~= expected_repo then
 			return
 		end
 		update_spinner()
@@ -179,7 +161,7 @@ local function dispatch_provider_fetches(pr)
 	local state = require("atlas.pulls.state")
 	local provider = state.provider
 	if provider and provider.panel and type(provider.panel.fetches) == "function" then
-		provider.panel.fetches(pr, make_done())
+		provider.panel.fetches(pr, make_refresh_callback(pr))
 	end
 end
 
@@ -189,8 +171,23 @@ end
 local function notify_tab(pr, repo, opts)
 	local tab_mod = get_tab_module(panel_state.current_tab)
 	if tab_mod and type(tab_mod.on_select) == "function" then
-		tab_mod.on_select(pr, repo, make_done(), opts)
+		tab_mod.on_select(pr, repo, make_refresh_callback(pr), opts)
 	end
+end
+
+local function reset_pr_tab_data()
+	local function reset_state(mod_path)
+		local ok, mod = pcall(require, mod_path)
+		if ok and type(mod) == "table" and type(mod.reset) == "function" then
+			mod.reset()
+		end
+	end
+
+	reset_state("atlas.pulls.ui.panel.pr.tabs.overview.state")
+	reset_state("atlas.pulls.ui.panel.pr.tabs.activity.state")
+	reset_state("atlas.pulls.ui.panel.pr.tabs.commits.state")
+	reset_state("atlas.pulls.ui.panel.pr.tabs.files.state")
+	reset_state("atlas.pulls.ui.panel.pr.tabs.comments.state")
 end
 
 --------------------------------------------------------------------------------
@@ -216,21 +213,21 @@ function M.on_select(pr, repo, opts)
 		and panel_state.current_pr ~= nil
 		and tostring(panel_state.current_pr.id) == tostring(pr.id)
 		and tostring(panel_state.current_pr.repo_full_name) == tostring(pr.repo_full_name)
+	local same_repo = repo ~= nil
+		and panel_state.current_repo ~= nil
+		and tostring(panel_state.current_repo.id or panel_state.current_repo.name or "")
+			== tostring(repo.id or repo.name or "")
+	local context_changed = (pr ~= nil and not same_pr) or (repo ~= nil and not same_repo)
 
-	if pr then
-		panel_state.current_pr = pr
-	end
-	if repo then
-		panel_state.current_repo = repo
-	end
-
+	panel_state.current_pr = pr
+	panel_state.current_repo = repo
 	if panel_state.current_pr == nil then
 		return
 	end
 
 	activate_current_tab()
 
-	local should_fetch = not same_pr or opts.force_refresh == true
+	local should_fetch = context_changed or opts.force_refresh == true
 
 	if not same_pr and pr ~= nil then
 		local old_key = panel_state.current_tab
@@ -241,9 +238,13 @@ function M.on_select(pr, repo, opts)
 		stop_spinner()
 	end
 
+	if context_changed then
+		reset_pr_tab_data()
+	end
+
 	if should_fetch then
 		dispatch_provider_fetches(panel_state.current_pr)
-		notify_tab(panel_state.current_pr, panel_state.current_repo, opts)
+		notify_tab(panel_state.current_pr, panel_state.current_repo, { force_refresh = opts.force_refresh == true })
 		update_spinner()
 	end
 
@@ -312,8 +313,7 @@ function M.close()
 	panel_state.reset()
 end
 
-function M.activate()
-end
+function M.activate() end
 
 function M.deactivate()
 	local tab_mod = get_tab_module(panel_state.current_tab)

@@ -1,13 +1,22 @@
 local M = {}
 
 local help = require("atlas.ui.popups.help")
+local layout = require("atlas.ui.layout")
 
 ---@param buf integer
----@param cursor_entry fun(): table|nil
----@param done fun()
-function M.setup(buf, cursor_entry, done)
+---@param refresh fun()
+function M.setup(buf, refresh)
 	local tab = require("atlas.pulls.providers.bitbucket.ui.panel.tabs.comments")
 	local panel_state = require("atlas.pulls.ui.panel.pr.state")
+
+	local function cursor_entry()
+		local win = layout.win_id("detail")
+		if win == nil or not vim.api.nvim_win_is_valid(win) then
+			return nil
+		end
+		local lnum = vim.api.nvim_win_get_cursor(win)[1]
+		return (panel_state.line_map or {})[lnum]
+	end
 
 	local items = {
 		{
@@ -17,7 +26,7 @@ function M.setup(buf, cursor_entry, done)
 			callback = function()
 				local pr = panel_state.current_pr
 				if pr then
-					tab.add_comment(pr, done)
+					tab.add_comment(pr, refresh)
 				end
 			end,
 		},
@@ -28,7 +37,7 @@ function M.setup(buf, cursor_entry, done)
 			callback = function()
 				local pr = panel_state.current_pr
 				if pr then
-					tab.add_task(pr, done)
+					tab.add_task(pr, refresh)
 				end
 			end,
 		},
@@ -40,7 +49,7 @@ function M.setup(buf, cursor_entry, done)
 				local pr = panel_state.current_pr
 				local entry = cursor_entry()
 				if pr and entry then
-					tab.reply_comment(pr, entry, done)
+					tab.reply_comment(pr, entry, refresh)
 				end
 			end,
 		},
@@ -52,7 +61,7 @@ function M.setup(buf, cursor_entry, done)
 				local pr = panel_state.current_pr
 				local entry = cursor_entry()
 				if pr and entry then
-					tab.toggle_task(pr, entry, done)
+					tab.toggle_task(pr, entry, refresh)
 				end
 			end,
 		},
@@ -64,7 +73,7 @@ function M.setup(buf, cursor_entry, done)
 				local pr = panel_state.current_pr
 				local entry = cursor_entry()
 				if pr and entry then
-					tab.edit_comment(pr, entry, done)
+					tab.edit_comment(pr, entry, refresh)
 				end
 			end,
 		},
@@ -76,7 +85,7 @@ function M.setup(buf, cursor_entry, done)
 				local pr = panel_state.current_pr
 				local entry = cursor_entry()
 				if pr and entry then
-					tab.delete_comment(pr, entry, done)
+					tab.delete_comment(pr, entry, refresh)
 				end
 			end,
 		},

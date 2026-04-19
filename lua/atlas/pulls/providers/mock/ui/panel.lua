@@ -94,8 +94,8 @@ function M.chips(pr)
 end
 
 ---@param pr PullRequest
----@param done fun()
-function M.fetches(pr, done) end
+---@param refresh fun()
+function M.fetches(pr, refresh) end
 
 ---@param pr PullRequest
 ---@return boolean

@@ -197,19 +197,26 @@ end
 
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
----@param done fun()
+---@param refresh fun()
 ---@param opts { force_refresh: boolean|nil }|nil
-function M.on_select(pr, repo, done, opts)
-	cancel_all()
-	state.reset()
+function M.on_select(pr, repo, refresh, opts)
+	opts = opts or {}
 
 	local provider = get_provider()
 	if not provider then
 		return
 	end
 
+	local force_refresh = opts.force_refresh == true
+	local should_fetch = force_refresh or state.activity == nil or state.activity == "loading"
+
+	if should_fetch then
+		cancel_all()
+		state.reset()
+	end
+
 	local pr_id = tostring(pr.id or "")
-	if type(provider.fetch_activity) == "function" then
+	if should_fetch and type(provider.fetch_activity) == "function" then
 		state.activity = "loading"
 		footer.notify("loading", string.format("Loading activity for #%s...", pr_id))
 		track(provider.fetch_activity(pr, opts, function(entries, err)
@@ -220,7 +227,7 @@ function M.on_select(pr, repo, done, opts)
 				state.activity = entries or {}
 				footer.notify("success", string.format("Activity loaded for #%s", pr_id), 1200)
 			end
-			done()
+			refresh()
 		end))
 	end
 end

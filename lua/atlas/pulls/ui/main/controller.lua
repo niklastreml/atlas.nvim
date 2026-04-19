@@ -283,7 +283,7 @@ function M.refresh_pr(pr, on_done)
 		if root_panel_state.current_panel == "repo" then
 			panel.on_select(pr, selected_repo, { force_refresh = true })
 		else
-			panel.on_select(nil, nil, { force_refresh = true })
+			panel.on_select(pr, nil, { force_refresh = true })
 		end
 	end
 

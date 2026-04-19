@@ -55,9 +55,9 @@ end
 
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
----@param done fun()
+---@param refresh fun()
 ---@param opts { force_refresh: boolean|nil }|nil
-function M.on_select(pr, repo, done, opts)
+function M.on_select(pr, repo, refresh, opts)
 	cancel_all()
 	state.reset()
 
@@ -78,7 +78,7 @@ function M.on_select(pr, repo, done, opts)
 				state.diff = files or {}
 				footer.notify("success", string.format("Changes loaded for #%s", pr_id), 1200)
 			end
-			done()
+			refresh()
 		end))
 	end
 end
@@ -211,12 +211,19 @@ function M.jump_hunk(direction)
 	end
 end
 
-function M.deactivate()
-	cancel_all()
+local keymaps = require("atlas.pulls.ui.panel.pr.tabs.files.keymaps")
+function M.activate(buf, refresh)
+	if buf == nil or refresh == nil then
+		return
+	end
+	keymaps.setup(buf, refresh)
 end
 
-local keymaps = require("atlas.pulls.ui.panel.pr.tabs.files.keymaps")
-M.setup_keymaps = keymaps.setup
-M.teardown_keymaps = keymaps.teardown
+function M.deactivate(buf)
+	if buf ~= nil then
+		keymaps.teardown(buf)
+	end
+	cancel_all()
+end
 
 return M

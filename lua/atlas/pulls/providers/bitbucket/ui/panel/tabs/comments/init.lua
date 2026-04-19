@@ -2,6 +2,7 @@
 local M = {}
 
 local bb_helper = require("atlas.pulls.providers.bitbucket.ui.panel.tabs.comments.helper")
+local core_utils = require("atlas.core.utils")
 local renderer = require("atlas.pulls.providers.bitbucket.ui.panel.tabs.comments.renderer")
 local md_editor = require("atlas.ui.popups.markdown_editor")
 local footer = require("atlas.ui.components.footer")
@@ -47,9 +48,9 @@ end
 
 ---@param pr PullRequest
 ---@param _repo PullsRepo|nil
----@param done fun()
+---@param refresh fun()
 ---@param opts { force_refresh: boolean|nil }|nil
-function M.on_select(pr, _repo, done, opts)
+function M.on_select(pr, _repo, refresh, opts)
 	cancel_all()
 	state.reset()
 
@@ -63,7 +64,7 @@ function M.on_select(pr, _repo, done, opts)
 	local function finish_one()
 		pending = pending - 1
 		if pending == 0 then
-			done()
+			refresh()
 		end
 	end
 
@@ -71,6 +72,7 @@ function M.on_select(pr, _repo, done, opts)
 	state.tasks = "loading"
 	local pr_id = tostring(pr.id or "")
 	footer.notify("loading", string.format("Loading comments for #%s...", pr_id))
+ 	footer.notify("loading", string.format("Loading tasks for #%s...", pr_id))
 
 	track(comments_api.fetch_comments(pr, opts, function(comments, err)
 		if err then
@@ -88,9 +90,10 @@ function M.on_select(pr, _repo, done, opts)
 	}, function(tasks, err)
 		if err then
 			state.tasks = nil
-			footer.notify("error", "Failed to load tasks")
+			footer.notify("error", string.format("Failed to load tasks for #%s", pr_id))
 		else
 			state.tasks = tasks and tasks.entries or {}
+			footer.notify("success", string.format("Tasks loaded for #%s", pr_id), 1200)
 		end
 		finish_one()
 	end))
@@ -132,10 +135,17 @@ function M.on_enter(pr, entry)
 end
 
 local keymaps = require("atlas.pulls.providers.bitbucket.ui.panel.tabs.comments.keymaps")
-M.setup_keymaps = keymaps.setup
-M.teardown_keymaps = keymaps.teardown
+function M.activate(buf, refresh)
+	if buf == nil or refresh == nil then
+		return
+	end
+	keymaps.setup(buf, refresh)
+end
 
-function M.deactivate()
+function M.deactivate(buf)
+	if buf ~= nil then
+		keymaps.teardown(buf)
+	end
 	cancel_all()
 end
 
@@ -163,16 +173,12 @@ local function collect_completion_authors(pr)
 
 	add(pr.author)
 
-	if type(state.comments) == "table" then
-		for _, comment in ipairs(state.comments) do
-			add(comment and comment.author or nil)
-		end
+	for _, comment in ipairs(core_utils.as_table(state.comments) or {}) do
+		add(comment and comment.author or nil)
 	end
 
-	if type(state.tasks) == "table" then
-		for _, task in ipairs(state.tasks) do
-			add(task and task.creator or nil)
-		end
+	for _, task in ipairs(core_utils.as_table(state.tasks) or {}) do
+		add(task and task.creator or nil)
 	end
 
 	return vim.tbl_values(seen)
@@ -210,7 +216,8 @@ local function upsert_local_task(task)
 	if state.tasks == "loading" then
 		return
 	end
-	if type(state.tasks) ~= "table" then
+	local tasks = core_utils.as_table(state.tasks)
+	if tasks == nil then
 		return
 	end
 
@@ -219,9 +226,9 @@ local function upsert_local_task(task)
 		return
 	end
 
-	for i, entry in ipairs(state.tasks) do
+	for i, entry in ipairs(tasks) do
 		if type(entry) == "table" and tonumber(entry.id) == target_id then
-			state.tasks[i] = task
+			tasks[i] = task
 			return
 		end
 	end
@@ -232,8 +239,8 @@ end
 -- -----------------------------------------------------------------------------
 
 ---@param pr PullRequest
----@param done fun()
-function M.add_comment(pr, done)
+---@param refresh fun()
+function M.add_comment(pr, refresh)
 	open_md_editor(pr, {
 		key = "pr-comment-add",
 		title = " Add Comment ",
@@ -251,7 +258,7 @@ function M.add_comment(pr, done)
 					table.insert(state.comments, comment)
 				end
 				footer.notify("success", "Comment added", 1200)
-				done()
+				refresh()
 			end))
 		end,
 	})
@@ -259,8 +266,8 @@ end
 
 ---@param pr PullRequest
 ---@param entry table
----@param done fun()
-function M.reply_comment(pr, entry, done)
+---@param refresh fun()
+function M.reply_comment(pr, entry, refresh)
 	local comment = entry.comment
 	if not comment then
 		return
@@ -297,7 +304,7 @@ function M.reply_comment(pr, entry, done)
 					table.insert(state.comments, reply)
 				end
 				footer.notify("success", "Reply added", 1200)
-				done()
+				refresh()
 			end))
 		end,
 	})
@@ -309,10 +316,10 @@ end
 
 ---@param pr PullRequest
 ---@param task BitbucketPRTask
----@param done fun()
+---@param refresh fun()
 ---@param current_user PullsUser|nil
 ---@return boolean
-local function edit_task(pr, task, done, current_user)
+local function edit_task(pr, task, refresh, current_user)
 	if not bb_helper.can_manage_task(task, current_user) then
 		footer.notify("warn", "You can only edit your own tasks")
 		return false
@@ -345,7 +352,7 @@ local function edit_task(pr, task, done, current_user)
 					upsert_local_task(updated)
 				end
 				footer.notify("success", "Task updated", 1200)
-				done()
+				refresh()
 			end))
 		end,
 	})
@@ -354,10 +361,10 @@ local function edit_task(pr, task, done, current_user)
 end
 
 ---@param task BitbucketPRTask
----@param done fun()
+---@param refresh fun()
 ---@param current_user PullsUser|nil
 ---@return boolean
-local function delete_task(task, done, current_user)
+local function delete_task(task, refresh, current_user)
 	if not bb_helper.can_manage_task(task, current_user) then
 		footer.notify("warn", "You can only delete your own tasks")
 		return false
@@ -396,7 +403,7 @@ local function delete_task(task, done, current_user)
 				end
 			end
 			footer.notify("success", "Task deleted", 1200)
-			done()
+			refresh()
 		end))
 	end)
 
@@ -405,13 +412,13 @@ end
 
 ---@param pr PullRequest
 ---@param entry table
----@param done fun()
-function M.edit_comment(pr, entry, done)
+---@param refresh fun()
+function M.edit_comment(pr, entry, refresh)
 	local current_user = require("atlas.pulls.state").current_user
 
 	local task = entry.task
 	if task ~= nil and entry.entity_kind == "task" then
-		edit_task(pr, task, done, current_user)
+		edit_task(pr, task, refresh, current_user)
 		return
 	end
 
@@ -434,16 +441,15 @@ function M.edit_comment(pr, entry, done)
 					footer.notify("error", "Edit failed: " .. err)
 					return
 				end
-				if type(state.comments) == "table" then
-					for i, c in ipairs(state.comments) do
-						if c.id == comment.id then
-							state.comments[i].content_raw = text
-							break
-						end
+				local comments = core_utils.as_table(state.comments) or {}
+				for i, c in ipairs(comments) do
+					if c.id == comment.id then
+						comments[i].content_raw = text
+						break
 					end
 				end
 				footer.notify("success", "Comment updated", 1200)
-				done()
+				refresh()
 			end))
 		end,
 	})
@@ -451,13 +457,13 @@ end
 
 ---@param pr PullRequest
 ---@param entry table
----@param done fun()
-function M.delete_comment(pr, entry, done)
+---@param refresh fun()
+function M.delete_comment(pr, entry, refresh)
 	local current_user = require("atlas.pulls.state").current_user
 
 	local task = entry.task
 	if task ~= nil and entry.entity_kind == "task" then
-		delete_task(task, done, current_user)
+		delete_task(task, refresh, current_user)
 		return
 	end
 
@@ -477,24 +483,25 @@ function M.delete_comment(pr, entry, done)
 				footer.notify("error", "Delete failed: " .. err)
 				return
 			end
-			if ok and type(state.comments) == "table" then
-				for i, c in ipairs(state.comments) do
+			if ok then
+				local comments = core_utils.as_table(state.comments) or {}
+				for i, c in ipairs(comments) do
 					if c.id == comment.id then
-						table.remove(state.comments, i)
+						table.remove(comments, i)
 						break
 					end
 				end
 			end
 			footer.notify("success", "Comment deleted", 1200)
-			done()
+			refresh()
 		end))
 	end)
 end
 
 ---@param _pr PullRequest
 ---@param entry table
----@param done fun()
-function M.toggle_task(_pr, entry, done)
+---@param refresh fun()
+function M.toggle_task(_pr, entry, refresh)
 	local task = entry.task
 	if task == nil or entry.entity_kind ~= "task" then
 		footer.notify("warn", "No task selected")
@@ -529,13 +536,13 @@ function M.toggle_task(_pr, entry, done)
 		end
 
 		footer.notify("success", is_resolved and "Task reopened" or "Task resolved", 1200)
-		done()
+		refresh()
 	end))
 end
 
 ---@param pr PullRequest
----@param done fun()
-function M.add_task(pr, done)
+---@param refresh fun()
+function M.add_task(pr, refresh)
 	local workspace = tostring(pr.workspace or "")
 	local repo_slug = tostring(pr.repo or "")
 	local pr_id = tostring(pr.id or "")
@@ -579,7 +586,7 @@ function M.add_task(pr, done)
 					end
 				end
 				footer.notify("success", "Task added", 1200)
-				done()
+				refresh()
 			end))
 		end,
 	})

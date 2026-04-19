@@ -105,58 +105,63 @@ end
 
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
----@param done fun()
+---@param refresh fun()
 ---@param opts { force_refresh: boolean|nil }|nil
-function M.on_select(pr, repo, done, opts)
-	cancel_all()
-	state.reset()
+function M.on_select(pr, repo, refresh, opts)
+	opts = opts or {}
 
 	local provider = get_provider()
 	if not provider then
 		return
 	end
 
-	if type(provider.fetch_commits) ~= "function" then
-		return
+	local force_refresh = opts.force_refresh == true
+	local should_fetch = force_refresh or state.commits == nil or state.commits == "loading"
+
+	if should_fetch then
+		cancel_all()
+		state.reset()
 	end
 
-	local pr_id = tostring(pr.id or "")
-	state.commits = "loading"
-	footer.notify("loading", string.format("Loading commits for #%s...", pr_id))
-	track(provider.fetch_commits(pr, opts, function(commits, err)
-		if err then
-			state.commits = err
-			footer.notify("error", string.format("Failed to load commits for #%s", pr_id))
-			done()
-			return
-		end
+	if should_fetch and type(provider.fetch_commits) == "function" then
+		local pr_id = tostring(pr.id or "")
+		state.commits = "loading"
+		footer.notify("loading", string.format("Loading commits for #%s...", pr_id))
+		track(provider.fetch_commits(pr, opts, function(commits, err)
+			if err then
+				state.commits = err
+				footer.notify("error", string.format("Failed to load commits for #%s", pr_id))
+				refresh()
+				return
+			end
 
-		state.commits = commits or {}
-		footer.notify("success", string.format("Commits loaded for #%s", pr_id), 1200)
+			state.commits = commits or {}
+			footer.notify("success", string.format("Commits loaded for #%s", pr_id), 1200)
 
-		-- Fetch build statuses for the first N commits
-		if type(provider.fetch_commit_status) == "function" and type(state.commits) == "table" then
-			local count = math.min(MAX_STATUS_COMMITS, #state.commits)
-			for i = 1, count do
-				local commit = state.commits[i]
-				local hash = tostring(commit.hash or "")
-				if hash ~= "" then
-					state.status_by_hash[hash] = "loading"
-					track(provider.fetch_commit_status(pr, commit, opts, function(status, url, status_err)
-						if status_err then
-							state.status_by_hash[hash] = "unknown"
-						else
-							state.status_by_hash[hash] = status or "unknown"
-							state.url_by_hash[hash] = url
-						end
-						done()
-					end))
+			-- Fetch build statuses for the first N commits
+			if type(provider.fetch_commit_status) == "function" and type(state.commits) == "table" then
+				local count = math.min(MAX_STATUS_COMMITS, #state.commits)
+				for i = 1, count do
+					local commit = state.commits[i]
+					local hash = tostring(commit.hash or "")
+					if hash ~= "" then
+						state.status_by_hash[hash] = "loading"
+						track(provider.fetch_commit_status(pr, commit, opts, function(status, url, status_err)
+							if status_err then
+								state.status_by_hash[hash] = "unknown"
+							else
+								state.status_by_hash[hash] = status or "unknown"
+								state.url_by_hash[hash] = url
+							end
+							refresh()
+						end))
+					end
 				end
 			end
-		end
 
-		done()
-	end))
+			refresh()
+		end))
+	end
 end
 
 ---@param pr PullRequest

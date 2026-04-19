@@ -4,6 +4,7 @@ local M = {}
 local utils = require("atlas.ui.shared.utils")
 local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
+local footer = require("atlas.ui.components.footer")
 local threads = require("atlas.ui.components.threadsv2")
 local state = require("atlas.pulls.ui.panel.repo.tabs.tags.state")
 local repo_panel_state = require("atlas.pulls.ui.panel.repo.state")
@@ -97,34 +98,37 @@ end
 
 ---@param _pr PullRequest|nil
 ---@param repo PullsRepo|nil
----@param done fun()
+---@param refresh fun()
 ---@param opts PullsFetchOpts|nil
-function M.on_select(_pr, repo, done, opts)
+function M.on_select(_pr, repo, refresh, opts)
 	opts = opts or {}
 	local detail = require("atlas.pulls.ui.panel.repo.state").current_repo_details
 	if detail == nil or repo == nil then
 		state.reset()
-		done()
+		refresh()
 		return
 	end
 
 	local prev_name = state.repo and state.repo.full_name or ""
 	local next_name = tostring(detail.full_name or "")
+	local repo_label = next_name ~= "" and next_name or tostring(repo.name or repo.id or "")
 	local should_fetch = opts.force_refresh == true or state.tags == nil or prev_name ~= next_name
 	state.repo = detail
 	if not should_fetch then
-		done()
+		refresh()
 		return
 	end
 
 	stop_request()
 	state.tags = "loading"
-		done()
+	footer.notify("loading", string.format("Loading tags for %s...", repo_label))
+	refresh()
 
 	local provider = require("atlas.pulls.state").provider
 	if provider == nil or type(provider.fetch_repo_tags) ~= "function" then
 		state.tags = { entries = {} }
-		done()
+		footer.notify("error", "Tag listing is not supported by this provider")
+		refresh()
 		return
 	end
 
@@ -135,8 +139,14 @@ function M.on_select(_pr, repo, done, opts)
 			return
 		end
 		state.repo = active_detail
-		state.tags = err == nil and (tags or { entries = {} }) or { entries = {} }
-		done()
+		if err then
+			state.tags = { entries = {} }
+			footer.notify("error", string.format("Failed to load tags for %s", repo_label))
+		else
+			state.tags = tags or { entries = {} }
+			footer.notify("success", string.format("Tags loaded for %s", repo_label), 1200)
+		end
+		refresh()
 	end)
 end
 

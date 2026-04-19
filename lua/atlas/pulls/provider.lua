@@ -54,14 +54,14 @@
 ---@field header_rows (fun(pr: PullRequest): PullsPanelHeaderRow[])|nil
 ---@field chips (fun(pr: PullRequest): PullsPanelChip[])|nil
 ---@field tabs (fun(): PullsPanelTab[])|nil
----@field fetches (fun(pr: PullRequest, done: fun()))|nil
+---@field fetches (fun(pr: PullRequest, refresh: fun()))|nil
 ---@field is_loading (fun(pr: PullRequest): boolean)|nil
 
 ---@class PullsProviderRepoPanel
 ---@field header_rows (fun(repo: PullsRepo): PullsPanelHeaderRow[])|nil
 ---@field chips (fun(repo: PullsRepo): PullsPanelChip[])|nil
 ---@field tabs (fun(): PullsRepoPanelTab[])|nil
----@field fetches (fun(repo: PullsRepo, done: fun()))|nil
+---@field fetches (fun(repo: PullsRepo, refresh: fun()))|nil
 ---@field is_loading (fun(repo: PullsRepo): boolean)|nil
 
 --------------------------------------------------------------------------------
@@ -82,13 +82,11 @@
 
 ---@class PullsPanelTabModule
 ---@field render fun(pr: PullRequest, width: integer): string[], table[], table<integer, table>|nil
----@field on_select (fun(pr: PullRequest, repo: PullsRepo|nil, done: fun(), opts: { force_refresh: boolean|nil }|nil))|nil
----@field activate (fun())|nil
----@field deactivate (fun())|nil
+---@field on_select (fun(pr: PullRequest, repo: PullsRepo|nil, refresh: fun(), opts: { force_refresh: boolean|nil }|nil))|nil
+---@field activate (fun(buf: integer|nil, refresh: fun|nil))|nil
+---@field deactivate (fun(buf: integer|nil))|nil
 ---@field is_selectable_line (fun(lnum: integer, entry: table): boolean)|nil
 ---@field on_enter (fun(pr: PullRequest, entry: table): boolean|nil)|nil
----@field setup_keymaps (fun(buf: integer, cursor_entry: fun(): table|nil, done: fun()))|nil
----@field teardown_keymaps (fun(buf: integer))|nil
 
 ---@class PullsPanelTab
 ---@field key string
@@ -102,13 +100,11 @@
 
 ---@class PullsRepoPanelTabModule
 ---@field render fun(repo: PullsRepo, width: integer): string[], table[], table<integer, table>|nil
----@field on_select (fun(pr: PullRequest|nil, repo: PullsRepo, done: fun(), opts: { force_refresh: boolean|nil }|nil))|nil
----@field activate (fun())|nil
----@field deactivate (fun())|nil
+---@field on_select (fun(pr: PullRequest|nil, repo: PullsRepo, refresh: fun(), opts: { force_refresh: boolean|nil }|nil))|nil
+---@field activate (fun(buf: integer|nil, refresh: fun|nil))|nil
+---@field deactivate (fun(buf: integer|nil))|nil
 ---@field is_selectable_line (fun(lnum: integer, entry: table): boolean)|nil
 ---@field on_enter (fun(repo: PullsRepo, entry: table): boolean|nil)|nil
----@field setup_keymaps (fun(buf: integer, cursor_entry: fun(): table|nil, done: fun()))|nil
----@field teardown_keymaps (fun(buf: integer))|nil
 
 ---@class PullsRepoPanelTab
 ---@field key string

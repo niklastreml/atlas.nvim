@@ -110,8 +110,8 @@ local function track_panel(handle)
 end
 
 ---@param pr PullRequest
----@param done fun()
-function M.fetches(pr, done)
+---@param refresh fun()
+function M.fetches(pr, refresh)
 	cancel_panel_fetches()
 
 	local overview_state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
@@ -121,7 +121,7 @@ function M.fetches(pr, done)
 	if provider and type(provider.fetch_builds) == "function" then
 		track_panel(provider.fetch_builds(pr, function(builds, err)
 			overview_state.builds = err and err or (builds or {})
-			done()
+			refresh()
 		end))
 	end
 end

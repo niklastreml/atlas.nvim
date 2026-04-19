@@ -112,16 +112,7 @@ local function stop_request()
 	detail_request = nil
 end
 
-local function cursor_entry()
-	local win = layout.win_id("detail")
-	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return nil
-	end
-	local lnum = vim.api.nvim_win_get_cursor(win)[1]
-	return (panel_state.line_map or {})[lnum]
-end
-
-local function done()
+local function refresh_panel()
 	update_spinner()
 	if M.is_open() then
 		M.render()
@@ -145,19 +136,13 @@ local function switch_tab_keymaps(old_key, new_key)
 	if old_key then
 		local old_mod = get_tab_module(old_key)
 		if old_mod and type(old_mod.deactivate) == "function" and old_key ~= new_key then
-			old_mod.deactivate()
-		end
-		if old_mod and type(old_mod.teardown_keymaps) == "function" then
-			old_mod.teardown_keymaps(buf)
+			old_mod.deactivate(buf)
 		end
 	end
 	if new_key then
 		local new_mod = get_tab_module(new_key)
 		if new_mod and type(new_mod.activate) == "function" and old_key ~= new_key then
-			new_mod.activate()
-		end
-		if new_mod and type(new_mod.setup_keymaps) == "function" then
-			new_mod.setup_keymaps(buf, cursor_entry, done)
+			new_mod.activate(buf, refresh_panel)
 		end
 	end
 end
@@ -167,7 +152,7 @@ end
 local function notify_tab(repo, opts)
 	local tab_mod = get_tab_module(panel_state.current_tab)
 	if tab_mod and type(tab_mod.on_select) == "function" then
-		tab_mod.on_select(nil, repo, done, opts)
+		tab_mod.on_select(nil, repo, refresh_panel, opts)
 	end
 end
 

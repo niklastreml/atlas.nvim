@@ -4,6 +4,7 @@ local M = {}
 local utils = require("atlas.ui.shared.utils")
 local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
+local footer = require("atlas.ui.components.footer")
 local table_view = require("atlas.ui.components.table_tree")
 local state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
 
@@ -35,31 +36,57 @@ end
 
 ---@param pr PullRequest
 ---@param repo PullsRepo|nil
----@param done fun()
+---@param refresh fun()
 ---@param opts { force_refresh: boolean|nil }|nil
-function M.on_select(pr, repo, done, opts)
-	cancel_all()
-	state.reviewers = nil
-	state.diffstat = nil
+function M.on_select(pr, repo, refresh, opts)
+	opts = opts or {}
 
 	local provider = get_provider()
 	if not provider then
 		return
 	end
 
-	if type(provider.fetch_reviewers) == "function" then
+	local force_refresh = opts.force_refresh == true
+	local pr_id = tostring(pr.id or "")
+
+	local can_fetch_reviewers = type(provider.fetch_reviewers) == "function"
+	local can_fetch_diffstat = type(provider.fetch_diffstat) == "function"
+	local should_fetch_reviewers = can_fetch_reviewers
+		and (force_refresh or state.reviewers == nil or state.reviewers == "loading")
+	local should_fetch_diffstat = can_fetch_diffstat
+		and (force_refresh or state.diffstat == nil or state.diffstat == "loading")
+
+	if should_fetch_reviewers or should_fetch_diffstat then
+		cancel_all()
+	end
+
+	if should_fetch_reviewers then
 		state.reviewers = "loading"
+		footer.notify("loading", string.format("Loading reviewers for #%s...", pr_id))
 		track(provider.fetch_reviewers(pr, opts, function(reviewers, err)
-			state.reviewers = err and err or (reviewers or {})
-			done()
+			if err then
+				state.reviewers = err
+				footer.notify("error", string.format("Failed to load reviewers for #%s", pr_id))
+			else
+				state.reviewers = reviewers or {}
+				footer.notify("success", string.format("Reviewers loaded for #%s", pr_id), 1200)
+			end
+			refresh()
 		end))
 	end
 
-	if type(provider.fetch_diffstat) == "function" then
+	if should_fetch_diffstat then
 		state.diffstat = "loading"
+		footer.notify("loading", string.format("Loading changes summary for #%s...", pr_id))
 		track(provider.fetch_diffstat(pr, opts, function(entries, err)
-			state.diffstat = err and err or (entries or {})
-			done()
+			if err then
+				state.diffstat = err
+				footer.notify("error", string.format("Failed to load changes summary for #%s", pr_id))
+			else
+				state.diffstat = entries or {}
+				footer.notify("success", string.format("Changes summary loaded for #%s", pr_id), 1200)
+			end
+			refresh()
 		end))
 	end
 end

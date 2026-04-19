@@ -3,6 +3,7 @@ local M = {}
 local help = require("atlas.ui.popups.help")
 local resolver = require("atlas.core.keymaps")
 local utils = require("atlas.ui.shared.utils")
+local layout = require("atlas.ui.layout")
 
 ---@param action_id AtlasKeymapActionId|string
 ---@param map_item table
@@ -29,10 +30,19 @@ local function remove_item(action_id)
 end
 
 ---@param buf integer
----@param cursor_entry fun(): table|nil
----@param done fun()
-function M.setup(buf, cursor_entry, done)
+---@param refresh fun()
+function M.setup(buf, refresh)
 	local tab = require("atlas.pulls.ui.panel.pr.tabs.files")
+	local panel_state = require("atlas.pulls.ui.panel.pr.state")
+
+	local function cursor_entry()
+		local win = layout.win_id("detail")
+		if win == nil or not vim.api.nvim_win_is_valid(win) then
+			return nil
+		end
+		local lnum = vim.api.nvim_win_get_cursor(win)[1]
+		return (panel_state.line_map or {})[lnum]
+	end
 
 	local items = {}
 	utils.insert_if(items, item("pulls.pr_files_toggle_fold", {
@@ -42,7 +52,7 @@ function M.setup(buf, cursor_entry, done)
 			local entry = cursor_entry()
 			if entry then
 				tab.toggle_hunk(entry)
-				done()
+				refresh()
 			end
 		end,
 	}))

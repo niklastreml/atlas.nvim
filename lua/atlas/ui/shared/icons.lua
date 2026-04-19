@@ -75,7 +75,17 @@ end
 ---@param name string
 ---@return string
 function M.pulls(name)
-	return ICONS.pulls[name] or ICONS.general[name] or ICONS.fallback
+	local pull_icon = ICONS.pulls[name]
+	if type(pull_icon) == "string" then
+		return pull_icon
+	end
+
+	local general_icon = ICONS.general[name]
+	if type(general_icon) == "string" then
+		return general_icon
+	end
+
+	return ICONS.fallback
 end
 
 ---@param status string
@@ -106,7 +116,17 @@ end
 ---@param name string
 ---@return string
 function M.issues(name)
-	return ICONS.issues[name] or ICONS.general[name] or ICONS.fallback
+	local issue_icon = ICONS.issues[name]
+	if type(issue_icon) == "string" then
+		return issue_icon
+	end
+
+	local general_icon = ICONS.general[name]
+	if type(general_icon) == "string" then
+		return general_icon
+	end
+
+	return ICONS.fallback
 end
 
 ---@param provider_id AtlasIssuesProviderId
