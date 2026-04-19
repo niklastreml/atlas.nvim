@@ -6,8 +6,8 @@ local help = require("atlas.ui.popups.help")
 ---@param cursor_entry fun(): table|nil
 ---@param done fun()
 function M.setup(buf, cursor_entry, done)
-	local tab = require("atlas.pulls.ui.panel.tabs.comments")
-	local panel_state = require("atlas.pulls.ui.panel.state")
+	local tab = require("atlas.pulls.ui.panel.pr.tabs.comments")
+	local panel_state = require("atlas.pulls.ui.panel.pr.state")
 
 	local items = {
 		{

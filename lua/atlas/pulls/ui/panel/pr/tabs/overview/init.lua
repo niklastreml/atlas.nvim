@@ -5,7 +5,7 @@ local utils = require("atlas.ui.shared.utils")
 local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
 local table_view = require("atlas.ui.components.table_tree")
-local state = require("atlas.pulls.ui.panel.tabs.overview.state")
+local state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
 
 local PADDING_X = 1
 local PADDING = string.rep(" ", PADDING_X)

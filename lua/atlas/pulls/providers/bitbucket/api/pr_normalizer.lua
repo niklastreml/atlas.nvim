@@ -235,6 +235,8 @@ function M.pull_request_groups(prs)
 				repo = {
 					id = rid,
 					name = pr.repo_full_name or rid,
+					owner = pr.workspace,
+					repo_name = pr.repo,
 				},
 				prs = {},
 			}

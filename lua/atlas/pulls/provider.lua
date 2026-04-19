@@ -20,6 +20,7 @@
 ---@field fetch_user fun(on_done: fun(user: PullsUser|nil, err: string|nil))
 ---@field fetch_pullrequests fun(view: AtlasPullsViewConfig, opts: PullsFetchOpts, on_done: fun(groups: PullsGroup[], err: string[]|nil)): { cancel: fun() }|nil
 ---@field fetch_pullrequest fun(pr: PullRequest, opts: PullsFetchOpts, on_done: fun(pr: PullRequest|nil, err: string|nil)): { cancel: fun() }|nil
+---@field fetch_repo_details (fun(repo: PullsRepo, opts: PullsFetchOpts, on_done: fun(repo: PullsRepoDetails|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_reviewers (fun(pr: PullRequest, opts: { force_refresh: boolean|nil }|nil, on_done: fun(reviewers: PullsReviewer[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_builds (fun(pr: PullRequest, on_done: fun(builds: PullsBuild[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_diffstat (fun(pr: PullRequest, opts: { force_refresh: boolean|nil }|nil, on_done: fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
@@ -39,6 +40,7 @@
 ---@field search fun()|nil
 ---
 ---@field panel PullsProviderPanel|nil
+---@field repo_panel PullsProviderRepoPanel|nil
 ---
 ---@field health fun()|nil
 
@@ -52,6 +54,13 @@
 ---@field tabs (fun(): PullsPanelTab[])|nil
 ---@field fetches (fun(pr: PullRequest, done: fun()))|nil
 ---@field is_loading (fun(pr: PullRequest): boolean)|nil
+
+---@class PullsProviderRepoPanel
+---@field header_rows (fun(repo: PullsRepo): PullsPanelHeaderRow[])|nil
+---@field chips (fun(repo: PullsRepo): PullsPanelChip[])|nil
+---@field tabs (fun(): PullsRepoPanelTab[])|nil
+---@field fetches (fun(repo: PullsRepo, done: fun()))|nil
+---@field is_loading (fun(repo: PullsRepo): boolean)|nil
 
 --------------------------------------------------------------------------------
 -- Panel types
@@ -82,3 +91,21 @@
 ---@field label string
 ---@field icon string|nil
 ---@field mod PullsPanelTabModule
+
+--------------------------------------------------------------------------------
+-- Repo panel types
+--------------------------------------------------------------------------------
+
+---@class PullsRepoPanelTabModule
+---@field render fun(repo: PullsRepo, width: integer): string[], table[], table<integer, table>|nil
+---@field on_select (fun(pr: PullRequest|nil, repo: PullsRepo, done: fun(), opts: { force_refresh: boolean|nil }|nil))|nil
+---@field is_selectable_line (fun(lnum: integer, entry: table): boolean)|nil
+---@field on_enter (fun(repo: PullsRepo, entry: table): boolean|nil)|nil
+---@field setup_keymaps (fun(buf: integer, cursor_entry: fun(): table|nil, done: fun()))|nil
+---@field teardown_keymaps (fun(buf: integer))|nil
+
+---@class PullsRepoPanelTab
+---@field key string
+---@field label string
+---@field icon string|nil
+---@field mod PullsRepoPanelTabModule

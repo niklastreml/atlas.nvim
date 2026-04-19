@@ -62,6 +62,15 @@ function M.fetch_pullrequest(pr, opts, on_done)
 	}, on_done)
 end
 
+---@param repo PullsRepo
+---@param opts PullsFetchOpts
+---@param on_done fun(repo: PullsRepoDetails|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_repo_details(repo, opts, on_done)
+	local repositories_api = require("atlas.pulls.providers.bitbucket.api.repositories")
+	return repositories_api.fetch_detail(repo, opts, on_done)
+end
+
 ---@return AtlasBitbucketViewConfig[]
 function M.views()
 	local cfg = bb_config()

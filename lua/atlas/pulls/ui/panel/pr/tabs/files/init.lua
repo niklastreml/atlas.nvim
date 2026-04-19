@@ -4,7 +4,7 @@ local M = {}
 local utils = require("atlas.ui.shared.utils")
 local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
-local state = require("atlas.pulls.ui.panel.tabs.files.state")
+local state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
 
 local PADDING_X = 1
 
@@ -186,7 +186,7 @@ end
 ---@param direction "next"|"prev"
 function M.jump_hunk(direction)
 	local layout = require("atlas.ui.layout")
-	local panel_state = require("atlas.pulls.ui.panel.state")
+	local panel_state = require("atlas.pulls.ui.panel.pr.state")
 	local win = layout.win_id("detail")
 	local buf = layout.buf_id("detail")
 	if not win or not vim.api.nvim_win_is_valid(win) then
@@ -211,7 +211,7 @@ function M.jump_hunk(direction)
 	end
 end
 
-local keymaps = require("atlas.pulls.ui.panel.tabs.files.keymaps")
+local keymaps = require("atlas.pulls.ui.panel.pr.tabs.files.keymaps")
 M.setup_keymaps = keymaps.setup
 M.teardown_keymaps = keymaps.teardown
 

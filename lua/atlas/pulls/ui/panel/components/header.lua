@@ -140,4 +140,119 @@ function M.render(pr, width, extra_rows)
 	return lines, spans
 end
 
+---@param repo PullsRepo
+---@return string
+local function repo_full_name(repo)
+	return tostring(repo.full_name or repo.name or repo.id or "Repository")
+end
+
+---@param repo PullsRepo
+---@return string
+local function repo_workspace(repo)
+	local workspace = tostring(repo.workspace or "")
+	if workspace ~= "" then
+		return workspace
+	end
+	local full_name = repo_full_name(repo)
+	return tostring(full_name:match("^([^/]+)/") or full_name)
+end
+
+---@param repo PullsRepo
+---@param width integer
+---@param extra_rows PullsPanelHeaderRow[]|nil
+---@return string[], table[]
+function M.render_repo(repo, width, extra_rows)
+	local full_name = repo_full_name(repo)
+	local workspace = repo_workspace(repo)
+	local created_text = utils.relative_time_text(tostring(repo.created_on or ((repo._raw or {}).created_on) or ""))
+
+	local title = string.format(" %s", full_name)
+	local author_icon = icons.general("user")
+	local by_prefix = string.format(" %s by @", author_icon)
+	local by_sep = " - "
+	local byline = by_prefix .. workspace .. by_sep .. created_text
+
+	local lines = {
+		title,
+		byline,
+		"",
+	}
+
+	local rows = vim.deepcopy(extra_rows or {})
+
+	if #rows > 0 then
+		local tbl_lines, _, tbl_spans = table_tree.render({
+			width = width,
+			margin = 1,
+			show_header = false,
+			column_gap = 1,
+			fill = true,
+			columns = {
+				{ key = "k1", name = "", can_grow = false },
+				{ key = "v1", name = "", can_grow = true },
+				{ key = "k2", name = "", can_grow = false },
+				{ key = "v2", name = "", can_grow = true, grow_last = true },
+			},
+			rows = rows,
+			cell_hl = function(row, col)
+				if col.key == "k1" or col.key == "k2" then
+					local label = col.key == "k1" and row.k1 or row.k2
+					return { { start_col = 0, end_col = #label, hl_group = "AtlasTextMuted" } }
+				end
+				if col.key == "v1" then
+					return { { start_col = 0, end_col = #row.v1, hl_group = row.v1_hl } }
+				end
+				if col.key == "v2" then
+					return { { start_col = 0, end_col = #row.v2, hl_group = row.v2_hl } }
+				end
+				return nil
+			end,
+		})
+
+		for _, l in ipairs(tbl_lines) do
+			table.insert(lines, l)
+		end
+		table.insert(lines, "")
+
+		local spans = {
+			{ line = 0, line_hl_group = "AtlasPanelHeaderBg" },
+			{ line = 1, line_hl_group = "AtlasPanelHeaderBg" },
+		}
+
+		add_span(spans, lines, 0, 1, 1 + #full_name, highlights.dynamic_for(full_name) or "AtlasTextMuted")
+
+		local owner_start = #by_prefix - 1
+		local owner_end = owner_start + #("@" .. workspace)
+		add_span(spans, lines, 1, owner_start, owner_end, helper.author_hl(workspace))
+
+		local ts_start = owner_end + #by_sep
+		local ts_end = ts_start + #created_text
+		add_span(spans, lines, 1, ts_start, ts_end, "AtlasTextMuted")
+
+		for _, span in ipairs(tbl_spans) do
+			table.insert(spans, {
+				line = span.line + 3,
+				start_col = span.start_col,
+				end_col = span.end_col,
+				hl_group = span.hl_group,
+			})
+		end
+
+		return lines, spans
+	end
+
+	local spans = {
+		{ line = 0, line_hl_group = "AtlasPanelHeaderBg" },
+		{ line = 1, line_hl_group = "AtlasPanelHeaderBg" },
+	}
+	add_span(spans, lines, 0, 1, 1 + #full_name, highlights.dynamic_for(full_name) or "AtlasTextMuted")
+	local owner_start = #by_prefix - 1
+	local owner_end = owner_start + #("@" .. workspace)
+	add_span(spans, lines, 1, owner_start, owner_end, helper.author_hl(workspace))
+	local ts_start = owner_end + #by_sep
+	local ts_end = ts_start + #created_text
+	add_span(spans, lines, 1, ts_start, ts_end, "AtlasTextMuted")
+	return lines, spans
+end
+
 return M

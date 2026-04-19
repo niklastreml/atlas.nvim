@@ -8,7 +8,7 @@ local footer = require("atlas.ui.components.footer")
 local state = require("atlas.pulls.providers.bitbucket.ui.panel.tabs.comments.state")
 local comments_api = require("atlas.pulls.providers.bitbucket.api.comments")
 local author_completion = require("atlas.pulls.providers.bitbucket.completion.author")
-local panel_state = require("atlas.pulls.ui.panel.state")
+local panel_state = require("atlas.pulls.ui.panel.pr.state")
 
 ---@type { cancel: fun() }[]
 local in_flight = {}

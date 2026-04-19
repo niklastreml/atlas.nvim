@@ -1,7 +1,7 @@
 local M = {}
 
 local layout = require("atlas.ui.layout")
-local panel_state = require("atlas.pulls.ui.panel.state")
+local panel_state = require("atlas.pulls.ui.panel.pr.state")
 
 ---@return integer|nil win
 ---@return integer|nil buf

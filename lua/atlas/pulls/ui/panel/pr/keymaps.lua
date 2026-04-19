@@ -3,7 +3,7 @@ local M = {}
 local help = require("atlas.ui.popups.help")
 local resolver = require("atlas.core.keymaps")
 local utils = require("atlas.ui.shared.utils")
-local panel_state = require("atlas.pulls.ui.panel.state")
+local panel_state = require("atlas.pulls.ui.panel.pr.state")
 local actions = require("atlas.pulls.actions")
 
 ---@return PullsPanelTabModule|nil
@@ -46,7 +46,7 @@ end
 ---@param buf integer
 function M.register(buf)
 	local items = {}
-	local nav = require("atlas.pulls.ui.panel.navigation")
+	local nav = require("atlas.pulls.ui.panel.pr.navigation")
 
 	table.insert(items, {
 		key = "j",

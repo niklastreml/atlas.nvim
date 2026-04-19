@@ -6,7 +6,7 @@ local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local footer = require("atlas.ui.components.footer")
-local state = require("atlas.pulls.ui.panel.tabs.commits.state")
+local state = require("atlas.pulls.ui.panel.pr.tabs.commits.state")
 
 local PADDING_X = 1
 local MAX_STATUS_COMMITS = 5

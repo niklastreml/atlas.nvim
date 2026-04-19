@@ -32,7 +32,7 @@ end
 ---@param cursor_entry fun(): table|nil
 ---@param done fun()
 function M.setup(buf, cursor_entry, done)
-	local tab = require("atlas.pulls.ui.panel.tabs.files")
+	local tab = require("atlas.pulls.ui.panel.pr.tabs.files")
 
 	local items = {}
 	utils.insert_if(items, item("pulls.pr_files_toggle_fold", {

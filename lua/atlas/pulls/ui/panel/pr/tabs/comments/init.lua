@@ -9,7 +9,7 @@ local threads = require("atlas.ui.components.threadsv2")
 local helper = require("atlas.pulls.ui.main.helper")
 local md_editor = require("atlas.ui.popups.markdown_editor")
 local footer = require("atlas.ui.components.footer")
-local state = require("atlas.pulls.ui.panel.tabs.comments.state")
+local state = require("atlas.pulls.ui.panel.pr.tabs.comments.state")
 
 local PADDING_X = 1
 
@@ -371,7 +371,7 @@ function M.is_selectable_line(_lnum, entry)
 	return k == "header" or k == "content" or k == "thread_header" or k == "thread_content"
 end
 
-local keymaps = require("atlas.pulls.ui.panel.tabs.comments.keymaps")
+local keymaps = require("atlas.pulls.ui.panel.pr.tabs.comments.keymaps")
 M.setup_keymaps = keymaps.setup
 M.teardown_keymaps = keymaps.teardown
 

@@ -342,6 +342,42 @@ function M.fetch_pullrequest(pr, opts, on_done)
 	}
 end
 
+---@param repo PullsRepo
+---@param opts PullsFetchOpts
+---@param on_done fun(repo: PullsRepoDetails|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_repo_details(repo, opts, on_done)
+	local cancelled = false
+	vim.defer_fn(function()
+		if cancelled then
+			return
+		end
+		local full_name = tostring(repo.id or repo.name or "")
+		local owner = tostring(repo.owner or "mock")
+		local repo_name = tostring(repo.repo_name or repo.name or "repo")
+		local details = {
+			id = tostring(repo.id or repo.name or "mock/repo"),
+			name = tostring(repo.name or repo.id or "Mock Repository"),
+			full_name = full_name ~= "" and full_name or tostring(repo.name or repo.id or "Mock Repository"),
+			owner = owner or "mock",
+			repo_name = repo_name or tostring(repo.name or "repo"),
+			description = "Mock repository used for local panel development.",
+			size = 1024 * 1024 * 12,
+			default_branch = "main",
+			is_private = false,
+			created_on = os.date("!%Y-%m-%dT%H:%M:%S+00:00", os.time() - (60 * 60 * 24 * 30)),
+			readme = "# Mock Repository\n\nThis is a mock README loaded through `fetch_repo_details`.\n",
+			_raw = { mock = true },
+		}
+		on_done(details, nil)
+	end, 150)
+	return {
+		cancel = function()
+			cancelled = true
+		end,
+	}
+end
+
 ---@param pr PullRequest
 ---@param on_done fun(reviewers: PullsReviewer[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil

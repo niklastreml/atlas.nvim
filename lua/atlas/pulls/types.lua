@@ -62,6 +62,20 @@
 ---@class PullsRepo
 ---@field id string
 ---@field name string
+---@field owner string|nil
+---@field repo_name string|nil
+
+---@class PullsRepoDetails : PullsRepo
+---@field full_name string|nil
+---@field owner string|nil
+---@field repo_name string|nil
+---@field description string|nil
+---@field size number|nil
+---@field default_branch string|nil
+---@field is_private boolean|nil
+---@field created_on string|nil
+---@field readme string|nil
+---@field _raw table|nil
 
 --------------------------------------------------------------------------------
 -- Group (PRs grouped by repository)
@@ -161,4 +175,3 @@
 ---@class PullsDiffLine
 ---@field kind "add"|"remove"|"context"|"meta"
 ---@field text string
-

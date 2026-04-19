@@ -237,14 +237,14 @@ local ACTIONS = {
 									layout = "compact",
 									repos = {
 										{
-											workspace = repo.workspace,
-											repo = repo.slug,
+											workspace = tostring(repo.owner or ""),
+											repo = tostring(repo.repo_name or ""),
 										},
 									},
 								}
 
 								local controller = require("atlas.pulls.ui.main.controller")
-								footer.notify("success", string.format("Search view -> %s", repo.full_name))
+								footer.notify("success", string.format("Search view -> %s", tostring(repo.full_name or repo.name)))
 								controller.switch_view(search_view)
 								done({ changed_pr = false, message = "Search view switched" }, nil)
 							end)

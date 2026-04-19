@@ -2,13 +2,12 @@ local M = {}
 
 local layout = require("atlas.ui.layout")
 local utils = require("atlas.ui.shared.utils")
-local panel_state = require("atlas.pulls.ui.panel.state")
-local header = require("atlas.pulls.ui.panel.components.header")
-local chips = require("atlas.pulls.ui.panel.components.chips")
+local panel_state = require("atlas.pulls.ui.panel.repo.state")
+local panel_header = require("atlas.pulls.ui.panel.components.header")
+local panel_chips = require("atlas.pulls.ui.panel.components.chips")
 local panel_tabs = require("atlas.pulls.ui.panel.components.tabs")
 
-local ns = vim.api.nvim_create_namespace("atlas.panel")
-
+local ns = vim.api.nvim_create_namespace("atlas.repo_panel")
 local PADDING_X = 1
 
 ---@param buf integer
@@ -30,7 +29,7 @@ local function apply_spans(buf, spans)
 	end
 end
 
----@param tab_items PullsPanelTab[]
+---@param tab_items PullsRepoPanelTab[]
 ---@param get_tab_module fun(key: string): table|nil
 function M.render(tab_items, get_tab_module)
 	local buf = layout.buf_id("detail")
@@ -42,34 +41,31 @@ function M.render(tab_items, get_tab_module)
 		return
 	end
 
-	local pr = panel_state.current_pr
+	local repo = panel_state.current_repo
+	local repo_details = panel_state.current_repo_details
 	local width = vim.api.nvim_win_get_width(win)
-
 	local lines = {}
 	local spans = {}
 
-	if pr == nil then
+	if repo == nil then
 		lines = { "", "  Nothing selected..." }
 		panel_state.line_map = {}
 	else
-		local state = require("atlas.pulls.state")
-		local provider = state.provider
+		local header_lines, header_spans = panel_header.render_repo(repo_details or repo, width, nil)
+		utils.append_block(lines, spans, { lines = header_lines, highlights = header_spans })
 
-		local panel = provider and provider.panel or nil
-		local extra_rows = panel and panel.header_rows and panel.header_rows(pr) or nil
-		local extra_chips = panel and panel.chips and panel.chips(pr) or nil
-
-		-- Header
-		local h_lines, h_spans = header.render(pr, width, extra_rows)
-		utils.append_block(lines, spans, { lines = h_lines, highlights = h_spans })
-
-		-- Chips
-		local chip_line, chip_spans = chips.render(pr, { extra_chips = extra_chips })
+		local chip_line, chip_spans
+		if panel_state.loading_details and repo_details == nil then
+			chip_line, chip_spans = panel_chips.render_loading("Loading repo details...", { padding_x = PADDING_X })
+		elseif repo_details ~= nil then
+			chip_line, chip_spans = panel_chips.render_repo(repo_details, { padding_x = PADDING_X })
+		else
+			chip_line, chip_spans = "", {}
+		end
 		table.insert(lines, chip_line)
-		local chip_base = #lines - 1
 		for _, span in ipairs(chip_spans) do
 			table.insert(spans, {
-				line = chip_base,
+				line = #lines - 1,
 				start_col = span.start_col,
 				end_col = span.end_col,
 				hl_group = span.hl_group,
@@ -77,26 +73,21 @@ function M.render(tab_items, get_tab_module)
 		end
 		table.insert(lines, "")
 
-		-- Tab bar
 		local tab_lines, tab_spans = panel_tabs.render(tab_items, panel_state.current_tab, { width = width, padding_x = PADDING_X })
 		utils.append_block(lines, spans, { lines = tab_lines, highlights = tab_spans })
 		table.insert(lines, "")
 
-		-- Tab content
 		local tab_mod = get_tab_module(panel_state.current_tab)
 		local content_offset = #lines
 		if tab_mod and type(tab_mod.render) == "function" then
-			local tab_lines_c, tab_spans_c, tab_line_map = tab_mod.render(pr, width)
+			local tab_lines_c, tab_spans_c, tab_line_map = tab_mod.render(repo, width)
 			utils.append_block(lines, spans, { lines = tab_lines_c, highlights = tab_spans_c })
-
-			-- Offset line_map keys to match buffer line numbers (1-indexed)
 			local adjusted = {}
 			for lnum, entry in pairs(tab_line_map or {}) do
 				adjusted[content_offset + lnum] = entry
 			end
 			panel_state.line_map = adjusted
 		else
-			table.insert(lines, "  Unknown tab: " .. tostring(panel_state.current_tab))
 			panel_state.line_map = {}
 		end
 	end

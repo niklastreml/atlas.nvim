@@ -7,7 +7,7 @@ local highlights = require("atlas.ui.shared.highlights")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local footer = require("atlas.ui.components.footer")
-local state = require("atlas.pulls.ui.panel.tabs.activity.state")
+local state = require("atlas.pulls.ui.panel.pr.tabs.activity.state")
 
 local PADDING_X = 1
 
