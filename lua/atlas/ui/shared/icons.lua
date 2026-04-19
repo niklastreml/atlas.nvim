@@ -53,6 +53,21 @@ local ICONS = {
 		providers = {
 			jira = {
 				provider = "󰌃",
+
+				type = {
+					epic = "",
+					story = "󰃀",
+					task = "",
+					bug = "",
+					subtask = "󰩊",
+
+					highest = "",
+					blocker = "",
+					high = "",
+					medium = "",
+					low = "",
+					lowest = "",
+				},
 			},
 		},
 	},

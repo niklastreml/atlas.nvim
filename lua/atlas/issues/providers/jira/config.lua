@@ -1,6 +1,4 @@
----@class AtlasJiraViewConfig
----@field name string
----@field key string|nil
+---@class AtlasJiraViewConfig : AtlasIssuesViewConfig
 ---@field jql string
 
 ---@class AtlasJiraCustomFieldConfig

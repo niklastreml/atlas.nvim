@@ -14,6 +14,7 @@ local function bootstrap_common()
 
 	require("atlas.ui.popups.help").register_command("Commands", {
 		{ name = "AtlasPulls", desc = "Open pulls domain" },
+		{ name = "AtlasIssues", desc = "Open issues domain" },
 		{ name = "AtlasClearCache", desc = "Clear Atlas cache" },
 		{ name = "AtlasLogs", desc = "Open Atlas logs" },
 	}, { index = 999, buffer = require("atlas.ui.layout").buf_id("main") })
@@ -30,6 +31,18 @@ local function resolve_pulls_provider(provider_id)
 	end
 
 	vim.notify(string.format("[Atlas] Unknown pulls provider: %s", id), vim.log.levels.ERROR)
+	return nil
+end
+
+---@param provider_id AtlasIssuesProviderId|nil
+---@return IssuesProvider|nil
+local function resolve_issues_provider(provider_id)
+	local id = provider_id or "jira"
+	if id == "jira" then
+		return require("atlas.issues.providers.jira")
+	end
+
+	vim.notify(string.format("[Atlas] Unknown issues provider: %s", id), vim.log.levels.ERROR)
 	return nil
 end
 
@@ -59,6 +72,17 @@ function M.open(domain, provider_id)
 		end)
 
 		require("atlas.pulls").init(provider)
+	elseif domain == "issues" then
+		local provider = resolve_issues_provider(provider_id)
+		if provider == nil then
+			return
+		end
+
+		layout.set_render_callback(function()
+			require("atlas.issues").render()
+		end)
+
+		require("atlas.issues").init(provider)
 	end
 end
 

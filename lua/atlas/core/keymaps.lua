@@ -23,8 +23,15 @@ local M = {}
 ---@field pr_files_previous_hunk? AtlasKeymapValue
 
 ---@class AtlasIssuesKeymaps
----@field refresh? AtlasKeymapValue
----@field refresh_view? AtlasKeymapValue
+---@field open_actions? AtlasKeymapValue
+---@field open_in_browser? AtlasKeymapValue
+---@field copy_url? AtlasKeymapValue
+---@field copy_key? AtlasKeymapValue
+---@field show_details? AtlasKeymapValue --TODO: Move to general ?
+---@field search? AtlasKeymapValue
+---@field toggle_issue_children? AtlasKeymapValue
+---@field refresh? AtlasKeymapValue --TODO: Move to general ?
+---@field refresh_view? AtlasKeymapValue --TODO: Move to general ?
 
 ---@class AtlasKeymapsConfig
 ---@field ui? AtlasUIKeymaps
@@ -52,6 +59,13 @@ local M = {}
 ---| "pulls.pr_files_previous_hunk"
 ---| "issues.refresh"
 ---| "issues.refresh_view"
+---| "issues.open_actions"
+---| "issues.open_in_browser"
+---| "issues.copy_url"
+---| "issues.copy_key"
+---| "issues.show_details"
+---| "issues.search"
+---| "issues.toggle_issue_children"
 
 ---@param value AtlasKeymapValue
 ---@return string[]|nil
@@ -170,6 +184,13 @@ function M.validate()
 			"pulls.pr_files_previous_hunk",
 		}, { "j", "k", "gg", "G" }),
 		issues = conflicts_for({
+			"issues.open_actions",
+			"issues.open_in_browser",
+			"issues.copy_url",
+			"issues.copy_key",
+			"issues.show_details",
+			"issues.search",
+			"issues.toggle_issue_children",
 			"issues.refresh",
 			"issues.refresh_view",
 		}, { "j", "k", "gg", "G" }),
