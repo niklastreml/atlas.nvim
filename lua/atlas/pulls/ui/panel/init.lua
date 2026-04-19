@@ -5,12 +5,20 @@ local repo_panel = require("atlas.pulls.ui.panel.repo")
 local panel_state = require("atlas.pulls.ui.panel.state")
 
 ---@return table
+local function inactive_panel()
+	if panel_state.current_panel == "repo" then
+		return pr_panel
+	end
+	return repo_panel
+end
+
+---@return table
 local function active_panel()
 	if panel_state.current_panel == "repo" then
 		return repo_panel
 	end
 	return pr_panel
-	end
+end
 
 function M.is_open()
 	return active_panel().is_open()
@@ -21,10 +29,19 @@ function M.render()
 end
 
 function M.on_select(pr, repo, opts)
-	if panel_state.current_panel == "repo" then
-		return repo_panel.on_select(repo, opts)
+	local target_panel = active_panel()
+	local prev_panel = inactive_panel()
+	if type(prev_panel.deactivate) == "function" then
+		prev_panel.deactivate()
 	end
-	return pr_panel.on_select(pr, repo, opts)
+	if type(target_panel.activate) == "function" then
+		target_panel.activate()
+	end
+
+	if panel_state.current_panel == "repo" then
+		return target_panel.on_select(repo, opts)
+	end
+	return target_panel.on_select(pr, repo, opts)
 end
 
 function M.next_tab()
@@ -36,8 +53,13 @@ function M.prev_tab()
 end
 
 function M.close()
+	local panel = active_panel()
+	if type(panel.deactivate) == "function" then
+		panel.deactivate()
+	end
+	local result = panel.close()
 	panel_state.reset()
-	return active_panel().close()
+	return result
 end
 
 return M

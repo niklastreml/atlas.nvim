@@ -537,4 +537,8 @@ function M.delete_comment(pr, entry, done)
 	end)
 end
 
+function M.deactivate()
+	cancel_all()
+end
+
 return M

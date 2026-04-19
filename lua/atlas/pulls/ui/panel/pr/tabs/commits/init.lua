@@ -249,4 +249,8 @@ function M.on_enter(_pr, entry)
 	end
 end
 
+function M.deactivate()
+	cancel_all()
+end
+
 return M

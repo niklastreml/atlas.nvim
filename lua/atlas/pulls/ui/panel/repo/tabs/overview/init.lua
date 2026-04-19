@@ -73,4 +73,23 @@ function M.render(repo, width)
 	return lines, spans, {}
 end
 
+function M.activate()
+	local layout = require("atlas.ui.layout")
+	local buf = layout.buf_id("detail")
+	if buf ~= nil and vim.api.nvim_buf_is_valid(buf) then
+		vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
+		vim.api.nvim_set_option_value("syntax", "markdown", { buf = buf })
+	end
+end
+
+function M.deactivate()
+	local layout = require("atlas.ui.layout")
+	local buf = layout.buf_id("detail")
+	if buf ~= nil and vim.api.nvim_buf_is_valid(buf) then
+		pcall(vim.treesitter.stop, buf)
+		vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
+		vim.api.nvim_set_option_value("filetype", "", { buf = buf })
+	end
+end
+
 return M

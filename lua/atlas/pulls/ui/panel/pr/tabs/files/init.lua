@@ -211,6 +211,10 @@ function M.jump_hunk(direction)
 	end
 end
 
+function M.deactivate()
+	cancel_all()
+end
+
 local keymaps = require("atlas.pulls.ui.panel.pr.tabs.files.keymaps")
 M.setup_keymaps = keymaps.setup
 M.teardown_keymaps = keymaps.teardown

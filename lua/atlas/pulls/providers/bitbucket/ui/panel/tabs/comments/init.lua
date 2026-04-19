@@ -135,6 +135,10 @@ local keymaps = require("atlas.pulls.providers.bitbucket.ui.panel.tabs.comments.
 M.setup_keymaps = keymaps.setup
 M.teardown_keymaps = keymaps.teardown
 
+function M.deactivate()
+	cancel_all()
+end
+
 ---@param pr PullRequest
 ---@return PullsAuthor[]
 local function collect_completion_authors(pr)

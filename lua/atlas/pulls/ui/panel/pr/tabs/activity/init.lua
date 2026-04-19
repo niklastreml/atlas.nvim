@@ -286,4 +286,8 @@ function M.is_selectable_line(_lnum, entry)
 	return k == "header" or k == "content"
 end
 
+function M.deactivate()
+	cancel_all()
+end
+
 return M

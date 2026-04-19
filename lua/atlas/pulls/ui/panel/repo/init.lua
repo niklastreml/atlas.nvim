@@ -113,6 +113,13 @@ local function done()
 	end
 end
 
+local function activate_current_tab()
+	local tab_mod = get_tab_module(panel_state.current_tab)
+	if tab_mod and type(tab_mod.activate) == "function" then
+		tab_mod.activate()
+	end
+end
+
 ---@param old_key string|nil
 ---@param new_key string|nil
 local function switch_tab_keymaps(old_key, new_key)
@@ -122,12 +129,18 @@ local function switch_tab_keymaps(old_key, new_key)
 	end
 	if old_key then
 		local old_mod = get_tab_module(old_key)
+		if old_mod and type(old_mod.deactivate) == "function" and old_key ~= new_key then
+			old_mod.deactivate()
+		end
 		if old_mod and type(old_mod.teardown_keymaps) == "function" then
 			old_mod.teardown_keymaps(buf)
 		end
 	end
 	if new_key then
 		local new_mod = get_tab_module(new_key)
+		if new_mod and type(new_mod.activate) == "function" and old_key ~= new_key then
+			new_mod.activate()
+		end
 		if new_mod and type(new_mod.setup_keymaps) == "function" then
 			new_mod.setup_keymaps(buf, cursor_entry, done)
 		end
@@ -172,6 +185,8 @@ function M.on_select(repo, opts)
 	if panel_state.current_tab == nil then
 		panel_state.current_tab = get_tabs()[1].key
 	end
+
+	activate_current_tab()
 
 	local should_fetch = opts.force_refresh == true or panel_state.current_repo_details == nil
 	if provider and type(provider.fetch_repo_details) == "function" and should_fetch then
@@ -251,6 +266,19 @@ function M.close()
 	stop_request()
 	stop_spinner()
 	panel_state.reset()
+end
+
+function M.activate()
+end
+
+function M.deactivate()
+	stop_request()
+	stop_spinner()
+
+	local tab_mod = get_tab_module(panel_state.current_tab)
+	if tab_mod and type(tab_mod.deactivate) == "function" then
+		tab_mod.deactivate()
+	end
 end
 
 return M
