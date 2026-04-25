@@ -409,7 +409,7 @@ function M.delete_issue(issue_key, callback)
 end
 
 ---@param project_key string
----@param callback fun(issue_types: JiraIssueType[]|nil, err: string|nil)
+---@param callback fun(issue_types: IssueType[]|nil, err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.get_create_meta(project_key, callback)
 	if type(project_key) ~= "string" or project_key == "" then

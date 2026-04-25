@@ -31,13 +31,35 @@
 ---@field status_id string|nil
 ---@field status_category string|nil
 ---@field status_color string|nil
----@field type table|nil
+---@field type IssueType|nil
 ---@field priority string|nil
 ---@field assignee IssueUser|nil
----@field reporter string|nil
+---@field reporter IssueUser|nil
 ---@field story_points number|nil
 ---@field duedate string|nil
 ---@field parent Issue|nil
+
+--------------------------------------------------------------------------------
+-- Type
+--------------------------------------------------------------------------------
+
+---@class IssueType
+---@field id string
+---@field name string
+---@field description string|nil
+---@field subtask boolean
+
+--------------------------------------------------------------------------------
+-- Transition
+--------------------------------------------------------------------------------
+
+---@class IssueTransition
+---@field id string
+---@field name string
+---@field to_status_id string|nil
+---@field to_status_name string|nil
+---@field to_status_category string|nil
+---@field to_status_color string|nil
 
 --------------------------------------------------------------------------------
 -- Comment

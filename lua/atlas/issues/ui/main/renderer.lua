@@ -43,7 +43,7 @@ local function issue_to_row(issue, is_child)
 			icon = "",
 			name = issue.key .. " " .. (issue.summary or ""),
 			assignee = (type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned",
-			reporter = issue.reporter or "Unknown",
+			reporter = (type(issue.reporter) == "table" and issue.reporter.display_name) or "Unknown",
 			status = string.format(" %s ", issue.status or ""),
 		}
 	end
@@ -114,7 +114,7 @@ function M.issue_popup_content(issue)
 	local title = string.format(" %s: %s", issue.key or "", summary)
 	local status_hl = helper.status_hl(issue.status_id)
 	local assignee_hl = helper.person_hl(type(issue.assignee) == "table" and issue.assignee.display_name or nil)
-	local reporter_hl = helper.person_hl(issue.reporter)
+	local reporter_hl = helper.person_hl(type(issue.reporter) == "table" and issue.reporter.display_name or nil)
 	local priority_hl = helper.priority_hl(issue.priority)
 	local parent_key = type(issue.parent) == "table" and issue.parent.key or nil
 	local parent_summary = type(issue.parent) == "table" and issue.parent.summary or nil
@@ -129,7 +129,7 @@ function M.issue_popup_content(issue)
 			" Assignee: %s",
 			(type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned"
 		),
-		string.format(" Reporter: %s", issue.reporter or "Unknown"),
+		string.format(" Reporter: %s", (type(issue.reporter) == "table" and issue.reporter.display_name) or "Unknown"),
 		string.format(" Due:      %s", issue.duedate or "-"),
 	}
 

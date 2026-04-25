@@ -1,3 +1,4 @@
+---TODO: Please refactor
 local M = {}
 local adf = require("atlas.issues.providers.jira.converted.adf")
 
@@ -43,7 +44,7 @@ function M.normalize_project(raw_project)
 end
 
 ---@param raw_type table|nil
----@return JiraIssueType|nil
+---@return IssueType|nil
 function M.normalize_issue_type(raw_type)
 	if type(raw_type) ~= "table" then
 		return nil
@@ -60,7 +61,6 @@ function M.normalize_issue_type(raw_type)
 		name = name,
 		description = raw_type.description and tostring(raw_type.description) or nil,
 		subtask = raw_type.subtask == true,
-		entity_id = raw_type.entityId and tostring(raw_type.entityId) or nil,
 	}
 end
 
@@ -159,7 +159,7 @@ local function extract_parent(raw_parent)
 		type = M.normalize_issue_type(safe_get(pf, "issuetype")),
 		priority = safe_get(pf, "priority", "name"),
 		assignee = normalize_issue_user(safe_get(pf, "assignee")),
-		reporter = safe_get(pf, "reporter", "displayName"),
+		reporter = normalize_issue_user(safe_get(pf, "reporter")),
 		story_points = nil,
 		duedate = nil,
 		parent = nil,
@@ -204,7 +204,7 @@ function M.normalize_issue(raw)
 		type = M.normalize_issue_type(safe_get(fields, "issuetype")),
 		priority = safe_get(fields, "priority", "name"),
 		assignee = normalize_issue_user(safe_get(fields, "assignee")),
-		reporter = safe_get(fields, "reporter", "displayName"),
+		reporter = normalize_issue_user(safe_get(fields, "reporter")),
 		story_points = extract_story_points(fields[STORY_POINTS_FIELD]),
 		duedate = fields.duedate,
 		parent = extract_parent(safe_get(fields, "parent")),
@@ -257,31 +257,6 @@ function M.normalize_comments(raw)
 		end
 	end
 	return comments
-end
-
----@param raw table|nil
----@return JiraIssueTransitionPage
-function M.normalize_transitions(raw)
-	local transitions = {}
-	for _, t in ipairs((type(raw) == "table" and raw.transitions) or {}) do
-		if type(t) == "table" then
-			local to = type(t.to) == "table" and t.to or {}
-			local category = type(to.statusCategory) == "table" and to.statusCategory or {}
-
-			table.insert(transitions, {
-				id = tostring(t.id or ""),
-				name = tostring(t.name or ""),
-				to_status_id = to.id and tostring(to.id) or nil,
-				to_status_name = to.name and tostring(to.name) or nil,
-				to_status_category = category.key and tostring(category.key) or nil,
-				to_status_color = category.colorName and tostring(category.colorName) or nil,
-			})
-		end
-	end
-
-	return {
-		transitions = transitions,
-	}
 end
 
 ---@param raw table|nil

@@ -57,7 +57,7 @@ function M.format_row(issue, is_child)
 			icons.general("user"),
 			(type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned"
 		),
-		reporter = string.format("%s %s", icons.general("user"), issue.reporter or "Unknown"),
+		reporter = string.format("%s %s", icons.general("user"), (type(issue.reporter) == "table" and issue.reporter.display_name) or "Unknown"),
 		status = (function()
 			local issue_key = tostring(issue.key or "")
 			local is_reloading = issue_key ~= "" and (tonumber((state.reloading_issue_keys or {})[issue_key]) or 0) > 0
@@ -165,7 +165,7 @@ function M.cell_hl(row, col, ctx)
 
 	if col.key == "reporter" then
 		return {
-			{ start_col = 0, end_col = #ctx.padded, hl_group = helper.person_hl(type(issue) == "table" and issue.reporter or nil) },
+			{ start_col = 0, end_col = #ctx.padded, hl_group = helper.person_hl(type(issue) == "table" and type(issue.reporter) == "table" and issue.reporter.display_name or nil) },
 		}
 	end
 

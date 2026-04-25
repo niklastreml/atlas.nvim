@@ -74,6 +74,40 @@ function M.register(buf, views)
 		)
 	end
 
+	if state.provider and state.provider.run_action then
+		utils.insert_if(
+			items,
+			item("issues.transition_issue", {
+				desc = "Transition issue",
+				index = 3,
+				callback = function()
+					local issue = selected_issue()
+					if issue == nil then
+						footer.notify("warn", "No issue selected")
+						return
+					end
+					actions.run_action("transition", issue, "main")
+				end,
+			})
+		)
+
+		utils.insert_if(
+			items,
+			item("issues.change_assignee", {
+				desc = "Change assignee",
+				index = 4,
+				callback = function()
+					local issue = selected_issue()
+					if issue == nil then
+						footer.notify("warn", "No issue selected")
+						return
+					end
+					actions.run_action("assign", issue, "main")
+				end,
+			})
+		)
+	end
+
 	if state.provider and state.provider.search then
 		utils.insert_if(
 			items,
@@ -199,6 +233,8 @@ function M.remove(buf)
 	local items = {}
 
 	utils.insert_if(items, item("issues.open_actions", { key = "" }))
+	utils.insert_if(items, item("issues.transition_issue", { key = "" }))
+	utils.insert_if(items, item("issues.change_assignee", { key = "" }))
 	utils.insert_if(items, item("issues.search", { key = "" }))
 	utils.insert_if(items, item("issues.open_in_browser", { key = "" }))
 	utils.insert_if(items, item("issues.copy_key", { key = "" }))

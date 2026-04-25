@@ -66,6 +66,8 @@ local M = {}
 ---| "issues.show_details"
 ---| "issues.search"
 ---| "issues.toggle_issue_children"
+---| "issues.transition_issue"
+---| "issues.change_assignee"
 
 ---@param value AtlasKeymapValue
 ---@return string[]|nil
@@ -193,6 +195,8 @@ function M.validate()
 			"issues.toggle_issue_children",
 			"issues.refresh",
 			"issues.refresh_view",
+			"issues.transition_issue",
+			"issues.change_assignee",
 		}, { "j", "k", "gg", "G" }),
 	}
 end
