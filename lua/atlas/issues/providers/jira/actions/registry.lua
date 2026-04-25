@@ -292,6 +292,300 @@ local ACTIONS = {
 		end,
 	},
 	{
+		id = "delete_issue",
+		label = "Delete Issue",
+		is_available = has_issue_key,
+		run = function(ctx, done)
+			local issue = ctx.issue
+			if not has_issue_key(ctx) or issue == nil then
+				done(nil, "No issue selected")
+				return
+			end
+
+			local issue_key = issue.key
+			vim.ui.input({
+				prompt = string.format("Delete issue %s? [y/N]: ", issue_key),
+			}, function(input)
+				if input == nil then
+					done({ changed_issue_key = nil, message = "Delete cancelled" }, nil)
+					return
+				end
+
+				if vim.trim(tostring(input)):lower() ~= "y" then
+					done({ changed_issue_key = nil, message = "Delete cancelled" }, nil)
+					return
+				end
+
+				footer.notify("loading", string.format("Deleting %s...", issue_key))
+				issues_api.delete_issue(issue_key, function(ok, err)
+					if not ok then
+						footer.notify("error", err or "Delete failed")
+						done(nil, err or "Delete failed")
+						return
+					end
+
+					footer.notify("success", string.format("Deleted %s", issue_key), 1200)
+					require("atlas.issues.ui.main.controller").refresh_current_view(function()
+						done({ changed_issue_key = nil, message = string.format("Deleted %s", issue_key) }, nil)
+					end)
+				end)
+			end)
+		end,
+	},
+	{
+		id = "edit_issue",
+		label = "Edit Issue",
+		is_available = has_issue_key,
+		run = function(ctx, done)
+			local issue = ctx.issue
+			if not has_issue_key(ctx) or issue == nil then
+				done(nil, "No issue selected")
+				return
+			end
+
+			local issue_key = issue.key
+			local adf = require("atlas.issues.providers.jira.converted.adf")
+			local md_to_adf = require("atlas.issues.providers.jira.converted.markdown")
+			local issue_editor = require("atlas.issues.providers.jira.ui.issue")
+
+			local function open_editor(initial_description)
+				issue_editor.open(function(fields, submit_done)
+					local payload = {
+						summary = fields.summary,
+						description = fields.description and md_to_adf.to_adf(fields.description) or vim.NIL,
+					}
+
+					if fields.issue_type and fields.issue_type.id and fields.issue_type.id ~= "" then
+						payload.issuetype = { id = fields.issue_type.id }
+					end
+
+					if fields.assignee and fields.assignee.account_id then
+						payload.assignee = { id = fields.assignee.account_id }
+					else
+						payload.assignee = vim.NIL
+					end
+
+					footer.notify("loading", string.format("Updating issue %s...", issue_key))
+					issues_api.update_issue(issue_key, payload, function(ok, err)
+						if not ok then
+							submit_done(false, err or "Failed to update issue")
+							done(nil, err or "Failed to update issue")
+							return
+						end
+
+						footer.notify("success", string.format("Updated %s", issue_key), 1200)
+						submit_done(true, nil)
+						done({ changed_issue_key = issue_key, message = "Issue updated" }, nil)
+					end)
+				end, {
+					summary = tostring(issue.summary or ""),
+					description = initial_description,
+					assignee = issue.assignee,
+					reporter = issue.reporter or issues_state.current_user,
+					project = issue.project and issue.project.key or "",
+					issue_key = issue.key,
+					issue_type = issue.type,
+				}, {
+					preview_fn = function(markdown)
+						local utils = require("atlas.ui.shared.utils")
+						return utils.encode_pretty_json(md_to_adf.to_adf(markdown))
+					end,
+				})
+			end
+
+			if ctx.description then
+				open_editor(ctx.description)
+				return
+			end
+
+			footer.notify("loading", string.format("Loading description for %s...", issue_key))
+			issues_api.get_issue_description(issue_key, function(description, err)
+				if err then
+					footer.notify("warn", string.format("Failed loading description for %s", issue_key), 1200)
+					open_editor("")
+					return
+				end
+
+				footer.notify("success", string.format("Loaded description for %s", issue_key), 1200)
+				if type(description) == "table" then
+					open_editor(adf.to_markdown(description))
+					return
+				end
+				open_editor("")
+			end)
+		end,
+	},
+	{
+		id = "create_issue",
+		label = "Create Issue",
+		is_available = function()
+			return true, nil
+		end,
+		run = function(_, done)
+			local projects_api = require("atlas.issues.providers.jira.api.projects")
+			local md_to_adf = require("atlas.issues.providers.jira.converted.markdown")
+			local issue_editor = require("atlas.issues.providers.jira.ui.issue")
+
+			local function run_create(project_key)
+				issue_editor.open(function(fields, submit_done)
+					local issue_type = fields.issue_type
+					local issue_type_id = issue_type and tostring(issue_type.id or "") or ""
+					local issue_type_name = issue_type and tostring(issue_type.name or "") or ""
+
+					local api_fields = {
+						project = { key = fields.project },
+						summary = fields.summary,
+					}
+
+					if issue_type_id ~= "" then
+						api_fields.issuetype = { id = issue_type_id }
+					elseif issue_type_name ~= "" then
+						api_fields.issuetype = { name = issue_type_name }
+					else
+						submit_done(false, "Issue type is required")
+						done(nil, "Issue type is required")
+						return
+					end
+
+					if fields.description then
+						api_fields.description = md_to_adf.to_adf(fields.description)
+					end
+
+					if fields.assignee and fields.assignee.account_id then
+						api_fields.assignee = { id = fields.assignee.account_id }
+					end
+
+					issues_api.create_issue(api_fields, function(result, err)
+						if err then
+							submit_done(false, err)
+							done(nil, err)
+							return
+						end
+
+						if result and result.key then
+							footer.notify("success", string.format("Created %s", result.key), 2000)
+							submit_done(true, nil)
+							done({ changed_issue_key = result.key, message = string.format("Created %s", result.key) }, nil)
+							return
+						end
+
+						submit_done(false, "Invalid response")
+						done(nil, "Invalid response")
+					end)
+				end, {
+					summary = "",
+					description = nil,
+					assignee = nil,
+					reporter = issues_state.current_user,
+					project = project_key,
+					issue_key = nil,
+					issue_type = nil,
+				}, {
+					preview_fn = function(markdown)
+						local utils = require("atlas.ui.shared.utils")
+						return utils.encode_pretty_json(md_to_adf.to_adf(markdown))
+					end,
+				})
+			end
+
+			local all_items = nil
+
+			async_picker.open({
+				title = "Create Issue",
+				prompt = "Select project",
+				debounce_ms = 0,
+				identifier = "jira_creatable_projects",
+				format_item = function(item)
+					local project = item.value
+					local category_name = project.category and project.category.name or ""
+					if category_name ~= "" then
+						return string.format("%s %s - %s (%s)", icons.issues_provider("jira", "provider"), item.label, project.name, category_name)
+					end
+					return string.format("%s %s - %s", icons.issues_provider("jira", "provider"), item.label, project.name)
+				end,
+				fetch = function(fetch_ctx, fetch_done)
+					if all_items then
+						local query = vim.trim(fetch_ctx.query):lower()
+						if query == "" then
+							fetch_done(all_items, nil)
+							return
+						end
+						local filtered = {}
+						for _, item in ipairs(all_items) do
+							local project = item.value
+							local haystack = (item.label .. " " .. (project.name or "") .. " " .. (project.category and project.category.name or "")):lower()
+							if haystack:find(query, 1, true) then
+								table.insert(filtered, item)
+							end
+						end
+						fetch_done(filtered, nil)
+						return
+					end
+
+					projects_api.get_projects({ maxResults = 50, total = 2, status = "live" }, function(groups, err)
+						if fetch_ctx.signal.cancelled then
+							return
+						end
+						if err or not groups then
+							fetch_done(nil, err or "Failed to load projects")
+							return
+						end
+
+						local projects = {}
+						for _, group in ipairs(groups) do
+							for _, project in ipairs(group.projects or {}) do
+								table.insert(projects, project)
+							end
+						end
+
+						local project_ids = {}
+						for _, project in ipairs(projects) do
+							local project_id = tonumber(project.id)
+							if project_id then
+								table.insert(project_ids, project_id)
+							end
+						end
+
+						users_api.get_permissions_bulk({
+							permissions = { "CREATE_ISSUES" },
+							project_ids = project_ids,
+						}, function(permission_map, perm_err)
+							if fetch_ctx.signal.cancelled then
+								return
+							end
+							if perm_err or not permission_map then
+								fetch_done(nil, perm_err or "Failed to load project permissions")
+								return
+							end
+
+							local allowed_map = permission_map.CREATE_ISSUES or {}
+							all_items = {}
+							for _, project in ipairs(projects) do
+								local project_id = tonumber(project.id)
+								if project_id and allowed_map[project_id] == true then
+									table.insert(all_items, {
+										id = tostring(project.id or ""),
+										label = tostring(project.key or ""),
+										value = project,
+									})
+								end
+							end
+
+							fetch_done(all_items, nil)
+						end)
+					end)
+				end,
+				on_select = function(item)
+					run_create(item.value.key)
+				end,
+				on_cancel = function()
+					footer.notify("info", "Create issue cancelled", 1200)
+					done({ changed_issue_key = nil, message = "Create issue cancelled" }, nil)
+				end,
+			})
+		end,
+	},
+	{
 		id = "search_query_issue",
 		label = "Search Issue",
 		is_available = function()
@@ -358,6 +652,7 @@ local ACTIONS = {
 	{
 		id = "browse_issue",
 		label = "Open Issue In Browser",
+		hidden = true,
 		is_available = has_issue_key,
 		run = function(ctx, done)
 			local issue = ctx.issue
@@ -380,6 +675,7 @@ local ACTIONS = {
 	{
 		id = "copy_issue_key",
 		label = "Copy Issue Key",
+		hidden = true,
 		is_available = has_issue_key,
 		run = function(ctx, done)
 			local issue = ctx.issue
@@ -402,6 +698,7 @@ local ACTIONS = {
 	{
 		id = "copy_issue_url",
 		label = "Copy Issue URL",
+		hidden = true,
 		is_available = has_issue_key,
 		run = function(ctx, done)
 			local issue = ctx.issue
@@ -431,8 +728,7 @@ local ACTIONS = {
 function M.available(ctx)
 	local out = {}
 	for _, action in ipairs(ACTIONS) do
-		local ok = action.is_available(ctx)
-		if ok then
+		if not action.hidden and action.is_available(ctx) then
 			table.insert(out, action)
 		end
 	end
