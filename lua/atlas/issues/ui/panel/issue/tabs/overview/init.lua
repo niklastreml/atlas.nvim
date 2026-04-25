@@ -67,7 +67,6 @@ function M.on_select(issue, refresh, opts)
 
 		state.raw_description = raw
 
-		-- Convert via provider hook
 		local panel = provider.panel
 		if raw ~= nil and panel and type(panel.convert_description) == "function" then
 			state.md_description = panel.convert_description(raw) or ""
@@ -110,7 +109,6 @@ function M.render(issue, width)
 	if state.description_loading then
 		utils.push(lines, spans, spinner.with_text("Loading..."), "AtlasTextMuted", PADDING_X)
 	elseif state.raw_description == nil and not state.description_loading then
-		-- already shows "Description" header, just no content
 	elseif state.view_mode == "raw" then
 		local raw_text
 		if type(state.raw_description) == "table" then

@@ -99,6 +99,44 @@ function M.fetch_comments(issue_key, opts, on_done)
 end
 
 ---@param issue_key string
+---@param content string
+---@param on_done fun(comment: IssueComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.add_comment(issue_key, content, on_done)
+	local comments_api = require("atlas.issues.providers.jira.api.comments")
+	return comments_api.add_comment(issue_key, content, on_done)
+end
+
+---@param issue_key string
+---@param parent_id string
+---@param content string
+---@param on_done fun(comment: IssueComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.reply_comment(issue_key, parent_id, content, on_done)
+	local comments_api = require("atlas.issues.providers.jira.api.comments")
+	return comments_api.add_comment(issue_key, content, { parent_id = parent_id }, on_done)
+end
+
+---@param issue_key string
+---@param comment_id string
+---@param content string
+---@param on_done fun(comment: IssueComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.edit_comment(issue_key, comment_id, content, on_done)
+	local comments_api = require("atlas.issues.providers.jira.api.comments")
+	return comments_api.edit_comment(issue_key, comment_id, content, on_done)
+end
+
+---@param issue_key string
+---@param comment_id string
+---@param on_done fun(ok: boolean, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.delete_comment(issue_key, comment_id, on_done)
+	local comments_api = require("atlas.issues.providers.jira.api.comments")
+	return comments_api.delete_comment(issue_key, comment_id, on_done)
+end
+
+---@param issue_key string
 ---@param opts IssuesFetchOpts|nil
 ---@param on_done fun(entries: table[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
