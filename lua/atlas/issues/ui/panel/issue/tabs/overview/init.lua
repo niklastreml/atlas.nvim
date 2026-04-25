@@ -172,6 +172,10 @@ function M.deactivate(buf)
 		vim.api.nvim_set_option_value("filetype", "", { buf = buf })
 	end
 	cancel_all()
+	if state.description_loading then
+		state.description_loading = false
+		footer.notify("info", "", 0)
+	end
 end
 
 return M

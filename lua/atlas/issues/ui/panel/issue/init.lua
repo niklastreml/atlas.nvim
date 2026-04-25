@@ -229,6 +229,8 @@ function M.on_select(issue, opts)
 		end
 		switch_tab_keymaps(old_key, panel_state.current_tab)
 		stop_spinner()
+	else
+		switch_tab_keymaps(nil, panel_state.current_tab)
 	end
 
 	if context_changed then

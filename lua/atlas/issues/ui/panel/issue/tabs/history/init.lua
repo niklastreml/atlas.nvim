@@ -169,6 +169,10 @@ function M.activate() end
 
 function M.deactivate()
 	cancel_all()
+	if state.is_loading then
+		state.is_loading = false
+		footer.notify("info", "", 0)
+	end
 end
 
 return M

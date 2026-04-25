@@ -84,6 +84,7 @@ function M.init(provider)
 	end
 
 	ui_state.on_panel_open = function()
+		M.render()
 		local panel = require("atlas.issues.ui.panel")
 		local panel_keymaps = require("atlas.issues.ui.panel.keymaps")
 		local detail_buf = require("atlas.ui.layout").buf_id("detail")
@@ -105,6 +106,7 @@ function M.init(provider)
 			panel_keymaps.remove(detail_buf)
 		end
 		panel.close()
+		M.render()
 	end
 
 	ui_state.on_panel_next_tab = function()

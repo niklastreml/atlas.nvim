@@ -113,6 +113,12 @@ function M.toggle_detail()
 	state.detail_win =
 		win_util.create(state.main_win, "rightbelow vsplit", state.detail_buf, win_util.apply_detail_opts)
 	pcall(vim.api.nvim_win_set_width, state.detail_win, math.max(math.floor(vim.o.columns * 0.40), 40))
+
+	if win_util.valid(state.main_win) then
+		vim.api.nvim_win_call(state.main_win, function()
+			vim.cmd("normal! 0")
+		end)
+	end
 end
 
 function M.reflow()

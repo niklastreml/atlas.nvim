@@ -454,6 +454,10 @@ function M.deactivate(buf)
 		keymaps.teardown(buf)
 	end
 	cancel_all()
+	if state.is_loading then
+		state.is_loading = false
+		footer.notify("info", "", 0)
+	end
 end
 
 return M
