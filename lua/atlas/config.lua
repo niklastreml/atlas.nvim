@@ -16,16 +16,8 @@
 ---@field key string|nil
 ---@field layout "compact"|"plain"|nil
 
----@class AtlasIssuesViewConfig
----@field name string
----@field key string|nil
-
 ---@class AtlasPullsRepoConfig
----@field settings table<string, AtlasPullsRepoSettings>|nil
 ---@field paths table<string, string>|nil
-
----@class AtlasPullsRepoSettings
----@field readme string|nil
 
 ---@class AtlasPullsDiffConfig
 ---@field open_cmd "DiffviewOpen"|"CodeDiff"|string|nil
@@ -97,13 +89,6 @@ M.options = {
 			pr_files_previous_hunk = "[h",
 		},
 		issues = {
-			open_actions = "A",
-			open_in_browser = "gx",
-			copy_url = "Y",
-			copy_key = "y",
-			show_details = "<CR>",
-			search = "?",
-			toggle_issue_children = "za",
 			refresh = "r",
 			refresh_view = "R",
 		},
