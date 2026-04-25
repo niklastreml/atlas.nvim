@@ -38,7 +38,9 @@ end
 ---@return IssuesProvider|nil
 local function resolve_issues_provider(provider_id)
 	local id = provider_id or "jira"
-	if id == "jira" then
+	if id == "mock" then
+		return require("atlas.issues.providers.mock")
+	elseif id == "jira" then
 		return require("atlas.issues.providers.jira")
 	end
 

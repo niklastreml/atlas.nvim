@@ -77,57 +77,9 @@ function M.register(buf, views)
 	if state.provider and state.provider.run_action then
 		utils.insert_if(
 			items,
-			item("issues.transition_issue", {
-				desc = "Transition issue",
-				index = 3,
-				callback = function()
-					local issue = selected_issue()
-					if issue == nil then
-						footer.notify("warn", "No issue selected")
-						return
-					end
-					actions.run_action("transition", issue, "main")
-				end,
-			})
-		)
-
-		utils.insert_if(
-			items,
-			item("issues.change_assignee", {
-				desc = "Change assignee",
-				index = 4,
-				callback = function()
-					local issue = selected_issue()
-					if issue == nil then
-						footer.notify("warn", "No issue selected")
-						return
-					end
-					actions.run_action("assign", issue, "main")
-				end,
-			})
-		)
-
-		utils.insert_if(
-			items,
-			item("issues.edit_issue", {
-				desc = "Edit issue",
-				index = 5,
-				callback = function()
-					local issue = selected_issue()
-					if issue == nil then
-						footer.notify("warn", "No issue selected")
-						return
-					end
-					actions.run_action("edit_issue", issue, "main")
-				end,
-			})
-		)
-
-		utils.insert_if(
-			items,
 			item("issues.create_issue", {
 				desc = "Create issue",
-				index = 6,
+				index = 2,
 				callback = function()
 					actions.run_action("create_issue", nil, "main")
 				end,
@@ -140,7 +92,7 @@ function M.register(buf, views)
 			items,
 			item("issues.search", {
 				desc = "Search issues",
-				index = 2,
+				index = 3,
 				callback = function()
 					actions.search()
 				end,
@@ -150,16 +102,54 @@ function M.register(buf, views)
 
 	utils.insert_if(
 		items,
-		item("issues.open_in_browser", {
-			desc = "Open issue in browser",
+		item("issues.show_details", {
+			desc = "Show issue details",
+			index = 4,
 			opts = { nowait = true },
 			callback = function()
-				local issue = selected_issue()
-				if issue == nil then
-					footer.notify("warn", "No issue selected")
-					return
-				end
-				actions.open_in_browser(issue)
+				controller.show_issue_details(buf)
+			end,
+		})
+	)
+
+	table.insert(items, {
+		key = "K",
+		desc = "Show issue details",
+		index = 4,
+		callback = function()
+			controller.show_issue_details(buf)
+		end,
+	})
+
+	utils.insert_if(
+		items,
+		item("issues.refresh", {
+			desc = "Reload selected issue",
+			index = 5,
+			callback = function()
+				controller.refresh_current_issue()
+			end,
+		})
+	)
+
+	utils.insert_if(
+		items,
+		item("issues.refresh_view", {
+			desc = "Refresh current view",
+			index = 6,
+			callback = function()
+				controller.refresh_current_view()
+			end,
+		})
+	)
+
+	utils.insert_if(
+		items,
+		item("issues.toggle_issue_children", {
+			desc = "Toggle issue children",
+			index = 7,
+			callback = function()
+				controller.toggle_current_issue_collapsed()
 			end,
 		})
 	)
@@ -168,6 +158,7 @@ function M.register(buf, views)
 		items,
 		item("issues.copy_key", {
 			desc = "Copy issue key",
+			index = 8,
 			opts = { nowait = true },
 			callback = function()
 				local issue = selected_issue()
@@ -184,6 +175,7 @@ function M.register(buf, views)
 		items,
 		item("issues.copy_url", {
 			desc = "Copy issue URL",
+			index = 9,
 			opts = { nowait = true },
 			callback = function()
 				local issue = selected_issue()
@@ -196,54 +188,89 @@ function M.register(buf, views)
 		})
 	)
 
-	utils.insert_if(
-		items,
-		item("issues.refresh", {
-			desc = "Reload selected issue",
-			callback = function()
-				controller.refresh_current_issue()
-			end,
-		})
-	)
+	-- g* keys grouped together
+	if state.provider and state.provider.run_action then
+		utils.insert_if(
+			items,
+			item("issues.transition_issue", {
+				desc = "Transition issue",
+				index = 10,
+				callback = function()
+					local issue = selected_issue()
+					if issue == nil then
+						footer.notify("warn", "No issue selected")
+						return
+					end
+					actions.run_action("transition", issue, "main")
+				end,
+			})
+		)
+
+		utils.insert_if(
+			items,
+			item("issues.change_assignee", {
+				desc = "Change assignee",
+				index = 11,
+				callback = function()
+					local issue = selected_issue()
+					if issue == nil then
+						footer.notify("warn", "No issue selected")
+						return
+					end
+					actions.run_action("assign", issue, "main")
+				end,
+			})
+		)
+
+		utils.insert_if(
+			items,
+			item("issues.change_reporter", {
+				desc = "Change reporter",
+				index = 12,
+				callback = function()
+					local issue = selected_issue()
+					if issue == nil then
+						footer.notify("warn", "No issue selected")
+						return
+					end
+					actions.run_action("reporter", issue, "main")
+				end,
+			})
+		)
+
+		utils.insert_if(
+			items,
+			item("issues.edit_issue", {
+				desc = "Edit issue",
+				index = 13,
+				callback = function()
+					local issue = selected_issue()
+					if issue == nil then
+						footer.notify("warn", "No issue selected")
+						return
+					end
+					actions.run_action("edit_issue", issue, "main")
+				end,
+			})
+		)
+	end
 
 	utils.insert_if(
 		items,
-		item("issues.refresh_view", {
-			desc = "Refresh current view",
-			callback = function()
-				controller.refresh_current_view()
-			end,
-		})
-	)
-
-	utils.insert_if(
-		items,
-		item("issues.show_details", {
-			desc = "Show issue details",
+		item("issues.open_in_browser", {
+			desc = "Open issue in browser",
+			index = 14,
 			opts = { nowait = true },
 			callback = function()
-				controller.show_issue_details(buf)
+				local issue = selected_issue()
+				if issue == nil then
+					footer.notify("warn", "No issue selected")
+					return
+				end
+				actions.open_in_browser(issue)
 			end,
 		})
 	)
-
-	utils.insert_if(
-		items,
-		item("issues.toggle_issue_children", {
-			desc = "Toggle issue children",
-			callback = function()
-				controller.toggle_current_issue_collapsed()
-			end,
-		})
-	)
-
-	table.insert(items, {
-		key = "K",
-		desc = "Show issue details",
-		callback = function()
-			controller.show_issue_details(buf)
-		end,
-	})
 
 	M.remove(buf)
 	help.register(provider_name, items, {
@@ -262,6 +289,7 @@ function M.remove(buf)
 	utils.insert_if(items, item("issues.open_actions", { key = "" }))
 	utils.insert_if(items, item("issues.transition_issue", { key = "" }))
 	utils.insert_if(items, item("issues.change_assignee", { key = "" }))
+	utils.insert_if(items, item("issues.change_reporter", { key = "" }))
 	utils.insert_if(items, item("issues.edit_issue", { key = "" }))
 	utils.insert_if(items, item("issues.create_issue", { key = "" }))
 	utils.insert_if(items, item("issues.search", { key = "" }))

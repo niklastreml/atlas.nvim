@@ -34,6 +34,7 @@ local M = {}
 ---@field refresh_view? AtlasKeymapValue --TODO: Move to general ?
 ---@field transition_issue? AtlasKeymapValue
 ---@field change_assignee? AtlasKeymapValue
+---@field change_reporter? AtlasKeymapValue
 ---@field edit_issue? AtlasKeymapValue
 ---@field create_issue? AtlasKeymapValue
 
@@ -72,6 +73,7 @@ local M = {}
 ---| "issues.toggle_issue_children"
 ---| "issues.transition_issue"
 ---| "issues.change_assignee"
+---| "issues.change_reporter"
 ---| "issues.edit_issue"
 ---| "issues.create_issue"
 
@@ -203,6 +205,7 @@ function M.validate()
 			"issues.refresh_view",
 			"issues.transition_issue",
 			"issues.change_assignee",
+			"issues.change_reporter",
 			"issues.edit_issue",
 			"issues.create_issue",
 		}, { "j", "k", "gg", "G" }),
