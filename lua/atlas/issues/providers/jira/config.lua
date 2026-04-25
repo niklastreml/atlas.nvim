@@ -1,6 +1,4 @@
----@class AtlasJiraViewConfig
----@field name string
----@field key string|nil
+---@class AtlasJiraViewConfig : AtlasIssuesViewConfig
 ---@field jql string
 
 ---@class AtlasJiraCustomFieldConfig
@@ -14,7 +12,5 @@
 ---@field email string
 ---@field token string
 ---@field cache_ttl number|nil
----@field max_result number|nil
 ---@field views AtlasJiraViewConfig[]|nil
----@field resolve_parent_issues boolean|nil
 ---@field project_config table<string, table<string, AtlasJiraCustomFieldConfig>>|nil

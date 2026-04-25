@@ -50,6 +50,23 @@ local ICONS = {
 	},
 
 	issues = {
+		type = {
+			epic = "",
+			story = "󰃀",
+			task = "",
+			bug = "",
+			subtask = "󰩊",
+		},
+
+		priority = {
+			highest = "",
+			blocker = "",
+			high = "",
+			medium = "",
+			low = "",
+			lowest = "",
+		},
+
 		providers = {
 			jira = {
 				provider = "󰌃",
@@ -127,6 +144,28 @@ function M.issues(name)
 	end
 
 	return ICONS.fallback
+end
+
+---@param name string
+---@return string
+function M.issues_type(name)
+	local lower = tostring(name or ""):lower()
+	local tbl = ICONS.issues.type
+	if tbl and tbl[lower] then
+		return tbl[lower]
+	end
+	return ""
+end
+
+---@param name string
+---@return string
+function M.issues_priority(name)
+	local lower = tostring(name or ""):lower()
+	local tbl = ICONS.issues.priority
+	if tbl and tbl[lower] then
+		return tbl[lower]
+	end
+	return ""
 end
 
 ---@param provider_id AtlasIssuesProviderId

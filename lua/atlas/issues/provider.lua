@@ -1,0 +1,36 @@
+--------------------------------------------------------------------------------
+-- Provider Interface
+--------------------------------------------------------------------------------
+
+---@class IssuesFetchOpts
+---@field force_load boolean|nil
+---@field max_results number|nil
+---@field next_page_token string|nil
+
+---@class IssuesViewConfig
+---@field name string
+---@field key string
+
+---@class IssuesProvider
+---@field id string
+---@field name string
+---@field icon string
+---@field hl_group string
+---
+---@field setup fun()|nil
+---@field on_refresh fun()|nil
+---
+---@field fetch_user fun(on_done: fun(user: IssueUser|nil, err: string|nil))
+---@field fetch_issues fun(view: IssuesViewConfig, opts: IssuesFetchOpts, on_done: fun(issues: Issue[], next_page_token: string|nil, is_last: boolean, err: string|nil)): { cancel: fun() }|nil
+---@field fetch_issue fun(issue_key: string, opts: IssuesFetchOpts|nil, on_done: fun(issue: Issue|nil, err: string|nil)): { cancel: fun() }|nil
+---
+---@field views fun(): IssuesViewConfig[]
+---@field run_action fun(action_id: string, ctx: table, on_done: fun(result: table|nil, err: string|nil))|nil
+---@field open_actions fun(issue: Issue|nil, source: "main"|"panel"|nil, on_done: fun(result: table|nil, err: string|nil))|nil
+---@field search fun(on_done: fun(result: table|nil, err: string|nil)|nil)|nil
+---
+--- Main UI Style
+---@field format_row fun(issue: Issue, is_child: boolean): table|nil
+---@field cell_hl fun(row: table, col: table, ctx: { text: string, padded: string, width: integer }): table[]|nil|nil
+---
+---@field health fun()|nil

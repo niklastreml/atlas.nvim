@@ -18,7 +18,7 @@ if _G.vim == nil then
 	}
 end
 
-local md = require("atlas.jira.converted.markdown")
+local md = require("atlas.issues.providers.jira.converted.markdown")
 
 --- Helper: wraps content nodes in a full ADF doc
 local function doc(content)
@@ -46,31 +46,19 @@ describe("markdown to adf", function()
 
 	describe("inline marks", function()
 		it("converts bold", function()
-			assert.are.same(
-				doc({ p({ text("bold", { { type = "strong" } }) }) }),
-				md.to_adf("**bold**")
-			)
+			assert.are.same(doc({ p({ text("bold", { { type = "strong" } }) }) }), md.to_adf("**bold**"))
 		end)
 
 		it("converts italic", function()
-			assert.are.same(
-				doc({ p({ text("italic", { { type = "em" } }) }) }),
-				md.to_adf("*italic*")
-			)
+			assert.are.same(doc({ p({ text("italic", { { type = "em" } }) }) }), md.to_adf("*italic*"))
 		end)
 
 		it("converts inline code", function()
-			assert.are.same(
-				doc({ p({ text("code", { { type = "code" } }) }) }),
-				md.to_adf("`code`")
-			)
+			assert.are.same(doc({ p({ text("code", { { type = "code" } }) }) }), md.to_adf("`code`"))
 		end)
 
 		it("converts strikethrough", function()
-			assert.are.same(
-				doc({ p({ text("gone", { { type = "strike" } }) }) }),
-				md.to_adf("~~gone~~")
-			)
+			assert.are.same(doc({ p({ text("gone", { { type = "strike" } }) }) }), md.to_adf("~~gone~~"))
 		end)
 
 		it("converts link", function()
@@ -154,7 +142,13 @@ describe("markdown to adf", function()
 	describe("codeBlock", function()
 		it("converts with language", function()
 			assert.are.same(
-				doc({ { type = "codeBlock", attrs = { language = "lua" }, content = { { type = "text", text = "print('hi')" } } } }),
+				doc({
+					{
+						type = "codeBlock",
+						attrs = { language = "lua" },
+						content = { { type = "text", text = "print('hi')" } },
+					},
+				}),
 				md.to_adf("```lua\nprint('hi')\n```")
 			)
 		end)
