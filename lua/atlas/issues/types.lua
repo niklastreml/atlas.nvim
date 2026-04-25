@@ -76,3 +76,21 @@
 ---@field updated string|nil
 ---@field parent_id string|number|nil
 ---@field children IssueComment[]|nil
+
+--------------------------------------------------------------------------------
+-- History
+--------------------------------------------------------------------------------
+
+---@class IssueHistoryItem
+---@field field string|nil
+---@field field_type string|nil
+---@field from string|nil
+---@field from_string string|nil
+---@field to string|nil
+---@field to_string string|nil
+
+---@class IssueHistoryEntry
+---@field id string
+---@field created string|nil
+---@field author IssueUser|nil
+---@field items IssueHistoryItem[]

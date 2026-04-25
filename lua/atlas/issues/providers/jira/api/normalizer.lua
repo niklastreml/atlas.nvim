@@ -275,20 +275,11 @@ end
 ---@param raw table|nil
 ---@param fallback_start_at number|nil
 ---@param fallback_max_results number|nil
----@return JiraIssueHistoryPage
+---@return { start_at: number, max_results: number, total: number, is_last: boolean, values: IssueHistoryEntry[] }
 function M.normalize_issue_history_page(raw, fallback_start_at, fallback_max_results)
 	local values = {}
 	for _, raw_entry in ipairs((type(raw) == "table" and raw.values) or {}) do
 		if type(raw_entry) == "table" then
-			local author = nil
-			if type(raw_entry.author) == "table" then
-				author = {
-					account_id = tostring(raw_entry.author.accountId or ""),
-					display_name = tostring(raw_entry.author.displayName or ""),
-					email = tostring(raw_entry.author.emailAddress or ""),
-				}
-			end
-
 			local items = {}
 			for _, raw_item in ipairs(raw_entry.items or {}) do
 				if type(raw_item) == "table" then
@@ -306,14 +297,13 @@ function M.normalize_issue_history_page(raw, fallback_start_at, fallback_max_res
 			table.insert(values, {
 				id = tostring(raw_entry.id or ""),
 				created = raw_entry.created and tostring(raw_entry.created) or nil,
-				author = author,
+				author = normalize_issue_user(raw_entry.author),
 				items = items,
 			})
 		end
 	end
 
 	return {
-		self = type(raw) == "table" and raw.self and tostring(raw.self) or nil,
 		start_at = tonumber(type(raw) == "table" and raw.startAt) or tonumber(fallback_start_at) or 0,
 		max_results = tonumber(type(raw) == "table" and raw.maxResults) or tonumber(fallback_max_results) or 100,
 		total = tonumber(type(raw) == "table" and raw.total) or #values,

@@ -165,7 +165,7 @@ end
 ---@param issue_key string
 ---@param start_at number|nil
 ---@param max_results number|nil
----@param on_done fun(page: JiraIssueHistoryPage|nil, err: string|nil)
+---@param on_done fun(page: { values: IssueHistoryEntry[], total: number, is_last: boolean }|nil, err: string|nil)
 ---@param opts { force_load?: boolean }|nil
 ---@return { job_id: integer, cancel: fun() }|nil
 function M.get_issue_history_page(issue_key, start_at, max_results, on_done, opts)

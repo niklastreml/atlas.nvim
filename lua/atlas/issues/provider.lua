@@ -25,7 +25,7 @@
 ---@field fetch_issue fun(issue_key: string, opts: IssuesFetchOpts|nil, on_done: fun(issue: Issue|nil, err: string|nil)): { cancel: fun() }|nil
 ---@field fetch_description fun(issue_key: string, opts: IssuesFetchOpts|nil, on_done: fun(raw: any, err: string|nil)): { cancel: fun() }|nil
 ---@field fetch_comments fun(issue_key: string, opts: IssuesFetchOpts|nil, on_done: fun(comments: IssueComment[]|nil, err: string|nil)): { cancel: fun() }|nil
----@field fetch_history fun(issue_key: string, opts: IssuesFetchOpts|nil, on_done: fun(entries: table[]|nil, err: string|nil)): { cancel: fun() }|nil
+---@field fetch_history fun(issue_key: string, opts: IssuesFetchOpts|nil, on_done: fun(entries: IssueHistoryEntry[]|nil, err: string|nil)): { cancel: fun() }|nil
 ---
 ---@field views fun(): IssuesViewConfig[]
 ---@field run_action fun(action_id: string, ctx: table, on_done: fun(result: table|nil, err: string|nil))|nil
@@ -51,6 +51,8 @@
 ---@field fetches (fun(issue: Issue, refresh: fun(), opts: { force_load?: boolean }|nil))|nil
 ---@field is_loading (fun(issue: Issue): boolean)|nil
 ---@field convert_description (fun(raw: any): string|nil)|nil
+---@field format_history_item (fun(item: IssueHistoryItem): { label: string, content: string|nil })|nil
+---@field history_item_hl (fun(item: IssueHistoryItem, row: string, row_index: integer): table[]|nil)|nil
 
 --------------------------------------------------------------------------------
 -- Panel types
