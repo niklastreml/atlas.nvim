@@ -71,6 +71,9 @@ local ICONS = {
 			jira = {
 				provider = "󰌃",
 			},
+			mock = {
+				provider = "󰙨",
+			},
 		},
 	},
 }

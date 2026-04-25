@@ -5,7 +5,7 @@
 ---@alias AtlasKeymapValue string|string[]|false|nil
 
 ---@alias AtlasPullsProviderId "bitbucket"|"mock"|"github"
----@alias AtlasIssuesProviderId "jira"
+---@alias AtlasIssuesProviderId "jira"|"mock"
 
 --------------------------------------------------------------------------------
 -- Pulls Provider Config
