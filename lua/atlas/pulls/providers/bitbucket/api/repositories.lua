@@ -246,6 +246,8 @@ function M.fetch_branches(branches_url, opts, on_done)
 			local target = as_table(branch.target) or {}
 			local author = as_table(target.author) or {}
 			local user = as_table(author.user) or {}
+			local links = as_table(branch.links) or {}
+			local self_link = as_table(links.self) or {}
 			local name = user.nickname or user.display_name or author.raw or ""
 			table.insert(entries, {
 				name = tostring(branch.name or ""),
@@ -253,6 +255,7 @@ function M.fetch_branches(branches_url, opts, on_done)
 				date = tostring(target.date or ""),
 				message = tostring(target.message or ""),
 				author = tostring(name),
+				api_url = tostring(self_link.href or ""),
 			})
 		end
 		local branches = { entries = entries }
@@ -316,6 +319,41 @@ function M.fetch_tags(tags_url, opts, on_done)
 		local tags = { entries = entries }
 		service.set_cache(key, tags, service.cache_ttl())
 		on_done(tags, nil)
+	end)
+end
+
+---@param repo PullsRepoDetails
+---@param branch PullsRepoBranch
+---@param on_done fun(ok: boolean, err: string|nil)
+---@return { job_id: integer, cancel: fun() }|nil
+function M.delete_branch(repo, branch, on_done)
+	local owner = tostring(repo.owner or "")
+	local repo_name = tostring(repo.repo_name or "")
+	local branch_name = tostring(branch.name or "")
+
+	if owner == "" or repo_name == "" then
+		on_done(false, "Repository missing owner/name")
+		return nil
+	end
+	if branch_name == "" then
+		on_done(false, "Branch name is missing")
+		return nil
+	end
+
+	local endpoint = tostring(branch.api_url or "")
+	if endpoint == "" then
+		on_done(false, "Branch API URL is missing")
+		return nil
+	end
+
+	return service.request("DELETE", endpoint, nil, nil, function(_, err)
+		if err ~= nil then
+			on_done(false, err)
+			return
+		end
+
+		service.clear_cache()
+		on_done(true, nil)
 	end)
 end
 

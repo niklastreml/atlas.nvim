@@ -83,6 +83,7 @@
 ---@field date string
 ---@field message string
 ---@field author string
+---@field api_url string|nil
 
 ---@class PullsRepoBranches
 ---@field entries PullsRepoBranch[]

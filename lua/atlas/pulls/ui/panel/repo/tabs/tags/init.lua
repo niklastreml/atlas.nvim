@@ -103,7 +103,17 @@ end
 function M.on_select(_pr, repo, refresh, opts)
 	opts = opts or {}
 	local detail = require("atlas.pulls.ui.panel.repo.state").current_repo_details
-	if detail == nil or repo == nil then
+	if repo == nil then
+		state.reset()
+		refresh()
+		return
+	end
+	if detail == "loading" then
+		state.tags = "loading"
+		refresh()
+		return
+	end
+	if type(detail) ~= "table" then
 		state.reset()
 		refresh()
 		return
@@ -112,7 +122,7 @@ function M.on_select(_pr, repo, refresh, opts)
 	local prev_name = state.repo and state.repo.full_name or ""
 	local next_name = tostring(detail.full_name or "")
 	local repo_label = next_name ~= "" and next_name or tostring(repo.name or repo.id or "")
-	local should_fetch = opts.force_refresh == true or state.tags == nil or prev_name ~= next_name
+	local should_fetch = opts.force_refresh == true or state.tags == nil or state.tags == "loading" or prev_name ~= next_name
 	state.repo = detail
 	if not should_fetch then
 		refresh()
@@ -132,10 +142,13 @@ function M.on_select(_pr, repo, refresh, opts)
 		return
 	end
 
-	request = provider.fetch_repo_tags(detail, opts, function(tags, err)
+	request = provider.fetch_repo_tags(detail, {
+		force_load = opts.force_load == true or opts.force_refresh == true,
+		pagelen = opts.pagelen,
+	}, function(tags, err)
 		request = nil
 		local active_detail = require("atlas.pulls.ui.panel.repo.state").current_repo_details
-		if active_detail == nil or tostring(active_detail.full_name or "") ~= next_name then
+		if type(active_detail) ~= "table" or tostring(active_detail.full_name or "") ~= next_name then
 			return
 		end
 		state.repo = active_detail
@@ -157,6 +170,13 @@ end
 ---@return boolean
 function M.is_loading()
 	return state.tags == "loading"
+end
+
+---@param _lnum integer
+---@param entry table
+---@return boolean
+function M.is_selectable_line(_lnum, entry)
+	return entry.kind == "header"
 end
 
 return M

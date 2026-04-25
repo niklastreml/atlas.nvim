@@ -14,7 +14,7 @@ local ICONS = {
 		edit = "",
 		delete = "󰆴",
 		success = "",
-		waring = "",
+		warning = "",
 		error = "",
 		info = "",
 	},

@@ -62,6 +62,8 @@ local function get_tab_module(tab_key)
 	return nil
 end
 
+M.get_tab_module = get_tab_module
+
 ---@return boolean
 local function is_tab_loading()
 	local tab_mod = get_tab_module(panel_state.current_tab)
@@ -122,7 +124,10 @@ end
 local function activate_current_tab()
 	local tab_mod = get_tab_module(panel_state.current_tab)
 	if tab_mod and type(tab_mod.activate) == "function" then
-		tab_mod.activate()
+		local buf = layout.buf_id("detail")
+		if buf ~= nil and vim.api.nvim_buf_is_valid(buf) then
+			tab_mod.activate(buf, refresh_panel)
+		end
 	end
 end
 

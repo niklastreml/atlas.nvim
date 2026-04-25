@@ -31,7 +31,44 @@ end
 ---@param buf integer
 function M.register(buf)
 	M.remove(buf)
+	local nav = require("atlas.pulls.ui.panel.repo.navigation")
 	help.register("Panel", {
+		{
+			key = "j",
+			desc = "Next selectable item",
+			opts = { nowait = true, silent = true },
+			hidden = true,
+			callback = function()
+				nav.move_cursor("down")
+			end,
+		},
+		{
+			key = "k",
+			desc = "Previous selectable item",
+			opts = { nowait = true, silent = true },
+			hidden = true,
+			callback = function()
+				nav.move_cursor("up")
+			end,
+		},
+		{
+			key = "gg",
+			desc = "First selectable item",
+			opts = { nowait = true, silent = true },
+			hidden = true,
+			callback = function()
+				nav.focus_first()
+			end,
+		},
+		{
+			key = "G",
+			desc = "Last selectable item",
+			opts = { nowait = true, silent = true },
+			hidden = true,
+			callback = function()
+				nav.focus_last()
+			end,
+		},
 		{
 			key = "r",
 			desc = "Refresh tab",
@@ -98,6 +135,10 @@ end
 ---@param buf integer
 function M.remove(buf)
 	local panel_items = {
+		{ key = "j" },
+		{ key = "k" },
+		{ key = "gg" },
+		{ key = "G" },
 		{ key = "r" },
 	}
 

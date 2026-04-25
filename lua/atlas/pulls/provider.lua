@@ -23,6 +23,7 @@
 ---@field fetch_repo_details (fun(repo: PullsRepo, opts: PullsFetchOpts, on_done: fun(repo: PullsRepoDetails|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_repo_branches (fun(repo: PullsRepoDetails, opts: PullsFetchOpts, on_done: fun(branches: PullsRepoBranches|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_repo_tags (fun(repo: PullsRepoDetails, opts: PullsFetchOpts, on_done: fun(tags: PullsRepoTags|nil, err: string|nil)): { cancel: fun() }|nil)|nil
+---@field delete_repo_branch (fun(repo: PullsRepoDetails, branch: PullsRepoBranch, on_done: fun(ok: boolean, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_reviewers (fun(pr: PullRequest, opts: { force_refresh: boolean|nil }|nil, on_done: fun(reviewers: PullsReviewer[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_builds (fun(pr: PullRequest, on_done: fun(builds: PullsBuild[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_diffstat (fun(pr: PullRequest, opts: { force_refresh: boolean|nil }|nil, on_done: fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
@@ -105,6 +106,7 @@
 ---@field deactivate (fun(buf: integer|nil))|nil
 ---@field is_selectable_line (fun(lnum: integer, entry: table): boolean)|nil
 ---@field on_enter (fun(repo: PullsRepo, entry: table): boolean|nil)|nil
+---@field delete_current_branch (fun(refresh: fun()))|nil
 
 ---@class PullsRepoPanelTab
 ---@field key string

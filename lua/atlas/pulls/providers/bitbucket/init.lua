@@ -97,6 +97,15 @@ function M.fetch_repo_tags(repo, opts, on_done)
 	return repositories_api.fetch_tags(tags_url, opts, on_done)
 end
 
+---@param repo PullsRepoDetails
+---@param branch PullsRepoBranch
+---@param on_done fun(ok: boolean, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.delete_repo_branch(repo, branch, on_done)
+	local repositories_api = require("atlas.pulls.providers.bitbucket.api.repositories")
+	return repositories_api.delete_branch(repo, branch, on_done)
+end
+
 ---@return AtlasBitbucketViewConfig[]
 function M.views()
 	local cfg = bb_config()
