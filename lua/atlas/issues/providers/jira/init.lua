@@ -6,6 +6,7 @@ local M = {
 	name = "Jira",
 	icon = icons.issues_provider("jira", "provider"),
 	hl_group = "AtlasJiraTheme",
+	panel = require("atlas.issues.providers.jira.ui.panel"),
 }
 
 function M.setup()
@@ -73,6 +74,45 @@ end
 function M.fetch_issue(issue_key, opts, on_done)
 	local issues_api = require("atlas.issues.providers.jira.api.issues")
 	return issues_api.get_issue(issue_key, on_done)
+end
+
+---@param issue_key string
+---@param opts IssuesFetchOpts|nil
+---@param on_done fun(raw: any, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_description(issue_key, opts, on_done)
+	local issues_api = require("atlas.issues.providers.jira.api.issues")
+	return issues_api.get_issue_description(issue_key, on_done, opts)
+end
+
+---@param issue_key string
+---@param opts IssuesFetchOpts|nil
+---@param on_done fun(comments: IssueComment[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_comments(issue_key, opts, on_done)
+	local comments_api = require("atlas.issues.providers.jira.api.comments")
+	local COMMENTS_PAGE_SIZE = 100
+
+	return comments_api.get_comments_page(issue_key, 0, COMMENTS_PAGE_SIZE, on_done, {
+		force_load = opts and opts.force_load or false,
+	})
+end
+
+---@param issue_key string
+---@param opts IssuesFetchOpts|nil
+---@param on_done fun(entries: table[]|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.fetch_history(issue_key, opts, on_done)
+	local issues_api = require("atlas.issues.providers.jira.api.issues")
+	return issues_api.get_issue_history_page(issue_key, 0, 100, function(page, err)
+		if err or not page then
+			on_done(nil, err)
+			return
+		end
+		on_done(page.values or {}, nil)
+	end, {
+		force_load = opts and opts.force_load or false,
+	})
 end
 
 ---@param action_id string

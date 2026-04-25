@@ -68,6 +68,7 @@
 ---@class IssueComment
 ---@field id string
 ---@field self string|nil
+---@field url string|nil
 ---@field author IssueUser|nil
 ---@field body string|nil
 ---@field _body table|nil

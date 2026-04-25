@@ -222,8 +222,11 @@ function M.normalize_issues(raw_issues)
 end
 
 ---@param raw_comment table|nil
+---@param raw_comment table
+---@param issue_key string|nil
+---@param base_url string|nil
 ---@return IssueComment|nil
-local function normalize_comment(raw_comment)
+local function normalize_comment(raw_comment, issue_key, base_url)
 	if type(raw_comment) ~= "table" then
 		return nil
 	end
@@ -233,9 +236,16 @@ local function normalize_comment(raw_comment)
 		parent_id = raw_comment.parentId
 	end
 
+	local comment_id = tostring(raw_comment.id or "")
+	local url = nil
+	if base_url and base_url ~= "" and issue_key and issue_key ~= "" and comment_id ~= "" then
+		url = string.format("%s/browse/%s?focusedCommentId=%s", base_url, issue_key, comment_id)
+	end
+
 	return {
-		id = tostring(raw_comment.id or ""),
+		id = comment_id,
 		self = raw_comment.self and tostring(raw_comment.self) or nil,
+		url = url,
 		author = normalize_issue_user(raw_comment.author),
 		body = adf.to_markdown(type(raw_comment.body) == "table" and raw_comment.body or nil),
 		_body = type(raw_comment.body) == "table" and raw_comment.body or nil,
@@ -247,11 +257,14 @@ local function normalize_comment(raw_comment)
 end
 
 ---@param raw table|nil
+---@param issue_key string|nil
 ---@return IssueComment[]
-function M.normalize_comments(raw)
+function M.normalize_comments(raw, issue_key)
+	local service = require("atlas.issues.providers.jira.api.service")
+	local base_url = tostring(service.jira_config().base_url or ""):gsub("/$", "")
 	local comments = {}
 	for _, raw_comment in ipairs((type(raw) == "table" and raw.comments) or {}) do
-		local comment = normalize_comment(raw_comment)
+		local comment = normalize_comment(raw_comment, issue_key, base_url)
 		if comment ~= nil then
 			table.insert(comments, comment)
 		end

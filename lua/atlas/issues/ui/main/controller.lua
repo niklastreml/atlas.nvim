@@ -465,12 +465,13 @@ function M.open_actions()
 	actions.open_actions(issue, "main")
 end
 
----@param issue_key string|nil
+---@param issue Issue|string|nil
 ---@param on_done fun()|nil
-function M.refresh_issue(issue_key, on_done)
+function M.refresh_issue(issue, on_done)
 	on_done = on_done or function() end
 
-	issue_key = type(issue_key) == "string" and issue_key or ""
+	local current_issue = type(issue) == "table" and issue or nil
+	local issue_key = current_issue and tostring(current_issue.key or "") or (type(issue) == "string" and issue or "")
 	if issue_key == "" then
 		footer.notify("warn", "Issue key missing")
 		on_done()
@@ -485,6 +486,12 @@ function M.refresh_issue(issue_key, on_done)
 
 	footer.notify("loading", string.format("Reloading %s...", issue_key))
 	begin_issue_reload(issue_key)
+
+	local panel = require("atlas.issues.ui.panel")
+	if panel.is_open() then
+		panel.on_select(current_issue, { force_refresh = true })
+	end
+
 	local reload_handle = nil
 	reload_handle = provider.fetch_issue(issue_key, { force_load = true }, function(fetched_issue, err)
 		for i = #active_issue_reload_handles, 1, -1 do
@@ -518,6 +525,10 @@ function M.refresh_issue(issue_key, on_done)
 		state.issues = issues
 		state.issue_tree = helper.build_issue_tree(issues)
 		end_issue_reload(issue_key)
+
+		if panel.is_open() then
+			panel.on_select(fetched_issue)
+		end
 
 		render_if_active()
 		footer.notify("success", string.format("Reloaded %s", issue_key), 1200)
@@ -554,8 +565,7 @@ function M.refresh_current_issue(on_done)
 	end
 
 	local issue = type(node._issue) == "table" and node._issue or nil
-	local issue_key = type(issue) == "table" and tostring(issue.key or "") or ""
-	M.refresh_issue(issue_key, on_done)
+	M.refresh_issue(issue, on_done)
 end
 
 return M

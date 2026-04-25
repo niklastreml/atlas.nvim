@@ -289,16 +289,69 @@ function M.get_issue_detail(issue_key, on_done, opts)
 end
 
 ---@param issue_key string
----@param on_done fun(description: any, err: string|nil)
+---@param fields string[]
+---@param on_done fun(values: table<string, any>|nil, err: string|nil)
+---@param opts { force_load?: boolean }|nil
 ---@return { job_id: integer, cancel: fun() }|nil
-function M.get_issue_description(issue_key, on_done)
+function M.get_custom_fields(issue_key, fields, on_done, opts)
+	if type(issue_key) ~= "string" or issue_key == "" then
+		on_done(nil, "Missing issue key")
+		return nil
+	end
+
+	if #fields == 0 then
+		on_done({}, nil)
+		return nil
+	end
+
+	opts = opts or {}
+	local sorted = vim.deepcopy(fields)
+	table.sort(sorted)
+	local cache_key = string.format("jira:panel:custom_fields:%s:%s", issue_key, table.concat(sorted, ","))
+
+	if not opts.force_load then
+		local cached, ok = service.get_memory_cache(cache_key)
+		if ok then
+			on_done(cached, nil)
+			return nil
+		end
+	end
+
+	logger.loginfo("Jira fetch custom fields", { issue_key = issue_key, fields = fields })
+
+	return service.request("POST", "/search/jql", {
+		jql = "key = " .. issue_key,
+		fields = fields,
+		maxResults = 1,
+	}, function(result, err)
+		if err or not result then
+			on_done(nil, err or "Empty response")
+			return
+		end
+
+		local raw_fields = ((result.issues or {})[1] or {}).fields or {}
+		local values = {}
+		for _, field_id in ipairs(fields) do
+			values[field_id] = raw_fields[field_id]
+		end
+
+		service.set_memory_cache(cache_key, values, CACHE_TTL)
+		on_done(values, nil)
+	end)
+end
+
+---@param issue_key string
+---@param on_done fun(description: any, err: string|nil)
+---@param opts { force_load?: boolean }|nil
+---@return { job_id: integer, cancel: fun() }|nil
+function M.get_issue_description(issue_key, on_done, opts)
 	return M.get_issue_detail(issue_key, function(detail, err)
 		if err or not detail then
 			on_done(nil, err)
 			return
 		end
 		on_done(detail.description, nil)
-	end)
+	end, opts)
 end
 
 function M.create_issue(fields, callback)

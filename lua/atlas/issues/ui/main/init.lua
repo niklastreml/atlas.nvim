@@ -71,6 +71,50 @@ function M.init(provider)
 		keymaps.register(buf, views)
 	end
 
+	ui_state.on_select = function(item)
+		if type(item) ~= "table" then
+			return
+		end
+		if item.kind == "issue" and type(item._issue) == "table" then
+			local panel = require("atlas.issues.ui.panel")
+			if panel.is_open() then
+				panel.on_select(item._issue)
+			end
+		end
+	end
+
+	ui_state.on_panel_open = function()
+		local panel = require("atlas.issues.ui.panel")
+		local panel_keymaps = require("atlas.issues.ui.panel.keymaps")
+		local detail_buf = require("atlas.ui.layout").buf_id("detail")
+		if detail_buf then
+			panel_keymaps.register(detail_buf)
+		end
+		local navigation = require("atlas.ui.navigation")
+		local current = navigation.current_item()
+		if type(current) == "table" and current.kind == "issue" and type(current._issue) == "table" then
+			panel.on_select(current._issue)
+		end
+	end
+
+	ui_state.on_panel_close = function()
+		local panel = require("atlas.issues.ui.panel")
+		local panel_keymaps = require("atlas.issues.ui.panel.keymaps")
+		local detail_buf = require("atlas.ui.layout").buf_id("detail")
+		if detail_buf then
+			panel_keymaps.remove(detail_buf)
+		end
+		panel.close()
+	end
+
+	ui_state.on_panel_next_tab = function()
+		require("atlas.issues.ui.panel").next_tab()
+	end
+
+	ui_state.on_panel_prev_tab = function()
+		require("atlas.issues.ui.panel").prev_tab()
+	end
+
 	if state.active_view == nil then
 		state.error = "No issues view configured"
 		M.render()
