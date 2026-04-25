@@ -233,6 +233,9 @@ function M.render(issue, width)
 		author_hl = function(_, author)
 			return highlights.dynamic_for(author)
 		end,
+		icon_hl_fn = function(item)
+			return highlights.dynamic_for(tostring(item.author or ""))
+		end,
 	})
 
 	utils.append_block(lines, spans, { lines = t_lines, highlights = t_spans })

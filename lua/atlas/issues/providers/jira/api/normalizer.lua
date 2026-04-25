@@ -1,8 +1,5 @@
----TODO: Please refactor
 local M = {}
 local adf = require("atlas.issues.providers.jira.converted.adf")
-
-local STORY_POINTS_FIELD = "customfield_10016"
 
 ---@param raw_project table|nil
 ---@return IssueProject|nil
@@ -188,8 +185,9 @@ local function extract_story_points(value)
 end
 
 ---@param raw table
+---@param sp_field string|nil
 ---@return Issue
-function M.normalize_issue(raw)
+function M.normalize_issue(raw, sp_field)
 	local fields = raw.fields or {}
 	local status, status_id, status_category, status_color = extract_status(safe_get(fields, "status"))
 
@@ -205,18 +203,19 @@ function M.normalize_issue(raw)
 		priority = safe_get(fields, "priority", "name"),
 		assignee = normalize_issue_user(safe_get(fields, "assignee")),
 		reporter = normalize_issue_user(safe_get(fields, "reporter")),
-		story_points = extract_story_points(fields[STORY_POINTS_FIELD]),
+		story_points = sp_field and extract_story_points(fields[sp_field]) or nil,
 		duedate = fields.duedate,
 		parent = extract_parent(safe_get(fields, "parent")),
 	}
 end
 
 ---@param raw_issues table[]
+---@param sp_field string|nil
 ---@return Issue[]
-function M.normalize_issues(raw_issues)
+function M.normalize_issues(raw_issues, sp_field)
 	local out = {}
 	for _, raw in ipairs(raw_issues or {}) do
-		table.insert(out, M.normalize_issue(raw))
+		table.insert(out, M.normalize_issue(raw, sp_field))
 	end
 	return out
 end

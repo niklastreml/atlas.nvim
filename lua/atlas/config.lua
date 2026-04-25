@@ -110,6 +110,8 @@ M.options = {
 			refresh_view = "R",
 			transition_issue = "gs",
 			change_assignee = "ga",
+			edit_issue = "ge",
+			create_issue = "c",
 		},
 	},
 }

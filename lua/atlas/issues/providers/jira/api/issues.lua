@@ -7,20 +7,26 @@ local logger = require("atlas.core.logger")
 
 local CACHE_TTL = 300
 
-local SEARCH_FIELDS = {
-	"summary",
-	"status",
-	"project",
-	"assignee",
-	"reporter",
-	"parent",
-	"priority",
-	"issuetype",
-	"duedate",
+local function story_points_field()
+	local cfg = service.jira_config()
+	local project_config = cfg.project_config or {}
+	return tostring(project_config.story_points_field or "customfield_10016")
+end
 
-	-- TODO: Probably different in every board, need to make this configurable
-	"customfield_10016", --- story points
-}
+local function search_fields()
+	return {
+		"summary",
+		"status",
+		"project",
+		"assignee",
+		"reporter",
+		"parent",
+		"priority",
+		"issuetype",
+		"duedate",
+		story_points_field(),
+	}
+end
 
 ---@param str string
 ---@return string
@@ -59,7 +65,7 @@ function M.search_issues(jql, on_done, opts)
 
 	local data = {
 		jql = jql,
-		fields = SEARCH_FIELDS,
+		fields = search_fields(),
 		nextPageToken = page_token,
 		maxResults = page_size,
 	}
@@ -71,7 +77,7 @@ function M.search_issues(jql, on_done, opts)
 		end
 
 		local page = {
-			issues = normalizer.normalize_issues(result.issues or {}),
+			issues = normalizer.normalize_issues(result.issues or {}, story_points_field()),
 			nextPageToken = result.nextPageToken,
 			isLast = result.isLast == true,
 		}
@@ -150,7 +156,7 @@ function M.get_issue(issue_key, callback)
 	end
 
 	logger.loginfo("Jira fetch issue", { issue_key = issue_key })
-	local endpoint = string.format("/issue/%s?fields=%s", issue_key, table.concat(SEARCH_FIELDS, ","))
+	local endpoint = string.format("/issue/%s?fields=%s", issue_key, table.concat(search_fields(), ","))
 
 	return service.request("GET", endpoint, nil, function(result, err)
 		if err or not result then
@@ -158,7 +164,7 @@ function M.get_issue(issue_key, callback)
 			return
 		end
 
-		callback(normalizer.normalize_issue(result), nil)
+		callback(normalizer.normalize_issue(result, story_points_field()), nil)
 	end)
 end
 

@@ -486,9 +486,13 @@ function M.fetch_repo_tags(repo, opts, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(reviewers: PullsReviewer[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_reviewers(pr, on_done)
+function M.fetch_reviewers(pr, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+	end
 	local cancelled = false
 	vim.defer_fn(function()
 		if cancelled then
@@ -537,9 +541,13 @@ function M.fetch_builds(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_diffstat(pr, on_done)
+function M.fetch_diffstat(pr, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+	end
 	local cancelled = false
 	vim.defer_fn(function()
 		if cancelled then
@@ -560,9 +568,13 @@ function M.fetch_diffstat(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(entries: PullsActivityEntry[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_activity(pr, on_done)
+function M.fetch_activity(pr, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+	end
 	local cancelled = false
 	vim.defer_fn(function()
 		if cancelled then
@@ -578,9 +590,13 @@ function M.fetch_activity(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(comments: PullsComment[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_comments(pr, on_done)
+function M.fetch_comments(pr, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+	end
 	local cancelled = false
 	vim.defer_fn(function()
 		if cancelled then
@@ -596,9 +612,13 @@ function M.fetch_comments(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(commits: PullsCommit[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_commits(pr, on_done)
+function M.fetch_commits(pr, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+	end
 	local cancelled = false
 	vim.defer_fn(function()
 		if cancelled then
@@ -614,9 +634,13 @@ function M.fetch_commits(pr, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(files: PullsDiffFile[]|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_diff(pr, on_done)
+function M.fetch_diff(pr, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+	end
 	local cancelled = false
 	vim.defer_fn(function()
 		if cancelled then
@@ -632,10 +656,14 @@ function M.fetch_diff(pr, on_done)
 end
 
 ---@param pr PullRequest
----@param commit_hash string
+---@param commit PullsCommit
+---@param opts { force_refresh: boolean|nil }|nil
 ---@param on_done fun(status: string|nil, url: string|nil, err: string|nil)
 ---@return { cancel: fun() }|nil
-function M.fetch_commit_status(pr, commit_hash, on_done)
+function M.fetch_commit_status(pr, commit, opts, on_done)
+	if type(opts) == "function" and on_done == nil then
+		on_done = opts
+	end
 	local cancelled = false
 	vim.defer_fn(function()
 		if cancelled then

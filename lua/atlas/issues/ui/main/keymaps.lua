@@ -106,6 +106,33 @@ function M.register(buf, views)
 				end,
 			})
 		)
+
+		utils.insert_if(
+			items,
+			item("issues.edit_issue", {
+				desc = "Edit issue",
+				index = 5,
+				callback = function()
+					local issue = selected_issue()
+					if issue == nil then
+						footer.notify("warn", "No issue selected")
+						return
+					end
+					actions.run_action("edit_issue", issue, "main")
+				end,
+			})
+		)
+
+		utils.insert_if(
+			items,
+			item("issues.create_issue", {
+				desc = "Create issue",
+				index = 6,
+				callback = function()
+					actions.run_action("create_issue", nil, "main")
+				end,
+			})
+		)
 	end
 
 	if state.provider and state.provider.search then
@@ -235,6 +262,8 @@ function M.remove(buf)
 	utils.insert_if(items, item("issues.open_actions", { key = "" }))
 	utils.insert_if(items, item("issues.transition_issue", { key = "" }))
 	utils.insert_if(items, item("issues.change_assignee", { key = "" }))
+	utils.insert_if(items, item("issues.edit_issue", { key = "" }))
+	utils.insert_if(items, item("issues.create_issue", { key = "" }))
 	utils.insert_if(items, item("issues.search", { key = "" }))
 	utils.insert_if(items, item("issues.open_in_browser", { key = "" }))
 	utils.insert_if(items, item("issues.copy_key", { key = "" }))

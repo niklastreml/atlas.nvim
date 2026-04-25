@@ -33,8 +33,14 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
   },
   config = function()
     require("atlas").setup({
-        bitbucket = { }, -- See configuration below
-        jira = { },      -- See configuration below
+      pulls = {
+        providers = {
+          bitbucket = { }, -- See configuration below
+        },
+      },
+      issues = {
+        jira = { }, -- See configuration below
+      },
     })
   end,
 }
@@ -47,8 +53,14 @@ use {
   "emrearmagan/atlas.nvim",
   config = function()
     require("atlas").setup({
-        bitbucket = { }, -- See configuration below
-        jira = { },      -- See configuration below
+      pulls = {
+        providers = {
+          bitbucket = { }, -- See configuration below
+        },
+      },
+      issues = {
+        jira = { }, -- See configuration below
+      },
     })
   end
 }
@@ -104,44 +116,48 @@ return {
   "emrearmagan/atlas.nvim",
   config = function()
     require("atlas").setup({
-      ---@type JiraConfig
-      jira = {
-        base_url = "https://your-site.atlassian.net",
-        email = "you@example.com",
-        --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
-        token = "your_jira_api_token",
-        cache_ttl = 300,
-        max_result = 100,
-        resolve_parent_issues = true,
+      issues = {
+        max_results = 100,
+        fetch_parent_issues = true,
+        jira = {
+          base_url = "https://your-site.atlassian.net",
+          email = "you@example.com",
+          --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
+          token = "your_jira_api_token",
+          cache_ttl = 300,
 
-        project_config = {
-          KAN = {
-            customfield_10003 = {
-              name = "Approvers",
-              format = function(value)
-                if type(value) ~= "table" or #value == 0 then
-                  return nil -- nil hides the field
-                end
+          project_config = {
+            -- The Jira custom field ID used for story points. Defaults to "customfield_10016".
+            -- This varies per Jira instance/board — check your board's field configuration.
+            story_points_field = "customfield_10016",
 
-                return table.concat(value, ", ")
-              end,
-              hl_group = "AtlasChipActive",
-              display = "chip", -- "chip" (default) or "table"
+            KAN = {
+              customfield_10003 = {
+                name = "Approvers",
+                format = function(value)
+                  if type(value) ~= "table" or #value == 0 then
+                    return nil -- nil hides the field
+                  end
+                  return table.concat(value, ", ")
+                end,
+                hl_group = "AtlasChipActive",
+                display = "chip", -- "chip" or "table"
+              },
             },
           },
-        },
 
-        ---@type JiraViewConfig[]
-        views = {
-          {
-            name = "My Board",
-            key = "M",
-            jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
-          },
-          {
-            name = "Team Board",
-            key = "T",
-            jql = "project = KAN ORDER BY updated DESC",
+          ---@type AtlasJiraViewConfig[]
+          views = {
+            {
+              name = "My Board",
+              key = "M",
+              jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
+            },
+            {
+              name = "Team Board",
+              key = "T",
+              jql = "project = KAN ORDER BY updated DESC",
+            },
           },
         },
       },
@@ -187,11 +203,7 @@ return {
   "emrearmagan/atlas.nvim",
   config = function()
     require("atlas").setup({
-      ---@type BitbucketConfig
-      bitbucket = {
-        user = os.getenv("BITBUCKET_USER") or "",
-        token = os.getenv("BITBUCKET_TOKEN") or "",
-        cache_ttl = 300,
+      pulls = {
         diff = {
           -- Command must support range input: origin/<destination>...origin/<source>
           open_cmd = "DiffviewOpen", -- e.g. "DiffviewOpen" or "CodeDiff", defaults to nil.
@@ -202,7 +214,6 @@ return {
             ["your-workspace/*"] = "~/code/repos/*",
             ["your-workspace/atlas"] = "~/code/atlas",
           },
-
           settings = {
             ["your-workspace/atlas"] = {
               readme = "README.md", -- optional, defaults to README.md
@@ -210,31 +221,38 @@ return {
           },
         },
         custom_actions = {}, -- See Custom Actions below.
+        providers = {
+          bitbucket = {
+            user = os.getenv("BITBUCKET_USER") or "",
+            token = os.getenv("BITBUCKET_TOKEN") or "",
+            cache_ttl = 300,
 
-        ---@type BitbucketViewConfig[]
-        views = {
-          {
-            name = "Me",
-            key = "M",
-            layout = "compact", -- "compact" or "plain"
-            repos = {
-				{ workspace = "your-workspace", repo = "atlas" },
-            },
+            ---@type AtlasBitbucketViewConfig[]
+            views = {
+              {
+                name = "Me",
+                key = "M",
+                layout = "compact", -- "compact" or "plain"
+                repos = {
+                  { workspace = "your-workspace", repo = "atlas" },
+                },
 
-            ---@param pr BitbucketPR
-            ---@param ctx table
-            filter = function(pr, ctx)
-              local user = ctx.user or {}
-              return pr.author and pr.author.account_id == user.account_id
-            end,
-          },
-          {
-            name = "Team",
-            key = "O",
-            layout = "plain", -- "compact" or "plain"
-            repos = {
-              { workspace = "your-workspace", repo = "atlas" },
-              { workspace = "your-workspace", repo = "other-repo" },
+                ---@param pr PullRequest
+                ---@param ctx table
+                filter = function(pr, ctx)
+                  local user = ctx.user or {}
+                  return pr.author and pr.author.account_id == user.account_id
+                end,
+              },
+              {
+                name = "Team",
+                key = "1",
+                layout = "plain", -- "compact" or "plain"
+                repos = {
+                  { workspace = "your-workspace", repo = "atlas" },
+                  { workspace = "your-workspace", repo = "other-repo" },
+                },
+              },
             },
           },
         },
@@ -246,20 +264,20 @@ return {
 
 #### Custom Actions
 
-You can add custom PR actions under `bitbucket.custom_actions`.
+You can add custom PR actions under `pulls.custom_actions`.
 
 Context type:
 
 ```lua
----@class BitbucketCustomActionContext
+---@class AtlasPullsCustomActionContext
 ---@field repo_path string|nil
----@field pr BitbucketPR
+---@field pr PullRequest
 ```
 
 Example:
 
 ```lua
-bitbucket = {
+pulls = {
   repo_config = {
     paths = {
       ["your-workspace/*"] = "~/code/repos/*",
@@ -271,8 +289,8 @@ bitbucket = {
       id = "open_tmux_window",
       label = "Open repo in tmux window",
       confirmation = true, -- present a confirmation prompt before running the action
-      ---@param pr BitbucketPR
-      ---@param ctx BitbucketCustomActionContext
+      ---@param pr PullRequest
+      ---@param ctx AtlasPullsCustomActionContext
       ---@param done fun(ok: boolean|nil, message: string|nil)
       run = function(_, ctx, done)
         if not ctx.repo_path then
@@ -292,6 +310,9 @@ bitbucket = {
       end,
     },
   },
+  providers = {
+    bitbucket = { },
+  },
 }
 ```
 
@@ -309,12 +330,14 @@ require("atlas").setup({
       next_panel_tab = { "]", "<Tab>", "gn" },
       previous_panel_tab = { "[", "<S-Tab>", "gp" },
     },
-    jira = {
-      create_issue = "i",
-      manage_templates = "gT",
+    issues = {
+      transition_issue = "gs",
+      change_assignee = "ga",
+      edit_issue = "ge",
+      search = "?",
     },
-    bitbucket = {
-      open_diffview = { "go", "gd" },
+    pulls = {
+      open_diff = { "go", "gd" },
     },
   },
 })
@@ -325,11 +348,10 @@ require("atlas").setup({
 | Context | Key                     | Action                              |
 | ------- | ----------------------- | ----------------------------------- |
 | Atlas   | `q`                     | Close Atlas                         |
-| Atlas   | `?`                     | Toggle help popup                   |
+| Atlas   | `g?`                    | Toggle help popup                   |
 | Atlas   | `p`                     | Toggle detail pane                  |
 | Atlas   | `<S-Tab>`               | Previous panel tab                  |
 | Atlas   | `<Tab>`                 | Next panel tab                      |
-| Atlas   | `K`                     | Show issue/pr details               |
 | Atlas   | `R`                     | Refresh current view                |
 | Atlas   | `r`                     | Refresh selected issue/pr           |
 | Atlas   | `a/i` / `c` / `e` / `d` | Add / reply / edit / delete comment |
@@ -339,25 +361,25 @@ require("atlas").setup({
 | Context | Key         | Action                        |
 | ------- | ----------- | ----------------------------- |
 | Jira    | `A`         | Open Jira actions             |
-| Jira    | `/`         | Search issues                 |
-| Jira    | `ge`        | Edit Issue                    |
+| Jira    | `K`         | Show issue details            |
+| Jira    | `?`         | Search issues                 |
 | Jira    | `gs`        | Transition Issue              |
 | Jira    | `ga` / `gr` | Change Assignee and reporter  |
-| Jira    | `gt`        | Change issue type             |
-| Jira    | `gT`        | Open template editor          |
+| Jira    | `gs`        | Transition Issue              |
+| Jira    | `ge`        | Edit issue                    |
 | Jira    | `gx`        | Open issue/comment in browser |
 | Jira    | `c`         | Create issue                  |
 | Jira    | `y` / `Y`   | Copy issue key / URL          |
-| Jira    | `m`         | Toggle ADF / markdown view    |
+| Jira    | `za`        | Toggle issue children         |
 
 #### Bitbucket
 
 | Context                  | Key         | Action                           |
 | ------------------------ | ----------- | -------------------------------- |
 | Bitbucket                | `A`         | Open PR actions                  |
-| Bitbucket                | `/`         | Search repositories              |
 | Bitbucket                | `o`         | Toggle repository panel          |
 | Bitbucket                | `T`         | Create new tasks on PR           |
+| Bitbucket                | `?`         | Search repositories              |
 | Bitbucket                | `gc`        | Checkout selected PR             |
 | Bitbucket                | `gd`        | Open selected PR diff            |
 | Bitbucket                | `gx`        | Open pr/build/comment in browser |
