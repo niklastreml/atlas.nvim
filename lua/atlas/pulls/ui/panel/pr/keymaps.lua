@@ -99,7 +99,12 @@ function M.register(buf)
 		desc = "Refresh tab",
 		opts = { nowait = true, silent = true },
 		callback = function()
-			require("atlas.pulls.ui.panel").on_select(nil, nil, { force_refresh = true })
+			local panel_state = require("atlas.pulls.ui.panel.pr.state")
+			local pr = panel_state.current_pr
+			local repo = panel_state.current_repo
+			if pr then
+				require("atlas.pulls.ui.panel").on_select(pr, repo, { force_refresh = true })
+			end
 		end,
 	})
 
