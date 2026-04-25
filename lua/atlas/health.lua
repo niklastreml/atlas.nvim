@@ -1,5 +1,6 @@
 local M = {}
 
+local config = require("atlas.config")
 local keymaps = require("atlas.core.keymaps")
 
 ---@param bin string
@@ -15,6 +16,82 @@ local function check_executable(bin, required, label)
 		vim.health.error(string.format("%s missing: %s", label, bin))
 	else
 		vim.health.warn(string.format("%s not found: %s", label, bin))
+	end
+end
+
+---@param section_path string[]
+---@param user_key string
+---@param token_key string
+---@param label string
+local function check_credentials(section_path, user_key, token_key, label)
+	local opts = config.options
+	for _, key in ipairs(section_path) do
+		opts = type(opts) == "table" and opts[key] or nil
+	end
+
+	if type(opts) ~= "table" then
+		vim.health.warn(string.format("%s not configured", label))
+		return
+	end
+
+	local user = opts[user_key]
+	local token = opts[token_key]
+	if user and user ~= "" and token and token ~= "" then
+		vim.health.ok(string.format("%s credentials configured", label))
+		return
+	end
+
+	vim.health.warn(string.format("%s credentials missing (%s and/or %s)", label, user_key, token_key))
+end
+
+local function check_bitbucket()
+	local pulls = config.options and config.options.pulls or nil
+	local bb = pulls and pulls.providers and pulls.providers.bitbucket or nil
+	if not bb then
+		vim.health.info("Bitbucket not configured")
+		return
+	end
+
+	check_credentials({ "pulls", "providers", "bitbucket" }, "user", "token", "Bitbucket")
+
+	local repo_paths = (bb.repo_config or {}).paths or {}
+	if vim.tbl_isempty(repo_paths) then
+		vim.health.warn("bitbucket.repo_config.paths is empty")
+	else
+		vim.health.ok(string.format(
+			"bitbucket.repo_config.paths configured (%d mapping%s)",
+			vim.tbl_count(repo_paths),
+			vim.tbl_count(repo_paths) == 1 and "" or "s"
+		))
+	end
+
+	local diff_cmd = tostring((bb.diff or {}).open_cmd or "")
+	if diff_cmd == "" then
+		vim.health.warn("bitbucket.diff.open_cmd is empty")
+	elseif vim.fn.exists(":" .. diff_cmd) == 2 then
+		vim.health.ok(string.format("bitbucket.diff.open_cmd available: %s", diff_cmd))
+	else
+		vim.health.error(string.format("bitbucket.diff.open_cmd not found: %s", diff_cmd))
+	end
+end
+
+local function check_jira()
+	local issues = config.options and config.options.issues or nil
+	local jira = issues and issues.jira or nil
+	if not jira then
+		vim.health.info("Jira not configured")
+		return
+	end
+
+	check_credentials({ "issues", "jira" }, "email", "token", "Jira")
+
+	local base_url = tostring(jira.base_url or "")
+	if base_url == "" then
+		vim.health.warn("jira.base_url is empty")
+	elseif not base_url:match("^https://") then
+		vim.health.warn(string.format("jira.base_url should start with https:// (current: %s)", base_url))
+	else
+		vim.health.ok("jira.base_url looks valid")
 	end
 end
 
@@ -52,6 +129,12 @@ function M.check()
 		vim.health.ok("Neovim version compatible")
 	end
 	check_executable("git", true, "Git")
+
+	vim.health.start("Bitbucket")
+	check_bitbucket()
+
+	vim.health.start("Jira")
+	check_jira()
 
 	vim.health.start("Keymaps")
 	validate_keymaps()
