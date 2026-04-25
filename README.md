@@ -81,9 +81,9 @@ use {
 
 ## Commands
 
-- `:AtlasJira` - Open Jira issue picker
+- `:AtlasIssues [provider]` - Open Atlas issues domain
+- `:AtlasPulls [provider]` - Open Atlas pulls domain
 - `:AtlasJqlSearch {query}` - Search Jira issues with JQL
-- `:AtlasBitbucket` - Open Bitbucket PR picker
 - `:AtlasClearCache` - Clear Atlas disk and memory cache
 - `:AtlasLogs` - Toggle Atlas logs
 
@@ -97,6 +97,7 @@ use {
 - [x] Search issues
 - [x] JQL support and completion
 - [x] Support for custom fields
+- [x] Add custom actions to issues
 - [x] Create and edit issue templates
 - [ ] Save JQL queries as custom views
 - [ ] Save and filter issues
@@ -111,6 +112,9 @@ use {
 
 ### Configuration
 
+> [!TIP]
+> Not ready to connect to Jira yet? Run `:AtlasIssues mock` to explore the UI with local mock data.
+
 ```lua
 return {
   "emrearmagan/atlas.nvim",
@@ -119,6 +123,8 @@ return {
       issues = {
         max_results = 100,
         fetch_parent_issues = true,
+        custom_actions = {}, -- See Custom Actions below.
+
         jira = {
           base_url = "https://your-site.atlassian.net",
           email = "you@example.com",
@@ -166,6 +172,40 @@ return {
 }
 ```
 
+#### Custom Actions
+
+You can add custom issue actions under `issues.custom_actions`.
+
+Context type:
+
+```lua
+---@class AtlasIssuesCustomActionContext
+---@field issue Issue|nil
+---@field user IssueUser|nil
+```
+
+Example:
+
+```lua
+issues = {
+  custom_actions = {
+    {
+      id = "copy_branch_name",
+      label = "Copy branch name",
+      ---@param issue Issue
+      ---@param ctx AtlasIssuesCustomActionContext
+      ---@param done fun(ok: boolean|nil, message: string|nil)
+      run = function(issue, ctx, done)
+        local branch = string.format("%s/%s", issue.key, issue.summary:lower():gsub("%s+", "-"))
+        vim.fn.setreg("+", branch)
+        done(true, "Copied: " .. branch)
+      end,
+    },
+  },
+  jira = { },
+}
+```
+
 ### JQL Search Command
 
 Use `:AtlasJqlSearch` to run JQL directly from command mode. It also supports command-line completion while typing the query.
@@ -197,6 +237,9 @@ Examples:
 - [ ] Save and filter pull requests
 
 ### Configuration
+
+> [!TIP]
+> Not ready to connect to Bitbucket yet? Run `:AtlasPulls mock` to explore the UI with local mock data.
 
 ```lua
 return {
@@ -358,19 +401,20 @@ require("atlas").setup({
 
 #### Jira
 
-| Context | Key         | Action                        |
-| ------- | ----------- | ----------------------------- |
-| Jira    | `A`         | Open Jira actions             |
-| Jira    | `K`         | Show issue details            |
-| Jira    | `?`         | Search issues                 |
-| Jira    | `gs`        | Transition Issue              |
-| Jira    | `ga` / `gr` | Change Assignee and reporter  |
-| Jira    | `gs`        | Transition Issue              |
-| Jira    | `ge`        | Edit issue                    |
-| Jira    | `gx`        | Open issue/comment in browser |
-| Jira    | `c`         | Create issue                  |
-| Jira    | `y` / `Y`   | Copy issue key / URL          |
-| Jira    | `za`        | Toggle issue children         |
+| Context | Key       | Action                                    |
+| ------- | --------- | ----------------------------------------- |
+| Jira    | `A`       | Open Jira actions                         |
+| Jira    | `K`       | Show issue details                        |
+| Jira    | `c`       | Create issue                              |
+| Jira    | `?`       | Search issues                             |
+| Jira    | `gs`      | Transition issue                          |
+| Jira    | `ga`      | Change assignee                           |
+| Jira    | `gr`      | Change reporter                           |
+| Jira    | `ge`      | Edit issue                                |
+| Jira    | `gx`      | Open issue/comment in browser             |
+| Jira    | `y` / `Y` | Copy issue key / URL                      |
+| Jira    | `za`      | Toggle issue children                     |
+| Jira    | `m`       | Toggle markdown / raw view (overview tab) |
 
 #### Bitbucket
 

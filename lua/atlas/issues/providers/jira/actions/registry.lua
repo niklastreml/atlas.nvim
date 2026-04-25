@@ -941,6 +941,55 @@ function M.available(ctx)
 			table.insert(out, action)
 		end
 	end
+
+	local issues_cfg = require("atlas.config").options.issues or {}
+	local custom_actions = issues_cfg.custom_actions or {}
+
+	for _, item in ipairs(custom_actions) do
+		if type(item) == "table" and type(item.label) == "string" and type(item.run) == "function" then
+			table.insert(out, {
+				id = tostring(item.id or item.label),
+				label = item.label,
+				is_available = function(action_ctx)
+					if not has_issue_key(action_ctx) then
+						return false, "No issue selected"
+					end
+					return true, nil
+				end,
+				run = function(action_ctx, done)
+					footer.notify("loading", string.format("Running %s...", tostring(item.label)))
+
+					local done_called = false
+					local function custom_done(ok, message)
+						if done_called then
+							return
+						end
+						done_called = true
+
+						vim.schedule(function()
+							if ok == false then
+								footer.notify("error", tostring(message or (item.label .. " failed")))
+								done(nil, tostring(message or (item.label .. " failed")))
+								return
+							end
+							footer.notify("success", tostring(message or (item.label .. " done")))
+							done({ changed_issue_key = nil, message = tostring(message or (item.label .. " done")) }, nil)
+						end)
+					end
+
+					local ok, err = pcall(item.run, action_ctx.issue, {
+						issue = action_ctx.issue,
+						user = issues_state.current_user,
+					}, custom_done)
+
+					if not ok then
+						custom_done(false, string.format("Custom action failed: %s", tostring(err)))
+					end
+				end,
+			})
+		end
+	end
+
 	return out
 end
 

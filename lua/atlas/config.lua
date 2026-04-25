@@ -4,7 +4,7 @@
 
 ---@alias AtlasKeymapValue string|string[]|false|nil
 
----@alias AtlasPullsProviderId "bitbucket"|"mock"|"github"
+---@alias AtlasPullsProviderId "bitbucket"|"mock"
 ---@alias AtlasIssuesProviderId "jira"|"mock"
 
 --------------------------------------------------------------------------------
@@ -47,7 +47,6 @@
 
 ---@class AtlasPullsProviders
 ---@field bitbucket AtlasBitbucketConfig|nil
----@field github table|nil
 
 ---@class AtlasPullsConfig
 ---@field repo_config AtlasPullsRepoConfig|nil
@@ -55,9 +54,20 @@
 ---@field custom_actions AtlasPullsCustomAction[]|nil
 ---@field providers AtlasPullsProviders|nil
 
+---@class AtlasIssuesCustomActionContext
+---@field issue Issue|nil
+---@field user IssueUser|nil
+
+---@class AtlasIssuesCustomAction
+---@field id string
+---@field label string
+---@field confirmation boolean|nil
+---@field run fun(issue: Issue, ctx: AtlasIssuesCustomActionContext, done: fun(ok: boolean|nil, message: string|nil))
+
 ---@class AtlasIssuesConfig
 ---@field max_results number|nil
 ---@field fetch_parent_issues boolean|nil
+---@field custom_actions AtlasIssuesCustomAction[]|nil
 ---@field jira AtlasJiraIssuesConfig|nil
 
 --------------------------------------------------------------------------------
@@ -132,8 +142,10 @@ local function migrate_legacy_config(opts)
 		end)
 	end
 
+	local legacy = false
+
 	if migrated.bitbucket and not migrated.pulls then
-		warn("Legacy config: move 'bitbucket' into 'pulls.providers.bitbucket'.")
+		legacy = true
 		migrated.pulls = migrated.pulls or {}
 		migrated.pulls.providers = migrated.pulls.providers or {}
 		migrated.pulls.providers.bitbucket = migrated.bitbucket
@@ -141,10 +153,14 @@ local function migrate_legacy_config(opts)
 	end
 
 	if migrated.jira and not migrated.issues then
-		warn("Legacy config: move 'jira' into 'issues.jira'.")
+		legacy = true
 		migrated.issues = migrated.issues or {}
 		migrated.issues.jira = migrated.jira
 		migrated.jira = nil
+	end
+
+	if legacy then
+		warn("Legacy config detected. Please update your config - see the README for the new structure.")
 	end
 
 	return migrated
@@ -157,8 +173,6 @@ end
 local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasPulls")
 	pcall(vim.api.nvim_del_user_command, "AtlasIssues")
-	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket")
-	pcall(vim.api.nvim_del_user_command, "AtlasJira")
 	pcall(vim.api.nvim_del_user_command, "AtlasJqlSearch")
 	pcall(vim.api.nvim_del_user_command, "AtlasLogs")
 	pcall(vim.api.nvim_del_user_command, "AtlasClearCache")
@@ -174,42 +188,28 @@ local function register_commands()
 	end, { desc = "Clear Atlas disk and memory cache" })
 
 	vim.api.nvim_create_user_command("AtlasPulls", function(opts)
-		local provider_id = opts.fargs[1]
+		local provider_id = opts.fargs[1] and opts.fargs[1]:lower() or nil
 		require("atlas").open("pulls", provider_id)
 	end, { desc = "Open Atlas pulls domain", nargs = "?" })
 
 	vim.api.nvim_create_user_command("AtlasIssues", function(opts)
-		local provider_id = opts.fargs[1]
+		local provider_id = opts.fargs[1] and opts.fargs[1]:lower() or nil
 		require("atlas").open("issues", provider_id)
 	end, { desc = "Open Atlas issues domain", nargs = "?" })
 
-	if M.options.pulls and M.options.pulls.providers then
-		if M.options.pulls.providers.bitbucket then
-			vim.api.nvim_create_user_command("AtlasBitbucket", function()
-				require("atlas").open("pulls", "bitbucket")
-			end, { desc = "Open Atlas Bitbucket pulls" })
-		end
-
-		if M.options.pulls.providers.github then
-			vim.api.nvim_create_user_command("AtlasGithub", function()
-				require("atlas").open("pulls", "github")
-			end, { desc = "Open Atlas GitHub pulls" })
-		end
-	end
-
 	if M.options.issues then
 		if M.options.issues.jira then
-			vim.api.nvim_create_user_command("AtlasJira", function()
-				require("atlas").open("issues", "jira")
-			end, { desc = "Open Atlas Jira issues" })
-
 			vim.api.nvim_create_user_command("AtlasJqlSearch", function(cmd_opts)
 				require("atlas.issues.providers.jira.completion.search").command(cmd_opts)
 			end, {
 				desc = "Search Jira issues with JQL",
 				nargs = "*",
 				complete = function(arglead, cmdline, cursorpos)
-					return require("atlas.issues.providers.jira.completion.search").complete(arglead, cmdline, cursorpos)
+					return require("atlas.issues.providers.jira.completion.search").complete(
+						arglead,
+						cmdline,
+						cursorpos
+					)
 				end,
 			})
 		end

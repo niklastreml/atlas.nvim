@@ -5,7 +5,7 @@
 ---@field name string
 ---@field format fun(value: any): string|nil
 ---@field hl_group string|nil
----@field display "table"|"chip"|nil
+---@field display "chip"|"table"|nil
 
 ---@class AtlasJiraProjectConfig
 ---@field story_points_field string|nil

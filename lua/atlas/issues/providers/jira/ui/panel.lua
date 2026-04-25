@@ -178,7 +178,7 @@ function M.fetches(issue, refresh, opts)
 						name = field_cfg.name or field_id,
 						formatted = formatted,
 						hl_group = field_cfg.hl_group,
-						display = field_cfg.display or "table",
+						display = field_cfg.display or "chip",
 					})
 				end
 			end
