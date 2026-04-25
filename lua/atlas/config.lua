@@ -156,6 +156,7 @@ local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasIssues")
 	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket")
 	pcall(vim.api.nvim_del_user_command, "AtlasJira")
+	pcall(vim.api.nvim_del_user_command, "AtlasJqlSearch")
 	pcall(vim.api.nvim_del_user_command, "AtlasLogs")
 	pcall(vim.api.nvim_del_user_command, "AtlasClearCache")
 
@@ -198,6 +199,16 @@ local function register_commands()
 			vim.api.nvim_create_user_command("AtlasJira", function()
 				require("atlas").open("issues", "jira")
 			end, { desc = "Open Atlas Jira issues" })
+
+			vim.api.nvim_create_user_command("AtlasJqlSearch", function(cmd_opts)
+				require("atlas.issues.providers.jira.completion.search").command(cmd_opts)
+			end, {
+				desc = "Search Jira issues with JQL",
+				nargs = "*",
+				complete = function(arglead, cmdline, cursorpos)
+					return require("atlas.issues.providers.jira.completion.search").complete(arglead, cmdline, cursorpos)
+				end,
+			})
 		end
 	end
 end
