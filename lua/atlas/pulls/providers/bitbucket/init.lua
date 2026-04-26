@@ -40,7 +40,31 @@ function M.fetch_pullrequests(view, opts, on_done)
 	return pr_api.fetch_pullrequests(view.repos or {}, {
 		force_load = opts.force_load == true,
 		pagelen = opts.pagelen,
-	}, on_done)
+	}, function(groups, err)
+		if type(view.filter) ~= "function" then
+			on_done(groups, err)
+			return
+		end
+
+		local ctx = {
+			user = require("atlas.pulls.state").current_user,
+		}
+		local filtered = {}
+		for _, group in ipairs(groups or {}) do
+			local prs = {}
+			for _, pr in ipairs(group.prs or {}) do
+				local ok, keep = pcall(view.filter, pr, ctx)
+				if ok and keep ~= false then
+					table.insert(prs, pr)
+				end
+			end
+			if #prs > 0 then
+				table.insert(filtered, vim.tbl_extend("force", group, { prs = prs }))
+			end
+		end
+
+		on_done(filtered, err)
+	end)
 end
 
 ---@param pr PullRequest
