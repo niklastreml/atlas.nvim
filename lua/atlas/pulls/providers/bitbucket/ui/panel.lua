@@ -49,7 +49,7 @@ function M.header_rows(pr)
 	if raw.close_source_branch ~= nil then
 		table.insert(rows, {
 			k1 = "Close source:",
-			v1 = raw.close_source_branch and "yes" or "no",
+			v1 = raw.close_source_branch and icons.general("success") or icons.general("error"),
 			v1_hl = raw.close_source_branch and "AtlasTextPositive" or "AtlasLogError",
 			k2 = "",
 			v2 = "",

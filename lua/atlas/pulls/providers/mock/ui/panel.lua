@@ -50,7 +50,7 @@ function M.header_rows(pr)
 	return {
 		{
 			k1 = "Close source:",
-			v1 = pr.close_source_branch and "yes" or "no",
+			v1 = pr.close_source_branch and icons.general("success") or icons.general("error"),
 			v1_hl = pr.close_source_branch and "AtlasTextPositive" or "AtlasLogError",
 			k2 = "",
 			v2 = "",

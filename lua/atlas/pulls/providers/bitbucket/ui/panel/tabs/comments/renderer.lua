@@ -128,6 +128,80 @@ local function render_file_header(file, count, pad, max_width)
 	return line, hdr_spans
 end
 
+---@param task BitbucketPRTask
+---@param file string
+---@param authors PullsAuthor[]
+---@return AtlasThreadV2Item
+local function to_task_item(task, file, authors)
+	local is_resolved = tostring(task.state or "") == "RESOLVED"
+	local checkbox = is_resolved and "[x]" or "[ ]"
+	local title = author_completion.resolve(first_line(task.content_raw), authors)
+	if title == "" then
+		title = "(empty task)"
+	end
+	local task_author = author_name(task.creator)
+	return {
+		icon = "",
+		author = string.format("%s %s", checkbox, title),
+		additional = string.format("by @%s", task_author),
+		right_text = utils.relative_time(task.updated_on ~= "" and task.updated_on or task.created_on),
+		content = nil,
+		footer_items = {},
+		line_map = {
+			task = task,
+			entity_kind = "task",
+			file = file,
+		},
+		meta = {
+			task = task,
+			author_hl_name = task_author,
+			is_task = true,
+			is_resolved = is_resolved,
+		},
+	}
+end
+
+---@param task BitbucketPRTask
+---@param file string
+---@param authors PullsAuthor[]
+---@param current_user PullsUser|nil
+---@return AtlasThreadV2Item
+local function to_thread_task_item(task, file, authors, current_user)
+	local is_resolved = tostring(task.state or "") == "RESOLVED"
+	local task_author = author_name(task.creator)
+	local task_title = author_completion.resolve(first_line(task.content_raw), authors)
+	if task_title == "" then
+		task_title = "(empty task)"
+	end
+	local checkbox = is_resolved and "[x]" or "[ ]"
+	local footer_items = {
+		string.format("%s (t)", is_resolved and icons.general("refresh") or icons.general("success")),
+	}
+	if bb_helper.can_manage_task(task, current_user) then
+		table.insert(footer_items, string.format("%s (e)", icons.general("edit")))
+		table.insert(footer_items, string.format("%s (d)", icons.general("delete")))
+	end
+	return {
+		icon = "",
+		author = string.format("%s %s", checkbox, task_title),
+		additional = string.format("by @%s", task_author),
+		right_text = utils.relative_time(task.updated_on ~= "" and task.updated_on or task.created_on),
+		content = nil,
+		footer_items = footer_items,
+		line_map = {
+			task = task,
+			entity_kind = "task",
+			file = file,
+		},
+		meta = {
+			task = task,
+			author_hl_name = task_author,
+			is_task = true,
+			is_resolved = is_resolved,
+		},
+	}
+end
+
 ---@param node PullsCommentTreeNode
 ---@param file string
 ---@param task_map BitbucketTaskMap
@@ -150,40 +224,7 @@ local function to_thread_item(node, file, task_map, authors, current_user)
 	end
 
 	for _, task in ipairs((task_map.by_comment_id or {})[tonumber(comment.id) or -1] or {}) do
-		local is_resolved = tostring(task.state or "") == "RESOLVED"
-		local task_author = author_name(task.creator)
-		local task_title = author_completion.resolve(first_line(task.content_raw), authors)
-		if task_title == "" then
-			task_title = "(empty task)"
-		end
-		local checkbox = is_resolved and "[x]" or "[ ]"
-		local can_manage_task = bb_helper.can_manage_task(task, current_user)
-		local footer_items = {
-			string.format("%s (t)", is_resolved and icons.general("refresh") or icons.general("success")),
-		}
-		if can_manage_task then
-			table.insert(footer_items, string.format("%s (e)", icons.general("edit")))
-			table.insert(footer_items, string.format("%s (d)", icons.general("delete")))
-		end
-		table.insert(children, {
-			icon = "",
-			author = string.format("%s %s", checkbox, task_title),
-			additional = string.format("by @%s", task_author),
-			right_text = utils.relative_time(task.updated_on ~= "" and task.updated_on or task.created_on),
-			content = nil,
-			footer_items = footer_items,
-			line_map = {
-				task = task,
-				entity_kind = "task",
-				file = file,
-			},
-			meta = {
-				task = task,
-				author_hl_name = task_author,
-				is_task = true,
-				is_resolved = is_resolved,
-			},
-		})
+		table.insert(children, to_thread_task_item(task, file, authors, current_user))
 	end
 
 	local footer_items = {
@@ -236,46 +277,6 @@ local function build_task_map(tasks)
 	return {
 		by_comment_id = by_comment_id,
 		global = global,
-	}
-end
-
----@param task BitbucketPRTask
----@param authors PullsAuthor[]
----@param current_user PullsUser|nil
----@return AtlasThreadV2Item
-local function to_global_task_item(task, authors, current_user)
-	local is_resolved = tostring(task.state or "") == "RESOLVED"
-	local checkbox = is_resolved and "[x]" or "[ ]"
-	local title = author_completion.resolve(first_line(task.content_raw), authors)
-	if title == "" then
-		title = "(empty task)"
-	end
-	local can_manage_task = bb_helper.can_manage_task(task, current_user)
-	local footer_items = {
-		string.format("%s (t)", is_resolved and icons.general("refresh") or icons.general("success")),
-	}
-	if can_manage_task then
-		table.insert(footer_items, string.format("%s (e)", icons.general("edit")))
-		table.insert(footer_items, string.format("%s (d)", icons.general("delete")))
-	end
-	return {
-		icon = "",
-		author = string.format("%s %s", checkbox, title),
-		additional = string.format("by @%s", author_name(task.creator)),
-		right_text = utils.relative_time(task.updated_on ~= "" and task.updated_on or task.created_on),
-		content = nil,
-		footer_items = footer_items,
-		line_map = {
-			task = task,
-			entity_kind = "task",
-			file = "PR",
-		},
-		meta = {
-			task = task,
-			author_hl_name = author_name(task.creator),
-			is_task = true,
-			is_resolved = is_resolved,
-		},
 	}
 end
 
@@ -361,7 +362,7 @@ function M.render(pr, width, comment_entries, task_entries)
 
 		local global_items = {}
 		for _, task in ipairs(tasks_tbl) do
-			table.insert(global_items, to_global_task_item(task, authors, current_user))
+			table.insert(global_items, to_task_item(task, "PR", authors))
 		end
 
 		local item_lines, item_spans, item_map = threads.render(global_items, max_width, {
