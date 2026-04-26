@@ -53,25 +53,35 @@ local function check_bitbucket()
 	end
 
 	check_credentials({ "pulls", "providers", "bitbucket" }, "user", "token", "Bitbucket")
+end
 
-	local repo_paths = (bb.repo_config or {}).paths or {}
+local function check_pulls()
+	local pulls = config.options and config.options.pulls or nil
+	if not pulls then
+		vim.health.info("Pulls not configured")
+		return
+	end
+
+	local repo_paths = (pulls.repo_config or {}).paths or {}
 	if vim.tbl_isempty(repo_paths) then
-		vim.health.warn("bitbucket.repo_config.paths is empty")
+		vim.health.warn("pulls.repo_config.paths is empty")
 	else
 		vim.health.ok(string.format(
-			"bitbucket.repo_config.paths configured (%d mapping%s)",
+			"pulls.repo_config.paths configured (%d mapping%s)",
 			vim.tbl_count(repo_paths),
 			vim.tbl_count(repo_paths) == 1 and "" or "s"
 		))
 	end
 
-	local diff_cmd = tostring((bb.diff or {}).open_cmd or "")
+	local diff_cmd = tostring((pulls.diff or {}).open_cmd or "")
 	if diff_cmd == "" then
-		vim.health.warn("bitbucket.diff.open_cmd is empty")
+		vim.health.warn("pulls.diff.open_cmd is empty")
 	elseif vim.fn.exists(":" .. diff_cmd) == 2 then
-		vim.health.ok(string.format("bitbucket.diff.open_cmd available: %s", diff_cmd))
+		vim.health.ok(string.format("pulls.diff.open_cmd available: %s", diff_cmd))
 	else
-		vim.health.error(string.format("bitbucket.diff.open_cmd not found: %s", diff_cmd))
+		vim.health.error(string.format("pulls.diff.open_cmd not found: %s", diff_cmd))
+	end
+end
 	end
 end
 
@@ -129,6 +139,9 @@ function M.check()
 		vim.health.ok("Neovim version compatible")
 	end
 	check_executable("git", true, "Git")
+
+	vim.health.start("Pulls")
+	check_pulls()
 
 	vim.health.start("Bitbucket")
 	check_bitbucket()
