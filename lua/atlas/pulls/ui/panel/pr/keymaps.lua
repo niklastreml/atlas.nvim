@@ -85,14 +85,20 @@ function M.register(buf)
 		end,
 	})
 
-	table.insert(items, {
-		key = "gx",
+	utils.insert_if(items, item("pulls.open_in_browser", {
 		desc = "Open in browser",
 		opts = { nowait = true, silent = true },
 		callback = function()
-			M.open_current_line()
+			if M.open_current_line() then
+				return
+			end
+			local pr = panel_state.current_pr
+			if pr == nil then
+				return
+			end
+			actions.open_in_browser(pr)
 		end,
-	})
+	}))
 
 	table.insert(items, {
 		key = "r",
@@ -121,18 +127,6 @@ function M.register(buf)
 			end,
 		}))
 	end
-
-	utils.insert_if(items, item("pulls.open_in_browser", {
-		desc = "Open PR in browser",
-		opts = { nowait = true },
-		callback = function()
-			local pr = panel_state.current_pr
-			if pr == nil then
-				return
-			end
-			actions.open_in_browser(pr)
-		end,
-	}))
 
 	utils.insert_if(items, item("pulls.open_diff", {
 		desc = "Open PR diff",
@@ -233,24 +227,26 @@ function M.register(buf)
 	help.register("General", general, { index = 300, buffer = buf })
 end
 
+---@return boolean
 function M.open_current_line()
 	local layout = require("atlas.ui.layout")
 	local win = layout.win_id("detail")
 	if win == nil or not vim.api.nvim_win_is_valid(win) then
-		return
+		return false
 	end
 
 	local lnum = vim.api.nvim_win_get_cursor(win)[1]
 	local entry = (panel_state.line_map or {})[lnum]
 	local pr = panel_state.current_pr
 	if not entry or not pr then
-		return
+		return false
 	end
 
 	local tab_mod = current_tab_mod()
 	if tab_mod and type(tab_mod.on_enter) == "function" then
-		tab_mod.on_enter(pr, entry)
+		return tab_mod.on_enter(pr, entry) == true
 	end
+	return false
 end
 
 ---@param buf integer

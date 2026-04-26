@@ -18,6 +18,12 @@ local function first_line(value)
 	return line
 end
 
+---@param value string|nil
+---@return string
+local function comment_display_text(value)
+	return vim.trim(tostring(value or ""):gsub("\r\n", "\n"))
+end
+
 ---@param pr PullRequest
 ---@param comments PullsComment[]|nil
 ---@param tasks BitbucketPRTask[]|nil
@@ -131,8 +137,8 @@ end
 local function to_thread_item(node, file, task_map, authors, current_user)
 	local comment = node.comment
 	local is_deleted = comment.deleted == true
-	local raw_line = is_deleted and "(deleted comment)" or first_line(comment.content_raw)
-	local text = author_completion.resolve(raw_line, authors)
+	local raw_text = is_deleted and "(deleted comment)" or comment_display_text(comment.content_raw)
+	local text = author_completion.resolve(raw_text, authors)
 	if text == "" then
 		text = "(empty comment)"
 	end

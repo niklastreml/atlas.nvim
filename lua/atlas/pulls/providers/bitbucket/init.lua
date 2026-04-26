@@ -44,6 +44,17 @@ function M.fetch_pullrequests(view, opts, on_done)
 end
 
 ---@param pr PullRequest
+---@param opts { force_refresh: boolean|nil }|nil
+---@param on_done fun(description: string|nil, err: string|nil)
+---@return nil
+function M.fetch_description(pr, opts, on_done)
+	vim.schedule(function()
+		on_done(tostring(pr.description or ""), nil)
+	end)
+	return nil
+end
+
+---@param pr PullRequest
 ---@param opts PullsFetchOpts
 ---@param on_done fun(pr: PullRequest|nil, err: string|nil)
 ---@return { cancel: fun() }|nil

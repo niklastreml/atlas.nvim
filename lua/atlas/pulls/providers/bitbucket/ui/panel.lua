@@ -127,18 +127,26 @@ function M.fetches(pr, refresh)
 end
 
 ---@param pr PullRequest
+---@param active_tab string|nil
 ---@return boolean
-function M.is_loading(pr)
+function M.is_loading(pr, active_tab)
 	local overview_state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
 	local activity_state = require("atlas.pulls.ui.panel.pr.tabs.activity.state")
 	local bb_comments_state = require("atlas.pulls.providers.bitbucket.ui.panel.tabs.comments.state")
 	local commits_state = require("atlas.pulls.ui.panel.pr.tabs.commits.state")
 	local files_state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
-	return overview_state.any_loading()
-		or activity_state.any_loading()
-		or bb_comments_state.any_loading()
-		or commits_state.any_loading()
-		or files_state.any_loading()
+	if active_tab == "overview" then
+		return overview_state.any_loading()
+	elseif active_tab == "activity" then
+		return activity_state.any_loading()
+	elseif active_tab == "comments" then
+		return bb_comments_state.any_loading()
+	elseif active_tab == "commits" then
+		return commits_state.any_loading()
+	elseif active_tab == "files" then
+		return files_state.any_loading()
+	end
+	return false
 end
 
 ---@return PullsPanelTab[]

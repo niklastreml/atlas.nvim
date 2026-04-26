@@ -37,14 +37,6 @@ local function track(handle)
 	end
 end
 
----@param value string|nil
----@return string
-local function first_line(value)
-	local raw = tostring(value or ""):gsub("\r\n", "\n")
-	local line = raw:match("([^\n]+)") or raw
-	return line
-end
-
 ---@param author {name: string, nickname: string|nil}|nil
 ---@return string
 local function author_name(author)
@@ -164,13 +156,22 @@ local function is_own_comment(comment)
 	return comment.author.nickname == current_user.username or comment.author.name == current_user.name
 end
 
+---@param value string|nil
+---@return string
+local function comment_display_text(value)
+	local text = tostring(value or "")
+	text = text:gsub("\r\n", "\n")
+	text = text:gsub("<!%-%-.-%-%->", "")
+	return vim.trim(text)
+end
+
 ---@param node PullsCommentTreeNode
 ---@param file string
 ---@return AtlasThreadV2Item
 local function to_thread_item(node, file)
 	local comment = node.comment
 	local is_deleted = comment.deleted == true
-	local text = is_deleted and "(deleted comment)" or first_line(comment.content_raw)
+	local text = is_deleted and "(deleted comment)" or comment_display_text(comment.content_raw)
 	if text == "" then
 		text = "(empty comment)"
 	end

@@ -38,7 +38,7 @@ local function is_loading()
 	local state = require("atlas.pulls.state")
 	local provider = state.provider
 	if provider and provider.panel and type(provider.panel.is_loading) == "function" then
-		return provider.panel.is_loading(pr)
+		return provider.panel.is_loading(pr, panel_state.current_tab)
 	end
 	return false
 end
@@ -107,9 +107,10 @@ local function refresh_panel()
 end
 
 local function activate_current_tab()
+	local buf = layout.buf_id("detail")
 	local tab_mod = get_tab_module(panel_state.current_tab)
 	if tab_mod and type(tab_mod.activate) == "function" then
-		tab_mod.activate()
+		tab_mod.activate(buf, refresh_panel)
 	end
 end
 
@@ -316,9 +317,10 @@ end
 function M.activate() end
 
 function M.deactivate()
+	local buf = layout.buf_id("detail")
 	local tab_mod = get_tab_module(panel_state.current_tab)
 	if tab_mod and type(tab_mod.deactivate) == "function" then
-		tab_mod.deactivate()
+		tab_mod.deactivate(buf)
 	end
 end
 

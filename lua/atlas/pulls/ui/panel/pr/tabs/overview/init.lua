@@ -51,13 +51,28 @@ function M.on_select(pr, repo, refresh, opts)
 
 	local can_fetch_reviewers = type(provider.fetch_reviewers) == "function"
 	local can_fetch_diffstat = type(provider.fetch_diffstat) == "function"
+	local can_fetch_description = type(provider.fetch_description) == "function"
 	local should_fetch_reviewers = can_fetch_reviewers
 		and (force_refresh or state.reviewers == nil or state.reviewers == "loading")
 	local should_fetch_diffstat = can_fetch_diffstat
 		and (force_refresh or state.diffstat == nil or state.diffstat == "loading")
+	local should_fetch_description = can_fetch_description
+		and (force_refresh or state.description == nil or state.description == "loading")
 
-	if should_fetch_reviewers or should_fetch_diffstat then
+	if should_fetch_reviewers or should_fetch_diffstat or should_fetch_description then
 		cancel_all()
+	end
+
+	if should_fetch_description then
+		state.description = "loading"
+		track(provider.fetch_description(pr, opts, function(desc, err)
+			if err then
+				state.description = nil
+			else
+				state.description = desc or ""
+			end
+			refresh()
+		end))
 	end
 
 	if should_fetch_reviewers then
@@ -153,7 +168,7 @@ local function render_reviewers(pr, width, lines, spans)
 	})
 
 	if #decisions == 0 then
-		utils.push(lines, spans, "no reviewers yet", nil, PADDING_X)
+		utils.push(lines, spans, "no reviewers yet", "AtlasTextMuted", PADDING_X)
 		table.insert(lines, "")
 		return
 	end
@@ -293,7 +308,12 @@ local function render_description(pr, width, lines, spans)
 
 	utils.push(lines, spans, "Description", "AtlasColumnHeader", PADDING_X)
 
-	local desc_text = tostring(pr.description or "")
+	if state.description == "loading" then
+		utils.push(lines, spans, spinner.with_text("Loading description..."), "AtlasTextMuted", PADDING_X)
+		return
+	end
+
+	local desc_text = tostring(state.description or pr.description or "")
 	if desc_text == "" then
 		utils.push(lines, spans, "No description provided.", "AtlasTextMuted", PADDING_X)
 		return
@@ -422,10 +442,10 @@ function M.render(pr, width)
 end
 
 ---@param _lnum integer
----@param entry table
+---@param _entry table
 ---@return boolean
-function M.is_selectable_line(_lnum, entry)
-	return entry.kind == "build"
+function M.is_selectable_line(_lnum, _entry)
+	return false
 end
 
 ---@param _pr PullRequest
@@ -438,10 +458,21 @@ function M.on_enter(_pr, entry)
 	end
 end
 
-function M.activate()
+function M.activate(buf)
+	if not (buf and vim.api.nvim_buf_is_valid(buf)) then
+		return
+	end
+	vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
+	vim.api.nvim_set_option_value("syntax", "markdown", { buf = buf })
 end
 
-function M.deactivate()
+function M.deactivate(buf)
+	if not (buf and vim.api.nvim_buf_is_valid(buf)) then
+		return
+	end
+	pcall(vim.treesitter.stop, buf)
+	vim.api.nvim_set_option_value("syntax", "OFF", { buf = buf })
+	vim.api.nvim_set_option_value("filetype", "", { buf = buf })
 	cancel_all()
 end
 

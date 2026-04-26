@@ -6,7 +6,6 @@
 ---@field force_load boolean|nil
 ---@field pagelen number|nil
 
-
 ---@class PullsProvider
 ---@field id string
 ---@field name string
@@ -24,6 +23,7 @@
 ---@field fetch_repo_branches (fun(repo: PullsRepoDetails, opts: PullsFetchOpts, on_done: fun(branches: PullsRepoBranches|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_repo_tags (fun(repo: PullsRepoDetails, opts: PullsFetchOpts, on_done: fun(tags: PullsRepoTags|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field delete_repo_branch (fun(repo: PullsRepoDetails, branch: PullsRepoBranch, on_done: fun(ok: boolean, err: string|nil)): { cancel: fun() }|nil)|nil
+---@field fetch_description (fun(pr: PullRequest, opts: { force_refresh: boolean|nil }|nil, on_done: fun(description: string|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_reviewers (fun(pr: PullRequest, opts: { force_refresh: boolean|nil }|nil, on_done: fun(reviewers: PullsReviewer[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_builds (fun(pr: PullRequest, on_done: fun(builds: PullsBuild[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field fetch_diffstat (fun(pr: PullRequest, opts: { force_refresh: boolean|nil }|nil, on_done: fun(entries: PullsDiffstatEntry[]|nil, err: string|nil)): { cancel: fun() }|nil)|nil
@@ -56,7 +56,7 @@
 ---@field chips (fun(pr: PullRequest): PullsPanelChip[])|nil
 ---@field tabs (fun(): PullsPanelTab[])|nil
 ---@field fetches (fun(pr: PullRequest, refresh: fun()))|nil
----@field is_loading (fun(pr: PullRequest): boolean)|nil
+---@field is_loading (fun(pr: PullRequest, active_tab: string|nil): boolean)|nil
 
 ---@class PullsProviderRepoPanel
 ---@field header_rows (fun(repo: PullsRepo): PullsPanelHeaderRow[])|nil

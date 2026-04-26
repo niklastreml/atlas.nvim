@@ -53,6 +53,31 @@ local function sort_node_children(nodes)
 	end
 end
 
+---@param node PullsCommentTreeNode
+---@return string
+local function latest_created_in_tree(node)
+	local latest = tostring((node.comment or {}).created_on or "")
+	for _, child in ipairs(node.children or {}) do
+		local child_latest = latest_created_in_tree(child)
+		if child_latest > latest then
+			latest = child_latest
+		end
+	end
+	return latest
+end
+
+---@param roots PullsCommentTreeNode[]
+local function sort_roots_by_latest_activity(roots)
+	table.sort(roots, function(a, b)
+		local at = latest_created_in_tree(a)
+		local bt = latest_created_in_tree(b)
+		if at == bt then
+			return tonumber((a.comment or {}).id or 0) > tonumber((b.comment or {}).id or 0)
+		end
+		return at > bt
+	end)
+end
+
 ---@param comments PullsComment[]|nil
 ---@return PullsCommentTreeNode[]
 function M.normalize_comments(comments)
@@ -92,6 +117,7 @@ function M.normalize_comments(comments)
 	end
 
 	sort_node_children(roots)
+	sort_roots_by_latest_activity(roots)
 	return roots
 end
 
