@@ -7,6 +7,7 @@ local M = {}
 ---@return JiraMentionUser[]
 local function collect_users()
 	local comments_state = require("atlas.issues.ui.panel.issue.tabs.comments.state")
+	local panel_state = require("atlas.issues.ui.panel.issue.state")
 	local issues_state = require("atlas.issues.state")
 
 	local seen = {}
@@ -29,6 +30,12 @@ local function collect_users()
 	end
 
 	add(issues_state.current_user)
+	add((panel_state.current_issue or {}).assignee)
+	add((panel_state.current_issue or {}).reporter)
+	for _, issue in ipairs(issues_state.issues or {}) do
+		add((issue or {}).assignee)
+		add((issue or {}).reporter)
+	end
 	for _, comment in ipairs(comments_state.comments or {}) do
 		add((comment or {}).author)
 	end
