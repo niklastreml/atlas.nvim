@@ -10,7 +10,8 @@ local API_PATH = "/rest/api/3"
 ---@return AtlasJiraIssuesConfig
 function M.jira_config()
 	local opts = config.options
-	return (opts and opts.issues and opts.issues.jira) or {}
+	local issues = opts and opts.issues or nil
+	return (issues and issues.providers and issues.providers.jira) or (issues and issues.jira) or {}
 end
 
 ---@return string, string, string|nil
@@ -21,7 +22,7 @@ function M.get_auth()
 	local token = jira.token
 
 	if not base_url or base_url == "" or not email or email == "" or not token or token == "" then
-		return "", "", "Missing Jira credentials in config (issues.jira.base_url, issues.jira.email, issues.jira.token)"
+		return "", "", "Missing Jira credentials in config (issues.providers.jira.base_url, issues.providers.jira.email, issues.providers.jira.token)"
 	end
 
 	return base_url, email, nil

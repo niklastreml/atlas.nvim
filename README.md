@@ -39,7 +39,9 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
         },
       },
       issues = {
-        jira = { }, -- See configuration below
+        providers = {
+          jira = { }, -- See configuration below
+        },
       },
     })
   end,
@@ -59,7 +61,9 @@ use {
         },
       },
       issues = {
-        jira = { }, -- See configuration below
+        providers = {
+          jira = { }, -- See configuration below
+        },
       },
     })
   end
@@ -125,44 +129,45 @@ return {
         fetch_parent_issues = true,
         custom_actions = {}, -- See Custom Actions below.
 
-        jira = {
-          base_url = "https://your-site.atlassian.net",
-          email = "you@example.com",
-          --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
-          token = "your_jira_api_token",
-          cache_ttl = 300,
+        providers = {
+          jira = {
+            base_url = "https://your-site.atlassian.net",
+            email = "you@example.com",
+            --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
+            token = "your_jira_api_token",
+            cache_ttl = 300,
 
-          project_config = {
-            -- The Jira custom field ID used for story points. Defaults to "customfield_10016".
-            -- This varies per Jira instance/board — check your board's field configuration.
-            story_points_field = "customfield_10016",
+            project_config = {
+              -- The Jira custom field ID used for story points. Defaults to "customfield_10016".
+              story_points_field = "customfield_10016",
 
-            KAN = {
-              customfield_10003 = {
-                name = "Approvers",
-                format = function(value)
-                  if type(value) ~= "table" or #value == 0 then
-                    return nil -- nil hides the field
-                  end
-                  return table.concat(value, ", ")
-                end,
-                hl_group = "AtlasChipActive",
-                display = "chip", -- "chip" or "table"
+              KAN = {
+                customfield_10003 = {
+                  name = "Approvers",
+                  format = function(value)
+                    if type(value) ~= "table" or #value == 0 then
+                      return nil -- nil hides the field
+	                    end
+	                    return table.concat(value, ", ")
+	                  end,
+                  hl_group = "AtlasChipActive",
+                  display = "chip", -- "chip" or "table"
+                },
               },
             },
-          },
 
-          ---@type AtlasJiraViewConfig[]
-          views = {
-            {
-              name = "My Board",
-              key = "M",
-              jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
-            },
-            {
-              name = "Team Board",
-              key = "T",
-              jql = "project = KAN ORDER BY updated DESC",
+            ---@type AtlasJiraViewConfig[]
+            views = {
+              {
+                name = "My Board",
+                key = "M",
+                jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
+              },
+              {
+                name = "Team Board",
+                key = "T",
+                jql = "project = KAN ORDER BY updated DESC",
+              },
             },
           },
         },
@@ -202,7 +207,9 @@ issues = {
       end,
     },
   },
-  jira = { },
+  providers = {
+    jira = { },
+  },
 }
 ```
 
@@ -284,7 +291,7 @@ return {
                 ---@param ctx { user: PullsUser|nil }
                 filter = function(pr, ctx)
                   local user = ctx.user or {}
-                  return pr.author and pr.author.account_id == user.account_id
+                  return pr.author and pr.author.account_id == user.id
                 end,
               },
               {

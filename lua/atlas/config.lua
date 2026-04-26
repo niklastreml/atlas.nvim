@@ -48,6 +48,9 @@
 ---@class AtlasPullsProviders
 ---@field bitbucket AtlasBitbucketConfig|nil
 
+---@class AtlasIssuesProviders
+---@field jira AtlasJiraIssuesConfig|nil
+
 ---@class AtlasPullsConfig
 ---@field repo_config AtlasPullsRepoConfig|nil
 ---@field diff AtlasPullsDiffConfig|nil
@@ -68,7 +71,7 @@
 ---@field max_results number|nil
 ---@field fetch_parent_issues boolean|nil
 ---@field custom_actions AtlasIssuesCustomAction[]|nil
----@field jira AtlasJiraIssuesConfig|nil
+---@field providers AtlasIssuesProviders|nil
 
 --------------------------------------------------------------------------------
 -- Config
@@ -155,8 +158,18 @@ local function migrate_legacy_config(opts)
 	if migrated.jira and not migrated.issues then
 		legacy = true
 		migrated.issues = migrated.issues or {}
-		migrated.issues.jira = migrated.jira
+		migrated.issues.providers = migrated.issues.providers or {}
+		migrated.issues.providers.jira = migrated.jira
 		migrated.jira = nil
+	end
+
+	if migrated.issues and migrated.issues.jira then
+		legacy = true
+		migrated.issues.providers = migrated.issues.providers or {}
+		if migrated.issues.providers.jira == nil then
+			migrated.issues.providers.jira = migrated.issues.jira
+		end
+		migrated.issues.jira = nil
 	end
 
 	if legacy then
@@ -198,7 +211,7 @@ local function register_commands()
 	end, { desc = "Open Atlas issues domain", nargs = "?" })
 
 	if M.options.issues then
-		if M.options.issues.jira then
+		if M.options.issues.providers and M.options.issues.providers.jira then
 			vim.api.nvim_create_user_command("AtlasJqlSearch", function(cmd_opts)
 				require("atlas.issues.providers.jira.completion.search").command(cmd_opts)
 			end, {

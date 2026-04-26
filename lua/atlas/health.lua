@@ -87,21 +87,21 @@ end
 
 local function check_jira()
 	local issues = config.options and config.options.issues or nil
-	local jira = issues and issues.jira or nil
+	local jira = issues and issues.providers and issues.providers.jira or nil
 	if not jira then
 		vim.health.info("Jira not configured")
 		return
 	end
 
-	check_credentials({ "issues", "jira" }, "email", "token", "Jira")
+	check_credentials({ "issues", "providers", "jira" }, "email", "token", "Jira")
 
 	local base_url = tostring(jira.base_url or "")
 	if base_url == "" then
-		vim.health.warn("jira.base_url is empty")
+		vim.health.warn("issues.providers.jira.base_url is empty")
 	elseif not base_url:match("^https://") then
-		vim.health.warn(string.format("jira.base_url should start with https:// (current: %s)", base_url))
+		vim.health.warn(string.format("issues.providers.jira.base_url should start with https:// (current: %s)", base_url))
 	else
-		vim.health.ok("jira.base_url looks valid")
+		vim.health.ok("issues.providers.jira.base_url looks valid")
 	end
 end
 
