@@ -434,6 +434,12 @@ function M.render(pr, width)
 	local line_map = {}
 
 	render_reviewers(pr, width, lines, spans)
+
+	local provider = get_provider()
+	if provider and provider.panel and type(provider.panel.overview_extra_sections) == "function" then
+		provider.panel.overview_extra_sections(pr, width, lines, spans)
+	end
+
 	render_builds(pr, width, lines, spans, line_map)
 	render_description(pr, width, lines, spans)
 	render_diffstat(pr, width, lines, spans)

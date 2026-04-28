@@ -1,0 +1,366 @@
+---@class GitHubProviderPanel : PullsProviderPanel
+local M = {}
+
+local icons = require("atlas.ui.shared.icons")
+local utils = require("atlas.ui.shared.utils")
+
+local BUILD_HL = {
+	successful = "AtlasTextPositive",
+	failed = "AtlasLogError",
+	inprogress = "AtlasTextWarning",
+	stopped = "AtlasTextMuted",
+}
+
+local MAX_HASH_LEN = 12
+
+--------------------------------------------------------------------------------
+-- Merge checks state
+--------------------------------------------------------------------------------
+
+local merge_checks = {
+	mergeable = nil, ---@type string|nil  "MERGEABLE"|"CONFLICTING"|"UNKNOWN"
+	merge_state = nil, ---@type string|nil "CLEAN"|"DIRTY"|"BLOCKED"|"BEHIND"|"UNSTABLE"|"HAS_HOOKS"|"DRAFT"|"UNKNOWN"
+	review_decision = nil, ---@type string|nil "APPROVED"|"CHANGES_REQUESTED"|"REVIEW_REQUIRED"|""
+	loading = false,
+}
+
+local function reset_merge_checks()
+	merge_checks.mergeable = nil
+	merge_checks.merge_state = nil
+	merge_checks.review_decision = nil
+	merge_checks.loading = false
+end
+
+--------------------------------------------------------------------------------
+-- Helpers
+--------------------------------------------------------------------------------
+
+---@param builds PullsBuild[]
+---@return string
+local function aggregate_build_status(builds)
+	local has_success = false
+	local has_stopped = false
+	for _, b in ipairs(builds) do
+		local s = tostring(b.state or ""):upper()
+		if s == "FAILED" then
+			return "failed"
+		end
+		if s == "INPROGRESS" then
+			return "inprogress"
+		end
+		if s == "STOPPED" then
+			has_stopped = true
+		elseif s == "SUCCESSFUL" then
+			has_success = true
+		end
+	end
+	if has_stopped then
+		return "stopped"
+	end
+	if has_success then
+		return "successful"
+	end
+	return "unknown"
+end
+
+--------------------------------------------------------------------------------
+-- Panel interface
+--------------------------------------------------------------------------------
+
+---@param pr PullRequest
+---@return PullsPanelHeaderRow[]
+function M.header_rows(pr)
+	local raw = pr._raw or {}
+	local rows = {}
+
+	local review_decision = tostring(raw.reviewDecision or "")
+	if review_decision ~= "" then
+		local label = review_decision:gsub("_", " "):lower()
+		label = label:sub(1, 1):upper() .. label:sub(2)
+		local hl = "AtlasTextMuted"
+		if review_decision == "APPROVED" then
+			hl = "AtlasTextPositive"
+		elseif review_decision == "CHANGES_REQUESTED" then
+			hl = "AtlasTextWarning"
+		end
+		table.insert(rows, {
+			k1 = "Review:",
+			v1 = label,
+			v1_hl = hl,
+			k2 = "",
+			v2 = "",
+			v2_hl = "AtlasTextMuted",
+		})
+	end
+
+	return rows
+end
+
+---@param pr PullRequest
+---@return PullsPanelChip[]
+function M.chips(pr)
+	local chips = {}
+	local overview_state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
+
+	local hash = tostring(pr.source and pr.source.commit_hash or "")
+	if hash ~= "" then
+		if #hash > MAX_HASH_LEN then
+			hash = hash:sub(1, MAX_HASH_LEN)
+		end
+		table.insert(chips, { label = hash, hl = "AtlasTabInactive" })
+	end
+
+	local spinner = require("atlas.ui.components.spinner")
+	if overview_state.builds == "loading" then
+		table.insert(chips, { label = spinner.with_text("Loading checks"), hl = "AtlasTextMuted" })
+	elseif type(overview_state.builds) == "table" and #overview_state.builds > 0 then
+		local status = aggregate_build_status(overview_state.builds)
+		if status ~= "unknown" then
+			local icon = icons.pulls_status(status)
+			local label = status:sub(1, 1):upper() .. status:sub(2)
+			table.insert(chips, {
+				label = string.format("%s %s", icon, label),
+				hl = BUILD_HL[status] or "AtlasTextMuted",
+			})
+		end
+	end
+
+	return chips
+end
+
+---@type { cancel: fun() }[]
+local panel_in_flight = {}
+
+local function cancel_panel_fetches()
+	for _, handle in ipairs(panel_in_flight) do
+		handle.cancel()
+	end
+	panel_in_flight = {}
+end
+
+---@param handle { cancel: fun() }|nil
+local function track_panel(handle)
+	if handle then
+		table.insert(panel_in_flight, handle)
+	end
+end
+
+---@param pr PullRequest
+---@param refresh fun()
+function M.fetches(pr, refresh)
+	cancel_panel_fetches()
+	reset_merge_checks()
+
+	local overview_state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
+	local provider = require("atlas.pulls.state").provider
+	local cli = require("atlas.pulls.providers.github.api.cli")
+
+	overview_state.builds = "loading"
+	if provider and type(provider.fetch_builds) == "function" then
+		track_panel(provider.fetch_builds(pr, function(builds, err)
+			overview_state.builds = err and err or (builds or {})
+			refresh()
+		end))
+	end
+
+	-- Fetch merge checks
+	local repo_slug = pr.repo_full_name or ""
+	if repo_slug ~= "" then
+		merge_checks.loading = true
+		track_panel(cli.gh({
+			"pr", "view", tostring(pr.id),
+			"--repo", repo_slug,
+			"--json", "mergeable,mergeStateStatus,reviewDecision",
+		}, function(result, _)
+			merge_checks.loading = false
+			if type(result) == "table" then
+				merge_checks.mergeable = tostring(result.mergeable or "")
+				merge_checks.merge_state = tostring(result.mergeStateStatus or "")
+				merge_checks.review_decision = tostring(result.reviewDecision or "")
+			end
+			refresh()
+		end))
+	end
+end
+
+---@param pr PullRequest
+---@param active_tab string|nil
+---@return boolean
+function M.is_loading(pr, active_tab)
+	local overview_state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
+	local activity_state = require("atlas.pulls.ui.panel.pr.tabs.activity.state")
+	local comments_state = require("atlas.pulls.ui.panel.pr.tabs.comments.state")
+	local commits_state = require("atlas.pulls.ui.panel.pr.tabs.commits.state")
+	local files_state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
+	if active_tab == "overview" then
+		return overview_state.any_loading() or merge_checks.loading
+	elseif active_tab == "activity" then
+		return activity_state.any_loading()
+	elseif active_tab == "comments" then
+		return comments_state.any_loading()
+	elseif active_tab == "commits" then
+		return commits_state.any_loading()
+	elseif active_tab == "files" then
+		return files_state.any_loading()
+	end
+	return false
+end
+
+--------------------------------------------------------------------------------
+-- Merge checks rendering (overview_extra_sections)
+--------------------------------------------------------------------------------
+
+local MERGE_CHECK_ITEMS = {
+	{
+		key = "review",
+		label = function()
+			local rd = merge_checks.review_decision or ""
+			if rd == "APPROVED" then
+				return "Reviews approved"
+			elseif rd == "CHANGES_REQUESTED" then
+				return "Changes requested"
+			elseif rd == "REVIEW_REQUIRED" then
+				return "Review required"
+			end
+			return "Reviews"
+		end,
+		detail = function()
+			local rd = merge_checks.review_decision or ""
+			if rd == "APPROVED" then
+				return "All required reviewers have approved."
+			elseif rd == "CHANGES_REQUESTED" then
+				return "A reviewer has requested changes."
+			elseif rd == "REVIEW_REQUIRED" then
+				return "At least one approving review is required."
+			end
+			return "Non requested"
+		end,
+		icon = function()
+			local rd = merge_checks.review_decision or ""
+			if rd == "APPROVED" then
+				return icons.pulls_status("successful"), "AtlasTextPositive"
+			elseif rd == "CHANGES_REQUESTED" then
+				return icons.pulls_status("failed"), "AtlasLogError"
+			elseif rd == "REVIEW_REQUIRED" then
+				return icons.pulls_status("inprogress"), "AtlasTextWarning"
+			end
+			return icons.pulls_status("inprogress"), "AtlasTextMuted"
+		end,
+	},
+	{
+		key = "conflicts",
+		label = function()
+			local m = merge_checks.mergeable or ""
+			if m == "MERGEABLE" then
+				return "No conflicts with base branch"
+			elseif m == "CONFLICTING" then
+				return "This branch has conflicts that must be resolved"
+			end
+			return "Merge status unknown"
+		end,
+		detail = function()
+			local m = merge_checks.mergeable or ""
+			if m == "MERGEABLE" then
+				return "Changes can be cleanly merged."
+			elseif m == "CONFLICTING" then
+				return "Conflicting files must be resolved before merging."
+			end
+			return nil
+		end,
+		icon = function()
+			local m = merge_checks.mergeable or ""
+			if m == "MERGEABLE" then
+				return icons.pulls_status("successful"), "AtlasTextPositive"
+			elseif m == "CONFLICTING" then
+				return icons.pulls_status("failed"), "AtlasLogError"
+			end
+			return icons.pulls_status("inprogress"), "AtlasTextMuted"
+		end,
+	},
+}
+
+local PADDING_X = 1
+
+---@param pr PullRequest
+---@param width integer
+---@param lines string[]
+---@param spans table[]
+function M.overview_extra_sections(pr, width, lines, spans)
+	if merge_checks.loading then
+		local spinner = require("atlas.ui.components.spinner")
+		utils.push(lines, spans, "Merge Checks", "AtlasColumnHeader", PADDING_X)
+		utils.push(lines, spans, spinner.with_text("Loading merge checks..."), "AtlasTextMuted", PADDING_X)
+		table.insert(lines, "")
+		return
+	end
+
+	if merge_checks.mergeable == nil and merge_checks.review_decision == nil then
+		return
+	end
+
+	utils.push(lines, spans, "Merge Checks", "AtlasColumnHeader", PADDING_X)
+
+	for _, item in ipairs(MERGE_CHECK_ITEMS) do
+		local icon, icon_hl = item.icon()
+		local label = item.label()
+		local detail = item.detail()
+
+		local line_text = string.format("%s %s", icon, label)
+		table.insert(lines, string.rep(" ", PADDING_X) .. line_text)
+		local icon_width = vim.api.nvim_strwidth(icon)
+		table.insert(spans, {
+			line = #lines - 1,
+			start_col = PADDING_X,
+			end_col = PADDING_X + icon_width,
+			hl_group = icon_hl,
+		})
+
+		if detail then
+			utils.push(lines, spans, "  " .. detail, "AtlasTextMuted", PADDING_X)
+		end
+	end
+
+	table.insert(lines, "")
+end
+
+--------------------------------------------------------------------------------
+-- Tabs
+--------------------------------------------------------------------------------
+
+---@return PullsPanelTab[]
+function M.tabs()
+	return {
+		{
+			key = "overview",
+			label = "Overview",
+			icon = icons.general("overview"),
+			mod = require("atlas.pulls.ui.panel.pr.tabs.overview"),
+		},
+		{
+			key = "activity",
+			label = "Activity",
+			icon = icons.pulls("activity"),
+			mod = require("atlas.pulls.ui.panel.pr.tabs.activity"),
+		},
+		{
+			key = "comments",
+			label = "Comments",
+			icon = icons.general("comment"),
+			mod = require("atlas.pulls.ui.panel.pr.tabs.comments"),
+		},
+		{
+			key = "commits",
+			label = "Commits",
+			icon = icons.pulls("commit"),
+			mod = require("atlas.pulls.ui.panel.pr.tabs.commits"),
+		},
+		{
+			key = "files",
+			label = "Changes",
+			icon = icons.pulls("files"),
+			mod = require("atlas.pulls.ui.panel.pr.tabs.files"),
+		},
+	}
+end
+
+return M

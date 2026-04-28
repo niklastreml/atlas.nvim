@@ -42,6 +42,9 @@ local ICONS = {
 			bitbucket = {
 				provider = "",
 			},
+			github = {
+				provider = "",
+			},
 			mock = {
 				provider = "󰙨",
 			},

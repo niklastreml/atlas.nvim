@@ -82,6 +82,33 @@ local function check_pulls()
 		vim.health.error(string.format("pulls.diff.open_cmd not found: %s", diff_cmd))
 	end
 end
+
+local function check_github()
+	local pulls = config.options and config.options.pulls or nil
+	local gh = pulls and pulls.providers and pulls.providers.github or nil
+	if not gh then
+		vim.health.info("GitHub not configured")
+		return
+	end
+
+	if vim.fn.executable("gh") ~= 1 then
+		vim.health.error("gh CLI not found", { "Install from https://cli.github.com" })
+		return
+	end
+	vim.health.ok("gh CLI found")
+
+	local res = vim.system({ "gh", "auth", "status" }, { text = true }):wait()
+	if res.code ~= 0 then
+		vim.health.error("gh not authenticated", { "Run: gh auth login" })
+		return
+	end
+	vim.health.ok("gh authenticated")
+
+	local views = gh.views or {}
+	if #views == 0 then
+		vim.health.warn("No GitHub views configured")
+	else
+		vim.health.ok(string.format("%d view(s) configured", #views))
 	end
 end
 
@@ -145,6 +172,9 @@ function M.check()
 
 	vim.health.start("Bitbucket")
 	check_bitbucket()
+
+	vim.health.start("GitHub")
+	check_github()
 
 	vim.health.start("Jira")
 	check_jira()

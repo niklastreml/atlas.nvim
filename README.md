@@ -290,8 +290,8 @@ return {
                 ---@param pr PullRequest
                 ---@param ctx { user: PullsUser|nil }
                 filter = function(pr, ctx)
-                  local user = ctx.user or {}
-                  return pr.author and pr.author.account_id == user.id
+                  local user = ctx.user
+                  return pr.author and user and pr.author.id == user.id
                 end,
               },
               {
