@@ -131,12 +131,21 @@ local function render_header(lines, spans, width)
 		})
 	end
 
-	local actions = {
-		{
-			label = string.format("Refresh (%s)", refresh_key_display()),
-			hl_group = "AtlasTextMuted",
-		},
-	}
+	local actions = {}
+
+	local STATUS_ORDER = { "OPEN", "MERGED", "DECLINED", "SUPERSEDED" }
+	for _, s in ipairs(STATUS_ORDER) do
+		local label = s:sub(1, 1):upper() .. s:sub(2):lower()
+		local hl = state.status_filters[s] and "AtlasLogInfo" or "AtlasTextMuted"
+		table.insert(actions, { label = label, hl_group = hl })
+	end
+
+	table.insert(actions, { label = "|", hl_group = "AtlasTextMuted" })
+
+	table.insert(actions, {
+		label = string.format("Refresh (%s)", refresh_key_display()),
+		hl_group = "AtlasTextMuted",
+	})
 
 	utils.append_block(lines, spans, navbar.render({
 		width = width,
@@ -144,23 +153,6 @@ local function render_header(lines, spans, width)
 		actions = actions,
 		active_hl = state.provider and state.provider.hl_group or "Title",
 	}))
-  local STATUS_ORDER = { "OPEN", "MERGED", "DECLINED", "SUPERSEDED" }
-  local status_items = {}
-  for _, s in ipairs(STATUS_ORDER) do
-      -- Title-case the label: "OPEN" → "Open"
-      local label = s:sub(1,1):upper() .. s:sub(2):lower()
-      table.insert(status_items, {
-          label = label,
-          active = state.status_filters[s] == true,
-      })
-  end
-
-  utils.append_block(lines, spans, navbar.render({
-      width = width,
-      items = status_items,
-      active_hl = "AtlasChipActive",
-      inactive_hl = "AtlasTabInactive",
-  }))
 end
 
 ---@param opts { width: integer, height: integer }
