@@ -63,6 +63,27 @@ function M.pr_state_hl(state)
 	return "AtlasTextMuted"
 end
 
+---@param state_str string|nil
+---@return string
+function M.status_badge_hl(state_str)
+	local lower = tostring(state_str or ""):lower()
+	if lower == "" then
+		return "AtlasTextMuted"
+	end
+	return highlights.dynamic_for_bg("pr-state:" .. lower) or "AtlasTextMuted"
+end
+
+---@return integer
+local function active_filter_count()
+	local count = 0
+	for _, enabled in pairs(state.status_filters or {}) do
+		if enabled then
+			count = count + 1
+		end
+	end
+	return count
+end
+
 ---@param view AtlasPullsViewConfig|nil
 ---@return string
 function M.view_id(view)
@@ -125,6 +146,10 @@ function M.cell_hl(row, col, ctx)
 		local hl_group = M.repo_hl(row.repo_hl or row.repo)
 		return { { start_col = 0, end_col = #ctx.padded, hl_group = hl_group } }
 	end
+	if col.key == "status" then
+		local hl_group = M.status_badge_hl(row.status_raw)
+		return { { start_col = 0, end_col = #ctx.padded, hl_group = hl_group } }
+	end
 	return nil
 end
 
@@ -168,7 +193,7 @@ end
 
 ---@return table[]
 local function compact_columns()
-	return {
+	local cols = {
 		{ key = "pr_icon", name = "", min_width = 1, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "repo_pr", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
 		{
@@ -179,6 +204,17 @@ local function compact_columns()
 			header_hl = "AtlasColumnHeader",
 		},
 		{ key = "tasks", name = TASKS_ICON, min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
+	}
+	if active_filter_count() > 1 then
+		table.insert(cols, {
+			key = "status",
+			name = "Status",
+			min_width = 6,
+			can_grow = false,
+			header_hl = "AtlasColumnHeader",
+		})
+	end
+	vim.list_extend(cols, {
 		{
 			key = "author",
 			name = string.format("%s Author", icons.general("user")),
@@ -195,7 +231,8 @@ local function compact_columns()
 		},
 		{ key = "created", name = icons.general("created"), can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "updated", name = icons.general("updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
-	}
+	})
+	return cols
 end
 
 ---@param groups PullsGroup[]|nil
@@ -211,6 +248,8 @@ function M.build_compact_table(groups)
 			local src = (pr.source and pr.source.branch) or ""
 			local dst = (pr.destination and pr.destination.branch) or ""
 			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
+			local state_str = tostring(pr.state or "")
+			local state_label = state_str ~= "" and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ") or ""
 			table.insert(rows, {
 				kind = "pr",
 				pr_icon = pr_icon_or_spinner(pr),
@@ -218,6 +257,8 @@ function M.build_compact_table(groups)
 				repo_pr = "#" .. id_str .. " " .. title,
 				comments = tostring(pr.comments_count or 0),
 				tasks = tostring(pr.tasks_count or 0),
+				status = state_label,
+				status_raw = state_str,
 				author = string.format("%s %s", icons.general("user"), author_name),
 				author_hl = author_name,
 				repo = string.format("%s %s", REPO_ICON, repo_label),
@@ -237,6 +278,8 @@ function M.build_compact_table(groups)
 				repo_pr = src .. " → " .. dst,
 				comments = "",
 				tasks = "",
+				status = "",
+				status_raw = "",
 				author = "",
 				repo = "",
 				created = "",
@@ -256,7 +299,7 @@ end
 
 ---@return table[]
 local function plain_tree_columns()
-	return {
+	local cols = {
 		{ key = "name", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
 		{
 			key = "comments",
@@ -266,6 +309,17 @@ local function plain_tree_columns()
 			header_hl = "AtlasColumnHeader",
 		},
 		{ key = "tasks", name = TASKS_ICON, min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
+	}
+	if active_filter_count() > 1 then
+		table.insert(cols, {
+			key = "status",
+			name = "Status",
+			min_width = 6,
+			can_grow = false,
+			header_hl = "AtlasColumnHeader",
+		})
+	end
+	vim.list_extend(cols, {
 		{
 			key = "author",
 			name = string.format("%s Author", icons.general("user")),
@@ -282,7 +336,8 @@ local function plain_tree_columns()
 		},
 		{ key = "created", name = icons.general("created"), can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "updated", name = icons.general("updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
-	}
+	})
+	return cols
 end
 
 ---@param groups PullsGroup[]|nil
@@ -300,12 +355,16 @@ function M.build_plain_tree_table(groups)
 			local dst = (pr.destination and pr.destination.branch) or ""
 			local icon = pr_icon_or_spinner(pr)
 			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
+			local state_str = tostring(pr.state or "")
+			local state_label = state_str ~= "" and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ") or ""
 			table.insert(children, {
 				kind = "pr",
 				name = icon .. " #" .. id_str .. " " .. title,
 				_pr_reloading = is_reloading,
 				comments = tostring(pr.comments_count or 0),
 				tasks = tostring(pr.tasks_count or 0),
+				status = state_label,
+				status_raw = state_str,
 				author = string.format("%s %s", icons.general("user"), author_name),
 				author_hl = author_name,
 				branch = src .. " -> " .. dst,
@@ -325,6 +384,8 @@ function M.build_plain_tree_table(groups)
 			repo_full_name = repo_label,
 			comments = "",
 			tasks = "",
+			status = "",
+			status_raw = "",
 			author = "",
 			branch = "",
 			created = "",
