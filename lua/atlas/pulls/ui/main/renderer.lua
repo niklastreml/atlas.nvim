@@ -131,12 +131,21 @@ local function render_header(lines, spans, width)
 		})
 	end
 
-	local actions = {
-		{
-			label = string.format("Refresh (%s)", refresh_key_display()),
-			hl_group = "AtlasTextMuted",
-		},
-	}
+	local actions = {}
+
+	local STATUS_ORDER = { "OPEN", "MERGED", "DECLINED", "SUPERSEDED" }
+	for _, s in ipairs(STATUS_ORDER) do
+		local label = s:sub(1, 1):upper() .. s:sub(2):lower()
+		local hl = state.status_filters[s] and "AtlasLogInfo" or "AtlasTextMuted"
+		table.insert(actions, { label = label, hl_group = hl })
+	end
+
+	table.insert(actions, { label = "|", hl_group = "AtlasTextMuted" })
+
+	table.insert(actions, {
+		label = string.format("Refresh (%s)", refresh_key_display()),
+		hl_group = "AtlasTextMuted",
+	})
 
 	utils.append_block(lines, spans, navbar.render({
 		width = width,

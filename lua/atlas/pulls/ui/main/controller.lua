@@ -341,4 +341,22 @@ function M.switch_view(view)
 	end)
 end
 
+---@param status string
+function M.toggle_status_filter(status)
+    -- Don't allow deselecting the last active filter
+    local active_count = 0
+    for _, enabled in pairs(state.status_filters or {}) do
+        if enabled then active_count = active_count + 1 end
+    end
+    if state.status_filters[status] and active_count <= 1 then
+        footer.notify("warn", "At least one status filter must remain active")
+        return
+    end
+
+    state.status_filters[status] = not state.status_filters[status]
+    load_active_view({ force_load = true }, function()
+        navigation.focus_first_item()
+    end)
+end
+
 return M

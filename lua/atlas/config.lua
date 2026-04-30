@@ -111,6 +111,10 @@ M.options = {
 			pr_files_toggle_fold = "za",
 			pr_files_next_hunk = "]h",
 			pr_files_previous_hunk = "[h",
+      filter_status_open = "gpo",
+      filter_status_merged = "gpm",
+      filter_status_declined = "gpd",
+      filter_status_superseded = "gps",
 		},
 		issues = {
 			open_actions = "A",

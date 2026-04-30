@@ -10,8 +10,10 @@ local state = require("atlas.pulls.providers.bitbucket.state")
 ---@param workspace string
 ---@param repo string
 ---@return string
-local function cache_key(workspace, repo)
-	return string.format("bitbucket:prs:%s/%s", workspace, repo)
+local function cache_key(workspace, repo, statuses)
+  local sorted = vim.deepcopy(statuses)
+  table.sort(sorted)
+	return string.format("bitbucket:prs:%s/%s:%s", workspace, repo, table.concat(sorted, ","))
 end
 
 ---@param workspace string
@@ -20,7 +22,8 @@ end
 ---@param on_done fun(prs: PullRequest[], err: string|nil)
 ---@return { job_id: integer, cancel: fun() }|nil
 local function fetch_pullrequests_single(workspace, repo, opts, on_done)
-	local key = cache_key(workspace, repo)
+	local statuses_for_key = opts.statuses or { state.pr_state }
+	local key = cache_key(workspace, repo, statuses_for_key)
 	if not opts.force then
 		local cached = cache.get(key)
 		if cached and cached.value then
@@ -35,11 +38,16 @@ local function fetch_pullrequests_single(workspace, repo, opts, on_done)
 		repo = repo,
 	})
 
+	local statuses = opts.statuses or { state.pr_state }
+	local state_params = {}
+	for _, s in ipairs(statuses) do
+		table.insert(state_params, "state=" .. s)
+	end
 	local endpoint = string.format(
-		"/repositories/%s/%s/pullrequests?state=%s&pagelen=%d",
+		"/repositories/%s/%s/pullrequests?%s&pagelen=%d",
 		workspace,
 		repo,
-		state.pr_state,
+		table.concat(state_params, "&"),
 		tonumber(opts.pagelen) or 50
 	)
 	local user, token, _ = service.get_auth()
@@ -162,7 +170,7 @@ function M.fetch_pullrequests(view_repos, opts, on_done)
 		local handle = fetch_pullrequests_single(
 			repo.workspace,
 			repo.repo,
-			{ user = user, token = token, cache_ttl = ttl, force = opts.force_load, pagelen = opts.pagelen },
+			{ user = user, token = token, cache_ttl = ttl, force = opts.force_load, pagelen = opts.pagelen, statuses = opts.statuses },
 			finish
 		)
 		if handle ~= nil then

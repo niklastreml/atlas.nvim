@@ -21,6 +21,10 @@ local M = {}
 ---@field pr_files_toggle_fold? AtlasKeymapValue
 ---@field pr_files_next_hunk? AtlasKeymapValue
 ---@field pr_files_previous_hunk? AtlasKeymapValue
+---@field filter_status_open? AtlasKeymapValue
+---@field filter_status_merged? AtlasKeymapValue
+---@field filter_status_declined? AtlasKeymapValue
+---@field filter_status_superseded? AtlasKeymapValue
 
 ---@class AtlasIssuesKeymaps
 ---@field open_actions? AtlasKeymapValue
@@ -76,6 +80,10 @@ local M = {}
 ---| "issues.change_reporter"
 ---| "issues.edit_issue"
 ---| "issues.create_issue"
+---| "pulls.filter_status_open"
+---| "pulls.filter_status_merged"
+---| "pulls.filter_status_declined"
+---| "pulls.filter_status_superseded"
 
 ---@param value AtlasKeymapValue
 ---@return string[]|nil
@@ -192,7 +200,11 @@ function M.validate()
 			"pulls.pr_files_toggle_fold",
 			"pulls.pr_files_next_hunk",
 			"pulls.pr_files_previous_hunk",
-		}, { "j", "k", "gg", "G" }),
+      "pulls.filter_status_open",
+		  "pulls.filter_status_merged",
+      "pulls.filter_status_declined",
+      "pulls.filter_status_superseded",
+    }, { "j", "k", "gg", "G" }),
 		issues = conflicts_for({
 			"issues.open_actions",
 			"issues.open_in_browser",
