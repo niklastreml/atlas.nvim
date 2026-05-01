@@ -52,7 +52,11 @@ function M.normalize_pr(raw)
 			branch = tostring(raw.baseRefName or ""),
 			commit_hash = tostring(raw.baseRefOid or ""),
 		},
-		comments_count = tonumber(raw.commentsCount) or (type(raw.comments) == "table" and #raw.comments) or tonumber(raw.comments) or 0,
+		comments_count = tonumber(raw.commentsCount)
+			or (type(raw.comments) == "table" and tonumber(raw.comments.totalCount))
+			or (type(raw.comments) == "table" and #raw.comments)
+			or tonumber(raw.comments)
+			or 0,
 		tasks_count = 0,
 		created_on = tostring(raw.createdAt or ""),
 		updated_on = tostring(raw.updatedAt or ""),
@@ -98,7 +102,7 @@ function M.normalize_search_item(raw)
 	return {
 		id = tostring(raw.number or ""),
 		title = tostring(raw.title or ""),
-		description = "",
+		description = tostring(raw.body or ""),
 		state = state,
 		author = {
 			name = login,
@@ -177,6 +181,18 @@ function M.normalize_user(raw)
 		id = tostring(raw.id or ""),
 		username = tostring(raw.login or ""),
 	}
+end
+
+---@param nodes table[]
+---@return PullRequest[]
+function M.normalize_graphql_search_results(nodes)
+	local out = {}
+	for _, raw in ipairs(nodes or {}) do
+		if raw.number ~= nil then
+			table.insert(out, M.normalize_pr(raw))
+		end
+	end
+	return out
 end
 
 return M

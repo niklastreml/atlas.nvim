@@ -4,7 +4,7 @@ local cli = require("atlas.pulls.providers.github.api.cli")
 local normalizer = require("atlas.pulls.providers.github.api.normalizer")
 local logger = require("atlas.core.logger")
 
-local VIEW_FIELDS = {
+local DETAIL_FIELDS = {
 	"number",
 	"title",
 	"author",
@@ -25,13 +25,26 @@ local VIEW_FIELDS = {
 	"comments",
 }
 
----@param query string
----@return string
-local function url_encode(query)
-	return query:gsub("([^%w%-_.~ ])", function(c)
-		return string.format("%%%02X", string.byte(c))
-	end):gsub(" ", "+")
-end
+local SEARCH_GQL = [[
+query($search: String!, $limit: Int!) {
+  search(query: $search, type: ISSUE, first: $limit) {
+    nodes {
+      ... on PullRequest {
+        number title state isDraft
+        createdAt updatedAt url
+        additions deletions changedFiles
+        author { login ... on User { name } }
+        headRefName baseRefName
+        comments { totalCount }
+        repository { name nameWithOwner }
+        commits(last: 1) {
+          nodes { commit { statusCheckRollup { state } } }
+        }
+      }
+    }
+  }
+}
+]]
 
 ---@param search string
 ---@param on_done fun(groups: PullsGroup[], err: string[]|nil)
@@ -50,31 +63,44 @@ function M.search_prs(search, on_done, opts)
 		end
 	end
 
-	logger.loginfo("GitHub search PRs", { search = search, limit = limit })
-
 	local query = search
 	if not query:find("is:pr") then
 		query = "is:pr " .. query
 	end
 
-	local endpoint = string.format("search/issues?q=%s&per_page=%d&sort=updated&order=desc", url_encode(query), limit)
+	logger.loginfo("GitHub GraphQL search PRs", { search = query, limit = limit })
 
-	return cli.gh({ "api", endpoint }, function(result, err)
+	return cli.gh({
+		"api",
+		"graphql",
+		"-f",
+		"query=" .. vim.trim(SEARCH_GQL),
+		"-f",
+		"search=" .. query,
+		"-F",
+		"limit=" .. tostring(limit),
+	}, function(result, err)
 		if err then
 			on_done({}, { err })
 			return
 		end
 
-		if type(result) ~= "table" or type(result.items) ~= "table" then
+		local nodes = type(result) == "table"
+				and type(result.data) == "table"
+				and type(result.data.search) == "table"
+				and result.data.search.nodes
+			or nil
+
+		if type(nodes) ~= "table" then
 			on_done({}, nil)
 			return
 		end
 
-		local prs = normalizer.normalize_search_results(result.items)
+		local prs = normalizer.normalize_graphql_search_results(nodes)
 		local groups = normalizer.group_by_repo(prs)
 
 		cli.set_cache(cache_key, groups)
-		logger.loginfo("GitHub search complete", { count = #prs, groups = #groups })
+		logger.loginfo("GitHub GraphQL search complete", { count = #prs, groups = #groups })
 		on_done(groups, nil)
 	end)
 end
@@ -107,7 +133,7 @@ function M.get_pr(owner, repo, number, on_done, opts)
 		"--repo",
 		repo_slug,
 		"--json",
-		table.concat(VIEW_FIELDS, ","),
+		table.concat(DETAIL_FIELDS, ","),
 	}
 
 	return cli.gh(args, function(result, err)
