@@ -23,7 +23,19 @@ end
 ---@param provider_id AtlasPullsProviderId|nil
 ---@return PullsProvider|nil
 local function resolve_pulls_provider(provider_id)
-	local id = provider_id or "mock"
+	local config = require("atlas.config")
+	local id = provider_id
+	if id == nil then
+		local providers = config.options.pulls and config.options.pulls.providers or {}
+		if providers.bitbucket then
+			id = "bitbucket"
+		elseif providers.github then
+			id = "github"
+		else
+			id = "mock"
+		end
+	end
+
 	if id == "mock" then
 		return require("atlas.pulls.providers.mock")
 	elseif id == "bitbucket" then
@@ -39,7 +51,17 @@ end
 ---@param provider_id AtlasIssuesProviderId|nil
 ---@return IssuesProvider|nil
 local function resolve_issues_provider(provider_id)
-	local id = provider_id or "jira"
+	local config = require("atlas.config")
+	local id = provider_id
+	if id == nil then
+		local providers = config.options.issues and config.options.issues.providers or {}
+		if providers.jira then
+			id = "jira"
+		else
+			id = "mock"
+		end
+	end
+
 	if id == "mock" then
 		return require("atlas.issues.providers.mock")
 	elseif id == "jira" then

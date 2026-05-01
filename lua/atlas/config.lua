@@ -111,10 +111,10 @@ M.options = {
 			pr_files_toggle_fold = "za",
 			pr_files_next_hunk = "]h",
 			pr_files_previous_hunk = "[h",
-      filter_status_open = "gpo",
-      filter_status_merged = "gpm",
-      filter_status_declined = "gpd",
-      filter_status_superseded = "gps",
+			filter_status_open = "gpo",
+			filter_status_merged = "gpm",
+			filter_status_declined = "gpd",
+			filter_status_superseded = "gps",
 		},
 		issues = {
 			open_actions = "A",
@@ -205,15 +205,34 @@ local function register_commands()
 		vim.notify("Atlas cache cleared", vim.log.levels.INFO)
 	end, { desc = "Clear Atlas disk and memory cache" })
 
+	local pulls_providers = { "bitbucket", "github", "mock" }
+	local issues_providers = { "jira", "mock" }
+
 	vim.api.nvim_create_user_command("AtlasPulls", function(opts)
 		local provider_id = opts.fargs[1] and opts.fargs[1]:lower() or nil
 		require("atlas").open("pulls", provider_id)
-	end, { desc = "Open Atlas pulls domain", nargs = "?" })
+	end, {
+		desc = "Open Atlas pulls",
+		nargs = "?",
+		complete = function(arglead)
+			return vim.tbl_filter(function(p)
+				return p:find(arglead, 1, true) == 1
+			end, pulls_providers)
+		end,
+	})
 
 	vim.api.nvim_create_user_command("AtlasIssues", function(opts)
 		local provider_id = opts.fargs[1] and opts.fargs[1]:lower() or nil
 		require("atlas").open("issues", provider_id)
-	end, { desc = "Open Atlas issues domain", nargs = "?" })
+	end, {
+		desc = "Open Atlas issues",
+		nargs = "?",
+		complete = function(arglead)
+			return vim.tbl_filter(function(p)
+				return p:find(arglead, 1, true) == 1
+			end, issues_providers)
+		end,
+	})
 
 	if M.options.issues then
 		if M.options.issues.providers and M.options.issues.providers.jira then
