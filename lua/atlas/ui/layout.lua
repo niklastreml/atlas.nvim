@@ -43,6 +43,17 @@ local function ensure_main()
 		pcall(vim.api.nvim_buf_delete, tab_buf, { force = true })
 	end
 	win_util.apply_main_opts(state.main_win)
+
+	vim.api.nvim_create_autocmd("WinClosed", {
+		group = resize_group,
+		pattern = tostring(state.main_win),
+		once = true,
+		callback = function()
+			vim.schedule(function()
+				M.close()
+			end)
+		end,
+	})
 end
 
 local function ensure_footer()
@@ -160,15 +171,14 @@ function M.close()
 		if state.main_buf ~= nil and buf_util.valid(state.main_buf) then
 			keymaps.remove(state.main_buf)
 		end
-		if state.tab_id ~= nil and vim.api.nvim_tabpage_is_valid(state.tab_id) then
-			local current_tab = vim.api.nvim_get_current_tabpage()
-			if current_tab ~= state.tab_id then
-				vim.api.nvim_set_current_tabpage(state.tab_id)
-			end
-			vim.cmd("tabclose")
-		else
-			vim.api.nvim_win_close(state.main_win, true)
+		vim.api.nvim_win_close(state.main_win, true)
+	end
+	if state.tab_id ~= nil and vim.api.nvim_tabpage_is_valid(state.tab_id) then
+		local current_tab = vim.api.nvim_get_current_tabpage()
+		if current_tab ~= state.tab_id then
+			vim.api.nvim_set_current_tabpage(state.tab_id)
 		end
+		pcall(vim.cmd, "tabclose")
 	end
 	buf_util.delete(state.detail_buf)
 	buf_util.delete(state.footer_buf)
