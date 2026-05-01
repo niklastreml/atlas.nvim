@@ -250,6 +250,7 @@ function M.build_compact_table(groups)
 			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
 			local state_str = tostring(pr.state or "")
 			local state_label = state_str ~= "" and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ") or ""
+			local author_display = utils.shorten_name(author_name, 20)
 			table.insert(rows, {
 				kind = "pr",
 				pr_icon = pr_icon_or_spinner(pr),
@@ -259,7 +260,7 @@ function M.build_compact_table(groups)
 				tasks = tostring(pr.tasks_count or 0),
 				status = state_label,
 				status_raw = state_str,
-				author = string.format("%s %s", icons.general("user"), author_name),
+				author = string.format("%s %s", icons.general("user"), author_display),
 				author_hl = author_name,
 				repo = string.format("%s %s", REPO_ICON, repo_label),
 				repo_hl = repo_label,
@@ -357,6 +358,7 @@ function M.build_plain_tree_table(groups)
 			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
 			local state_str = tostring(pr.state or "")
 			local state_label = state_str ~= "" and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ") or ""
+			local author_display = utils.shorten_name(author_name, 20)
 			table.insert(children, {
 				kind = "pr",
 				name = icon .. " #" .. id_str .. " " .. title,
@@ -365,7 +367,7 @@ function M.build_plain_tree_table(groups)
 				tasks = tostring(pr.tasks_count or 0),
 				status = state_label,
 				status_raw = state_str,
-				author = string.format("%s %s", icons.general("user"), author_name),
+				author = string.format("%s %s", icons.general("user"), author_display),
 				author_hl = author_name,
 				branch = src .. " -> " .. dst,
 				created = utils.relative_time(pr.created_on),

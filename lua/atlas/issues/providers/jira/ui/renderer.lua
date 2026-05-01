@@ -55,9 +55,9 @@ function M.format_row(issue, is_child)
 		assignee = string.format(
 			"%s %s",
 			icons.general("user"),
-			(type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned"
+			utils.shorten_name((type(issue.assignee) == "table" and issue.assignee.display_name) or "Unassigned", 20)
 		),
-		reporter = string.format("%s %s", icons.general("user"), (type(issue.reporter) == "table" and issue.reporter.display_name) or "Unknown"),
+		reporter = string.format("%s %s", icons.general("user"), utils.shorten_name((type(issue.reporter) == "table" and issue.reporter.display_name) or "Unknown", 20)),
 		status = (function()
 			local issue_key = tostring(issue.key or "")
 			local is_reloading = issue_key ~= "" and (tonumber((state.reloading_issue_keys or {})[issue_key]) or 0) > 0

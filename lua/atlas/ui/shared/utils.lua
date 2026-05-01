@@ -302,6 +302,30 @@ function M.truncate(str, max_dw, from_start)
 	return ellipsis
 end
 
+---@param name string|nil
+---@param max_width integer
+---@return string
+function M.shorten_name(name, max_width)
+	if type(name) ~= "string" then
+		return ""
+	end
+	if strwidth(name) <= max_width then
+		return name
+	end
+	local parts = vim.split(name, " ", { plain = true, trimempty = true })
+	if #parts <= 1 then
+		return M.truncate(name, max_width)
+	end
+	for i = #parts, 2, -1 do
+		parts[i] = parts[i]:sub(1, 1) .. "."
+		local candidate = table.concat(parts, " ")
+		if strwidth(candidate) <= max_width then
+			return candidate
+		end
+	end
+	return M.truncate(table.concat(parts, " "), max_width)
+end
+
 ---@param text string
 ---@param max_dw integer
 ---@return string[]
