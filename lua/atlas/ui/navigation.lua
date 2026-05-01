@@ -2,6 +2,9 @@ local M = {}
 
 local ui_state = require("atlas.ui.state")
 
+local DEBOUNCE_MS = 150
+local select_timer = nil
+
 local function is_selectable(node)
 	if type(node) ~= "table" then
 		return false
@@ -20,10 +23,16 @@ function M.current_item()
 end
 
 local function on_cursor_moved()
-	local item = M.current_item()
-	if ui_state.on_select then
-		ui_state.on_select(item)
+	if select_timer then
+		select_timer:stop()
 	end
+	select_timer = vim.defer_fn(function()
+		select_timer = nil
+		local item = M.current_item()
+		if ui_state.on_select then
+			ui_state.on_select(item)
+		end
+	end, DEBOUNCE_MS)
 end
 
 function M.move_cursor(direction)
