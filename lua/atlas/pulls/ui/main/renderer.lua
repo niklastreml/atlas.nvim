@@ -133,6 +133,17 @@ local function render_header(lines, spans, width)
 
 	table.insert(actions, { label = "|", hl_group = "AtlasTextMuted" })
 
+	if state.provider and state.provider.fetch_notifications then
+		local notif_state = require("atlas.pulls.ui.notifications.state")
+		local icons_mod = require("atlas.ui.shared.icons")
+		local count = notif_state.unread_count or 0
+		local bell_icon = count > 0 and icons_mod.general("bell_unread") or icons_mod.general("bell")
+		local bell_label = count > 0 and string.format("%s %d", bell_icon, count) or bell_icon
+		local bell_hl = count > 0 and "AtlasLogInfo" or "AtlasTextMuted"
+		table.insert(actions, { label = bell_label, hl_group = bell_hl })
+		table.insert(actions, { label = "|", hl_group = "AtlasTextMuted" })
+	end
+
 	table.insert(actions, {
 		label = string.format("Refresh (%s)", refresh_key_display()),
 		hl_group = "AtlasTextMuted",
