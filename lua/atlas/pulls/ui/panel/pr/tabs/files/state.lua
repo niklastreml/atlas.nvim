@@ -12,7 +12,6 @@ local M = {
 
 function M.reset()
 	M.diff = nil
-	M.diffstat = nil
 	M.diffstat_collapsed = true
 	M.collapsed_hunks = {}
 end
