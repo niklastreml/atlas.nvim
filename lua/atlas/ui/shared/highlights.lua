@@ -36,6 +36,7 @@ local groups = {
 	AtlasPanelHeaderBg = { bg = "#494d64" },
 	AtlasColumnHeader = { fg = "#7f849c", bold = true },
 	AtlasSectionHeader = { fg = "#7f849c", bold = true, underline = true },
+	AtlasBorder = { fg = "#585b70" },
 
 	AtlasTextMuted = { fg = "#7f849c" },
 	AtlasTextMutedItalic = { fg = "#7f849c", italic = true },

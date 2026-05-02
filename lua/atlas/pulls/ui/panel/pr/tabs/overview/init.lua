@@ -4,6 +4,7 @@ local M = {}
 local utils = require("atlas.ui.shared.utils")
 local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
+local box = require("atlas.ui.components.box")
 local footer = require("atlas.ui.components.footer")
 local table_view = require("atlas.ui.components.table_tree")
 local state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
@@ -138,14 +139,22 @@ local function render_reviewers(pr, width, lines, spans)
 			end_col = PADDING_X + #header_text,
 			hl_group = "AtlasTextMuted",
 		})
-		utils.push(lines, spans, spinner.with_text("Loading reviewers..."), "AtlasTextMuted", PADDING_X)
+		local loading_text = spinner.with_text("Loading reviewers...")
+		utils.append_block(lines, spans, box.render(
+			{ { lines = { loading_text }, spans = { { line = 0, start_col = 0, end_col = #loading_text, hl_group = "AtlasTextMuted" } } } },
+			{ width = width, padding_x = PADDING_X }
+		))
 		table.insert(lines, "")
 		return
 	end
 
 	if type(state.reviewers) == "string" then
 		utils.push(lines, spans, "Reviewers", "AtlasColumnHeader", PADDING_X)
-		utils.push(lines, spans, state.reviewers, "AtlasLogError", PADDING_X)
+		local err_text = state.reviewers
+		utils.append_block(lines, spans, box.render(
+			{ { lines = { err_text }, spans = { { line = 0, start_col = 0, end_col = #err_text, hl_group = "AtlasLogError" } } } },
+			{ width = width, padding_x = PADDING_X }
+		))
 		table.insert(lines, "")
 		return
 	end
@@ -169,11 +178,17 @@ local function render_reviewers(pr, width, lines, spans)
 	})
 
 	if #decisions == 0 then
-		utils.push(lines, spans, "no reviewers yet", "AtlasTextMuted", PADDING_X)
+		local empty_text = "no reviewers yet"
+		utils.append_block(lines, spans, box.render(
+			{ { lines = { empty_text }, spans = { { line = 0, start_col = 0, end_col = #empty_text, hl_group = "AtlasTextMuted" } } } },
+			{ width = width, padding_x = PADDING_X }
+		))
 		table.insert(lines, "")
 		return
 	end
 
+	local box_lines = {}
+	local box_spans = {}
 	local grouped = { approved = {}, changes_requested = {}, pending = {} }
 	for _, d in ipairs(decisions) do
 		local s = d.decision or "pending"
@@ -186,7 +201,7 @@ local function render_reviewers(pr, width, lines, spans)
 		table.insert(grouped[s], name)
 	end
 
-	local content_width = math.max(10, width - (PADDING_X * 2))
+	local box_inner = math.max(10, width - (PADDING_X * 2) - 4)
 	for _, s in ipairs(DECISION_GROUPS) do
 		local names = grouped[s]
 		if #names > 0 then
@@ -195,24 +210,29 @@ local function render_reviewers(pr, width, lines, spans)
 			local label = table.concat(names, ", ")
 			local icon_prefix = d.icon .. " "
 			local icon_prefix_width = vim.api.nvim_strwidth(icon_prefix)
-			local label_width = math.max(1, content_width - icon_prefix_width)
+			local label_width = math.max(1, box_inner - icon_prefix_width)
 			local wrapped = utils.wrap_line(label, label_width)
 
 			local line_text = icon_prefix .. wrapped[1]
-			table.insert(lines, PADDING .. line_text)
-			table.insert(spans, {
-				line = #lines - 1,
-				start_col = PADDING_X,
-				end_col = PADDING_X + #d.icon,
+			table.insert(box_lines, line_text)
+			table.insert(box_spans, {
+				line = #box_lines - 1,
+				start_col = 0,
+				end_col = #d.icon,
 				hl_group = d.hl,
 			})
 
 			local continuation_prefix = string.rep(" ", icon_prefix_width)
 			for i = 2, #wrapped do
-				table.insert(lines, PADDING .. continuation_prefix .. wrapped[i])
+				table.insert(box_lines, continuation_prefix .. wrapped[i])
 			end
 		end
 	end
+
+	utils.append_block(lines, spans, box.render({ { lines = box_lines, spans = box_spans } }, {
+		width = width,
+		padding_x = PADDING_X,
+	}))
 	table.insert(lines, "")
 end
 
@@ -247,52 +267,67 @@ local function render_builds(pr, width, lines, spans, line_map)
 		return
 	end
 
-	utils.push(lines, spans, "Builds", "AtlasColumnHeader", PADDING_X)
-
 	if state.builds == "loading" then
-		utils.push(lines, spans, spinner.with_text("Loading builds..."), "AtlasTextMuted", PADDING_X)
+		utils.push(lines, spans, "Builds", "AtlasColumnHeader", PADDING_X)
+		local loading_text = spinner.with_text("Loading builds...")
+		utils.append_block(lines, spans, box.render(
+			{ { lines = { loading_text }, spans = { { line = 0, start_col = 0, end_col = #loading_text, hl_group = "AtlasTextMuted" } } } },
+			{ width = width, padding_x = PADDING_X }
+		))
 		table.insert(lines, "")
 		return
 	end
 
 	if type(state.builds) == "string" then
-		utils.push(lines, spans, state.builds, "AtlasLogError", PADDING_X)
+		utils.push(lines, spans, "Builds", "AtlasColumnHeader", PADDING_X)
+		local err_text = state.builds
+		utils.append_block(lines, spans, box.render(
+			{ { lines = { err_text }, spans = { { line = 0, start_col = 0, end_col = #err_text, hl_group = "AtlasLogError" } } } },
+			{ width = width, padding_x = PADDING_X }
+		))
 		table.insert(lines, "")
 		return
 	end
 
-	local content_width = math.max(10, width - (PADDING_X * 2))
 	local entries = state.builds
 
 	if #entries == 0 then
-		utils.push(lines, spans, "No builds found", "AtlasTextMuted", PADDING_X)
-		table.insert(lines, "")
 		return
 	end
+
+	utils.push(lines, spans, "Builds", "AtlasColumnHeader", PADDING_X)
+
+	local box_inner = math.max(10, width - (PADDING_X * 2) - 4)
+	local box_lines = {}
+	local box_spans = {}
+	local box_lmap = {}
 
 	for _, entry in ipairs(entries) do
 		local s = tostring(entry.state or "UNKNOWN")
 		local icon = icons.pulls_status(s:lower())
 		local name = tostring(entry.name or entry.key or "Build")
 		local text = string.format("%s %s (%s)", icon, name, status_label(s))
-		local wrapped = utils.wrap_line(text, content_width)
+		local wrapped = utils.wrap_line(text, box_inner)
 
 		for i, chunk in ipairs(wrapped) do
-			table.insert(lines, PADDING .. chunk)
-			line_map[#lines] = {
-				kind = "build",
-				build = entry,
-				url = tostring(entry.url or ""),
-			}
+			table.insert(box_lines, chunk)
+			box_lmap[#box_lines - 1] = { kind = "build", build = entry, url = tostring(entry.url or "") }
 			local hl = i == 1 and (BUILD_HL[s] or "AtlasBuildLinkMuted") or "AtlasBuildLinkMuted"
-			table.insert(spans, {
-				line = #lines - 1,
-				start_col = PADDING_X,
-				end_col = PADDING_X + #chunk,
+			table.insert(box_spans, {
+				line = #box_lines - 1,
+				start_col = 0,
+				end_col = #chunk,
 				hl_group = hl,
 			})
 		end
 	end
+
+	utils.append_block(lines, spans, box.render({ { lines = box_lines, spans = box_spans, line_map = box_lmap } }, {
+		width = width,
+		padding_x = PADDING_X,
+		line_map = line_map,
+		line_offset = #lines,
+	}))
 	table.insert(lines, "")
 end
 
