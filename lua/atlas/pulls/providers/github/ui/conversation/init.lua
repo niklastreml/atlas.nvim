@@ -16,6 +16,30 @@ local PADDING_X = 1
 local PADDING = string.rep(" ", PADDING_X)
 local CONNECTOR = "│"
 
+-- TODO: Consider nerd font icons for better terminal compatibility
+local REACTION_EMOJI = {
+	["+1"] = "👍", ["-1"] = "👎", laugh = "😄", hooray = "🎉",
+	confused = "😕", heart = "❤️", rocket = "🚀", eyes = "👀",
+}
+
+local REACTION_KEYS = { "+1", "-1", "laugh", "hooray", "confused", "heart", "rocket", "eyes" }
+
+---@param reactions table|nil
+---@return string
+local function format_reactions(reactions)
+	if type(reactions) ~= "table" then return "" end
+	local parts = {}
+	for _, key in ipairs(REACTION_KEYS) do
+		local count = tonumber(reactions[key]) or 0
+		if count > 0 then
+			local emoji = REACTION_EMOJI[key] or key
+			table.insert(parts, string.format("%s %d", emoji, count))
+		end
+	end
+	if #parts == 0 then return "" end
+	return table.concat(parts, "  ")
+end
+
 ---@type { cancel: fun() }[]
 local in_flight = {}
 
@@ -189,7 +213,9 @@ local function render_comment(comment, width)
 
 	-- Header group
 	local icon = icons.general("user")
-	local header_line = icon .. "  " .. author .. "  commented  " .. time_text
+	local box_inner = math.max(10, width - (PADDING_X * 2) - 4)
+
+	local header_left = icon .. "  " .. author .. "  commented  " .. time_text
 	local header_spans = {}
 	local col = 0
 	table.insert(header_spans, { line = 0, start_col = col, end_col = col + #icon, hl_group = author_hl })
@@ -197,15 +223,27 @@ local function render_comment(comment, width)
 	table.insert(header_spans, { line = 0, start_col = col, end_col = col + #author, hl_group = author_hl })
 	col = col + #author + 2
 	local commented_text = "commented  " .. time_text
-	table.insert(
-		header_spans,
-		{ line = 0, start_col = col, end_col = col + #commented_text, hl_group = "AtlasTextMuted" }
-	)
+	table.insert(header_spans, { line = 0, start_col = col, end_col = col + #commented_text, hl_group = "AtlasTextMuted" })
+
+	local action_parts = { string.format("%s (c)", icons.general("reply")) }
+	if not is_deleted and is_own_comment(comment) then
+		table.insert(action_parts, string.format("%s (e)", icons.general("edit")))
+		table.insert(action_parts, string.format("%s (d)", icons.general("delete")))
+	end
+	local actions_text = table.concat(action_parts, "  ")
+
+	local left_dw = vim.api.nvim_strwidth(header_left)
+	local actions_dw = vim.api.nvim_strwidth(actions_text)
+	local inner_content = box_inner - 2
+	local gap = math.max(2, inner_content - left_dw - actions_dw)
+	local header_line = header_left .. string.rep(" ", gap) .. actions_text
+
+	local actions_byte_start = #header_left + gap
+	table.insert(header_spans, { line = 0, start_col = actions_byte_start, end_col = actions_byte_start + #actions_text, hl_group = "AtlasTextMuted" })
 
 	-- Content group
 	local content_lines = {}
 	local content_spans = {}
-	local box_inner = math.max(10, width - (PADDING_X * 2) - 4)
 
 	if is_deleted then
 		table.insert(content_lines, "(deleted comment)")
@@ -229,21 +267,10 @@ local function render_comment(comment, width)
 		end
 	end
 
-	-- Footer items
-	local footer_parts = { string.format("%s (c)", icons.general("reply")) }
-	if not is_deleted and is_own_comment(comment) then
-		table.insert(footer_parts, string.format("%s (e)", icons.general("edit")))
-		table.insert(footer_parts, string.format("%s (d)", icons.general("delete")))
-	end
-	if #footer_parts > 0 then
-		local footer_line = table.concat(footer_parts, "   ")
-		table.insert(content_lines, footer_line)
-		table.insert(content_spans, {
-			line = #content_lines - 1,
-			start_col = 0,
-			end_col = #footer_line,
-			hl_group = "AtlasTextMuted",
-		})
+	local reaction_text = format_reactions(comment.reactions)
+	if reaction_text ~= "" then
+		table.insert(content_lines, reaction_text)
+		table.insert(content_spans, { line = #content_lines - 1, start_col = 0, end_col = #reaction_text, hl_group = "AtlasTextMuted" })
 	end
 
 	local groups = {

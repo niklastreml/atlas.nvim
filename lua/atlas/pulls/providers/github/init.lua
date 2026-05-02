@@ -552,6 +552,19 @@ function M.fetch_comments(pr, opts, on_done)
 			local comments = {}
 			for _, raw in ipairs(result) do
 				local user = raw.user or {}
+				local reactions = nil
+				if type(raw.reactions) == "table" then
+					reactions = {
+						["+1"] = tonumber(raw.reactions["+1"]) or 0,
+						["-1"] = tonumber(raw.reactions["-1"]) or 0,
+						laugh = tonumber(raw.reactions.laugh) or 0,
+						hooray = tonumber(raw.reactions.hooray) or 0,
+						confused = tonumber(raw.reactions.confused) or 0,
+						heart = tonumber(raw.reactions.heart) or 0,
+						rocket = tonumber(raw.reactions.rocket) or 0,
+						eyes = tonumber(raw.reactions.eyes) or 0,
+					}
+				end
 				table.insert(comments, {
 					id = raw.id,
 					parent_id = nil,
@@ -566,6 +579,7 @@ function M.fetch_comments(pr, opts, on_done)
 					inline = nil,
 					url = nil,
 					html_url = tostring(raw.html_url or ""),
+					reactions = reactions,
 				})
 			end
 
