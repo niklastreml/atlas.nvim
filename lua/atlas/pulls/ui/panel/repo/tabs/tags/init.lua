@@ -26,18 +26,23 @@ end
 local function to_items(repo)
 	local items = {}
 	for _, tag in ipairs((state.tags or {}).entries or {}) do
-		local first_line = tostring((tag.message or ""):match("^[^\n\r]*") or "")
-		local content = tostring(tag.author or "")
-		if content ~= "" and first_line ~= "" then
-			content = content .. " · " .. first_line
-		elseif first_line ~= "" then
+		local first_line = tag.message and tostring(tag.message:match("^[^\n\r]*") or "") or nil
+		if first_line == "" then first_line = nil end
+		local author_str = tag.author and tostring(tag.author) or nil
+		if author_str == "" then author_str = nil end
+		local content = nil
+		if author_str and first_line then
+			content = author_str .. " · " .. first_line
+		elseif first_line then
 			content = first_line
+		elseif author_str then
+			content = author_str
 		end
 		table.insert(items, {
 			icon = icons.pulls("tag"),
 			author = tostring(tag.name or ""),
-			additional = tostring(tag.hash or ""):sub(1, 8),
-			right_text = utils.relative_time_text(tag.date),
+			additional = tag.hash and tostring(tag.hash):sub(1, 8) or nil,
+			right_text = tag.date and utils.relative_time_text(tag.date) or nil,
 			content = content,
 			obj = { repo = repo, tag = tag },
 		})

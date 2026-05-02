@@ -45,12 +45,16 @@ end
 local function to_items(repo)
 	local items = {}
 	for _, branch in ipairs((state.branches or {}).entries or {}) do
+		local msg = branch.message and tostring(branch.message:match("^[^\n\r]*") or "") or nil
+		if msg == "" then msg = nil end
+		local author = branch.author and tostring(branch.author) or nil
+		if author == "" then author = nil end
 		table.insert(items, {
 			icon = icons.pulls("branch"),
 			author = tostring(branch.name or ""),
-			additional = tostring(branch.author or ""),
-			right_text = utils.relative_time_text(branch.date),
-			content = tostring((branch.message or ""):match("^[^\n\r]*") or ""),
+			additional = author,
+			right_text = branch.date and utils.relative_time_text(branch.date) or nil,
+			content = msg,
 			obj = { repo = repo, branch = branch },
 		})
 	end
