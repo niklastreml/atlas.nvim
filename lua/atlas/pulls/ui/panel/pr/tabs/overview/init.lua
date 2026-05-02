@@ -7,6 +7,7 @@ local spinner = require("atlas.ui.components.spinner")
 local footer = require("atlas.ui.components.footer")
 local table_view = require("atlas.ui.components.table_tree")
 local state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
+local diff_blocks = require("atlas.ui.components.diff_blocks")
 
 local PADDING_X = 1
 local PADDING = string.rep(" ", PADDING_X)
@@ -376,7 +377,29 @@ local function render_diffstat(pr, width, lines, spans)
 
 	local entries = state.diffstat
 	local hdr = #entries > 0 and string.format("Files changed (%d)", #entries) or "Files changed"
-	utils.push(lines, spans, hdr, "AtlasColumnHeader", PADDING_X)
+
+	local total_add, total_del = 0, 0
+	for _, entry in ipairs(entries) do
+		total_add = total_add + (tonumber(entry.lines_added) or 0)
+		total_del = total_del + (tonumber(entry.lines_removed) or 0)
+	end
+	local diff_result = diff_blocks.render({ additions = total_add, deletions = total_del })
+
+	if diff_result.text ~= "" then
+		local hdr_w = vim.fn.strdisplaywidth(hdr)
+		local diff_w = vim.fn.strdisplaywidth(diff_result.text)
+		local padding = math.max(1, width - PADDING_X - hdr_w - diff_w)
+		local hdr_line = string.rep(" ", PADDING_X) .. hdr .. string.rep(" ", padding) .. diff_result.text
+		table.insert(lines, hdr_line)
+		local lnum = #lines - 1
+		table.insert(spans, { line = lnum, start_col = PADDING_X, end_col = PADDING_X + #hdr, hl_group = "AtlasColumnHeader" })
+		local diff_byte_start = PADDING_X + #hdr + padding
+		for _, hl in ipairs(diff_result.highlights) do
+			table.insert(spans, { line = lnum, start_col = diff_byte_start + hl.start_col, end_col = diff_byte_start + hl.end_col, hl_group = hl.hl_group })
+		end
+	else
+		utils.push(lines, spans, hdr, "AtlasColumnHeader", PADDING_X)
+	end
 
 	if #entries == 0 then
 		utils.push(lines, spans, "No files changed.", "AtlasTextMuted", PADDING_X)
