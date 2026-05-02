@@ -4,26 +4,26 @@ local cli = require("atlas.pulls.providers.github.api.cli")
 local normalizer = require("atlas.pulls.providers.github.api.normalizer")
 local logger = require("atlas.core.logger")
 
-local DETAIL_FIELDS = {
-	"number",
-	"title",
-	"author",
-	"headRefName",
-	"baseRefName",
-	"headRefOid",
-	"baseRefOid",
-	"state",
-	"isDraft",
-	"createdAt",
-	"updatedAt",
-	"url",
-	"body",
-	"reviewDecision",
-	"additions",
-	"deletions",
-	"changedFiles",
-	"comments",
+local GET_PR_GQL = [[
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      number title state isDraft
+      createdAt updatedAt url body
+      additions deletions changedFiles
+      reviewDecision
+      labels(first: 10) { nodes { name color } }
+      latestOpinionatedReviews(last: 10) { nodes { state } }
+      author { login ... on User { name } }
+      headRefName baseRefName headRefOid baseRefOid
+      comments { totalCount }
+      commits(last: 1) {
+        nodes { commit { statusCheckRollup { state } } }
+      }
+    }
+  }
 }
+]]
 
 local SEARCH_GQL = [[
 query($search: String!, $limit: Int!) {
@@ -33,9 +33,10 @@ query($search: String!, $limit: Int!) {
         number title state isDraft
         createdAt updatedAt url
         additions deletions changedFiles
+        labels(first: 10) { nodes { name color } }
         latestOpinionatedReviews(last: 10) { nodes { state } }
         author { login ... on User { name } }
-        headRefName baseRefName
+        headRefName baseRefName headRefOid baseRefOid
         comments { totalCount }
         repository { name nameWithOwner }
         commits(last: 1) {
@@ -122,27 +123,33 @@ function M.get_pr(owner, repo, number, on_done, opts)
 
 	logger.loginfo("GitHub fetch PR", { repo = repo_slug, number = number })
 
-	local args = {
-		"pr",
-		"view",
-		tostring(number),
-		"--repo",
-		repo_slug,
-		"--json",
-		table.concat(DETAIL_FIELDS, ","),
-	}
-
-	return cli.gh(args, function(result, err)
+	return cli.gh({
+		"api",
+		"graphql",
+		"-f",
+		"query=" .. vim.trim(GET_PR_GQL),
+		"-f",
+		"owner=" .. owner,
+		"-f",
+		"repo=" .. repo,
+		"-F",
+		"number=" .. tostring(number),
+	}, function(result, err)
 		if err or not result or type(result) ~= "table" then
 			on_done(nil, err or "Failed to fetch PR")
 			return
 		end
 
-		if not result.repository then
-			result.repository = { name = repo, nameWithOwner = repo_slug }
+		local pr_raw = type(result.data) == "table"
+			and type(result.data.repository) == "table"
+			and result.data.repository.pullRequest
+		if type(pr_raw) ~= "table" then
+			on_done(nil, "PR not found")
+			return
 		end
 
-		local pr = normalizer.normalize_pr(result)
+		pr_raw.repository = { name = repo, nameWithOwner = repo_slug }
+		local pr = normalizer.normalize_pr(pr_raw)
 		cli.set_cache(cache_key, pr)
 		on_done(pr, nil)
 	end)

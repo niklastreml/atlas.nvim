@@ -123,7 +123,7 @@ function M.toggle_detail()
 	state.detail_buf = ensure_buf("detail_buf", "AtlasDetail", "")
 	state.detail_win =
 		win_util.create(state.main_win, "rightbelow vsplit", state.detail_buf, win_util.apply_detail_opts)
-	pcall(vim.api.nvim_win_set_width, state.detail_win, math.max(math.floor(vim.o.columns * 0.40), 40))
+	pcall(vim.api.nvim_win_set_width, state.detail_win, math.max(math.floor(vim.o.columns * 0.45), 40))
 
 	if win_util.valid(state.main_win) then
 		vim.api.nvim_win_call(state.main_win, function()
@@ -138,7 +138,7 @@ function M.reflow()
 	end
 	ensure_footer()
 	if win_util.valid(state.detail_win) then
-		pcall(vim.api.nvim_win_set_width, state.detail_win, math.max(math.floor(vim.o.columns * 0.40), 40))
+		pcall(vim.api.nvim_win_set_width, state.detail_win, math.max(math.floor(vim.o.columns * 0.45), 40))
 	end
 	footer.refresh()
 end

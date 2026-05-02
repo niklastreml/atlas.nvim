@@ -13,6 +13,14 @@ local BUILD_HL = {
 
 local MAX_HASH_LEN = 12
 
+---@param hex string  e.g. "f29513" (no leading #)
+---@return string
+local function label_hl(hex)
+	local name = string.format("AtlasGHLabel_%s", hex)
+	vim.api.nvim_set_hl(0, name, { fg = "#1e1e2e", bg = "#" .. hex, bold = true })
+	return name
+end
+
 --------------------------------------------------------------------------------
 -- Merge checks state
 --------------------------------------------------------------------------------
@@ -110,6 +118,17 @@ function M.chips(pr)
 		table.insert(chips, { label = hash, hl = "AtlasTabInactive" })
 	end
 
+	local raw = pr._raw or {}
+	local label_nodes = type(raw.labels) == "table" and type(raw.labels.nodes) == "table" and raw.labels.nodes or {}
+	for _, lbl in ipairs(label_nodes) do
+		local name = tostring(lbl.name or "")
+		if name ~= "" then
+			local color = tostring(lbl.color or "")
+			local hl = color ~= "" and label_hl(color) or "AtlasTabInactive"
+			table.insert(chips, { label = name, hl = hl })
+		end
+	end
+
 	local spinner = require("atlas.ui.components.spinner")
 	if overview_state.builds == "loading" then
 		table.insert(chips, { label = spinner.with_text("Loading checks"), hl = "AtlasTextMuted" })
@@ -168,9 +187,13 @@ function M.fetches(pr, refresh)
 	if repo_slug ~= "" then
 		merge_checks.loading = true
 		track_panel(cli.gh({
-			"pr", "view", tostring(pr.id),
-			"--repo", repo_slug,
-			"--json", "mergeable,mergeStateStatus,reviewDecision",
+			"pr",
+			"view",
+			tostring(pr.id),
+			"--repo",
+			repo_slug,
+			"--json",
+			"mergeable,mergeStateStatus,reviewDecision",
 		}, function(result, _)
 			merge_checks.loading = false
 			if type(result) == "table" then
