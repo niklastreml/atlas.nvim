@@ -385,12 +385,13 @@ function M.add_comment(pr, refresh)
 		return
 	end
 
+	local completion = type(provider.get_completion) == "function" and provider.get_completion(pr) or nil
 	md_editor.open({
 		key = "pr-comment-add",
 		title = " Add Comment ",
 		width_ratio = 0.5,
 		height_ratio = 0.18,
-		completion = nil,
+		completion = completion,
 		on_save = function(text)
 			if not text or vim.trim(text) == "" then
 				return
@@ -426,12 +427,17 @@ function M.reply_comment(pr, entry, refresh)
 		return
 	end
 
+	local completion = type(provider.get_completion) == "function" and provider.get_completion(pr) or nil
+	local author = comment.author or {}
+	local mention = tostring(author.nickname or author.name or "")
+	local initial_text = mention ~= "" and ("@" .. mention .. " ") or ""
 	md_editor.open({
 		key = "pr-comment-reply-" .. tostring(comment.id),
 		title = " Reply to Comment ",
 		width_ratio = 0.5,
 		height_ratio = 0.18,
-		completion = nil,
+		initial_text = initial_text,
+		completion = completion,
 		on_save = function(text)
 			if not text or vim.trim(text) == "" then
 				return
@@ -467,13 +473,14 @@ function M.edit_comment(pr, entry, refresh)
 		return
 	end
 
+	local completion = type(provider.get_completion) == "function" and provider.get_completion(pr) or nil
 	md_editor.open({
 		key = "pr-comment-edit-" .. tostring(comment.id),
 		title = " Edit Comment ",
 		width_ratio = 0.5,
 		height_ratio = 0.18,
 		initial_text = comment.content_raw or "",
-		completion = nil,
+		completion = completion,
 		on_save = function(text)
 			if not text or vim.trim(text) == "" then
 				return

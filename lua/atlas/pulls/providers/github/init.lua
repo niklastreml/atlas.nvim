@@ -384,7 +384,9 @@ function M.fetch_activity(pr, opts, on_done)
 			local entries = {}
 			for _, item in ipairs(result) do
 				local event = tostring(item.event or "")
-				local actor_login = type(item.actor) == "table" and tostring(item.actor.login or "") or ""
+				local actor_login = (type(item.actor) == "table" and tostring(item.actor.login or ""))
+					or (type(item.user) == "table" and tostring(item.user.login or ""))
+					or ""
 				local date = tostring(item.created_at or item.submitted_at or "")
 
 				if event == "commented" then
@@ -398,13 +400,15 @@ function M.fetch_activity(pr, opts, on_done)
 					})
 				elseif event == "reviewed" then
 					local state_label = tostring(item.state or ""):lower()
+					local kind = state_label == "approved" and "approval"
+						or state_label == "changes_requested" and "changes_requested"
+						or "update"
 					table.insert(entries, {
-						kind = "approval",
+						kind = kind,
 						actor = actor_login ~= ""
 								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
 							or nil,
 						date = date,
-						content_raw = state_label ~= "" and state_label or nil,
 					})
 				elseif event == "closed" or event == "merged" or event == "reopened" then
 					table.insert(entries, {
@@ -458,6 +462,49 @@ function M.fetch_activity(pr, opts, on_done)
 							content_raw = string.format("added label: %s", label),
 						})
 					end
+				elseif event == "assigned" then
+					local assignee = type(item.assignee) == "table" and tostring(item.assignee.login or "") or ""
+					if assignee ~= "" then
+						table.insert(entries, {
+							kind = "update",
+							actor = actor_login ~= ""
+									and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+								or nil,
+							date = date,
+							content_raw = string.format("assigned %s", assignee),
+						})
+					end
+				elseif event == "review_requested" then
+					local reviewer = type(item.requested_reviewer) == "table"
+						and tostring(item.requested_reviewer.login or "")
+						or ""
+					table.insert(entries, {
+						kind = "update",
+						actor = actor_login ~= ""
+								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+							or nil,
+						date = date,
+						content_raw = reviewer ~= "" and string.format("requested review from %s", reviewer)
+							or "requested review",
+					})
+				elseif event == "ready_for_review" then
+					table.insert(entries, {
+						kind = "update",
+						actor = actor_login ~= ""
+								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+							or nil,
+						date = date,
+						content_raw = "marked as ready for review",
+					})
+				elseif event == "convert_to_draft" then
+					table.insert(entries, {
+						kind = "update",
+						actor = actor_login ~= ""
+								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+							or nil,
+						date = date,
+						content_raw = "marked as draft",
+					})
 				end
 			end
 
@@ -525,6 +572,97 @@ function M.fetch_comments(pr, opts, on_done)
 			on_done(comments, nil)
 		end
 	)
+end
+
+---@param pr PullRequest
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.add_comment(pr, content, on_done)
+	local cli = require("atlas.pulls.providers.github.api.cli")
+	local repo_slug = pr.repo_full_name or ""
+	if repo_slug == "" then
+		vim.schedule(function() on_done(nil, "Missing repo") end)
+		return nil
+	end
+	return cli.api("POST", string.format("repos/%s/issues/%s/comments", repo_slug, tostring(pr.id)), { body = content }, function(result, err)
+		if err or type(result) ~= "table" then
+			on_done(nil, err or "Failed to create comment")
+			return
+		end
+		local user = result.user or {}
+		on_done({
+			id = result.id,
+			parent_id = nil,
+			author = { name = tostring(user.login or ""), nickname = tostring(user.login or ""), id = tostring(user.id or "") },
+			content_raw = tostring(result.body or ""),
+			created_on = tostring(result.created_at or ""),
+			deleted = false,
+			inline = nil,
+			html_url = tostring(result.html_url or ""),
+		}, nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param _parent_id number|string
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.reply_comment(pr, _parent_id, content, on_done)
+	-- GitHub issue comments have no threading — reply is just a new comment
+	return M.add_comment(pr, content, on_done)
+end
+
+---@param pr PullRequest
+---@param comment_id number|string
+---@param content string
+---@param on_done fun(comment: PullsComment|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.edit_comment(pr, comment_id, content, on_done)
+	local cli = require("atlas.pulls.providers.github.api.cli")
+	local repo_slug = pr.repo_full_name or ""
+	if repo_slug == "" then
+		vim.schedule(function() on_done(nil, "Missing repo") end)
+		return nil
+	end
+	return cli.api("PATCH", string.format("repos/%s/issues/comments/%s", repo_slug, tostring(comment_id)), { body = content }, function(result, err)
+		if err or type(result) ~= "table" then
+			on_done(nil, err or "Failed to edit comment")
+			return
+		end
+		local user = result.user or {}
+		on_done({
+			id = result.id,
+			parent_id = nil,
+			author = { name = tostring(user.login or ""), nickname = tostring(user.login or ""), id = tostring(user.id or "") },
+			content_raw = tostring(result.body or ""),
+			created_on = tostring(result.created_at or ""),
+			deleted = false,
+			inline = nil,
+			html_url = tostring(result.html_url or ""),
+		}, nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param comment_id number|string
+---@param on_done fun(ok: boolean, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.delete_comment(pr, comment_id, on_done)
+	local cli = require("atlas.pulls.providers.github.api.cli")
+	local repo_slug = pr.repo_full_name or ""
+	if repo_slug == "" then
+		vim.schedule(function() on_done(false, "Missing repo") end)
+		return nil
+	end
+	return cli.api("DELETE", string.format("repos/%s/issues/comments/%s", repo_slug, tostring(comment_id)), nil, function(_, err)
+		if err then
+			on_done(false, err)
+			return
+		end
+		on_done(true, nil)
+	end)
 end
 
 ---@param pr PullRequest
@@ -642,6 +780,46 @@ function M.fetch_diff(pr, opts, on_done)
 end
 
 ---@return AtlasPullsViewConfig[]
+---@param pr PullRequest
+---@return AtlasMarkdownCompletionProvider|nil
+function M.get_completion(pr)
+	local author_completion = require("atlas.pulls.providers.github.completion.author")
+	local comments_state = require("atlas.pulls.ui.panel.pr.tabs.comments.state")
+
+	local seen = {}
+	local logins = {}
+
+	local function add(login)
+		local l = tostring(login or "")
+		if l ~= "" and not seen[l] then
+			seen[l] = true
+			table.insert(logins, l)
+		end
+	end
+
+	-- PR author
+	local raw = pr._raw or {}
+	add(type(raw.author) == "table" and raw.author.login or (pr.author and pr.author.name))
+
+	-- Reviewers from raw
+	local reviews = type(raw.latestOpinionatedReviews) == "table" and raw.latestOpinionatedReviews.nodes or {}
+	for _, r in ipairs(reviews) do
+		add(type(r.author) == "table" and r.author.login or nil)
+	end
+
+	-- Already loaded commenters
+	local comments = type(comments_state.comments) == "table" and comments_state.comments or {}
+	for _, c in ipairs(comments) do
+		add(c.author and c.author.nickname)
+	end
+
+	if #logins == 0 then
+		return nil
+	end
+
+	return author_completion.build_completion(logins)
+end
+
 function M.views()
 	local cfg = github_config()
 	return cfg.views or {}
