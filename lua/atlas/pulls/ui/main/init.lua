@@ -50,6 +50,9 @@ function M.init(provider)
 	local state = require("atlas.pulls.state")
 	local controller = require("atlas.pulls.ui.main.controller")
 	local keymaps = require("atlas.pulls.ui.main.keymaps")
+	if state.provider ~= provider then
+		state.current_user = nil
+	end
 	state.provider = provider
 
 	require("atlas.pulls.ui.highlights").setup()
