@@ -181,6 +181,177 @@ local ACTIONS = {
 		end,
 	},
 	{
+		id = "close",
+		label = "Close PR",
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if repo_slug(ctx) == "" then
+				return false, "Missing repository info"
+			end
+			local s = tostring(ctx.pr.state or ""):lower()
+			if s ~= "open" and s ~= "draft" then
+				return false, "PR is not open"
+			end
+			return true, nil
+		end,
+		run = function(ctx, done)
+			local pr = ctx.pr
+			if pr == nil then
+				done(nil, "No PR selected")
+				return
+			end
+
+			vim.ui.input({
+				prompt = string.format("Close PR #%s? [y/N]: ", tostring(pr.id or "")),
+			}, function(input)
+				if input == nil then
+					done({ changed_pr = false, message = "Close cancelled" }, nil)
+					return
+				end
+
+				local normalized = vim.trim(tostring(input)):lower()
+				if normalized ~= "y" and normalized ~= "yes" then
+					footer.notify("info", "Close cancelled")
+					done({ changed_pr = false, message = "Close cancelled" }, nil)
+					return
+				end
+
+				footer.notify("loading", "Closing PR...")
+				cli.gh({
+					"pr", "close", tostring(pr.id),
+					"--repo", repo_slug(ctx),
+				}, function(_, err)
+					if err then
+						footer.notify("error", string.format("Close failed: %s", tostring(err)))
+						done(nil, tostring(err))
+						return
+					end
+
+					footer.notify("success", "PR closed", 1200)
+					done({ changed_pr = true, message = "Closed" }, nil)
+				end)
+			end)
+		end,
+	},
+	{
+		id = "reopen",
+		label = "Reopen PR",
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if repo_slug(ctx) == "" then
+				return false, "Missing repository info"
+			end
+			local s = tostring(ctx.pr.state or ""):lower()
+			if s ~= "declined" then
+				return false, "PR is not closed"
+			end
+			return true, nil
+		end,
+		run = function(ctx, done)
+			local pr = ctx.pr
+			if pr == nil then
+				done(nil, "No PR selected")
+				return
+			end
+
+			footer.notify("loading", "Reopening PR...")
+			cli.gh({
+				"pr", "reopen", tostring(pr.id),
+				"--repo", repo_slug(ctx),
+			}, function(_, err)
+				if err then
+					footer.notify("error", string.format("Reopen failed: %s", tostring(err)))
+					done(nil, tostring(err))
+					return
+				end
+
+				footer.notify("success", "PR reopened", 1200)
+				done({ changed_pr = true, message = "Reopened" }, nil)
+			end)
+		end,
+	},
+	{
+		id = "ready_for_review",
+		label = "Mark as ready for review",
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if repo_slug(ctx) == "" then
+				return false, "Missing repository info"
+			end
+			if tostring(ctx.pr.state or ""):lower() ~= "draft" then
+				return false, "PR is not a draft"
+			end
+			return true, nil
+		end,
+		run = function(ctx, done)
+			local pr = ctx.pr
+			if pr == nil then
+				done(nil, "No PR selected")
+				return
+			end
+
+			footer.notify("loading", "Marking as ready...")
+			cli.gh({
+				"pr", "ready", tostring(pr.id),
+				"--repo", repo_slug(ctx),
+			}, function(_, err)
+				if err then
+					footer.notify("error", string.format("Failed: %s", tostring(err)))
+					done(nil, tostring(err))
+					return
+				end
+
+				footer.notify("success", "PR marked as ready for review", 1200)
+				done({ changed_pr = true, message = "Ready for review" }, nil)
+			end)
+		end,
+	},
+	{
+		id = "convert_to_draft",
+		label = "Convert to draft",
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if repo_slug(ctx) == "" then
+				return false, "Missing repository info"
+			end
+			if tostring(ctx.pr.state or ""):lower() ~= "open" then
+				return false, "PR is not open"
+			end
+			return true, nil
+		end,
+		run = function(ctx, done)
+			local pr = ctx.pr
+			if pr == nil then
+				done(nil, "No PR selected")
+				return
+			end
+
+			footer.notify("loading", "Converting to draft...")
+			cli.gh({
+				"pr", "ready", tostring(pr.id),
+				"--repo", repo_slug(ctx),
+				"--undo",
+			}, function(_, err)
+				if err then
+					footer.notify("error", string.format("Failed: %s", tostring(err)))
+					done(nil, tostring(err))
+					return
+				end
+
+				footer.notify("success", "PR converted to draft", 1200)
+				done({ changed_pr = true, message = "Converted to draft" }, nil)
+			end)
+		end,
+	},
+	{
 		id = "search",
 		label = "Search repositories",
 		is_available = function(_)

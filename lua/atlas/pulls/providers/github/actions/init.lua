@@ -8,6 +8,10 @@ local footer = require("atlas.ui.components.footer")
 ---| "merge"
 ---| "approve"
 ---| "request_changes"
+---| "close"
+---| "reopen"
+---| "ready_for_review"
+---| "convert_to_draft"
 ---| "search"
 
 ---@param id GitHubActionId|string
