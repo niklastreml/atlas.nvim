@@ -116,7 +116,7 @@ function M.on_select(pr, repo, refresh, opts)
 	end
 
 	local force_refresh = opts.force_refresh == true
-	local should_fetch = force_refresh or state.commits == nil or state.commits == "loading"
+	local should_fetch = force_refresh or state.commits == nil or state.commits == "loading" or type(state.commits) == "string"
 
 	if should_fetch then
 		cancel_all()

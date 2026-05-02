@@ -124,11 +124,8 @@ function M.render(issue, width)
 		if md == "" then
 			utils.push(lines, spans, "No description", "AtlasTextMuted", PADDING_X)
 		else
-			local content_width = math.max(10, width - (PADDING_X * 2))
 			for _, line in ipairs(utils.sanitize_lines(md)) do
-				for _, chunk in ipairs(utils.wrap_line(line, content_width)) do
-					table.insert(lines, PADDING .. chunk)
-				end
+				table.insert(lines, PADDING .. line)
 			end
 		end
 	end

@@ -342,10 +342,7 @@ local function render_description(pr, width, lines, spans)
 		table.remove(desc_lines)
 	end
 	for _, line in ipairs(desc_lines) do
-		local wrapped = utils.wrap_line(line, content_width)
-		for _, chunk in ipairs(wrapped) do
-			table.insert(lines, PADDING .. chunk)
-		end
+		table.insert(lines, PADDING .. line)
 	end
 	table.insert(lines, "")
 end

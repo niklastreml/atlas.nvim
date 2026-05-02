@@ -218,7 +218,7 @@ function M.on_select(pr, repo, refresh, opts)
 	end
 
 	local force_refresh = opts.force_refresh == true
-	local should_fetch = force_refresh or state.activity == nil or state.activity == "loading"
+	local should_fetch = force_refresh or state.activity == nil or state.activity == "loading" or type(state.activity) == "string"
 
 	if should_fetch then
 		cancel_all()

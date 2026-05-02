@@ -84,17 +84,6 @@ function M.on_select(pr, repo, refresh, opts)
 		end))
 	end
 
-	if type(provider.fetch_diffstat) == "function" then
-		state.diffstat = "loading"
-		track(provider.fetch_diffstat(pr, opts, function(entries, err)
-			if err then
-				state.diffstat = err
-			else
-				state.diffstat = entries or {}
-			end
-			refresh()
-		end))
-	end
 end
 
 --------------------------------------------------------------------------------

@@ -3,6 +3,7 @@ local M = {}
 local icons = require("atlas.ui.shared.icons")
 local highlights = require("atlas.ui.shared.highlights")
 local table_tree = require("atlas.ui.components.table_tree")
+local diff_blocks = require("atlas.ui.components.diff_blocks")
 local utils = require("atlas.ui.shared.utils")
 local helper = require("atlas.pulls.ui.main.helper")
 
@@ -47,6 +48,23 @@ function M.render(pr, width, extra_rows)
 	local by_prefix = string.format(" %s by @", author_icon)
 	local by_sep = " - "
 	local byline = by_prefix .. author_name .. by_sep .. created_text
+
+	local files_state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
+	local diff_result = nil
+	if type(files_state.diffstat) == "table" and #files_state.diffstat > 0 then
+		local total_add, total_del = 0, 0
+		for _, entry in ipairs(files_state.diffstat) do
+			total_add = total_add + (tonumber(entry.lines_added) or 0)
+			total_del = total_del + (tonumber(entry.lines_removed) or 0)
+		end
+		diff_result = diff_blocks.render({ additions = total_add, deletions = total_del })
+		if diff_result and diff_result.text ~= "" then
+			local byline_w = vim.api.nvim_strwidth(byline)
+			local diff_w = vim.api.nvim_strwidth(diff_result.text)
+			local gap = math.max(2, width - byline_w - diff_w)
+			byline = byline .. string.rep(" ", gap) .. diff_result.text
+		end
+	end
 
 	local lines = {
 		title,
@@ -127,6 +145,13 @@ function M.render(pr, width, extra_rows)
 	local ts_start = author_end + #by_sep
 	local ts_end = ts_start + #created_text
 	add_span(spans, lines, 1, ts_start, ts_end, "AtlasTextMuted")
+
+	if diff_result and diff_result.text ~= "" then
+		local diff_byte_start = #byline - #diff_result.text
+		for _, hl in ipairs(diff_result.highlights) do
+			add_span(spans, lines, 1, diff_byte_start + hl.start_col, diff_byte_start + hl.end_col, hl.hl_group)
+		end
+	end
 
 	for _, span in ipairs(tbl_spans) do
 		table.insert(spans, {

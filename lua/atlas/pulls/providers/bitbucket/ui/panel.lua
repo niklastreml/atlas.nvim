@@ -124,6 +124,15 @@ function M.fetches(pr, refresh)
 			refresh()
 		end))
 	end
+
+	local files_state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
+	files_state.diffstat = "loading"
+	if provider and type(provider.fetch_diffstat) == "function" then
+		track_panel(provider.fetch_diffstat(pr, nil, function(entries, err)
+			files_state.diffstat = err and err or (entries or {})
+			refresh()
+		end))
+	end
 end
 
 ---@param pr PullRequest
