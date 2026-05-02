@@ -307,9 +307,6 @@ return {
 <details>
 <summary><strong>Configuration</strong></summary>
 
-> [!TIP]
-> Not ready to connect to Bitbucket yet? Run `:AtlasPulls mock` to explore the UI with local mock data.
-
 ```lua
 return {
   "emrearmagan/atlas.nvim",
