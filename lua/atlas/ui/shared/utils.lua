@@ -372,4 +372,13 @@ function M.wrap_line(text, max_dw)
 	return result
 end
 
+---@param text string|nil
+---@return string
+function M.strip_markup(text)
+	local s = tostring(text or "")
+	s = s:gsub("\r\n", "\n")
+	s = s:gsub("<!%-%-.-%-%->", "")
+	return vim.trim(s)
+end
+
 return M

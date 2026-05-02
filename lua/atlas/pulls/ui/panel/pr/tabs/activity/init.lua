@@ -129,7 +129,7 @@ local function to_thread_items(entries)
 			entry_icon = icons.pulls_status("successful")
 		elseif kind == "comment" then
 			additional = "commented"
-			local raw = tostring(e.content_raw or ""):gsub("\r\n", "\n")
+			local raw = utils.strip_markup(e.content_raw)
 			local first = raw:match("([^\n]+)") or raw
 			content = first ~= "" and first or "(empty comment)"
 
@@ -139,6 +139,10 @@ local function to_thread_items(entries)
 		elseif kind == "update" then
 			additional = update_additional(e)
 			entry_icon = icons.pulls("activity")
+			local raw = tostring(e.content_raw or "")
+			if raw ~= "" then
+				content = raw
+			end
 		end
 
 		items[#items + 1] = {

@@ -3,7 +3,6 @@ local M = {}
 
 local utils = require("atlas.ui.shared.utils")
 local icons = require("atlas.ui.shared.icons")
-local highlights = require("atlas.ui.shared.highlights")
 local spinner = require("atlas.ui.components.spinner")
 local threads = require("atlas.ui.components.threadsv2")
 local helper = require("atlas.pulls.ui.main.helper")
@@ -159,10 +158,7 @@ end
 ---@param value string|nil
 ---@return string
 local function comment_display_text(value)
-	local text = tostring(value or "")
-	text = text:gsub("\r\n", "\n")
-	text = text:gsub("<!%-%-.-%-%->", "")
-	return vim.trim(text)
+	return utils.strip_markup(value)
 end
 
 ---@param node PullsCommentTreeNode
