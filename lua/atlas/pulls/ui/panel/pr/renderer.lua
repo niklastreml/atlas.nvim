@@ -21,11 +21,17 @@ local function apply_spans(buf, spans)
 				line_hl_group = span.line_hl_group,
 			})
 		elseif type(span) == "table" and span.line ~= nil and span.start_col ~= nil and span.end_col ~= nil and span.hl_group ~= nil then
-			vim.api.nvim_buf_set_extmark(buf, ns, span.line, span.start_col, {
-				end_row = span.line,
-				end_col = span.end_col,
-				hl_group = span.hl_group,
-			})
+			local line_text = vim.api.nvim_buf_get_lines(buf, span.line, span.line + 1, false)[1] or ""
+			local max_col = #line_text
+			local sc = math.min(span.start_col, max_col)
+			local ec = math.min(span.end_col, max_col)
+			if ec > sc then
+				vim.api.nvim_buf_set_extmark(buf, ns, span.line, sc, {
+					end_row = span.line,
+					end_col = ec,
+					hl_group = span.hl_group,
+				})
+			end
 		end
 	end
 end

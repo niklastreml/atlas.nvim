@@ -66,31 +66,8 @@ end
 
 ---@param pr PullRequest
 ---@return PullsPanelHeaderRow[]
-function M.header_rows(pr)
-	local raw = pr._raw or {}
-	local rows = {}
-
-	local review_decision = tostring(raw.reviewDecision or "")
-	if review_decision ~= "" then
-		local label = review_decision:gsub("_", " "):lower()
-		label = label:sub(1, 1):upper() .. label:sub(2)
-		local hl = "AtlasTextMuted"
-		if review_decision == "APPROVED" then
-			hl = "AtlasTextPositive"
-		elseif review_decision == "CHANGES_REQUESTED" then
-			hl = "AtlasTextWarning"
-		end
-		table.insert(rows, {
-			k1 = "Review:",
-			v1 = label,
-			v1_hl = hl,
-			k2 = "",
-			v2 = "",
-			v2_hl = "AtlasTextMuted",
-		})
-	end
-
-	return rows
+function M.header_rows(_)
+	return {}
 end
 
 ---@param pr PullRequest
@@ -189,6 +166,15 @@ function M.fetches(pr, refresh)
 		end
 		refresh()
 	end))
+
+	local files_state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
+	files_state.diffstat = "loading"
+	if provider and type(provider.fetch_diffstat) == "function" then
+		track_panel(provider.fetch_diffstat(pr, nil, function(entries, err)
+			files_state.diffstat = err and err or (entries or {})
+			refresh()
+		end))
+	end
 end
 
 ---@param pr PullRequest
@@ -233,25 +219,36 @@ local BUILD_STATE_ICON = {
 ---@param icon_hl string
 ---@param label string
 ---@param details string[]|nil
----@param lines string[]
----@param spans table[]
-local function push_section(icon, icon_hl, label, details, lines, spans)
+---@return BoxContentGroup
+local function render_check_group(icon, icon_hl, label, details, detail_spans)
+	local lines = {}
+	local spans = {}
 	local line_text = string.format("%s %s", icon, label)
-	table.insert(lines, string.rep(" ", PADDING_X) .. line_text)
+	table.insert(lines, line_text)
 	table.insert(spans, {
-		line = #lines - 1,
-		start_col = PADDING_X,
-		end_col = PADDING_X + vim.api.nvim_strwidth(icon),
+		line = 0,
+		start_col = 0,
+		end_col = #icon,
 		hl_group = icon_hl,
 	})
-	for _, detail in ipairs(details or {}) do
-		utils.push(lines, spans, "  " .. detail, "AtlasTextMuted", PADDING_X)
+	for di, detail in ipairs(details or {}) do
+		local indent = "  "
+		table.insert(lines, indent .. detail)
+		local lnum = #lines - 1
+		local ds = detail_spans and detail_spans[di] or nil
+		if ds then
+			table.insert(spans, { line = lnum, start_col = #indent, end_col = #indent + ds.icon_len, hl_group = ds.hl })
+			table.insert(spans, { line = lnum, start_col = #indent + ds.icon_len, end_col = #lines[#lines], hl_group = "AtlasTextMuted" })
+		else
+			table.insert(spans, { line = lnum, start_col = 0, end_col = #lines[#lines], hl_group = "AtlasTextMuted" })
+		end
 	end
+	return { lines = lines, spans = spans }
 end
 
 ---@class MergeCheckItem
 ---@field key string
----@field render fun(checks: table, builds: PullsBuild[]|string|nil, spinner: table): string|nil, string|nil, string|nil, string[]|nil
+---@field render fun(checks: table, builds: PullsBuild[]|string|nil, spinner: table): string|nil, string|nil, string|nil, string[]|nil, table[]|nil
 
 ---@type MergeCheckItem[]
 local MERGE_CHECK_ITEMS = {
@@ -288,14 +285,17 @@ local MERGE_CHECK_ITEMS = {
 				return icons.pulls_status("inprogress"), "AtlasTextMuted", "Builds", { spinner.with_text("Loading...") }
 			elseif type(builds) == "table" and #builds > 0 then
 				local details = {}
+				local detail_spans = {}
 				for _, build in ipairs(builds) do
 					local s = tostring(build.state or ""):upper()
 					local p = BUILD_STATE_ICON[s] or BUILD_STATE_ICON.STOPPED
-					table.insert(details, string.format("%s %s", p[1], tostring(build.name or "")))
+					local detail = string.format("%s %s", p[1], tostring(build.name or ""))
+					table.insert(details, detail)
+					table.insert(detail_spans, { icon_len = #p[1], hl = p[2] })
 				end
 				local overall = aggregate_build_status(builds)
 				local pair = BUILD_STATE_ICON[overall:upper()] or BUILD_STATE_ICON.STOPPED
-				return pair[1], pair[2], "Builds", details
+				return pair[1], pair[2], "Builds", details, detail_spans
 			end
 			return nil, nil, nil, nil
 		end,
@@ -339,13 +339,24 @@ function M.overview_extra_sections(pr, width, lines, spans) ---@diagnostic disab
 
 	utils.push(lines, spans, "Merge Checks", "AtlasColumnHeader", PADDING_X)
 
+	local groups = {}
 	for _, item in ipairs(MERGE_CHECK_ITEMS) do
-		local icon, icon_hl, label, details = item.render(merge_checks, builds, spinner_mod)
+		local icon, icon_hl, label, details, dspans = item.render(merge_checks, builds, spinner_mod)
 		if icon and icon_hl and label then
-			push_section(icon, icon_hl, label, details, lines, spans)
+			table.insert(groups, render_check_group(icon, icon_hl, label, details, dspans))
 		end
 	end
 
+	if #groups > 0 then
+		utils.append_block(
+			lines,
+			spans,
+			box.render(groups, {
+				width = width,
+				padding_x = PADDING_X,
+			})
+		)
+	end
 	table.insert(lines, "")
 end
 
