@@ -25,6 +25,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
 }
 ]]
 
+--TODO: This query already fetched most of the stuff. I could probably extend it slightly and then in the overview page i could instantly show more details without having to fetch the PR again. Like reviewers, build status etc.
 local SEARCH_GQL = [[
 query($search: String!, $limit: Int!) {
   search(query: $search, type: ISSUE, first: $limit) {
@@ -152,6 +153,35 @@ function M.get_pr(owner, repo, number, on_done, opts)
 		local pr = normalizer.normalize_pr(pr_raw)
 		cli.set_cache(cache_key, pr)
 		on_done(pr, nil)
+	end)
+end
+
+---@param pr PullRequest
+---@param on_done fun(result: { mergeable: string, merge_state: string, review_decision: string }|nil, err: string|nil)
+---@return { cancel: fun() }|nil
+function M.get_merge_checks(pr, on_done)
+	local repo_slug = pr.repo_full_name or ""
+	if repo_slug == "" then
+		vim.schedule(function()
+			on_done(nil, "Missing repo")
+		end)
+		return nil
+	end
+
+	return cli.gh({
+		"pr", "view", tostring(pr.id),
+		"--repo", repo_slug,
+		"--json", "mergeable,mergeStateStatus,reviewDecision",
+	}, function(result, err)
+		if err or type(result) ~= "table" then
+			on_done(nil, err or "Failed to fetch merge checks")
+			return
+		end
+		on_done({
+			mergeable = tostring(result.mergeable or ""),
+			merge_state = tostring(result.mergeStateStatus or ""),
+			review_decision = tostring(result.reviewDecision or ""),
+		}, nil)
 	end)
 end
 
