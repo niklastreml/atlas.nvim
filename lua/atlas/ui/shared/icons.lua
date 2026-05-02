@@ -32,6 +32,7 @@ local ICONS = {
 		activity = "󱐋",
 		tag = "",
 		branch = "",
+		issue = "",
 
 		status = {
 			successful = "",

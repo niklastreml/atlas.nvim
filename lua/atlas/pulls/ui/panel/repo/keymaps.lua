@@ -77,6 +77,14 @@ function M.register(buf)
 				require("atlas.pulls.ui.panel").on_select(nil, nil, { force_refresh = true })
 			end,
 		},
+		{
+			key = "gx",
+			desc = "Open in browser",
+			opts = { nowait = true, silent = true },
+			callback = function()
+				M.open_current_line()
+			end,
+		},
 	}, { index = 211, buffer = buf })
 
 	local general = {}
@@ -132,6 +140,32 @@ function M.register(buf)
 	help.register("General", general, { index = 300, buffer = buf })
 end
 
+---@return boolean
+function M.open_current_line()
+	local layout = require("atlas.ui.layout")
+	local panel_state = require("atlas.pulls.ui.panel.repo.state")
+	local win = layout.win_id("detail")
+	if win == nil or not vim.api.nvim_win_is_valid(win) then
+		return false
+	end
+
+	local lnum = vim.api.nvim_win_get_cursor(win)[1]
+	local entry = (panel_state.line_map or {})[lnum]
+	if not entry then
+		return false
+	end
+
+	local repo_panel = require("atlas.pulls.ui.panel.repo")
+	local tab_mod = repo_panel.get_tab_module(panel_state.current_tab)
+	if tab_mod and type(tab_mod.on_enter) == "function" then
+		local repo = panel_state.current_repo
+		if repo then
+			return tab_mod.on_enter(repo, entry) == true
+		end
+	end
+	return false
+end
+
 ---@param buf integer
 function M.remove(buf)
 	local panel_items = {
@@ -140,6 +174,7 @@ function M.remove(buf)
 		{ key = "gg" },
 		{ key = "G" },
 		{ key = "r" },
+		{ key = "gx" },
 	}
 
 	local general_items = {

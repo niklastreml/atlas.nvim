@@ -9,6 +9,7 @@ local M = {
 	hl_group = "AtlasGitHubTheme",
 	render = main_ui.render,
 	panel = require("atlas.pulls.providers.github.ui.panel"),
+	repo_panel = require("atlas.pulls.providers.github.ui.repo_panel"),
 }
 
 function M.setup()

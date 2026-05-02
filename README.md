@@ -252,8 +252,8 @@ Examples:
 - [x] Add custom actions to PRs
 - [x] Open PR diff in given command
 - [x] Switch between open, merged and closed PRs
+- [x] Show Github Issues
 - [ ] Pagination for API results
-- [ ] Bulk actions
 
 ### GitHub
 
@@ -440,8 +440,8 @@ pulls = {
 ```
 
 ![CleanShot2026-03-31at20 08 06-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/a8ca355b-09e2-428c-b3fb-3280fd161110)
-</details>
 
+</details>
 
 #### Keymaps
 
@@ -500,18 +500,18 @@ require("atlas").setup({
 
 ##### Pulls
 
-| Context               | Key         | Action                           |
-| --------------------- | ----------- | -------------------------------- |
-| Pulls                 | `A`         | Open PR actions                  |
-| Pulls                 | `o`         | Toggle repository panel          |
-| Pulls                 | `T`         | Create new tasks on PR           |
-| Pulls                 | `?`         | Search repositories              |
-| Pulls                 | `gc`        | Checkout selected PR             |
-| Pulls                 | `gd`        | Open selected PR diff            |
-| Pulls                 | `gx`        | Open pr/build/comment in browser |
-| Pulls                 | `y` / `Y`   | Copy PR id / URL                 |
-| Pulls (File changes)  | `za` / `zA` | Toggle fold / all folds          |
-| Pulls (File changes)  | `]h` / `[h` | Next / previous hunk             |
+| Context              | Key         | Action                           |
+| -------------------- | ----------- | -------------------------------- |
+| Pulls                | `A`         | Open PR actions                  |
+| Pulls                | `o`         | Toggle repository panel          |
+| Pulls                | `T`         | Create new tasks on PR           |
+| Pulls                | `?`         | Search repositories              |
+| Pulls                | `gc`        | Checkout selected PR             |
+| Pulls                | `gd`        | Open selected PR diff            |
+| Pulls                | `gx`        | Open pr/build/comment in browser |
+| Pulls                | `y` / `Y`   | Copy PR id / URL                 |
+| Pulls (File changes) | `za` / `zA` | Toggle fold / all folds          |
+| Pulls (File changes) | `]h` / `[h` | Next / previous hunk             |
 
 ## Contributors ✨
 
