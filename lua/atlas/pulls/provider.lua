@@ -1,4 +1,13 @@
 --------------------------------------------------------------------------------
+-- Main render result
+--------------------------------------------------------------------------------
+
+---@class PullsMainRenderResult
+---@field lines string[]
+---@field spans table[]
+---@field line_map table<integer, table>
+
+--------------------------------------------------------------------------------
 -- Provider Interface
 --------------------------------------------------------------------------------
 
@@ -41,6 +50,9 @@
 ---@field views fun(): AtlasPullsViewConfig[]
 ---@field open_actions fun(pr: PullRequest|nil, source: "main"|"panel"|nil, on_done: fun(result: PullsActionResult|nil))|nil
 ---@field search fun()|nil
+---
+--- Main list rendering (optional – falls back to default table when nil):
+---@field render (fun(groups: PullsGroup[], layout: string, opts: { width: integer }): PullsMainRenderResult)|nil
 ---
 ---@field panel PullsProviderPanel|nil
 ---@field repo_panel PullsProviderRepoPanel|nil
