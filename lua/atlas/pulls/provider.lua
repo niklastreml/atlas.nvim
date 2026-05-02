@@ -46,7 +46,6 @@
 ---@field reply_comment (fun(pr: PullRequest, parent_id: number, content: string, on_done: fun(comment: PullsComment|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field edit_comment (fun(pr: PullRequest, comment_id: number, content: string, on_done: fun(comment: PullsComment|nil, err: string|nil)): { cancel: fun() }|nil)|nil
 ---@field delete_comment (fun(pr: PullRequest, comment_id: number, on_done: fun(ok: boolean, err: string|nil)): { cancel: fun() }|nil)|nil
----@field get_completion (fun(pr: PullRequest): AtlasMarkdownCompletionProvider|nil)|nil
 ---
 ---@field views fun(): AtlasPullsViewConfig[]
 ---@field open_actions fun(pr: PullRequest|nil, source: "main"|"panel"|nil, on_done: fun(result: PullsActionResult|nil))|nil

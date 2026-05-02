@@ -6,9 +6,7 @@ local icons = require("atlas.ui.shared.icons")
 local spinner = require("atlas.ui.components.spinner")
 local box = require("atlas.ui.components.box")
 local footer = require("atlas.ui.components.footer")
-local table_view = require("atlas.ui.components.table_tree")
 local state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
-local diff_blocks = require("atlas.ui.components.diff_blocks")
 
 local PADDING_X = 1
 local PADDING = string.rep(" ", PADDING_X)
@@ -52,16 +50,13 @@ function M.on_select(pr, repo, refresh, opts)
 	local pr_id = tostring(pr.id or "")
 
 	local can_fetch_reviewers = type(provider.fetch_reviewers) == "function"
-	local can_fetch_diffstat = type(provider.fetch_diffstat) == "function"
 	local can_fetch_description = type(provider.fetch_description) == "function"
 	local should_fetch_reviewers = can_fetch_reviewers
 		and (force_refresh or state.reviewers == nil or state.reviewers == "loading")
-	local should_fetch_diffstat = can_fetch_diffstat
-		and (force_refresh or state.diffstat == nil or state.diffstat == "loading")
 	local should_fetch_description = can_fetch_description
 		and (force_refresh or state.description == nil or state.description == "loading")
 
-	if should_fetch_reviewers or should_fetch_diffstat or should_fetch_description then
+	if should_fetch_reviewers or should_fetch_description then
 		cancel_all()
 	end
 
@@ -87,21 +82,6 @@ function M.on_select(pr, repo, refresh, opts)
 			else
 				state.reviewers = reviewers or {}
 				footer.notify("success", string.format("Reviewers loaded for #%s", pr_id), 1200)
-			end
-			refresh()
-		end))
-	end
-
-	if should_fetch_diffstat then
-		state.diffstat = "loading"
-		footer.notify("loading", string.format("Loading changes summary for #%s...", pr_id))
-		track(provider.fetch_diffstat(pr, opts, function(entries, err)
-			if err then
-				state.diffstat = err
-				footer.notify("error", string.format("Failed to load changes summary for #%s", pr_id))
-			else
-				state.diffstat = entries or {}
-				footer.notify("success", string.format("Changes summary loaded for #%s", pr_id), 1200)
 			end
 			refresh()
 		end))
@@ -358,6 +338,9 @@ local function render_description(pr, width, lines, spans)
 	end
 
 	local desc_lines = utils.sanitize_lines(desc_text)
+	while #desc_lines > 0 and vim.trim(desc_lines[#desc_lines]) == "" do
+		table.remove(desc_lines)
+	end
 	for _, line in ipairs(desc_lines) do
 		local wrapped = utils.wrap_line(line, content_width)
 		for _, chunk in ipairs(wrapped) do
@@ -367,124 +350,6 @@ local function render_description(pr, width, lines, spans)
 	table.insert(lines, "")
 end
 
---------------------------------------------------------------------------------
--- Diffstat
---------------------------------------------------------------------------------
-
-local STATUS_MAP = {
-	added = { "+", "AtlasTextPositive" },
-	removed = { "-", "AtlasLogError" },
-	deleted = { "-", "AtlasLogError" },
-	renamed = { "R", "AtlasLogWarn" },
-	modified = { "~", "AtlasTextMuted" },
-}
-
----@param entry PullsDiffstatEntry
----@return string
-local function diffstat_path(entry)
-	local s = tostring(entry.status or ""):lower()
-	if s == "renamed" and entry.old_path and entry.old_path ~= "" and entry.path ~= "" then
-		return entry.old_path .. " → " .. entry.path
-	end
-	return entry.path or "(unknown file)"
-end
-
----@param pr PullRequest
----@param width integer
----@param lines string[]
----@param spans table[]
-local function render_diffstat(pr, width, lines, spans)
-	if state.diffstat == nil then
-		return
-	end
-
-	if state.diffstat == "loading" then
-		utils.push(lines, spans, "Files changed", "AtlasColumnHeader", PADDING_X)
-		utils.push(lines, spans, spinner.with_text("Loading file changes..."), "AtlasTextMuted", PADDING_X)
-		return
-	end
-
-	if type(state.diffstat) == "string" then
-		utils.push(lines, spans, "Files changed", "AtlasColumnHeader", PADDING_X)
-		utils.push(lines, spans, state.diffstat, "AtlasLogError", PADDING_X)
-		return
-	end
-
-	local entries = state.diffstat
-	local hdr = #entries > 0 and string.format("Files changed (%d)", #entries) or "Files changed"
-
-	local total_add, total_del = 0, 0
-	for _, entry in ipairs(entries) do
-		total_add = total_add + (tonumber(entry.lines_added) or 0)
-		total_del = total_del + (tonumber(entry.lines_removed) or 0)
-	end
-	local diff_result = diff_blocks.render({ additions = total_add, deletions = total_del })
-
-	if diff_result.text ~= "" then
-		local hdr_w = vim.fn.strdisplaywidth(hdr)
-		local diff_w = vim.fn.strdisplaywidth(diff_result.text)
-		local padding = math.max(1, width - PADDING_X - hdr_w - diff_w)
-		local hdr_line = string.rep(" ", PADDING_X) .. hdr .. string.rep(" ", padding) .. diff_result.text
-		table.insert(lines, hdr_line)
-		local lnum = #lines - 1
-		table.insert(spans, { line = lnum, start_col = PADDING_X, end_col = PADDING_X + #hdr, hl_group = "AtlasColumnHeader" })
-		local diff_byte_start = PADDING_X + #hdr + padding
-		for _, hl in ipairs(diff_result.highlights) do
-			table.insert(spans, { line = lnum, start_col = diff_byte_start + hl.start_col, end_col = diff_byte_start + hl.end_col, hl_group = hl.hl_group })
-		end
-	else
-		utils.push(lines, spans, hdr, "AtlasColumnHeader", PADDING_X)
-	end
-
-	if #entries == 0 then
-		utils.push(lines, spans, "No files changed.", "AtlasTextMuted", PADDING_X)
-		return
-	end
-
-	local rows = {}
-	for _, entry in ipairs(entries) do
-		local s = tostring(entry.status or ""):lower()
-		local m = STATUS_MAP[s] or { "~", "AtlasTextMuted" }
-		table.insert(rows, {
-			marker = m[1],
-			marker_hl = m[2],
-			path = diffstat_path(entry),
-			added = string.format("+%d", tonumber(entry.lines_added) or 0),
-			removed = string.format("-%d", tonumber(entry.lines_removed) or 0),
-		})
-	end
-
-	local tbl_lines, _, tbl_spans = table_view.render({
-		width = width,
-		margin = PADDING_X,
-		column_gap = 1,
-		show_header = false,
-		fill = true,
-		columns = {
-			{ key = "marker", can_grow = false, max_width = 1 },
-			{ key = "path", can_grow = true, truncate_from = "start" },
-			{ key = "added", can_grow = false, align = "center" },
-			{ key = "removed", can_grow = false, align = "center" },
-		},
-		rows = rows,
-		cell_hl = function(row, col)
-			if col.key == "marker" then
-				return row.marker_hl
-			end
-			if col.key == "path" then
-				return "AtlasTextMuted"
-			end
-			if col.key == "added" then
-				return "AtlasTextPositive"
-			end
-			if col.key == "removed" then
-				return "AtlasLogError"
-			end
-		end,
-	})
-
-	utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
-end
 
 ---@param pr PullRequest
 ---@param width integer
@@ -494,6 +359,7 @@ function M.render(pr, width)
 	local spans = {}
 	local line_map = {}
 
+	render_description(pr, width, lines, spans)
 	render_reviewers(pr, width, lines, spans)
 
 	local provider = get_provider()
@@ -502,8 +368,6 @@ function M.render(pr, width)
 	end
 
 	render_builds(pr, width, lines, spans, line_map)
-	render_description(pr, width, lines, spans)
-	render_diffstat(pr, width, lines, spans)
 
 	return lines, spans, line_map
 end

@@ -3,6 +3,8 @@ local M = {}
 
 local utils = require("atlas.ui.shared.utils")
 local spinner = require("atlas.ui.components.spinner")
+local diff_blocks = require("atlas.ui.components.diff_blocks")
+local table_view = require("atlas.ui.components.table_tree")
 local footer = require("atlas.ui.components.footer")
 local state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
 
@@ -81,7 +83,128 @@ function M.on_select(pr, repo, refresh, opts)
 			refresh()
 		end))
 	end
+
+	if type(provider.fetch_diffstat) == "function" then
+		state.diffstat = "loading"
+		track(provider.fetch_diffstat(pr, opts, function(entries, err)
+			if err then
+				state.diffstat = err
+			else
+				state.diffstat = entries or {}
+			end
+			refresh()
+		end))
+	end
 end
+
+--------------------------------------------------------------------------------
+-- Diffstat summary
+--------------------------------------------------------------------------------
+
+local DIFFSTAT_STATUS_MAP = {
+	added = { "+", "AtlasTextPositive" },
+	removed = { "-", "AtlasLogError" },
+	deleted = { "-", "AtlasLogError" },
+	renamed = { "R", "AtlasLogWarn" },
+	modified = { "~", "AtlasTextMuted" },
+}
+
+---@param entry PullsDiffstatEntry
+---@return string
+local function diffstat_path(entry)
+	local s = tostring(entry.status or ""):lower()
+	if s == "renamed" and entry.old_path and entry.old_path ~= "" and entry.path ~= "" then
+		return entry.old_path .. " → " .. entry.path
+	end
+	return entry.path or "(unknown file)"
+end
+
+---@param width integer
+---@param lines string[]
+---@param spans table[]
+---@param line_map table<integer, table>
+local function render_diffstat_summary(width, lines, spans, line_map)
+	if not (type(state.diffstat) == "table") then
+		return
+	end
+
+	local entries = state.diffstat
+	if #entries == 0 then
+		return
+	end
+
+	local total_add, total_del = 0, 0
+	for _, entry in ipairs(entries) do
+		total_add = total_add + (tonumber(entry.lines_added) or 0)
+		total_del = total_del + (tonumber(entry.lines_removed) or 0)
+	end
+
+	local collapsed = state.diffstat_collapsed
+	local indicator = collapsed and "▸" or "▾"
+	local hdr = string.format("%s Files changed (%d)", indicator, #entries)
+	local diff_result = diff_blocks.render({ additions = total_add, deletions = total_del })
+
+	if diff_result.text ~= "" then
+		local hdr_w = vim.fn.strdisplaywidth(hdr)
+		local diff_w = vim.fn.strdisplaywidth(diff_result.text)
+		local gap = math.max(1, width - PADDING_X - hdr_w - diff_w)
+		local hdr_line = string.rep(" ", PADDING_X) .. hdr .. string.rep(" ", gap) .. diff_result.text
+		table.insert(lines, hdr_line)
+		local lnum = #lines - 1
+		table.insert(spans, { line = lnum, start_col = PADDING_X, end_col = PADDING_X + #hdr, hl_group = "AtlasColumnHeader" })
+		local diff_byte_start = PADDING_X + #hdr + gap
+		for _, hl in ipairs(diff_result.highlights) do
+			table.insert(spans, { line = lnum, start_col = diff_byte_start + hl.start_col, end_col = diff_byte_start + hl.end_col, hl_group = hl.hl_group })
+		end
+	else
+		push(lines, spans, hdr, "AtlasColumnHeader")
+	end
+	line_map[#lines] = { type = "diffstat_header" }
+
+	if not collapsed then
+		local rows = {}
+		for _, entry in ipairs(entries) do
+			local s = tostring(entry.status or ""):lower()
+			local m = DIFFSTAT_STATUS_MAP[s] or { "~", "AtlasTextMuted" }
+			table.insert(rows, {
+				marker = m[1],
+				marker_hl = m[2],
+				path = diffstat_path(entry),
+				added = string.format("+%d", tonumber(entry.lines_added) or 0),
+				removed = string.format("-%d", tonumber(entry.lines_removed) or 0),
+			})
+		end
+
+		local tbl_lines, _, tbl_spans = table_view.render({
+			width = width,
+			margin = PADDING_X,
+			column_gap = 1,
+			show_header = false,
+			fill = true,
+			columns = {
+				{ key = "marker", can_grow = false, max_width = 1 },
+				{ key = "path", can_grow = true, truncate_from = "start" },
+				{ key = "added", can_grow = false, align = "center" },
+				{ key = "removed", can_grow = false, align = "center" },
+			},
+			rows = rows,
+			cell_hl = function(row, col)
+				if col.key == "marker" then return row.marker_hl end
+				if col.key == "path" then return "AtlasTextMuted" end
+				if col.key == "added" then return "AtlasTextPositive" end
+				if col.key == "removed" then return "AtlasLogError" end
+			end,
+		})
+
+		utils.append_block(lines, spans, { lines = tbl_lines, highlights = tbl_spans })
+	end
+
+	table.insert(lines, "")
+end
+
+--------------------------------------------------------------------------------
+-- Render
+--------------------------------------------------------------------------------
 
 ---@param pr PullRequest
 ---@param width integer
@@ -92,23 +215,22 @@ function M.render(pr, width)
 	local line_map = {}
 	local max_width = math.max(20, tonumber(width) or 60)
 
+	render_diffstat_summary(width, lines, spans, line_map)
+
 	if state.diff == nil then
 		return lines, spans, line_map
 	end
 
-	-- Loading state
 	if state.diff == "loading" then
 		push(lines, spans, spinner.with_text("Loading file changes..."), "AtlasTextMuted")
 		return lines, spans, line_map
 	end
 
-	-- Error
 	if type(state.diff) == "string" then
 		push(lines, spans, state.diff, "AtlasLogError")
 		return lines, spans, line_map
 	end
 
-	-- Diff hunks
 	local files = state.diff
 	if #files == 0 then
 		push(lines, spans, "No diff available.", nil)
@@ -170,6 +292,10 @@ end
 ---@param entry table
 ---@return boolean|nil
 function M.on_enter(_pr, entry)
+	if entry.type == "diffstat_header" then
+		state.diffstat_collapsed = not state.diffstat_collapsed
+		return true
+	end
 	if entry.type == "hunk_header" then
 		state.collapsed_hunks[entry.hunk_idx] = not state.collapsed_hunks[entry.hunk_idx]
 		return true
@@ -178,7 +304,9 @@ end
 
 ---@param entry table|nil
 function M.toggle_hunk(entry)
-	if entry and entry.type == "hunk_header" then
+	if entry and entry.type == "diffstat_header" then
+		state.diffstat_collapsed = not state.diffstat_collapsed
+	elseif entry and entry.type == "hunk_header" then
 		state.collapsed_hunks[entry.hunk_idx] = not state.collapsed_hunks[entry.hunk_idx]
 	end
 end

@@ -385,7 +385,7 @@ function M.add_comment(pr, refresh)
 		return
 	end
 
-	local completion = type(provider.get_completion) == "function" and provider.get_completion(pr) or nil
+	local completion = nil
 	md_editor.open({
 		key = "pr-comment-add",
 		title = " Add Comment ",
@@ -427,7 +427,7 @@ function M.reply_comment(pr, entry, refresh)
 		return
 	end
 
-	local completion = type(provider.get_completion) == "function" and provider.get_completion(pr) or nil
+	local completion = nil
 	local author = comment.author or {}
 	local mention = tostring(author.nickname or author.name or "")
 	local initial_text = mention ~= "" and ("@" .. mention .. " ") or ""
@@ -473,7 +473,7 @@ function M.edit_comment(pr, entry, refresh)
 		return
 	end
 
-	local completion = type(provider.get_completion) == "function" and provider.get_completion(pr) or nil
+	local completion = nil
 	md_editor.open({
 		key = "pr-comment-edit-" .. tostring(comment.id),
 		title = " Edit Comment ",

@@ -779,47 +779,6 @@ function M.fetch_diff(pr, opts, on_done)
 	end)
 end
 
----@return AtlasPullsViewConfig[]
----@param pr PullRequest
----@return AtlasMarkdownCompletionProvider|nil
-function M.get_completion(pr)
-	local author_completion = require("atlas.pulls.providers.github.completion.author")
-	local comments_state = require("atlas.pulls.ui.panel.pr.tabs.comments.state")
-
-	local seen = {}
-	local logins = {}
-
-	local function add(login)
-		local l = tostring(login or "")
-		if l ~= "" and not seen[l] then
-			seen[l] = true
-			table.insert(logins, l)
-		end
-	end
-
-	-- PR author
-	local raw = pr._raw or {}
-	add(type(raw.author) == "table" and raw.author.login or (pr.author and pr.author.name))
-
-	-- Reviewers from raw
-	local reviews = type(raw.latestOpinionatedReviews) == "table" and raw.latestOpinionatedReviews.nodes or {}
-	for _, r in ipairs(reviews) do
-		add(type(r.author) == "table" and r.author.login or nil)
-	end
-
-	-- Already loaded commenters
-	local comments = type(comments_state.comments) == "table" and comments_state.comments or {}
-	for _, c in ipairs(comments) do
-		add(c.author and c.author.nickname)
-	end
-
-	if #logins == 0 then
-		return nil
-	end
-
-	return author_completion.build_completion(logins)
-end
-
 function M.views()
 	local cfg = github_config()
 	return cfg.views or {}
