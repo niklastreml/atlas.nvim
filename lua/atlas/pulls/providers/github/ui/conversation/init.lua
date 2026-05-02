@@ -675,4 +675,57 @@ function M.delete_comment(pr, entry, refresh)
 	end)
 end
 
+---@param pr PullRequest
+---@param entry table
+---@param refresh fun()
+function M.add_reaction(pr, entry, refresh)
+	local comment = entry and entry.comment
+	if not comment then
+		return
+	end
+
+	local repo_slug = pr.repo_full_name or ""
+	if repo_slug == "" then
+		return
+	end
+
+	local choices = {}
+	for _, key in ipairs(REACTION_KEYS) do
+		table.insert(choices, { key = key, label = string.format("%s  %s", REACTION_EMOJI[key], key) })
+	end
+
+	vim.ui.select(choices, {
+		prompt = "Add reaction",
+		format_item = function(item)
+			return item.label
+		end,
+	}, function(selected)
+		if selected == nil then
+			return
+		end
+
+		local cli = require("atlas.pulls.providers.github.api.cli")
+		footer.notify("loading", "Adding reaction...")
+		track(cli.api("POST", string.format("repos/%s/issues/comments/%s/reactions", repo_slug, tostring(comment.id)), {
+			content = selected.key,
+		}, function(_, err)
+			if err then
+				footer.notify("error", "Reaction failed: " .. tostring(err))
+				return
+			end
+
+			local comments = core_utils.as_table(state.comments) or {}
+			for _, c in ipairs(comments) do
+				if c.id == comment.id and type(c.reactions) == "table" then
+					c.reactions[selected.key] = (tonumber(c.reactions[selected.key]) or 0) + 1
+					break
+				end
+			end
+
+			footer.notify("success", string.format("Reacted with %s", REACTION_EMOJI[selected.key] or selected.key), 1200)
+			refresh()
+		end))
+	end)
+end
+
 return M
