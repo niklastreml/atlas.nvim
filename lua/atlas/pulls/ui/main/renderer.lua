@@ -65,15 +65,6 @@ local function build_plain_singleline_content(opts, repos)
 		columns = table_data.columns,
 		rows = table_data.rows,
 		cell_hl = helper.cell_hl,
-		tree = {
-			column_key = "name",
-			children_key = "children",
-			expanded_field = "expanded",
-			default_expanded = true,
-			indent = "",
-			show_indicator = false,
-			separator = "─",
-		},
 	})
 	add_pr_id_spans(tbl_lines, tbl_map, tbl_spans)
 	return tbl_lines, tbl_spans, tbl_map

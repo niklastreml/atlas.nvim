@@ -266,6 +266,7 @@ end
 ---@return table[]
 local function plain_columns()
 	return {
+		{ key = "pr_icon", name = "", min_width = 1, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "name", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
 		{
 			key = "comments",
@@ -311,10 +312,31 @@ end
 ---@param groups PullsGroup[]
 ---@return table[]
 local function plain_rows(groups)
-	local roots = {}
-	for _, group in ipairs(groups or {}) do
+	local rows = {}
+	for i, group in ipairs(groups or {}) do
 		local repo_label = group.repo.name or ""
-		local children = {}
+		if i > 1 then
+			table.insert(rows, { kind = "spacer", pr_icon = "", name = "", comments = "", ci = "", ci_hl = "", review = "", review_hl = "", diff = "", diff_hl = nil, author = "", branch = "", created = "", updated = "" })
+		end
+		table.insert(rows, {
+			kind = "repo",
+			pr_icon = REPO_ICON,
+			name = repo_label,
+			repo_full_name = repo_label,
+			comments = "",
+			ci = "",
+			ci_hl = "",
+			review = "",
+			review_hl = "",
+			diff = "",
+			diff_hl = nil,
+			author = "",
+			branch = "",
+			created = "",
+			updated = "",
+			separator = true,
+			_item = { kind = "repo", repo = group.repo },
+		})
 		for _, pr in ipairs(group.prs or {}) do
 			local id_str = tostring(pr.id or "")
 			local title = tostring(pr.title or "")
@@ -329,12 +351,13 @@ local function plain_rows(groups)
 				additions = tonumber(pr._raw and pr._raw.additions) or 0,
 				deletions = tonumber(pr._raw and pr._raw.deletions) or 0,
 			})
-			table.insert(children, {
+			table.insert(rows, {
 				kind = "pr",
-				name = icon .. " #" .. id_str .. " " .. title,
+				pr_icon = icon,
 				_pr_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id),
 				_pr_icon_str = icon,
 				_pr_icon_hl = icon_hl,
+				name = "#" .. id_str .. " " .. title,
 				comments = tostring(pr.comments_count or 0),
 				ci = ci,
 				ci_hl = ci_h,
@@ -350,27 +373,8 @@ local function plain_rows(groups)
 				_item = { kind = "pr", id = pr.id, repo = group.repo, pr = pr },
 			})
 		end
-		table.insert(roots, {
-			kind = "repo",
-			name = REPO_ICON .. " " .. repo_label,
-			repo_full_name = repo_label,
-			comments = "",
-			ci = "",
-			ci_hl = "",
-			review = "",
-			review_hl = "",
-			diff = "",
-			diff_hl = nil,
-			author = "",
-			branch = "",
-			created = "",
-			updated = "",
-			expanded = true,
-			children = children,
-			_item = { kind = "repo", repo = group.repo },
-		})
 	end
-	return roots
+	return rows
 end
 
 -- Render
@@ -402,15 +406,6 @@ function M.render(groups, layout, opts)
 			columns = plain_columns(),
 			rows = plain_rows(groups),
 			cell_hl = cell_hl,
-			tree = {
-				column_key = "name",
-				children_key = "children",
-				expanded_field = "expanded",
-				default_expanded = true,
-				indent = "",
-				show_indicator = false,
-				separator = "─",
-			},
 		})
 	else
 		tbl_lines, tbl_map, tbl_spans = table_tree.render({

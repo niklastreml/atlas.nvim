@@ -307,8 +307,9 @@ function M.build_compact_table(groups)
 end
 
 ---@return table[]
-local function plain_tree_columns()
-	local cols = {
+local function plain_columns()
+	return {
+		{ key = "pr_icon", name = "", min_width = 1, can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "name", name = "PR", min_width = 42, header_hl = "AtlasColumnHeader" },
 		{
 			key = "comments",
@@ -318,8 +319,6 @@ local function plain_tree_columns()
 			header_hl = "AtlasColumnHeader",
 		},
 		{ key = "tasks", name = TASKS_ICON, min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
-	}
-	vim.list_extend(cols, {
 		{
 			key = "author",
 			name = string.format("%s Author", icons.general("user")),
@@ -336,17 +335,34 @@ local function plain_tree_columns()
 		},
 		{ key = "created", name = icons.general("created"), can_grow = false, header_hl = "AtlasColumnHeader" },
 		{ key = "updated", name = icons.general("updated"), can_grow = false, header_hl = "AtlasColumnHeader" },
-	})
-	return cols
+	}
 end
 
 ---@param groups PullsGroup[]|nil
----@return { columns: table, rows: table[], tree: table }
+---@return { columns: table, rows: table[] }
 function M.build_plain_tree_table(groups)
-	local roots = {}
-	for _, group in ipairs(groups or {}) do
+	local rows = {}
+	for i, group in ipairs(groups or {}) do
 		local repo_label = group.repo.name or ""
-		local children = {}
+		if i > 1 then
+			table.insert(rows, { kind = "spacer", pr_icon = "", name = "", comments = "", tasks = "", status = "", status_raw = "", author = "", branch = "", created = "", updated = "" })
+		end
+		table.insert(rows, {
+			kind = "repo",
+			pr_icon = REPO_ICON,
+			name = repo_label,
+			repo_full_name = repo_label,
+			comments = "",
+			tasks = "",
+			status = "",
+			status_raw = "",
+			author = "",
+			branch = "",
+			created = "",
+			updated = "",
+			separator = true,
+			_item = { kind = "repo", repo = group.repo },
+		})
 		for _, pr in ipairs(group.prs or {}) do
 			local id_str = tostring(pr.id or "")
 			local title = tostring(pr.title or "")
@@ -357,60 +373,30 @@ function M.build_plain_tree_table(groups)
 			local _, icon_hl = pr_icon_and_hl(pr)
 			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
 			local state_str = tostring(pr.state or "")
-			local state_label = state_str ~= "" and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ") or ""
 			local author_display = utils.shorten_name(author_name, 20)
-			table.insert(children, {
+			table.insert(rows, {
 				kind = "pr",
-				name = icon .. " #" .. id_str .. " " .. title,
+				pr_icon = icon,
 				_pr_reloading = is_reloading,
 				_pr_icon_str = icon,
 				_pr_icon_hl = icon_hl,
+				name = "#" .. id_str .. " " .. title,
 				comments = tostring(pr.comments_count or 0),
 				tasks = tostring(pr.tasks_count or 0),
-				status = state_label,
+				status = "",
 				status_raw = state_str,
 				author = string.format("%s %s", icons.general("user"), author_display),
 				author_hl = author_name,
 				branch = utils.truncate(src .. " → " .. dst, 28),
 				created = utils.relative_time(pr.created_on),
 				updated = utils.relative_time(pr.updated_on),
-				_item = {
-					kind = "pr",
-					id = pr.id,
-					repo = group.repo,
-					pr = pr,
-				},
+				_item = { kind = "pr", id = pr.id, repo = group.repo, pr = pr },
 			})
 		end
-		table.insert(roots, {
-			kind = "repo",
-			name = REPO_ICON .. " " .. repo_label,
-			repo_full_name = repo_label,
-			comments = "",
-			tasks = "",
-			status = "",
-			status_raw = "",
-			author = "",
-			branch = "",
-			created = "",
-			updated = "",
-			expanded = true,
-			children = children,
-			_item = {
-				kind = "repo",
-				repo = group.repo,
-			},
-		})
 	end
 	return {
-		columns = plain_tree_columns(),
-		rows = roots,
-		tree = {
-			column_key = "name",
-			children_key = "children",
-			expanded_field = "expanded",
-			default_expanded = true,
-		},
+		columns = plain_columns(),
+		rows = rows,
 	}
 end
 
