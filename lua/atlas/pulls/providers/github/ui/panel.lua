@@ -3,6 +3,7 @@ local M = {}
 
 local icons = require("atlas.ui.shared.icons")
 local utils = require("atlas.ui.shared.utils")
+local box = require("atlas.ui.components.box")
 
 local MAX_HASH_LEN = 12
 
@@ -220,9 +221,10 @@ local BUILD_STATE_ICON = {
 ---@param label string
 ---@param details string[]|nil
 ---@return BoxContentGroup
-local function render_check_group(icon, icon_hl, label, details, detail_spans)
+local function render_check_group(icon, icon_hl, label, details, detail_spans, detail_lmap)
 	local lines = {}
 	local spans = {}
+	local lmap = {}
 	local line_text = string.format("%s %s", icon, label)
 	table.insert(lines, line_text)
 	table.insert(spans, {
@@ -242,13 +244,16 @@ local function render_check_group(icon, icon_hl, label, details, detail_spans)
 		else
 			table.insert(spans, { line = lnum, start_col = 0, end_col = #lines[#lines], hl_group = "AtlasTextMuted" })
 		end
+		if detail_lmap and detail_lmap[di] then
+			lmap[lnum] = detail_lmap[di]
+		end
 	end
-	return { lines = lines, spans = spans }
+	return { lines = lines, spans = spans, line_map = lmap }
 end
 
 ---@class MergeCheckItem
 ---@field key string
----@field render fun(checks: table, builds: PullsBuild[]|string|nil, spinner: table): string|nil, string|nil, string|nil, string[]|nil, table[]|nil
+---@field render fun(checks: table, builds: PullsBuild[]|string|nil, spinner: table): string|nil, string|nil, string|nil, string[]|nil, table[]|nil, table<integer, table>|nil
 
 ---@type MergeCheckItem[]
 local MERGE_CHECK_ITEMS = {
@@ -286,16 +291,18 @@ local MERGE_CHECK_ITEMS = {
 			elseif type(builds) == "table" and #builds > 0 then
 				local details = {}
 				local detail_spans = {}
+				local detail_lmap = {}
 				for _, build in ipairs(builds) do
 					local s = tostring(build.state or ""):upper()
 					local p = BUILD_STATE_ICON[s] or BUILD_STATE_ICON.STOPPED
 					local detail = string.format("%s %s", p[1], tostring(build.name or ""))
 					table.insert(details, detail)
 					table.insert(detail_spans, { icon_len = #p[1], hl = p[2] })
+					detail_lmap[#details] = { kind = "build", build = build, url = tostring(build.url or "") }
 				end
 				local overall = aggregate_build_status(builds)
 				local pair = BUILD_STATE_ICON[overall:upper()] or BUILD_STATE_ICON.STOPPED
-				return pair[1], pair[2], "Builds", details, detail_spans
+				return pair[1], pair[2], "Builds", details, detail_spans, detail_lmap
 			end
 			return nil, nil, nil, nil
 		end,
@@ -327,7 +334,8 @@ local MERGE_CHECK_ITEMS = {
 ---@param width integer
 ---@param lines string[]
 ---@param spans table[]
-function M.overview_extra_sections(pr, width, lines, spans) ---@diagnostic disable-line: unused-local
+---@param line_map table<integer, table>|nil
+function M.overview_extra_sections(pr, width, lines, spans, line_map) ---@diagnostic disable-line: unused-local
 	local overview_state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
 	local spinner_mod = require("atlas.ui.components.spinner")
 	local builds = overview_state.builds
@@ -341,9 +349,9 @@ function M.overview_extra_sections(pr, width, lines, spans) ---@diagnostic disab
 
 	local groups = {}
 	for _, item in ipairs(MERGE_CHECK_ITEMS) do
-		local icon, icon_hl, label, details, dspans = item.render(merge_checks, builds, spinner_mod)
+		local icon, icon_hl, label, details, dspans, dlmap = item.render(merge_checks, builds, spinner_mod)
 		if icon and icon_hl and label then
-			table.insert(groups, render_check_group(icon, icon_hl, label, details, dspans))
+			table.insert(groups, render_check_group(icon, icon_hl, label, details, dspans, dlmap))
 		end
 	end
 
@@ -354,6 +362,8 @@ function M.overview_extra_sections(pr, width, lines, spans) ---@diagnostic disab
 			box.render(groups, {
 				width = width,
 				padding_x = PADDING_X,
+				line_map = line_map,
+				line_offset = line_map and #lines or nil,
 			})
 		)
 	end
