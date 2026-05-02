@@ -236,8 +236,8 @@ Examples:
 - [x] Resolve and checkout PR branches locally
 - [x] Open PR diff in given command
 - [x] View Repository details like branches, tags, commits
+- [x] Switch between open, merged and superseded PRs
 - [ ] Pagination for API results (PRs, comments, commits, files, activity)
-- [ ] Switch between open, merged and superseded PRs
 - [ ] Bulk actions: approve/request changes on multiple PRs at once
 - [ ] Shows pull request checks
 - [ ] Support for Bitbucket Server
@@ -420,7 +420,7 @@ require("atlas").setup({
 | Jira    | `ge`      | Edit issue                                |
 | Jira    | `gx`      | Open issue/comment in browser             |
 | Jira    | `y` / `Y` | Copy issue key / URL                      |
-| Jira    | `za`      | Toggle issue children                     |
+| Jira    | `za` / `zA` | Toggle fold / all folds                 |
 | Jira    | `m`       | Toggle markdown / raw view (overview tab) |
 
 #### Bitbucket
@@ -435,7 +435,7 @@ require("atlas").setup({
 | Bitbucket                | `gd`        | Open selected PR diff            |
 | Bitbucket                | `gx`        | Open pr/build/comment in browser |
 | Bitbucket                | `y` / `Y`   | Copy PR id / URL                 |
-| Bitbucket (File changes) | `za`        | Toggle hunk fold                 |
+| Bitbucket (File changes) | `za` / `zA` | Toggle fold / all folds          |
 | Bitbucket (File changes) | `]h` / `[h` | Next / previous hunk             |
 
 ## Contributors ✨

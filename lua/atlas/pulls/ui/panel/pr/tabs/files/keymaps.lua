@@ -45,13 +45,22 @@ function M.setup(buf, refresh)
 	end
 
 	local items = {}
-	utils.insert_if(items, item("pulls.pr_files_toggle_fold", {
+	utils.insert_if(items, item("ui.toggle_fold", {
 		desc = "Toggle hunk fold",
 		opts = { nowait = true, silent = true },
 		callback = function()
 			local entry = cursor_entry()
 			if entry then
 				tab.toggle_hunk(entry)
+				refresh()
+			end
+		end,
+	}))
+	utils.insert_if(items, item("ui.toggle_all_folds", {
+		desc = "Toggle all hunk folds",
+		opts = { nowait = true, silent = true },
+		callback = function()
+			if tab.toggle_all_hunks() then
 				refresh()
 			end
 		end,
@@ -77,7 +86,8 @@ end
 ---@param buf integer
 function M.teardown(buf)
 	local items = {}
-	utils.insert_if(items, remove_item("pulls.pr_files_toggle_fold"))
+	utils.insert_if(items, remove_item("ui.toggle_fold"))
+	utils.insert_if(items, remove_item("ui.toggle_all_folds"))
 	utils.insert_if(items, remove_item("pulls.pr_files_next_hunk"))
 	utils.insert_if(items, remove_item("pulls.pr_files_previous_hunk"))
 	help.remove("Panel", items, { buffer = buf })

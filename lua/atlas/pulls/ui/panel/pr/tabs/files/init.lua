@@ -183,6 +183,42 @@ function M.toggle_hunk(entry)
 	end
 end
 
+---@return boolean
+function M.toggle_all_hunks()
+	if type(state.diff) ~= "table" then
+		return false
+	end
+
+	local hunk_count = 0
+	for _, file in ipairs(state.diff) do
+		for _ in ipairs(file.hunks or {}) do
+			hunk_count = hunk_count + 1
+		end
+	end
+
+	if hunk_count == 0 then
+		return false
+	end
+
+	local should_expand = false
+	for idx = 1, hunk_count do
+		if state.collapsed_hunks[idx] == true then
+			should_expand = true
+			break
+		end
+	end
+
+	state.collapsed_hunks = {}
+	if should_expand then
+		return true
+	end
+
+	for idx = 1, hunk_count do
+		state.collapsed_hunks[idx] = true
+	end
+	return true
+end
+
 ---@param direction "next"|"prev"
 function M.jump_hunk(direction)
 	local layout = require("atlas.ui.layout")

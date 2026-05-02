@@ -553,6 +553,13 @@ function M.toggle_current_issue_collapsed()
 	render_if_active()
 end
 
+function M.toggle_all_issues_collapsed()
+	if state.toggle_all_issues_collapsed() ~= true then
+		return
+	end
+	render_if_active()
+end
+
 ---@param on_done fun()|nil
 function M.refresh_current_issue(on_done)
 	local node = navigation.current_item()

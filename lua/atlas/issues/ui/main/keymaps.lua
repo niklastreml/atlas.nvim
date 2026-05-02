@@ -145,7 +145,7 @@ function M.register(buf, views)
 
 	utils.insert_if(
 		items,
-		item("issues.toggle_issue_children", {
+		item("ui.toggle_fold", {
 			desc = "Toggle issue children",
 			index = 7,
 			callback = function()
@@ -156,9 +156,20 @@ function M.register(buf, views)
 
 	utils.insert_if(
 		items,
+		item("ui.toggle_all_folds", {
+			desc = "Toggle all issue children",
+			index = 8,
+			callback = function()
+				controller.toggle_all_issues_collapsed()
+			end,
+		})
+	)
+
+	utils.insert_if(
+		items,
 		item("issues.copy_key", {
 			desc = "Copy issue key",
-			index = 8,
+			index = 9,
 			opts = { nowait = true },
 			callback = function()
 				local issue = selected_issue()
@@ -299,7 +310,8 @@ function M.remove(buf)
 	utils.insert_if(items, item("issues.refresh", { key = "" }))
 	utils.insert_if(items, item("issues.refresh_view", { key = "" }))
 	utils.insert_if(items, item("issues.show_details", { key = "" }))
-	utils.insert_if(items, item("issues.toggle_issue_children", { key = "" }))
+	utils.insert_if(items, item("ui.toggle_fold", { key = "" }))
+	utils.insert_if(items, item("ui.toggle_all_folds", { key = "" }))
 	table.insert(items, { key = "K" })
 
 	help.remove(provider_name, items, { buffer = buf })

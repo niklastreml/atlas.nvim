@@ -4,6 +4,8 @@ local M = {}
 ---@field help? AtlasKeymapValue
 ---@field close? AtlasKeymapValue
 ---@field toggle_panel? AtlasKeymapValue
+---@field toggle_fold? AtlasKeymapValue
+---@field toggle_all_folds? AtlasKeymapValue
 ---@field previous_panel_tab? AtlasKeymapValue
 ---@field next_panel_tab? AtlasKeymapValue
 
@@ -18,7 +20,6 @@ local M = {}
 ---@field checkout? AtlasKeymapValue
 ---@field show_details? AtlasKeymapValue
 ---@field search? AtlasKeymapValue
----@field pr_files_toggle_fold? AtlasKeymapValue
 ---@field pr_files_next_hunk? AtlasKeymapValue
 ---@field pr_files_previous_hunk? AtlasKeymapValue
 ---@field filter_status_open? AtlasKeymapValue
@@ -32,7 +33,6 @@ local M = {}
 ---@field copy_key? AtlasKeymapValue
 ---@field show_details? AtlasKeymapValue --TODO: Move to general ?
 ---@field search? AtlasKeymapValue
----@field toggle_issue_children? AtlasKeymapValue
 ---@field refresh? AtlasKeymapValue --TODO: Move to general ?
 ---@field refresh_view? AtlasKeymapValue --TODO: Move to general ?
 ---@field transition_issue? AtlasKeymapValue
@@ -50,6 +50,8 @@ local M = {}
 ---| "ui.help"
 ---| "ui.close"
 ---| "ui.toggle_panel"
+---| "ui.toggle_fold"
+---| "ui.toggle_all_folds"
 ---| "ui.previous_panel_tab"
 ---| "ui.next_panel_tab"
 ---| "pulls.refresh"
@@ -62,7 +64,6 @@ local M = {}
 ---| "pulls.checkout"
 ---| "pulls.show_details"
 ---| "pulls.search"
----| "pulls.pr_files_toggle_fold"
 ---| "pulls.pr_files_next_hunk"
 ---| "pulls.pr_files_previous_hunk"
 ---| "issues.refresh"
@@ -73,7 +74,6 @@ local M = {}
 ---| "issues.copy_key"
 ---| "issues.show_details"
 ---| "issues.search"
----| "issues.toggle_issue_children"
 ---| "issues.transition_issue"
 ---| "issues.change_assignee"
 ---| "issues.change_reporter"
@@ -181,6 +181,8 @@ function M.validate()
 			"ui.help",
 			"ui.close",
 			"ui.toggle_panel",
+			"ui.toggle_fold",
+			"ui.toggle_all_folds",
 			"ui.previous_panel_tab",
 			"ui.next_panel_tab",
 		}, { "j", "k", "gg", "G" }),
@@ -195,13 +197,12 @@ function M.validate()
 			"pulls.checkout",
 			"pulls.show_details",
 			"pulls.search",
-			"pulls.pr_files_toggle_fold",
 			"pulls.pr_files_next_hunk",
 			"pulls.pr_files_previous_hunk",
-      "pulls.filter_status_open",
-		  "pulls.filter_status_merged",
-      "pulls.filter_status_declined",
-    }, { "j", "k", "gg", "G" }),
+			"pulls.filter_status_open",
+			"pulls.filter_status_merged",
+			"pulls.filter_status_declined",
+		}, { "j", "k", "gg", "G" }),
 		issues = conflicts_for({
 			"issues.open_actions",
 			"issues.open_in_browser",
@@ -209,7 +210,6 @@ function M.validate()
 			"issues.copy_key",
 			"issues.show_details",
 			"issues.search",
-			"issues.toggle_issue_children",
 			"issues.refresh",
 			"issues.refresh_view",
 			"issues.transition_issue",
