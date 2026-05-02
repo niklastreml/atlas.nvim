@@ -24,7 +24,6 @@ local M = {}
 ---@field filter_status_open? AtlasKeymapValue
 ---@field filter_status_merged? AtlasKeymapValue
 ---@field filter_status_declined? AtlasKeymapValue
----@field filter_status_superseded? AtlasKeymapValue
 
 ---@class AtlasIssuesKeymaps
 ---@field open_actions? AtlasKeymapValue
@@ -83,7 +82,6 @@ local M = {}
 ---| "pulls.filter_status_open"
 ---| "pulls.filter_status_merged"
 ---| "pulls.filter_status_declined"
----| "pulls.filter_status_superseded"
 
 ---@param value AtlasKeymapValue
 ---@return string[]|nil
@@ -203,7 +201,6 @@ function M.validate()
       "pulls.filter_status_open",
 		  "pulls.filter_status_merged",
       "pulls.filter_status_declined",
-      "pulls.filter_status_superseded",
     }, { "j", "k", "gg", "G" }),
 		issues = conflicts_for({
 			"issues.open_actions",

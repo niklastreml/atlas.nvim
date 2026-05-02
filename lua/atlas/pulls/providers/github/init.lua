@@ -13,6 +13,7 @@ function M.setup()
 	require("atlas.pulls.providers.github.highlights").setup()
 end
 
+
 ---@return AtlasGitHubConfig
 local function github_config()
 	local config = require("atlas.config")
@@ -38,6 +39,7 @@ end
 ---@return { cancel: fun() }|nil
 function M.fetch_pullrequests(view, opts, on_done)
 	local pr_api = require("atlas.pulls.providers.github.api.pullrequests")
+	local gh_state = require("atlas.pulls.providers.github.state")
 	---@cast view AtlasGitHubViewConfig
 
 	local search = view.search or ""
@@ -48,7 +50,27 @@ function M.fetch_pullrequests(view, opts, on_done)
 		return nil
 	end
 
-	return pr_api.search_prs(search, on_done, {
+	local query = search
+	if not query:find("is:pr") then
+		query = "is:pr " .. query
+	end
+
+	local pulls_state = require("atlas.pulls.state")
+	local f = pulls_state.status_filters or {}
+	local open, merged, declined = f.OPEN, f.MERGED, f.DECLINED
+	if open and not merged and not declined then
+		query = query .. " is:open"
+	elseif merged and not open and not declined then
+		query = query .. " is:merged"
+	elseif declined and not open and not merged then
+		query = query .. " is:closed -is:merged"
+	elseif merged and declined and not open then
+		query = query .. " is:closed"
+	end
+
+	gh_state.last_search_query = query
+
+	return pr_api.search_prs(query, on_done, {
 		force_load = opts.force_load == true,
 		limit = opts.pagelen,
 	})

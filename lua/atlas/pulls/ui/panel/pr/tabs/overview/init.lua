@@ -310,12 +310,14 @@ local function render_description(pr, width, lines, spans)
 
 	if state.description == "loading" then
 		utils.push(lines, spans, spinner.with_text("Loading description..."), "AtlasTextMuted", PADDING_X)
+		table.insert(lines, "")
 		return
 	end
 
 	local desc_text = tostring(state.description or pr.description or "")
 	if desc_text == "" then
 		utils.push(lines, spans, "No description provided.", "AtlasTextMuted", PADDING_X)
+		table.insert(lines, "")
 		return
 	end
 
@@ -326,6 +328,7 @@ local function render_description(pr, width, lines, spans)
 			table.insert(lines, PADDING .. chunk)
 		end
 	end
+	table.insert(lines, "")
 end
 
 --------------------------------------------------------------------------------

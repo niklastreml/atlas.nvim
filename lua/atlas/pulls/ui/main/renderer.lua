@@ -133,7 +133,7 @@ local function render_header(lines, spans, width)
 
 	local actions = {}
 
-	local STATUS_ORDER = { "OPEN", "MERGED", "DECLINED", "SUPERSEDED" }
+	local STATUS_ORDER = { "OPEN", "MERGED", "DECLINED" }
 	for _, s in ipairs(STATUS_ORDER) do
 		local label = s:sub(1, 1):upper() .. s:sub(2):lower()
 		local hl = state.status_filters[s] and "AtlasLogInfo" or "AtlasTextMuted"
@@ -177,11 +177,16 @@ function M.render(opts)
 		table.insert(lines, "Loading...")
 	else
 		local layout = state.active_view and state.active_view.layout or "compact"
+		local groups = state.pulls or {}
 		local body_lines, body_spans, body_map
-		if layout == "plain" then
-			body_lines, body_spans, body_map = build_plain_singleline_content(opts, state.pulls or {})
+
+		if state.provider and state.provider.render then
+			local result = state.provider.render(groups, layout, { width = opts.width })
+			body_lines, body_spans, body_map = result.lines, result.spans, result.line_map
+		elseif layout == "plain" then
+			body_lines, body_spans, body_map = build_plain_singleline_content(opts, groups)
 		else
-			body_lines, body_spans, body_map = build_plain_content(opts, state.pulls or {})
+			body_lines, body_spans, body_map = build_plain_content(opts, groups)
 		end
 
 		local body_base = #lines
@@ -190,7 +195,7 @@ function M.render(opts)
 			line_map[body_base + lnum] = node
 		end
 
-		footer.set_items(helper.build_footer_items(state.pulls, state.current_user))
+		footer.set_items(helper.build_footer_items(groups, state.current_user))
 	end
 
 	return lines, spans, line_map

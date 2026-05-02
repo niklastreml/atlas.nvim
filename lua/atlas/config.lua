@@ -114,7 +114,6 @@ M.options = {
 			filter_status_open = "gpo",
 			filter_status_merged = "gpm",
 			filter_status_declined = "gpd",
-			filter_status_superseded = "gps",
 		},
 		issues = {
 			open_actions = "A",

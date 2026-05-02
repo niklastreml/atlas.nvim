@@ -1,7 +1,7 @@
 local M = {}
 
 local logger = require("atlas.core.logger")
-local memory_cache = require("atlas.core.memory_cache")
+local cache = require("atlas.core.cache")
 
 local DEFAULT_CACHE_TTL = 300
 
@@ -21,7 +21,7 @@ end
 ---@param key string
 ---@return any|nil, boolean
 function M.get_cache(key)
-	local entry = memory_cache.get(key)
+	local entry = cache.get(key)
 	if entry and entry.value ~= nil then
 		return entry.value, true
 	end
@@ -32,12 +32,12 @@ end
 ---@param value any
 ---@param ttl number|nil
 function M.set_cache(key, value, ttl)
-	memory_cache.set(key, value, ttl or M.cache_ttl())
+	cache.set(key, value, ttl or M.cache_ttl())
 end
 
 ---@param key string
 function M.delete_cache(key)
-	memory_cache.delete(key)
+	cache.delete(key)
 end
 
 ---@param err string|nil

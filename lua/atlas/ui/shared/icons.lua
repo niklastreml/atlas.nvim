@@ -4,6 +4,7 @@ local ICONS = {
 	fallback = "•",
 
 	general = {
+		search = "",
 		refresh = "󰑐",
 		overview = "󰈙",
 		comment = "",
@@ -22,6 +23,8 @@ local ICONS = {
 	pulls = {
 		repo = "",
 		pr = "",
+		merged_pr = "",
+		declined_pr = "",
 		tasks = "󰘽",
 		check = "",
 		commit = "󰜘",

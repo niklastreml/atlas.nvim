@@ -33,6 +33,7 @@ query($search: String!, $limit: Int!) {
         number title state isDraft
         createdAt updatedAt url
         additions deletions changedFiles
+        reviews(last: 10) { nodes { state } }
         author { login ... on User { name } }
         headRefName baseRefName
         comments { totalCount }
@@ -63,12 +64,7 @@ function M.search_prs(search, on_done, opts)
 		end
 	end
 
-	local query = search
-	if not query:find("is:pr") then
-		query = "is:pr " .. query
-	end
-
-	logger.loginfo("GitHub GraphQL search PRs", { search = query, limit = limit })
+	logger.loginfo("GitHub GraphQL search PRs", { search = search, limit = limit })
 
 	return cli.gh({
 		"api",
@@ -76,7 +72,7 @@ function M.search_prs(search, on_done, opts)
 		"-f",
 		"query=" .. vim.trim(SEARCH_GQL),
 		"-f",
-		"search=" .. query,
+		"search=" .. search,
 		"-F",
 		"limit=" .. tostring(limit),
 	}, function(result, err)

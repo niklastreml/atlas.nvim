@@ -23,7 +23,7 @@ local M = {
 	request_seq = 0,
 	reloading_pr_keys = {},
 	reload_spinner_frame = "⠋",
-	status_filters = { OPEN = true, MERGED = false, DECLINED = false, SUPERSEDED = false },
+	status_filters = { OPEN = true, MERGED = false, DECLINED = false },
 }
 
 ---@param repo_id string
@@ -53,7 +53,7 @@ function M.reset()
 	M.request_seq = 0
 	M.reloading_pr_keys = {}
 	M.reload_spinner_frame = "⠋"
-	M.status_filters = { OPEN = true, MERGED = false, DECLINED = false, SUPERSEDED = false }
+	M.status_filters = { OPEN = true, MERGED = false, DECLINED = false }
 end
 
 return M

@@ -6,8 +6,31 @@ local utils = require("atlas.ui.shared.utils")
 local state = require("atlas.pulls.state")
 
 local PR_ICON = icons.pulls("pr")
+local MERGED_PR_ICON = icons.pulls("merged_pr")
+local DECLINED_PR_ICON = icons.pulls("declined_pr")
 local REPO_ICON = icons.pulls("repo")
 local TASKS_ICON = icons.pulls("tasks")
+
+local PR_STATE_ICON = {
+	open = PR_ICON,
+	draft = PR_ICON,
+	merged = MERGED_PR_ICON,
+	declined = DECLINED_PR_ICON,
+}
+
+local PR_STATE_ICON_HL = {
+	open = "AtlasPROpen",
+	draft = "AtlasPRDraft",
+	merged = "AtlasPRMerged",
+	declined = "AtlasPRDeclined",
+}
+
+---@param pr PullRequest
+---@return string, string
+local function pr_icon_and_hl(pr)
+	local s = tostring(pr.state or ""):lower()
+	return PR_STATE_ICON[s] or PR_ICON, PR_STATE_ICON_HL[s] or "AtlasPROpen"
+end
 
 ---@param pr PullRequest
 ---@return string
@@ -15,7 +38,8 @@ local function pr_icon_or_spinner(pr)
 	if state.is_pr_reloading(pr.repo_full_name, pr.id) then
 		return state.reload_spinner_frame or "⠋"
 	end
-	return PR_ICON
+	local icon = pr_icon_and_hl(pr)
+	return icon
 end
 
 ---@param name string|nil
@@ -49,16 +73,16 @@ end
 function M.pr_state_hl(state)
 	local lower = tostring(state or ""):lower()
 	if lower == "open" then
-		return "AtlasPROpen"
+		return "AtlasPROpenChip"
 	end
 	if lower == "merged" then
-		return "AtlasPRMerged"
+		return "AtlasPRMergedChip"
 	end
-	if lower == "declined" or lower == "superseded" then
-		return "AtlasPRDeclined"
+	if lower == "declined" then
+		return "AtlasPRDeclinedChip"
 	end
 	if lower == "draft" then
-		return "AtlasPRDraft"
+		return "AtlasPRDraftChip"
 	end
 	return "AtlasTextMuted"
 end
@@ -73,16 +97,6 @@ function M.status_badge_hl(state_str)
 	return highlights.dynamic_for_bg("pr-state:" .. lower) or "AtlasTextMuted"
 end
 
----@return integer
-local function active_filter_count()
-	local count = 0
-	for _, enabled in pairs(state.status_filters or {}) do
-		if enabled then
-			count = count + 1
-		end
-	end
-	return count
-end
 
 ---@param view AtlasPullsViewConfig|nil
 ---@return string
@@ -117,19 +131,19 @@ function M.cell_hl(row, col, ctx)
 	end
 	if col.key == "name" and row.kind == "pr" then
 		local is_reloading = row._pr_reloading == true
-		local icon_hl = is_reloading and "AtlasTextMuted" or "AtlasTextPositive"
-		local icon_start = string.find(ctx.text or "", PR_ICON, 1, true)
+		local icon_hl = is_reloading and "AtlasTextMuted" or (row._pr_icon_hl or "AtlasPROpen")
+		local pr_icon = row._pr_icon_str or PR_ICON
+		local icon_start = string.find(ctx.text or "", pr_icon, 1, true)
 		if icon_start ~= nil then
 			local start_col = icon_start - 1
-			return { { start_col = start_col, end_col = start_col + #PR_ICON, hl_group = icon_hl } }
+			return { { start_col = start_col, end_col = start_col + #pr_icon, hl_group = icon_hl } }
 		end
-		-- When reloading the icon is a spinner frame, just highlight the first few chars
 		local frame_len = #(state.reload_spinner_frame or "⠋")
 		return { { start_col = 0, end_col = frame_len, hl_group = icon_hl } }
 	end
 	if col.key == "pr_icon" then
 		local is_reloading = row.kind == "pr" and row._pr_reloading == true
-		local hl_group = is_reloading and "AtlasTextMuted" or (row.kind == "pr" and "AtlasTextPositive" or "AtlasTextMuted")
+		local hl_group = is_reloading and "AtlasTextMuted" or (row.kind == "pr" and (row._pr_icon_hl or "AtlasPROpen") or "AtlasTextMuted")
 		return { { start_col = 0, end_col = #ctx.padded, hl_group = hl_group } }
 	end
 	if col.key == "branch" then
@@ -205,15 +219,6 @@ local function compact_columns()
 		},
 		{ key = "tasks", name = TASKS_ICON, min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
 	}
-	if active_filter_count() > 1 then
-		table.insert(cols, {
-			key = "status",
-			name = "Status",
-			min_width = 6,
-			can_grow = false,
-			header_hl = "AtlasColumnHeader",
-		})
-	end
 	vim.list_extend(cols, {
 		{
 			key = "author",
@@ -251,10 +256,13 @@ function M.build_compact_table(groups)
 			local state_str = tostring(pr.state or "")
 			local state_label = state_str ~= "" and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ") or ""
 			local author_display = utils.shorten_name(author_name, 20)
+			local icon, icon_hl = pr_icon_and_hl(pr)
 			table.insert(rows, {
 				kind = "pr",
 				pr_icon = pr_icon_or_spinner(pr),
 				_pr_reloading = is_reloading,
+				_pr_icon_str = icon,
+				_pr_icon_hl = icon_hl,
 				repo_pr = "#" .. id_str .. " " .. title,
 				comments = tostring(pr.comments_count or 0),
 				tasks = tostring(pr.tasks_count or 0),
@@ -311,15 +319,6 @@ local function plain_tree_columns()
 		},
 		{ key = "tasks", name = TASKS_ICON, min_width = 2, can_grow = false, header_hl = "AtlasColumnHeader" },
 	}
-	if active_filter_count() > 1 then
-		table.insert(cols, {
-			key = "status",
-			name = "Status",
-			min_width = 6,
-			can_grow = false,
-			header_hl = "AtlasColumnHeader",
-		})
-	end
 	vim.list_extend(cols, {
 		{
 			key = "author",
@@ -355,6 +354,7 @@ function M.build_plain_tree_table(groups)
 			local src = (pr.source and pr.source.branch) or ""
 			local dst = (pr.destination and pr.destination.branch) or ""
 			local icon = pr_icon_or_spinner(pr)
+			local _, icon_hl = pr_icon_and_hl(pr)
 			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
 			local state_str = tostring(pr.state or "")
 			local state_label = state_str ~= "" and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ") or ""
@@ -363,6 +363,8 @@ function M.build_plain_tree_table(groups)
 				kind = "pr",
 				name = icon .. " #" .. id_str .. " " .. title,
 				_pr_reloading = is_reloading,
+				_pr_icon_str = icon,
+				_pr_icon_hl = icon_hl,
 				comments = tostring(pr.comments_count or 0),
 				tasks = tostring(pr.tasks_count or 0),
 				status = state_label,
