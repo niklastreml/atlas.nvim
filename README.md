@@ -253,6 +253,7 @@ Examples:
 - [x] Open PR diff in given command
 - [x] Switch between open, merged and closed PRs
 - [x] Show Github Issues
+- [x] Show Notifications
 - [ ] Pagination for API results
 
 ### GitHub
