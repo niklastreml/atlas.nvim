@@ -127,7 +127,7 @@ local function render_file_header(file, count, pad, max_width)
 
 	if file == "PR" then
 		local icon = icons.general("comment")
-		local label = "Pull Request"
+		local label = "Conversation"
 		local line = padding .. icon .. " " .. label .. count_suffix
 		table.insert(hdr_spans, { line = 0, start_col = pad, end_col = #line, hl_group = "AtlasTextMuted" })
 		return line, hdr_spans

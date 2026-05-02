@@ -141,7 +141,7 @@
 --------------------------------------------------------------------------------
 
 ---@class PullsActivityEntry
----@field kind "approval"|"comment"|"update"|string
+---@field kind "approval"|"changes_requested"|"comment"|"update"|string
 ---@field actor PullsAuthor|nil
 ---@field date string
 ---@field content_raw string|nil

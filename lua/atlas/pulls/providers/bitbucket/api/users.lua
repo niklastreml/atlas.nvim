@@ -41,7 +41,6 @@ function M.fetch_current_user(on_done)
 			display_name = current_user.name,
 		})
 		cache.set(cachekey, current_user, 86400)
-
 		on_done(current_user, nil)
 	end)
 end

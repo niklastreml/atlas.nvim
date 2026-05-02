@@ -127,6 +127,9 @@ local function to_thread_items(entries)
 		if kind == "approval" then
 			additional = "approved"
 			entry_icon = icons.pulls_status("successful")
+		elseif kind == "changes_requested" then
+			additional = "requested changes"
+			entry_icon = icons.pulls_status("inprogress")
 		elseif kind == "comment" then
 			additional = "commented"
 			local raw = utils.strip_markup(e.content_raw)
@@ -170,6 +173,9 @@ local function additional_hl(item, _text)
 	end
 	if entry.kind == "approval" then
 		return "AtlasTextPositive"
+	end
+	if entry.kind == "changes_requested" then
+		return "AtlasTextWarning"
 	end
 	return "AtlasTextMuted"
 end
@@ -274,6 +280,9 @@ function M.render(pr, width)
 			local entry = item.line_map and item.line_map.activity_entry
 			if entry and entry.kind == "approval" then
 				return "AtlasTextPositive"
+			end
+			if entry and entry.kind == "changes_requested" then
+				return "AtlasTextWarning"
 			end
 			local author = vim.trim(tostring(item.author or "")):lower()
 			return highlights.dynamic_for(author) or "AtlasTextMuted"
