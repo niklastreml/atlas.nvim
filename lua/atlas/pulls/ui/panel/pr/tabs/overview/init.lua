@@ -330,7 +330,7 @@ local function render_description(pr, width, lines, spans)
 		return
 	end
 
-	local desc_text = tostring(state.description or pr.description or "")
+	local desc_text = utils.strip_markup(state.description or pr.description or "")
 	if desc_text == "" then
 		utils.push(lines, spans, "No description provided.", "AtlasTextMuted", PADDING_X)
 		table.insert(lines, "")
@@ -361,7 +361,7 @@ function M.render(pr, width)
 
 	local provider = get_provider()
 	if provider and provider.panel and type(provider.panel.overview_extra_sections) == "function" then
-		provider.panel.overview_extra_sections(pr, width, lines, spans)
+		provider.panel.overview_extra_sections(pr, width, lines, spans, line_map)
 	end
 
 	render_builds(pr, width, lines, spans, line_map)
