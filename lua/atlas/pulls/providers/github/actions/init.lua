@@ -12,6 +12,7 @@ local footer = require("atlas.ui.components.footer")
 ---| "reopen"
 ---| "ready_for_review"
 ---| "convert_to_draft"
+---| "notifications"
 ---| "search"
 
 ---@param id GitHubActionId|string
