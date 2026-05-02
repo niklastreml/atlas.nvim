@@ -228,14 +228,15 @@ local function load_active_view(opts, on_done)
 			end
 			if user_err then
 				footer.notify("warn", string.format("Failed to fetch current user: %s", tostring(user_err)))
-				return
+			else
+				footer.set_items(helper.build_footer_items(state.pulls or {}, state.current_user))
+				render_if_active()
 			end
-			footer.set_items(helper.build_footer_items(state.pulls or {}, state.current_user))
-			render_if_active()
+			fetch_pull_requests()
 		end)
+	else
+		fetch_pull_requests()
 	end
-
-	fetch_pull_requests()
 end
 
 ---@param on_done fun()|nil
@@ -343,20 +344,22 @@ end
 
 ---@param status string
 function M.toggle_status_filter(status)
-    -- Don't allow deselecting the last active filter
-    local active_count = 0
-    for _, enabled in pairs(state.status_filters or {}) do
-        if enabled then active_count = active_count + 1 end
-    end
-    if state.status_filters[status] and active_count <= 1 then
-        footer.notify("warn", "At least one status filter must remain active")
-        return
-    end
+	-- Don't allow deselecting the last active filter
+	local active_count = 0
+	for _, enabled in pairs(state.status_filters or {}) do
+		if enabled then
+			active_count = active_count + 1
+		end
+	end
+	if state.status_filters[status] and active_count <= 1 then
+		footer.notify("warn", "At least one status filter must remain active")
+		return
+	end
 
-    state.status_filters[status] = not state.status_filters[status]
-    load_active_view({ force_load = true }, function()
-        navigation.focus_first_item()
-    end)
+	state.status_filters[status] = not state.status_filters[status]
+	load_active_view({ force_load = true }, function()
+		navigation.focus_first_item()
+	end)
 end
 
 return M

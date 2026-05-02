@@ -1,20 +1,19 @@
-local M = {}
-
 local icons = require("atlas.ui.shared.icons")
 local main_ui = require("atlas.pulls.providers.github.ui.main")
 
 ---@class GitHubProvider : PullsProvider
-M.id = "github"
-M.name = "GitHub"
-M.icon = icons.pulls_provider("github", "provider")
-M.hl_group = "AtlasGitHubTheme"
-M.render = main_ui.render
-M.panel = require("atlas.pulls.providers.github.ui.panel")
+local M = {
+	id = "github",
+	name = "GitHub",
+	icon = icons.pulls_provider("github", "provider"),
+	hl_group = "AtlasGitHubTheme",
+	render = main_ui.render,
+	panel = require("atlas.pulls.providers.github.ui.panel"),
+}
 
 function M.setup()
 	require("atlas.pulls.providers.github.highlights").setup()
 end
-
 
 ---@return AtlasGitHubConfig
 local function github_config()
@@ -128,9 +127,13 @@ function M.fetch_description(pr, opts, on_done)
 	end
 
 	return cli.gh({
-		"pr", "view", tostring(pr.id),
-		"--repo", repo_slug,
-		"--json", "body",
+		"pr",
+		"view",
+		tostring(pr.id),
+		"--repo",
+		repo_slug,
+		"--json",
+		"body",
 	}, function(result, err)
 		if err or type(result) ~= "table" then
 			on_done(nil, err or "Failed to fetch description")
@@ -170,9 +173,13 @@ function M.fetch_reviewers(pr, opts, on_done)
 	end
 
 	return cli.gh({
-		"pr", "view", tostring(pr.id),
-		"--repo", repo_slug,
-		"--json", "latestReviews,reviewRequests",
+		"pr",
+		"view",
+		tostring(pr.id),
+		"--repo",
+		repo_slug,
+		"--json",
+		"latestReviews,reviewRequests",
 	}, function(result, err)
 		if err or type(result) ~= "table" then
 			on_done(nil, err or "Failed to fetch reviewers")
@@ -230,9 +237,13 @@ function M.fetch_builds(pr, on_done)
 	end
 
 	return cli.gh({
-		"pr", "checks", tostring(pr.id),
-		"--repo", repo_slug,
-		"--json", "name,state,bucket,link,workflow",
+		"pr",
+		"checks",
+		tostring(pr.id),
+		"--repo",
+		repo_slug,
+		"--json",
+		"name,state,bucket,link,workflow",
 	}, function(result, err)
 		if err then
 			-- exit code 1 with no checks is not an error
@@ -298,9 +309,13 @@ function M.fetch_diffstat(pr, opts, on_done)
 	end
 
 	return cli.gh({
-		"pr", "view", tostring(pr.id),
-		"--repo", repo_slug,
-		"--json", "files",
+		"pr",
+		"view",
+		tostring(pr.id),
+		"--repo",
+		repo_slug,
+		"--json",
+		"files",
 	}, function(result, err)
 		if err or type(result) ~= "table" then
 			on_done(nil, err or "Failed to fetch files")
@@ -358,53 +373,98 @@ function M.fetch_activity(pr, opts, on_done)
 		end
 	end
 
-	return cli.gh({ "api", string.format("repos/%s/issues/%s/timeline", repo_slug, tostring(pr.id)) }, function(result, err)
-		if err or type(result) ~= "table" then
-			on_done(nil, err or "Failed to fetch activity")
-			return
-		end
-
-		local entries = {}
-		for _, item in ipairs(result) do
-			local event = tostring(item.event or "")
-			local actor_login = type(item.actor) == "table" and tostring(item.actor.login or "") or ""
-			local date = tostring(item.created_at or item.submitted_at or "")
-
-			if event == "commented" then
-				table.insert(entries, {
-					kind = "comment",
-					actor = actor_login ~= "" and { name = actor_login, id = "", username = actor_login, nickname = actor_login } or nil,
-					date = date,
-					content_raw = tostring(item.body or ""),
-				})
-			elseif event == "reviewed" then
-				local state_label = tostring(item.state or ""):lower()
-				table.insert(entries, {
-					kind = "approval",
-					actor = actor_login ~= "" and { name = actor_login, id = "", username = actor_login, nickname = actor_login } or nil,
-					date = date,
-					content_raw = state_label ~= "" and state_label or nil,
-				})
-			elseif event == "closed" or event == "merged" or event == "reopened" then
-				table.insert(entries, {
-					kind = "update",
-					actor = actor_login ~= "" and { name = actor_login, id = "", username = actor_login, nickname = actor_login } or nil,
-					date = date,
-					content_raw = event,
-				})
-			elseif event == "head_ref_force_pushed" then
-				table.insert(entries, {
-					kind = "update",
-					actor = actor_login ~= "" and { name = actor_login, id = "", username = actor_login, nickname = actor_login } or nil,
-					date = date,
-					content_raw = "force pushed",
-				})
+	return cli.gh(
+		{ "api", string.format("repos/%s/issues/%s/timeline", repo_slug, tostring(pr.id)) },
+		function(result, err)
+			if err or type(result) ~= "table" then
+				on_done(nil, err or "Failed to fetch activity")
+				return
 			end
-		end
 
-		cli.set_cache(cache_key, entries)
-		on_done(entries, nil)
-	end)
+			local entries = {}
+			for _, item in ipairs(result) do
+				local event = tostring(item.event or "")
+				local actor_login = type(item.actor) == "table" and tostring(item.actor.login or "") or ""
+				local date = tostring(item.created_at or item.submitted_at or "")
+
+				if event == "commented" then
+					table.insert(entries, {
+						kind = "comment",
+						actor = actor_login ~= ""
+								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+							or nil,
+						date = date,
+						content_raw = tostring(item.body or ""),
+					})
+				elseif event == "reviewed" then
+					local state_label = tostring(item.state or ""):lower()
+					table.insert(entries, {
+						kind = "approval",
+						actor = actor_login ~= ""
+								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+							or nil,
+						date = date,
+						content_raw = state_label ~= "" and state_label or nil,
+					})
+				elseif event == "closed" or event == "merged" or event == "reopened" then
+					table.insert(entries, {
+						kind = "update",
+						actor = actor_login ~= ""
+								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+							or nil,
+						date = date,
+						content_raw = event,
+					})
+				elseif event == "head_ref_force_pushed" then
+					table.insert(entries, {
+						kind = "update",
+						actor = actor_login ~= ""
+								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+							or nil,
+						date = date,
+						content_raw = "force pushed",
+					})
+				elseif event == "committed" then
+					local author = type(item.author) == "table" and item.author or {}
+					local author_name = tostring(author.name or "")
+					local msg = tostring(item.message or ""):match("([^\n]+)") or ""
+					local sha = tostring(item.sha or ""):sub(1, 8)
+					table.insert(entries, {
+						kind = "update",
+						actor = author_name ~= ""
+								and { name = author_name, id = "", username = author_name, nickname = author_name }
+							or nil,
+						date = tostring(author.date or date),
+						content_raw = sha ~= "" and string.format("%s %s", sha, msg) or msg,
+					})
+				elseif event == "base_ref_force_pushed" then
+					table.insert(entries, {
+						kind = "update",
+						actor = actor_login ~= ""
+								and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+							or nil,
+						date = date,
+						content_raw = "base branch force pushed",
+					})
+				elseif event == "labeled" then
+					local label = type(item.label) == "table" and tostring(item.label.name or "") or ""
+					if label ~= "" then
+						table.insert(entries, {
+							kind = "update",
+							actor = actor_login ~= ""
+									and { name = actor_login, id = "", username = actor_login, nickname = actor_login }
+								or nil,
+							date = date,
+							content_raw = string.format("added label: %s", label),
+						})
+					end
+				end
+			end
+
+			cli.set_cache(cache_key, entries)
+			on_done(entries, nil)
+		end
+	)
 end
 
 ---@param pr PullRequest
@@ -433,35 +493,38 @@ function M.fetch_comments(pr, opts, on_done)
 		end
 	end
 
-	return cli.gh({ "api", string.format("repos/%s/issues/%s/comments", repo_slug, tostring(pr.id)) }, function(result, err)
-		if err or type(result) ~= "table" then
-			on_done(nil, err or "Failed to fetch comments")
-			return
-		end
+	return cli.gh(
+		{ "api", string.format("repos/%s/issues/%s/comments", repo_slug, tostring(pr.id)) },
+		function(result, err)
+			if err or type(result) ~= "table" then
+				on_done(nil, err or "Failed to fetch comments")
+				return
+			end
 
-		local comments = {}
-		for _, raw in ipairs(result) do
-			local user = raw.user or {}
-			table.insert(comments, {
-				id = raw.id,
-				parent_id = nil,
-				author = {
-					name = tostring(user.login or ""),
-					nickname = tostring(user.login or ""),
-					id = tostring(user.id or ""),
-				},
-				content_raw = tostring(raw.body or ""),
-				created_on = tostring(raw.created_at or ""),
-				deleted = false,
-				inline = nil,
-				url = nil,
-				html_url = tostring(raw.html_url or ""),
-			})
-		end
+			local comments = {}
+			for _, raw in ipairs(result) do
+				local user = raw.user or {}
+				table.insert(comments, {
+					id = raw.id,
+					parent_id = nil,
+					author = {
+						name = tostring(user.login or ""),
+						nickname = tostring(user.login or ""),
+						id = tostring(user.id or ""),
+					},
+					content_raw = tostring(raw.body or ""),
+					created_on = tostring(raw.created_at or ""),
+					deleted = false,
+					inline = nil,
+					url = nil,
+					html_url = tostring(raw.html_url or ""),
+				})
+			end
 
-		cli.set_cache(cache_key, comments)
-		on_done(comments, nil)
-	end)
+			cli.set_cache(cache_key, comments)
+			on_done(comments, nil)
+		end
+	)
 end
 
 ---@param pr PullRequest
@@ -491,9 +554,13 @@ function M.fetch_commits(pr, opts, on_done)
 	end
 
 	return cli.gh({
-		"pr", "view", tostring(pr.id),
-		"--repo", repo_slug,
-		"--json", "commits",
+		"pr",
+		"view",
+		tostring(pr.id),
+		"--repo",
+		repo_slug,
+		"--json",
+		"commits",
 	}, function(result, err)
 		if err or type(result) ~= "table" then
 			on_done(nil, err or "Failed to fetch commits")
@@ -554,8 +621,11 @@ function M.fetch_diff(pr, opts, on_done)
 	end
 
 	return cli.gh({
-		"pr", "diff", tostring(pr.id),
-		"--repo", repo_slug,
+		"pr",
+		"diff",
+		tostring(pr.id),
+		"--repo",
+		repo_slug,
 	}, function(result, err)
 		if err then
 			on_done(nil, err)
