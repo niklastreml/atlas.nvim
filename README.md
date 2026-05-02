@@ -83,7 +83,7 @@ use {
 - Neovim: `0.10+`
 - Jira: Jira Cloud REST API v3 (`*.atlassian.net`)
 - Bitbucket: Bitbucket Cloud REST API 2.0 (`api.bitbucket.org`)
-- GitHub: GitHub REST API v3 / GraphQL API v4 (`api.github.com`)
+- GitHub: GitHub CLI (`gh`) authenticated with `gh auth login`
 
 > [!NOTE]
 > I have only tested this with my personal and work accounts. If you encounter any issues, please feel free to open an issue.
@@ -272,32 +272,24 @@ return {
         },
         providers = {
           github = {
-            token = os.getenv("GITHUB_TOKEN") or "",
             cache_ttl = 300,
 
             ---@type AtlasGitHubViewConfig[]
             views = {
               {
                 name = "My PRs",
-                key = "M",
-                repos = {
-                  { owner = "your-org", repo = "your-repo" },
-                },
-
-                ---@param pr PullRequest
-                ---@param ctx { user: PullsUser|nil }
-                filter = function(pr, ctx)
-                  local user = ctx.user
-                  return pr.author and user and pr.author.login == user.login
-                end,
+                key = "1",
+                search = "author:@me sort:updated-desc",
               },
               {
                 name = "Team",
-                key = "T",
-                repos = {
-                  { owner = "your-org", repo = "your-repo" },
-                  { owner = "your-org", repo = "other-repo" },
-                },
+                key = "2",
+                search = "org:your-org sort:updated-desc",
+              },
+              {
+                name = "Repo",
+                key = "3",
+                search = "repo:your-org/your-repo",
               },
             },
           },
