@@ -184,15 +184,15 @@ end
 function M.is_loading(pr, active_tab) ---@diagnostic disable-line: unused-local
 	local overview_state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
 	local activity_state = require("atlas.pulls.ui.panel.pr.tabs.activity.state")
-	local comments_state = require("atlas.pulls.ui.panel.pr.tabs.comments.state")
+	local conversation_state = require("atlas.pulls.providers.github.ui.conversation.state")
 	local commits_state = require("atlas.pulls.ui.panel.pr.tabs.commits.state")
 	local files_state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
 	if active_tab == "overview" then
 		return overview_state.any_loading() or merge_checks.loading
 	elseif active_tab == "activity" then
 		return activity_state.any_loading()
-	elseif active_tab == "comments" then
-		return comments_state.any_loading()
+	elseif active_tab == "conversation" then
+		return conversation_state.any_loading()
 	elseif active_tab == "commits" then
 		return commits_state.any_loading()
 	elseif active_tab == "files" then
@@ -384,16 +384,16 @@ function M.tabs()
 			mod = require("atlas.pulls.ui.panel.pr.tabs.overview"),
 		},
 		{
+			key = "conversation",
+			label = "Conversation",
+			icon = icons.general("comment"),
+			mod = require("atlas.pulls.providers.github.ui.conversation"),
+		},
+		{
 			key = "activity",
 			label = "Activity",
 			icon = icons.pulls("activity"),
 			mod = require("atlas.pulls.ui.panel.pr.tabs.activity"),
-		},
-		{
-			key = "comments",
-			label = "Comments",
-			icon = icons.general("comment"),
-			mod = require("atlas.pulls.ui.panel.pr.tabs.comments"),
 		},
 		{
 			key = "commits",
