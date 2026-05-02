@@ -5,7 +5,7 @@
 
 # Atlas.nvim
 
-A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your editor.
+A Neovim plugin for managing GitHub/Bitbucket PRs and Jira issues without leaving your editor.
 
 > [!CAUTION]
 > **Still in early development, will have breaking changes!**
@@ -16,8 +16,11 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 ## Table of Contents
 
 - [Installation](#installation)
-- [Jira](#jira)
-- [Bitbucket](#bitbucket)
+- [Issues](#issues)
+  - [Jira](#jira)
+- [Pulls](#pulls)
+  - [GitHub](#github)
+  - [Bitbucket](#bitbucket)
 
 ## Installation
 
@@ -28,14 +31,15 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
   "emrearmagan/atlas.nvim",
   dependencies = {
     "MeanderingProgrammer/render-markdown.nvim", -- optional but recommended (Jira)
-    "sindrets/diffview.nvim", -- optional (Bitbucket PR diff)
-    "esmuellert/codediff.nvim", -- optional (Bitbucket PR diff alternative)
+    "sindrets/diffview.nvim", -- optional (PullRequest diff)
+    "esmuellert/codediff.nvim", -- optional (PullRequest diff alternative)
   },
   config = function()
     require("atlas").setup({
       pulls = {
         providers = {
           bitbucket = { }, -- See configuration below
+          github = { },    -- See configuration below
         },
       },
       issues = {
@@ -58,6 +62,7 @@ use {
       pulls = {
         providers = {
           bitbucket = { }, -- See configuration below
+          github = { },    -- See configuration below
         },
       },
       issues = {
@@ -78,6 +83,7 @@ use {
 - Neovim: `0.10+`
 - Jira: Jira Cloud REST API v3 (`*.atlassian.net`)
 - Bitbucket: Bitbucket Cloud REST API 2.0 (`api.bitbucket.org`)
+- GitHub: GitHub REST API v3 / GraphQL API v4 (`api.github.com`)
 
 > [!NOTE]
 > I have only tested this with my personal and work accounts. If you encounter any issues, please feel free to open an issue.
@@ -91,7 +97,12 @@ use {
 - `:AtlasClearCache` - Clear Atlas disk and memory cache
 - `:AtlasLogs` - Toggle Atlas logs
 
-## Jira
+## Issues
+
+> [!TIP]
+> Not ready to connect to Jira yet? Run `:AtlasIssues mock` to explore the UI with local mock data.
+
+### Jira
 
 - [x] Create and Edit issues
 - [x] View and edit issues as markdown -> ADF conversion for issue descriptions (experimental)
@@ -114,10 +125,8 @@ use {
     <img width = "49%"alt="Jira Panel" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
 </div>
 
-### Configuration
-
-> [!TIP]
-> Not ready to connect to Jira yet? Run `:AtlasIssues mock` to explore the UI with local mock data.
+<details>
+<summary><strong>Configuration</strong></summary>
 
 ```lua
 return {
@@ -177,7 +186,10 @@ return {
 }
 ```
 
-#### Custom Actions
+</details>
+
+<details>
+<summary><strong>Custom Actions</strong></summary>
 
 You can add custom issue actions under `issues.custom_actions`.
 
@@ -213,7 +225,9 @@ issues = {
 }
 ```
 
-### JQL Search Command
+</details>
+
+#### JQL Search Command
 
 Use `:AtlasJqlSearch` to run JQL directly from command mode. It also supports command-line completion while typing the query.
 
@@ -224,26 +238,82 @@ Examples:
 :AtlasJqlSearch summary ~ "login bug"
 ```
 
-## Bitbucket
+## Pulls
 
-#### Features
+> [!TIP]
+> Not ready to connect? Run `:AtlasPulls mock` to explore the UI with local mock data.
 
-- [x] Multiple Bitbucket views
+- [x] Multiple views
 - [x] PR tabs: overview, activity, comments, commits, files
 - [x] PR actions: merge, approve, request changes
 - [x] Comment workflows (create, reply, edit, delete)
+- [x] Build/CI status with clickable links
+- [x] Diffstat summary in Changes tab
 - [x] Add custom actions to PRs
-- [x] Resolve and checkout PR branches locally
 - [x] Open PR diff in given command
-- [x] View Repository details like branches, tags, commits
-- [x] Switch between open, merged and superseded PRs
-- [ ] Pagination for API results (PRs, comments, commits, files, activity)
-- [ ] Bulk actions: approve/request changes on multiple PRs at once
-- [ ] Shows pull request checks
-- [ ] Support for Bitbucket Server
-- [ ] Save and filter pull requests
+- [x] Switch between open, merged and closed PRs
+- [ ] Pagination for API results
+- [ ] Bulk actions
 
-### Configuration
+### GitHub
+
+<details>
+<summary><strong>Configuration</strong></summary>
+
+```lua
+return {
+  "emrearmagan/atlas.nvim",
+  config = function()
+    require("atlas").setup({
+      pulls = {
+        diff = {
+          -- Command must support range input: origin/<destination>...origin/<source>
+          open_cmd = "DiffviewOpen", -- e.g. "DiffviewOpen" or "CodeDiff", defaults to nil.
+        },
+        providers = {
+          github = {
+            token = os.getenv("GITHUB_TOKEN") or "",
+            cache_ttl = 300,
+
+            ---@type AtlasGitHubViewConfig[]
+            views = {
+              {
+                name = "My PRs",
+                key = "M",
+                repos = {
+                  { owner = "your-org", repo = "your-repo" },
+                },
+
+                ---@param pr PullRequest
+                ---@param ctx { user: PullsUser|nil }
+                filter = function(pr, ctx)
+                  local user = ctx.user
+                  return pr.author and user and pr.author.login == user.login
+                end,
+              },
+              {
+                name = "Team",
+                key = "T",
+                repos = {
+                  { owner = "your-org", repo = "your-repo" },
+                  { owner = "your-org", repo = "other-repo" },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+  end,
+}
+```
+
+</details>
+
+### Bitbucket
+
+<details>
+<summary><strong>Configuration</strong></summary>
 
 > [!TIP]
 > Not ready to connect to Bitbucket yet? Run `:AtlasPulls mock` to explore the UI with local mock data.
@@ -312,7 +382,10 @@ return {
 }
 ```
 
-#### Custom Actions
+</details>
+
+<details>
+<summary><strong>Custom Actions</strong></summary>
 
 You can add custom PR actions under `pulls.custom_actions`.
 
@@ -367,8 +440,10 @@ pulls = {
 ```
 
 ![CleanShot2026-03-31at20 08 06-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/a8ca355b-09e2-428c-b3fb-3280fd161110)
+</details>
 
-### Keymaps
+
+#### Keymaps
 
 Set an action to `false` to disable it, or set it to a list to add aliases.
 
@@ -393,7 +468,7 @@ require("atlas").setup({
 })
 ```
 
-#### General
+##### General
 
 | Context | Key                     | Action                              |
 | ------- | ----------------------- | ----------------------------------- |
@@ -406,37 +481,37 @@ require("atlas").setup({
 | Atlas   | `r`                     | Refresh selected issue/pr           |
 | Atlas   | `a/i` / `c` / `e` / `d` | Add / reply / edit / delete comment |
 
-#### Jira
+##### Issues
 
-| Context | Key       | Action                                    |
-| ------- | --------- | ----------------------------------------- |
-| Jira    | `A`       | Open Jira actions                         |
-| Jira    | `K`       | Show issue details                        |
-| Jira    | `c`       | Create issue                              |
-| Jira    | `?`       | Search issues                             |
-| Jira    | `gs`      | Transition issue                          |
-| Jira    | `ga`      | Change assignee                           |
-| Jira    | `gr`      | Change reporter                           |
-| Jira    | `ge`      | Edit issue                                |
-| Jira    | `gx`      | Open issue/comment in browser             |
-| Jira    | `y` / `Y` | Copy issue key / URL                      |
-| Jira    | `za` / `zA` | Toggle fold / all folds                 |
-| Jira    | `m`       | Toggle markdown / raw view (overview tab) |
+| Context | Key         | Action                                    |
+| ------- | ----------- | ----------------------------------------- |
+| Issues  | `A`         | Open Jira actions                         |
+| Issues  | `K`         | Show issue details                        |
+| Issues  | `c`         | Create issue                              |
+| Issues  | `?`         | Search issues                             |
+| Issues  | `gs`        | Transition issue                          |
+| Issues  | `ga`        | Change assignee                           |
+| Issues  | `gr`        | Change reporter                           |
+| Issues  | `ge`        | Edit issue                                |
+| Issues  | `gx`        | Open issue/comment in browser             |
+| Issues  | `y` / `Y`   | Copy issue key / URL                      |
+| Issues  | `za` / `zA` | Toggle fold / all folds                   |
+| Issues  | `m`         | Toggle markdown / raw view (overview tab) |
 
-#### Bitbucket
+##### Pulls
 
-| Context                  | Key         | Action                           |
-| ------------------------ | ----------- | -------------------------------- |
-| Bitbucket                | `A`         | Open PR actions                  |
-| Bitbucket                | `o`         | Toggle repository panel          |
-| Bitbucket                | `T`         | Create new tasks on PR           |
-| Bitbucket                | `?`         | Search repositories              |
-| Bitbucket                | `gc`        | Checkout selected PR             |
-| Bitbucket                | `gd`        | Open selected PR diff            |
-| Bitbucket                | `gx`        | Open pr/build/comment in browser |
-| Bitbucket                | `y` / `Y`   | Copy PR id / URL                 |
-| Bitbucket (File changes) | `za` / `zA` | Toggle fold / all folds          |
-| Bitbucket (File changes) | `]h` / `[h` | Next / previous hunk             |
+| Context               | Key         | Action                           |
+| --------------------- | ----------- | -------------------------------- |
+| Pulls                 | `A`         | Open PR actions                  |
+| Pulls                 | `o`         | Toggle repository panel          |
+| Pulls                 | `T`         | Create new tasks on PR           |
+| Pulls                 | `?`         | Search repositories              |
+| Pulls                 | `gc`        | Checkout selected PR             |
+| Pulls                 | `gd`        | Open selected PR diff            |
+| Pulls                 | `gx`        | Open pr/build/comment in browser |
+| Pulls                 | `y` / `Y`   | Copy PR id / URL                 |
+| Pulls (File changes)  | `za` / `zA` | Toggle fold / all folds          |
+| Pulls (File changes)  | `]h` / `[h` | Next / previous hunk             |
 
 ## Contributors ✨
 
