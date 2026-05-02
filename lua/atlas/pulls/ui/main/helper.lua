@@ -371,7 +371,7 @@ function M.build_plain_tree_table(groups)
 				status_raw = state_str,
 				author = string.format("%s %s", icons.general("user"), author_display),
 				author_hl = author_name,
-				branch = src .. " -> " .. dst,
+				branch = utils.truncate(src .. " → " .. dst, 28),
 				created = utils.relative_time(pr.created_on),
 				updated = utils.relative_time(pr.updated_on),
 				_item = {

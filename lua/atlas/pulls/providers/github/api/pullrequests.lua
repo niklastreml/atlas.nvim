@@ -33,7 +33,7 @@ query($search: String!, $limit: Int!) {
         number title state isDraft
         createdAt updatedAt url
         additions deletions changedFiles
-        reviews(last: 10) { nodes { state } }
+        latestOpinionatedReviews(last: 10) { nodes { state } }
         author { login ... on User { name } }
         headRefName baseRefName
         comments { totalCount }

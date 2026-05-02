@@ -78,7 +78,7 @@ end
 ---@return string, string
 local function review_icon_and_hl(pr)
 	local ok, nodes = pcall(function()
-		return pr._raw.reviews.nodes
+		return pr._raw.latestOpinionatedReviews.nodes
 	end)
 	if not ok or type(nodes) ~= "table" then
 		return REVIEW_ICON.REVIEW_REQUIRED, REVIEW_HL.REVIEW_REQUIRED
@@ -86,10 +86,8 @@ local function review_icon_and_hl(pr)
 	local approved, changes = 0, 0
 	for _, node in ipairs(nodes) do
 		local s = tostring(node.state or ""):upper()
-		if s == "APPROVED" then
-			approved = approved + 1
-		elseif s == "CHANGES_REQUESTED" then
-			changes = changes + 1
+		if s == "APPROVED" then approved = approved + 1
+		elseif s == "CHANGES_REQUESTED" then changes = changes + 1
 		end
 	end
 	if changes > 0 then
@@ -187,7 +185,7 @@ local function compact_columns()
 		{
 			key = "diff",
 			name = icons.pulls("files"),
-			min_width = 14,
+			max_width = 15,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
@@ -232,7 +230,7 @@ local function compact_rows(groups)
 				diff_hl = diff_result.highlights,
 				author = string.format("%s %s", icons.general("user"), utils.shorten_name(author_name, 20)),
 				author_hl = author_name,
-				branch = src .. " → " .. dst,
+				branch = utils.truncate(src .. " → " .. dst, 28),
 				repo = string.format("%s %s", REPO_ICON, repo_label),
 				repo_hl = repo_label,
 				created = utils.relative_time(pr.created_on),
@@ -301,7 +299,7 @@ local function plain_columns()
 		{
 			key = "diff",
 			name = icons.pulls("files"),
-			min_width = 14,
+			max_width = 15,
 			can_grow = false,
 			header_hl = "AtlasColumnHeader",
 		},
@@ -346,7 +344,7 @@ local function plain_rows(groups)
 				diff_hl = diff_result.highlights,
 				author = string.format("%s %s", icons.general("user"), utils.shorten_name(author_name, 20)),
 				author_hl = author_name,
-				branch = src .. " → " .. dst,
+				branch = utils.truncate(src .. " → " .. dst, 28),
 				created = utils.relative_time(pr.created_on),
 				updated = utils.relative_time(pr.updated_on),
 				_item = { kind = "pr", id = pr.id, repo = group.repo, pr = pr },
