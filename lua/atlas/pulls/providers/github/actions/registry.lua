@@ -1,0 +1,359 @@
+local M = {}
+
+local cli = require("atlas.pulls.providers.github.api.cli")
+local footer = require("atlas.ui.components.footer")
+local checkout = require("atlas.core.git.checkout")
+local logger = require("atlas.core.logger")
+
+---@class GitHubActionContext
+---@field pr PullRequest|nil
+---@field source "main"|"panel"|nil
+
+---@class GitHubActionDef
+---@field id GitHubActionId|string
+---@field label string
+---@field is_available fun(ctx: GitHubActionContext): boolean, string|nil
+---@field run fun(ctx: GitHubActionContext, done: fun(result: PullsActionResult|nil, err: string|nil))
+
+---@param ctx GitHubActionContext
+---@return boolean
+local function has_pr(ctx)
+	return ctx.pr ~= nil and ctx.pr.id ~= nil
+end
+
+---@param ctx GitHubActionContext
+---@return string
+local function repo_slug(ctx)
+	return tostring((ctx.pr or {}).repo_full_name or "")
+end
+
+---@type GitHubActionDef[]
+local ACTIONS = {
+	{
+		id = "merge",
+		label = "Merge",
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if repo_slug(ctx) == "" then
+				return false, "Missing repository info"
+			end
+			return true, nil
+		end,
+		run = function(ctx, done)
+			local pr = ctx.pr
+			if pr == nil then
+				done(nil, "No PR selected")
+				return
+			end
+
+			local slug = repo_slug(ctx)
+			local strategies = { "merge", "squash", "rebase" }
+
+			vim.ui.select(strategies, {
+				prompt = string.format("Merge strategy for PR #%s:", tostring(pr.id or "")),
+				kind = "atlas_github_merge_strategy",
+			}, function(strategy)
+				if strategy == nil then
+					done({ changed_pr = false, message = "Merge cancelled" }, nil)
+					return
+				end
+
+				vim.ui.input({
+					prompt = string.format("Confirm %s merge PR #%s? [y/N]: ", strategy, tostring(pr.id or "")),
+				}, function(input)
+					if input == nil then
+						done({ changed_pr = false, message = "Merge cancelled" }, nil)
+						return
+					end
+
+					local normalized = vim.trim(tostring(input)):lower()
+					if normalized ~= "y" and normalized ~= "yes" then
+						footer.notify("info", "Merge cancelled")
+						done({ changed_pr = false, message = "Merge cancelled" }, nil)
+						return
+					end
+
+					footer.notify("loading", "Merging PR...")
+					cli.gh({
+						"pr", "merge", tostring(pr.id),
+						"--repo", slug,
+						"--" .. strategy,
+						"--delete-branch",
+					}, function(_, err)
+						if err then
+							footer.notify("error", string.format("Merge failed: %s", tostring(err)))
+							done(nil, tostring(err))
+							return
+						end
+
+						footer.notify("success", "Merge succeeded", 1200)
+						done({ changed_pr = true, message = "Merged" }, nil)
+					end)
+				end)
+			end)
+		end,
+	},
+	{
+		id = "approve",
+		label = "Approve",
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if repo_slug(ctx) == "" then
+				return false, "Missing repository info"
+			end
+			return true, nil
+		end,
+		run = function(ctx, done)
+			local pr = ctx.pr
+			if pr == nil then
+				done(nil, "No PR selected")
+				return
+			end
+
+			footer.notify("loading", "Approving PR...")
+			cli.gh({
+				"pr", "review", tostring(pr.id),
+				"--repo", repo_slug(ctx),
+				"--approve",
+			}, function(_, err)
+				if err then
+					footer.notify("error", string.format("Approve failed: %s", tostring(err)))
+					done(nil, tostring(err))
+					return
+				end
+
+				footer.notify("success", "PR approved", 1200)
+				done({ changed_pr = true, message = "Approved" }, nil)
+			end)
+		end,
+	},
+	{
+		id = "request_changes",
+		label = "Request changes",
+		is_available = function(ctx)
+			if not has_pr(ctx) or ctx.pr == nil then
+				return false, "No PR selected"
+			end
+			if repo_slug(ctx) == "" then
+				return false, "Missing repository info"
+			end
+			return true, nil
+		end,
+		run = function(ctx, done)
+			local pr = ctx.pr
+			if pr == nil then
+				done(nil, "No PR selected")
+				return
+			end
+
+			vim.ui.input({ prompt = "Reason for requesting changes: " }, function(input)
+				if input == nil then
+					done({ changed_pr = false, message = "Cancelled" }, nil)
+					return
+				end
+
+				local body = vim.trim(input)
+				if body == "" then
+					body = "Changes requested"
+				end
+
+				footer.notify("loading", "Requesting changes...")
+				cli.gh({
+					"pr", "review", tostring(pr.id),
+					"--repo", repo_slug(ctx),
+					"--request-changes",
+					"--body", body,
+				}, function(_, err)
+					if err then
+						footer.notify("error", string.format("Request changes failed: %s", tostring(err)))
+						done(nil, tostring(err))
+						return
+					end
+
+					footer.notify("success", "Changes requested", 1200)
+					done({ changed_pr = true, message = "Changes requested" }, nil)
+				end)
+			end)
+		end,
+	},
+	{
+		id = "search",
+		label = "Search repositories",
+		is_available = function(_)
+			return true, nil
+		end,
+		run = function(_, done)
+			vim.ui.input({ prompt = "Search repositories: " }, function(input)
+				if input == nil or vim.trim(input) == "" then
+					done({ changed_pr = false, message = "Search cancelled" }, nil)
+					return
+				end
+
+				local query = vim.trim(input)
+				footer.notify("loading", "Searching repositories...")
+				cli.gh({ "search", "repos", query, "--json", "fullName", "--limit", "20" }, function(result, err)
+					if err then
+						footer.notify("error", string.format("Search failed: %s", tostring(err)))
+						done(nil, tostring(err))
+						return
+					end
+
+					local list = {}
+					for _, item in ipairs(type(result) == "table" and result or {}) do
+						local full_name = tostring(item.fullName or "")
+						if full_name ~= "" then
+							table.insert(list, full_name)
+						end
+					end
+
+					if #list == 0 then
+						footer.notify("warn", "No repositories found")
+						done({ changed_pr = false, message = "No repositories found" }, nil)
+						return
+					end
+
+					footer.notify("info", string.format("Found %d repositories", #list), 1200)
+
+					vim.ui.select(list, {
+						prompt = "Select repository",
+						kind = "atlas_github_repo_select",
+					}, function(repo)
+						if repo == nil then
+							done({ changed_pr = false, message = "Selection cancelled" }, nil)
+							return
+						end
+
+						local search_query = string.format("repo:%s is:pr", repo)
+						---@type AtlasGitHubViewConfig
+						local search_view = {
+							name = "Search",
+							key = nil,
+							search = search_query,
+						}
+
+						local controller = require("atlas.pulls.ui.main.controller")
+						footer.notify("success", string.format("Search view -> %s", repo))
+						controller.switch_view(search_view)
+						done({ changed_pr = false, message = "Search view switched" }, nil)
+					end)
+				end)
+			end)
+		end,
+	},
+}
+
+---@param ctx GitHubActionContext
+---@return GitHubActionDef[]
+function M.available(ctx)
+	local pulls_cfg = require("atlas.config").options.pulls or {}
+	local custom_actions = pulls_cfg.custom_actions or {}
+
+	local out = {}
+
+	for _, action in ipairs(ACTIONS) do
+		if action.is_available(ctx) then
+			table.insert(out, action)
+		end
+	end
+
+	if has_pr(ctx) then
+		local shared_actions = require("atlas.pulls.actions")
+		table.insert(out, {
+			id = "open_diff",
+			label = "Open diff",
+			is_available = function()
+				return true, nil
+			end,
+			run = function(action_ctx, done)
+				shared_actions.open_diff(action_ctx.pr)
+				done({ changed_pr = false, message = "Opened diff" }, nil)
+			end,
+		})
+		table.insert(out, {
+			id = "checkout",
+			label = "Checkout PR branch",
+			is_available = function()
+				return true, nil
+			end,
+			run = function(action_ctx, done)
+				shared_actions.checkout(action_ctx.pr)
+				done({ changed_pr = false, message = "Checkout started" }, nil)
+			end,
+		})
+	end
+
+	for _, item in ipairs(custom_actions) do
+		if type(item) == "table" and type(item.label) == "string" and type(item.run) == "function" then
+			table.insert(out, {
+				id = tostring(item.id or item.label),
+				label = item.label,
+				is_available = function(action_ctx)
+					if not has_pr(action_ctx) then
+						return false, "No PR selected"
+					end
+					return true, nil
+				end,
+				run = function(action_ctx, done)
+					footer.notify("loading", string.format("Running %s...", tostring(item.label)))
+
+					local done_called = false
+					local function custom_done(ok, message)
+						if done_called then
+							return
+						end
+						done_called = true
+
+						vim.schedule(function()
+							if ok == false then
+								footer.notify("error", tostring(message or (item.label .. " failed")))
+								logger.logerror(string.format("Custom action failed: %s", tostring(message)))
+								done(nil, tostring(message or (item.label .. " failed")))
+								return
+							end
+							footer.notify("success", tostring(message or (item.label .. " done")))
+							done({ changed_pr = false, message = tostring(message or (item.label .. " done")) }, nil)
+						end)
+					end
+
+					local repo_path = checkout.resolve_repo_path_for_pr(action_ctx.pr, {
+						require_git = false,
+						require_existing = false,
+					})
+
+					local pulls_state = require("atlas.pulls.state")
+					local ok, run_err = pcall(item.run, action_ctx.pr, {
+						repo_path = repo_path,
+						pr = action_ctx.pr,
+						user = pulls_state.current_user,
+					}, custom_done)
+
+					if not ok then
+						custom_done(false, string.format("Custom action failed: %s", tostring(run_err)))
+						logger.logerror(
+							string.format("Custom action '%s' execution error: %s", item.label, tostring(run_err))
+						)
+					end
+				end,
+			})
+		end
+	end
+
+	return out
+end
+
+---@param id GitHubActionId|string
+---@return GitHubActionDef|nil
+function M.find(id)
+	for _, action in ipairs(ACTIONS) do
+		if action.id == id then
+			return action
+		end
+	end
+	return nil
+end
+
+return M

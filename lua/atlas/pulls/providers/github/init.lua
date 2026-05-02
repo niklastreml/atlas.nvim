@@ -779,6 +779,30 @@ function M.fetch_diff(pr, opts, on_done)
 	end)
 end
 
+---@param pr PullRequest|nil
+---@param source "main"|"panel"|nil
+---@param on_done fun(result: PullsActionResult|nil)
+function M.open_actions(pr, source, on_done)
+	local actions = require("atlas.pulls.providers.github.actions")
+	local ctx = {
+		pr = pr,
+		source = source,
+	}
+
+	actions.open(ctx, function(result, _)
+		if result == nil then
+			on_done(nil)
+			return
+		end
+		on_done({ changed_pr = result.changed_pr, message = result.message })
+	end)
+end
+
+function M.search()
+	local actions = require("atlas.pulls.providers.github.actions")
+	actions.run("search", { source = "main" }, function() end)
+end
+
 function M.views()
 	local cfg = github_config()
 	return cfg.views or {}
