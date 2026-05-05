@@ -10,8 +10,26 @@ A Neovim plugin for managing GitHub/Bitbucket PRs and Jira issues without leavin
 > [!CAUTION]
 > **Still in early development, will have breaking changes!**
 
-<img width="4566" height="2488" alt="Jira" src="https://github.com/user-attachments/assets/23a15b90-283c-45e2-8964-02970ec3b21a" />
-<img width="4566" height="2488" alt="Bitbucket" src="https://github.com/user-attachments/assets/06299ffc-b15b-4e2c-8f11-95a8ddde3b04" />
+<table>
+	<tr>
+     <td width="50%">
+      <img src="https://github.com/user-attachments/assets/caa30d3c-6883-4f2e-bc12-81bb2127f798"><br/>
+      Github
+    </td>
+     <td width="50%">
+      <img src="https://github.com/user-attachments/assets/06299ffc-b15b-4e2c-8f11-95a8ddde3b04"><br/>
+      Bitbucket
+    </td>
+  </tr>
+  <tr>
+	<td width="50%">
+	    <img src="https://github.com/user-attachments/assets/23a15b90-283c-45e2-8964-02970ec3b21a"><br/>
+	</td>
+    <td width="50%">
+		<img alt="Edit/Create Issue" src="https://github.com/user-attachments/assets/76913fbf-1667-4f35-9962-d3c1b4619c7f" />
+    </td>
+  </tr>
+</table>
 
 ## Table of Contents
 
@@ -119,11 +137,6 @@ use {
 
 > [!IMPORTANT]
 > The markdown editor for issue descriptions and comments is still experimental and may not work perfectly in all cases. You can toggle between markdown and ADF view in the overview tab to see the raw ADF content and how it translates to markdown. If you encounter any issues with the markdown editor, please open an issue with details.
-
-<div>
-    <img width = "49%" alt="Edit/Create Issue" src="https://github.com/user-attachments/assets/76913fbf-1667-4f35-9962-d3c1b4619c7f" />
-    <img width = "49%"alt="Jira Panel" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
-</div>
 
 <details>
 <summary><strong>Configuration</strong></summary>
