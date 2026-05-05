@@ -66,6 +66,18 @@ function M.setup(buf, refresh)
 				end
 			end,
 		},
+		{
+			key = "gr",
+			desc = "Add reaction",
+			opts = { nowait = true, silent = true },
+			callback = function()
+				local pr = panel_state.current_pr
+				local entry = cursor_entry()
+				if pr and entry then
+					tab.add_reaction(pr, entry, refresh)
+				end
+			end,
+		},
 	}
 
 	help.register("Panel", items, { index = 212, buffer = buf })
@@ -79,6 +91,7 @@ function M.teardown(buf)
 		{ key = "c" },
 		{ key = "e" },
 		{ key = "d" },
+		{ key = "gr" },
 	}, { buffer = buf })
 end
 
