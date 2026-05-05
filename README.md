@@ -5,7 +5,7 @@
 
 # Atlas.nvim
 
-A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your editor.
+A Neovim plugin for managing GitHub/Bitbucket PRs and Jira issues without leaving your editor.
 
 > [!CAUTION]
 > **Still in early development, will have breaking changes!**
@@ -16,8 +16,11 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
 ## Table of Contents
 
 - [Installation](#installation)
-- [Jira](#jira)
-- [Bitbucket](#bitbucket)
+- [Issues](#issues)
+  - [Jira](#jira)
+- [Pulls](#pulls)
+  - [GitHub](#github)
+  - [Bitbucket](#bitbucket)
 
 ## Installation
 
@@ -28,13 +31,22 @@ A Neovim plugin for managing Bitbucket PRs and Jira issues without leaving your 
   "emrearmagan/atlas.nvim",
   dependencies = {
     "MeanderingProgrammer/render-markdown.nvim", -- optional but recommended (Jira)
-    "sindrets/diffview.nvim", -- optional (Bitbucket PR diff)
-    "esmuellert/codediff.nvim", -- optional (Bitbucket PR diff alternative)
+    "sindrets/diffview.nvim", -- optional (PullRequest diff)
+    "esmuellert/codediff.nvim", -- optional (PullRequest diff alternative)
   },
   config = function()
     require("atlas").setup({
-        bitbucket = { }, -- See configuration below
-        jira = { },      -- See configuration below
+      pulls = {
+        providers = {
+          bitbucket = { }, -- See configuration below
+          github = { },    -- See configuration below
+        },
+      },
+      issues = {
+        providers = {
+          jira = { }, -- See configuration below
+        },
+      },
     })
   end,
 }
@@ -47,8 +59,17 @@ use {
   "emrearmagan/atlas.nvim",
   config = function()
     require("atlas").setup({
-        bitbucket = { }, -- See configuration below
-        jira = { },      -- See configuration below
+      pulls = {
+        providers = {
+          bitbucket = { }, -- See configuration below
+          github = { },    -- See configuration below
+        },
+      },
+      issues = {
+        providers = {
+          jira = { }, -- See configuration below
+        },
+      },
     })
   end
 }
@@ -62,6 +83,7 @@ use {
 - Neovim: `0.10+`
 - Jira: Jira Cloud REST API v3 (`*.atlassian.net`)
 - Bitbucket: Bitbucket Cloud REST API 2.0 (`api.bitbucket.org`)
+- GitHub: GitHub CLI (`gh`) authenticated with `gh auth login`
 
 > [!NOTE]
 > I have only tested this with my personal and work accounts. If you encounter any issues, please feel free to open an issue.
@@ -69,13 +91,18 @@ use {
 
 ## Commands
 
-- `:AtlasJira` - Open Jira issue picker
+- `:AtlasIssues [provider]` - Open Atlas issues domain
+- `:AtlasPulls [provider]` - Open Atlas pulls domain
 - `:AtlasJqlSearch {query}` - Search Jira issues with JQL
-- `:AtlasBitbucket` - Open Bitbucket PR picker
 - `:AtlasClearCache` - Clear Atlas disk and memory cache
 - `:AtlasLogs` - Toggle Atlas logs
 
-## Jira
+## Issues
+
+> [!TIP]
+> Not ready to connect to Jira yet? Run `:AtlasIssues mock` to explore the UI with local mock data.
+
+### Jira
 
 - [x] Create and Edit issues
 - [x] View and edit issues as markdown -> ADF conversion for issue descriptions (experimental)
@@ -85,6 +112,7 @@ use {
 - [x] Search issues
 - [x] JQL support and completion
 - [x] Support for custom fields
+- [x] Add custom actions to issues
 - [x] Create and edit issue templates
 - [ ] Save JQL queries as custom views
 - [ ] Save and filter issues
@@ -97,51 +125,59 @@ use {
     <img width = "49%"alt="Jira Panel" src="https://github.com/user-attachments/assets/e188582e-f784-46a8-aacd-ac989054c378" />
 </div>
 
-### Configuration
+<details>
+<summary><strong>Configuration</strong></summary>
 
 ```lua
 return {
   "emrearmagan/atlas.nvim",
   config = function()
     require("atlas").setup({
-      ---@type JiraConfig
-      jira = {
-        base_url = "https://your-site.atlassian.net",
-        email = "you@example.com",
-        --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
-        token = "your_jira_api_token",
-        cache_ttl = 300,
-        max_result = 100,
-        resolve_parent_issues = true,
+      issues = {
+        max_results = 100,
+        fetch_parent_issues = true,
+        custom_actions = {}, -- See Custom Actions below.
 
-        project_config = {
-          KAN = {
-            customfield_10003 = {
-              name = "Approvers",
-              format = function(value)
-                if type(value) ~= "table" or #value == 0 then
-                  return nil -- nil hides the field
-                end
+        providers = {
+          jira = {
+            base_url = "https://your-site.atlassian.net",
+            email = "you@example.com",
+            --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
+            token = "your_jira_api_token",
+            cache_ttl = 300,
 
-                return table.concat(value, ", ")
-              end,
-              hl_group = "AtlasChipActive",
-              display = "chip", -- "chip" (default) or "table"
+            project_config = {
+              -- The Jira custom field ID used for story points. Defaults to "customfield_10016".
+              story_points_field = "customfield_10016",
+
+              KAN = {
+                customfield_10003 = {
+                  name = "Approvers",
+                  format = function(value)
+                    if type(value) ~= "table" or #value == 0 then
+                      return nil -- nil hides the field
+	                    end
+	                    return table.concat(value, ", ")
+	                  end,
+                  hl_group = "AtlasChipActive",
+                  display = "chip", -- "chip" or "table"
+                },
+              },
             },
-          },
-        },
 
-        ---@type JiraViewConfig[]
-        views = {
-          {
-            name = "My Board",
-            key = "M",
-            jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
-          },
-          {
-            name = "Team Board",
-            key = "T",
-            jql = "project = KAN ORDER BY updated DESC",
+            ---@type AtlasJiraViewConfig[]
+            views = {
+              {
+                name = "My Board",
+                key = "M",
+                jql = "project = KAN AND assignee = currentUser() ORDER BY updated DESC",
+              },
+              {
+                name = "Team Board",
+                key = "T",
+                jql = "project = KAN ORDER BY updated DESC",
+              },
+            },
           },
         },
       },
@@ -150,7 +186,48 @@ return {
 }
 ```
 
-### JQL Search Command
+</details>
+
+<details>
+<summary><strong>Custom Actions</strong></summary>
+
+You can add custom issue actions under `issues.custom_actions`.
+
+Context type:
+
+```lua
+---@class AtlasIssuesCustomActionContext
+---@field issue Issue|nil
+---@field user IssueUser|nil
+```
+
+Example:
+
+```lua
+issues = {
+  custom_actions = {
+    {
+      id = "copy_branch_name",
+      label = "Copy branch name",
+      ---@param issue Issue
+      ---@param ctx AtlasIssuesCustomActionContext
+      ---@param done fun(ok: boolean|nil, message: string|nil)
+      run = function(issue, ctx, done)
+        local branch = string.format("%s/%s", issue.key, issue.summary:lower():gsub("%s+", "-"))
+        vim.fn.setreg("+", branch)
+        done(true, "Copied: " .. branch)
+      end,
+    },
+  },
+  providers = {
+    jira = { },
+  },
+}
+```
+
+</details>
+
+#### JQL Search Command
 
 Use `:AtlasJqlSearch` to run JQL directly from command mode. It also supports command-line completion while typing the query.
 
@@ -161,37 +238,81 @@ Examples:
 :AtlasJqlSearch summary ~ "login bug"
 ```
 
-## Bitbucket
+## Pulls
 
-#### Features
+> [!TIP]
+> Not ready to connect? Run `:AtlasPulls mock` to explore the UI with local mock data.
 
-- [x] Multiple Bitbucket views
+- [x] Multiple views
 - [x] PR tabs: overview, activity, comments, commits, files
 - [x] PR actions: merge, approve, request changes
 - [x] Comment workflows (create, reply, edit, delete)
+- [x] Build/CI status with clickable links
+- [x] Diffstat summary in Changes tab
 - [x] Add custom actions to PRs
-- [x] Resolve and checkout PR branches locally
 - [x] Open PR diff in given command
-- [x] View Repository details like branches, tags, commits
-- [ ] Pagination for API results (PRs, comments, commits, files, activity)
-- [ ] Switch between open, merged and superseded PRs
-- [ ] Bulk actions: approve/request changes on multiple PRs at once
-- [ ] Shows pull request checks
-- [ ] Support for Bitbucket Server
-- [ ] Save and filter pull requests
+- [x] Switch between open, merged and closed PRs
+- [x] Show Github Issues
+- [ ] Pagination for API results
 
-### Configuration
+### GitHub
+
+<details>
+<summary><strong>Configuration</strong></summary>
 
 ```lua
 return {
   "emrearmagan/atlas.nvim",
   config = function()
     require("atlas").setup({
-      ---@type BitbucketConfig
-      bitbucket = {
-        user = os.getenv("BITBUCKET_USER") or "",
-        token = os.getenv("BITBUCKET_TOKEN") or "",
-        cache_ttl = 300,
+      pulls = {
+        diff = {
+          -- Command must support range input: origin/<destination>...origin/<source>
+          open_cmd = "DiffviewOpen", -- e.g. "DiffviewOpen" or "CodeDiff", defaults to nil.
+        },
+        providers = {
+          github = {
+            cache_ttl = 300,
+
+            ---@type AtlasGitHubViewConfig[]
+            views = {
+              {
+                name = "My PRs",
+                key = "1",
+                search = "author:@me sort:updated-desc",
+              },
+              {
+                name = "Team",
+                key = "2",
+                search = "org:your-org sort:updated-desc",
+              },
+              {
+                name = "Repo",
+                key = "3",
+                search = "repo:your-org/your-repo",
+              },
+            },
+          },
+        },
+      },
+    })
+  end,
+}
+```
+
+</details>
+
+### Bitbucket
+
+<details>
+<summary><strong>Configuration</strong></summary>
+
+```lua
+return {
+  "emrearmagan/atlas.nvim",
+  config = function()
+    require("atlas").setup({
+      pulls = {
         diff = {
           -- Command must support range input: origin/<destination>...origin/<source>
           open_cmd = "DiffviewOpen", -- e.g. "DiffviewOpen" or "CodeDiff", defaults to nil.
@@ -202,7 +323,6 @@ return {
             ["your-workspace/*"] = "~/code/repos/*",
             ["your-workspace/atlas"] = "~/code/atlas",
           },
-
           settings = {
             ["your-workspace/atlas"] = {
               readme = "README.md", -- optional, defaults to README.md
@@ -210,31 +330,38 @@ return {
           },
         },
         custom_actions = {}, -- See Custom Actions below.
+        providers = {
+          bitbucket = {
+            user = os.getenv("BITBUCKET_USER") or "",
+            token = os.getenv("BITBUCKET_TOKEN") or "",
+            cache_ttl = 300,
 
-        ---@type BitbucketViewConfig[]
-        views = {
-          {
-            name = "Me",
-            key = "M",
-            layout = "compact", -- "compact" or "plain"
-            repos = {
-				{ workspace = "your-workspace", repo = "atlas" },
-            },
+            ---@type AtlasBitbucketViewConfig[]
+            views = {
+              {
+                name = "Me",
+                key = "M",
+                layout = "compact", -- "compact" or "plain"
+                repos = {
+                  { workspace = "your-workspace", repo = "atlas" },
+                },
 
-            ---@param pr BitbucketPR
-            ---@param ctx table
-            filter = function(pr, ctx)
-              local user = ctx.user or {}
-              return pr.author and pr.author.account_id == user.account_id
-            end,
-          },
-          {
-            name = "Team",
-            key = "O",
-            layout = "plain", -- "compact" or "plain"
-            repos = {
-              { workspace = "your-workspace", repo = "atlas" },
-              { workspace = "your-workspace", repo = "other-repo" },
+                ---@param pr PullRequest
+                ---@param ctx { user: PullsUser|nil }
+                filter = function(pr, ctx)
+                  local user = ctx.user
+                  return pr.author and user and pr.author.id == user.id
+                end,
+              },
+              {
+                name = "Team",
+                key = "1",
+                layout = "plain", -- "compact" or "plain"
+                repos = {
+                  { workspace = "your-workspace", repo = "atlas" },
+                  { workspace = "your-workspace", repo = "other-repo" },
+                },
+              },
             },
           },
         },
@@ -244,22 +371,25 @@ return {
 }
 ```
 
-#### Custom Actions
+</details>
 
-You can add custom PR actions under `bitbucket.custom_actions`.
+<details>
+<summary><strong>Custom Actions</strong></summary>
+
+You can add custom PR actions under `pulls.custom_actions`.
 
 Context type:
 
 ```lua
----@class BitbucketCustomActionContext
+---@class AtlasPullsCustomActionContext
 ---@field repo_path string|nil
----@field pr BitbucketPR
+---@field pr PullRequest
 ```
 
 Example:
 
 ```lua
-bitbucket = {
+pulls = {
   repo_config = {
     paths = {
       ["your-workspace/*"] = "~/code/repos/*",
@@ -271,8 +401,8 @@ bitbucket = {
       id = "open_tmux_window",
       label = "Open repo in tmux window",
       confirmation = true, -- present a confirmation prompt before running the action
-      ---@param pr BitbucketPR
-      ---@param ctx BitbucketCustomActionContext
+      ---@param pr PullRequest
+      ---@param ctx AtlasPullsCustomActionContext
       ---@param done fun(ok: boolean|nil, message: string|nil)
       run = function(_, ctx, done)
         if not ctx.repo_path then
@@ -292,12 +422,17 @@ bitbucket = {
       end,
     },
   },
+  providers = {
+    bitbucket = { },
+  },
 }
 ```
 
 ![CleanShot2026-03-31at20 08 06-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/a8ca355b-09e2-428c-b3fb-3280fd161110)
 
-### Keymaps
+</details>
+
+#### Keymaps
 
 Set an action to `false` to disable it, or set it to a list to add aliases.
 
@@ -309,61 +444,63 @@ require("atlas").setup({
       next_panel_tab = { "]", "<Tab>", "gn" },
       previous_panel_tab = { "[", "<S-Tab>", "gp" },
     },
-    jira = {
-      create_issue = "i",
-      manage_templates = "gT",
+    issues = {
+      transition_issue = "gs",
+      change_assignee = "ga",
+      edit_issue = "ge",
+      search = "?",
     },
-    bitbucket = {
-      open_diffview = { "go", "gd" },
+    pulls = {
+      open_diff = { "go", "gd" },
     },
   },
 })
 ```
 
-#### General
+##### General
 
 | Context | Key                     | Action                              |
 | ------- | ----------------------- | ----------------------------------- |
 | Atlas   | `q`                     | Close Atlas                         |
-| Atlas   | `?`                     | Toggle help popup                   |
+| Atlas   | `g?`                    | Toggle help popup                   |
 | Atlas   | `p`                     | Toggle detail pane                  |
 | Atlas   | `<S-Tab>`               | Previous panel tab                  |
 | Atlas   | `<Tab>`                 | Next panel tab                      |
-| Atlas   | `K`                     | Show issue/pr details               |
 | Atlas   | `R`                     | Refresh current view                |
 | Atlas   | `r`                     | Refresh selected issue/pr           |
 | Atlas   | `a/i` / `c` / `e` / `d` | Add / reply / edit / delete comment |
 
-#### Jira
+##### Issues
 
-| Context | Key         | Action                        |
-| ------- | ----------- | ----------------------------- |
-| Jira    | `A`         | Open Jira actions             |
-| Jira    | `/`         | Search issues                 |
-| Jira    | `ge`        | Edit Issue                    |
-| Jira    | `gs`        | Transition Issue              |
-| Jira    | `ga` / `gr` | Change Assignee and reporter  |
-| Jira    | `gt`        | Change issue type             |
-| Jira    | `gT`        | Open template editor          |
-| Jira    | `gx`        | Open issue/comment in browser |
-| Jira    | `c`         | Create issue                  |
-| Jira    | `y` / `Y`   | Copy issue key / URL          |
-| Jira    | `m`         | Toggle ADF / markdown view    |
+| Context | Key         | Action                                    |
+| ------- | ----------- | ----------------------------------------- |
+| Issues  | `A`         | Open Jira actions                         |
+| Issues  | `K`         | Show issue details                        |
+| Issues  | `c`         | Create issue                              |
+| Issues  | `?`         | Search issues                             |
+| Issues  | `gs`        | Transition issue                          |
+| Issues  | `ga`        | Change assignee                           |
+| Issues  | `gr`        | Change reporter                           |
+| Issues  | `ge`        | Edit issue                                |
+| Issues  | `gx`        | Open issue/comment in browser             |
+| Issues  | `y` / `Y`   | Copy issue key / URL                      |
+| Issues  | `za` / `zA` | Toggle fold / all folds                   |
+| Issues  | `m`         | Toggle markdown / raw view (overview tab) |
 
-#### Bitbucket
+##### Pulls
 
-| Context                  | Key         | Action                           |
-| ------------------------ | ----------- | -------------------------------- |
-| Bitbucket                | `A`         | Open PR actions                  |
-| Bitbucket                | `/`         | Search repositories              |
-| Bitbucket                | `o`         | Toggle repository panel          |
-| Bitbucket                | `T`         | Create new tasks on PR           |
-| Bitbucket                | `gc`        | Checkout selected PR             |
-| Bitbucket                | `gd`        | Open selected PR diff            |
-| Bitbucket                | `gx`        | Open pr/build/comment in browser |
-| Bitbucket                | `y` / `Y`   | Copy PR id / URL                 |
-| Bitbucket (File changes) | `za`        | Toggle hunk fold                 |
-| Bitbucket (File changes) | `]h` / `[h` | Next / previous hunk             |
+| Context              | Key         | Action                           |
+| -------------------- | ----------- | -------------------------------- |
+| Pulls                | `A`         | Open PR actions                  |
+| Pulls                | `o`         | Toggle repository panel          |
+| Pulls                | `T`         | Create new tasks on PR           |
+| Pulls                | `?`         | Search repositories              |
+| Pulls                | `gc`        | Checkout selected PR             |
+| Pulls                | `gd`        | Open selected PR diff            |
+| Pulls                | `gx`        | Open pr/build/comment in browser |
+| Pulls                | `y` / `Y`   | Copy PR id / URL                 |
+| Pulls (File changes) | `za` / `zA` | Toggle fold / all folds          |
+| Pulls (File changes) | `]h` / `[h` | Next / previous hunk             |
 
 ## Contributors ✨
 

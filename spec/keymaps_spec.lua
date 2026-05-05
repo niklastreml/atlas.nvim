@@ -22,6 +22,8 @@ end
 local default_keymaps = {
 	ui = {
 		toggle_panel = "p",
+		toggle_fold = "za",
+		toggle_all_folds = "zA",
 		next_panel_tab = { "]", "<Tab>" },
 		refresh = "r",
 	},
@@ -35,7 +37,6 @@ local default_keymaps = {
 		checkout_pr = "gc",
 		open_diffview = "gd",
 		refresh_tab = "r",
-		pr_files_toggle_fold = "za",
 		pr_files_next_hunk = "]h",
 		pr_files_previous_hunk = "[h",
 	},
@@ -48,6 +49,8 @@ describe("atlas keymaps resolver", function()
 
 	it("resolves single-key mapping", function()
 		assert.are.same({ "p" }, keymaps.resolve("ui.toggle_panel"))
+		assert.are.same({ "za" }, keymaps.resolve("ui.toggle_fold"))
+		assert.are.same({ "zA" }, keymaps.resolve("ui.toggle_all_folds"))
 	end)
 
 	it("resolves aliases for list mapping", function()
@@ -85,14 +88,13 @@ describe("atlas keymaps resolver", function()
 	end)
 
 	it("resolves bitbucket pr-files action IDs", function()
-		assert.are.same({ "za" }, keymaps.resolve("bitbucket.pr_files_toggle_fold"))
 		assert.are.same({ "]h" }, keymaps.resolve("bitbucket.pr_files_next_hunk"))
 		assert.are.same({ "[h" }, keymaps.resolve("bitbucket.pr_files_previous_hunk"))
 	end)
 
 	it("returns nil for missing or disabled mappings", function()
-		config.options.keymaps.bitbucket.pr_files_toggle_fold = false
-		assert.is_nil(keymaps.resolve("bitbucket.pr_files_toggle_fold"))
+		config.options.keymaps.ui.toggle_fold = false
+		assert.is_nil(keymaps.resolve("ui.toggle_fold"))
 		assert.is_nil(keymaps.resolve("jira.does_not_exist"))
 	end)
 end)

@@ -4,79 +4,84 @@ local M = {}
 ---@field help? AtlasKeymapValue
 ---@field close? AtlasKeymapValue
 ---@field toggle_panel? AtlasKeymapValue
+---@field toggle_fold? AtlasKeymapValue
+---@field toggle_all_folds? AtlasKeymapValue
 ---@field previous_panel_tab? AtlasKeymapValue
 ---@field next_panel_tab? AtlasKeymapValue
+
+---@class AtlasPullsKeymaps
 ---@field refresh? AtlasKeymapValue
-
----@class AtlasJiraKeymaps
----@field open_actions? AtlasKeymapValue
----@field search? AtlasKeymapValue
----@field edit_issue? AtlasKeymapValue
----@field transition_issue? AtlasKeymapValue
----@field change_assignee? AtlasKeymapValue
----@field open_in_browser? AtlasKeymapValue
----@field create_issue? AtlasKeymapValue
----@field manage_templates? AtlasKeymapValue
----@field refresh_issue? AtlasKeymapValue
 ---@field refresh_view? AtlasKeymapValue
----@field toggle_issue_children? AtlasKeymapValue
----@field show_details? AtlasKeymapValue
----@field copy_key? AtlasKeymapValue
+---@field open_actions? AtlasKeymapValue
+---@field open_in_browser? AtlasKeymapValue
 ---@field copy_url? AtlasKeymapValue
-
----@class AtlasBitbucketKeymaps
----@field open_actions? AtlasKeymapValue
----@field search? AtlasKeymapValue
----@field toggle_repo_panel? AtlasKeymapValue
----@field checkout_pr? AtlasKeymapValue
----@field open_diffview? AtlasKeymapValue
----@field open_in_browser? AtlasKeymapValue
----@field refresh_pr? AtlasKeymapValue
----@field refresh_view? AtlasKeymapValue
----@field show_details? AtlasKeymapValue
 ---@field copy_id? AtlasKeymapValue
----@field copy_url? AtlasKeymapValue
----@field pr_files_toggle_fold? AtlasKeymapValue
+---@field open_diff? AtlasKeymapValue
+---@field checkout? AtlasKeymapValue
+---@field show_details? AtlasKeymapValue
+---@field search? AtlasKeymapValue
 ---@field pr_files_next_hunk? AtlasKeymapValue
 ---@field pr_files_previous_hunk? AtlasKeymapValue
+---@field filter_status_open? AtlasKeymapValue
+---@field filter_status_merged? AtlasKeymapValue
+---@field filter_status_declined? AtlasKeymapValue
+
+---@class AtlasIssuesKeymaps
+---@field open_actions? AtlasKeymapValue
+---@field open_in_browser? AtlasKeymapValue
+---@field copy_url? AtlasKeymapValue
+---@field copy_key? AtlasKeymapValue
+---@field show_details? AtlasKeymapValue --TODO: Move to general ?
+---@field search? AtlasKeymapValue
+---@field refresh? AtlasKeymapValue --TODO: Move to general ?
+---@field refresh_view? AtlasKeymapValue --TODO: Move to general ?
+---@field transition_issue? AtlasKeymapValue
+---@field change_assignee? AtlasKeymapValue
+---@field change_reporter? AtlasKeymapValue
+---@field edit_issue? AtlasKeymapValue
+---@field create_issue? AtlasKeymapValue
+
+---@class AtlasKeymapsConfig
+---@field ui? AtlasUIKeymaps
+---@field pulls? AtlasPullsKeymaps
+---@field issues? AtlasIssuesKeymaps
 
 ---@alias AtlasKeymapActionId
 ---| "ui.help"
 ---| "ui.close"
 ---| "ui.toggle_panel"
+---| "ui.toggle_fold"
+---| "ui.toggle_all_folds"
 ---| "ui.previous_panel_tab"
 ---| "ui.next_panel_tab"
----| "ui.refresh"
----| "jira.open_actions"
----| "jira.search"
----| "jira.edit_issue"
----| "jira.transition_issue"
----| "jira.change_assignee"
----| "jira.open_in_browser"
----| "jira.create_issue"
----| "jira.manage_templates"
----| "jira.refresh_issue"
----| "jira.refresh_view"
----| "jira.toggle_issue_children"
----| "jira.show_details"
----| "jira.copy_key"
----| "jira.copy_url"
----| "bitbucket.open_actions"
----| "bitbucket.search"
----| "bitbucket.toggle_repo_panel"
----| "bitbucket.checkout_pr"
----| "bitbucket.open_diffview"
----| "bitbucket.open_in_browser"
----| "bitbucket.refresh_pr"
----| "bitbucket.refresh_view"
----| "bitbucket.show_details"
----| "bitbucket.copy_id"
----| "bitbucket.copy_url"
----| "bitbucket.pr_files_toggle_fold"
----| "bitbucket.pr_files_next_hunk"
----| "bitbucket.pr_files_previous_hunk"
-
----@alias AtlasKeymapValue string|string[]|false|nil
+---| "pulls.refresh"
+---| "pulls.refresh_view"
+---| "pulls.open_actions"
+---| "pulls.open_in_browser"
+---| "pulls.copy_url"
+---| "pulls.copy_id"
+---| "pulls.open_diff"
+---| "pulls.checkout"
+---| "pulls.show_details"
+---| "pulls.search"
+---| "pulls.pr_files_next_hunk"
+---| "pulls.pr_files_previous_hunk"
+---| "issues.refresh"
+---| "issues.refresh_view"
+---| "issues.open_actions"
+---| "issues.open_in_browser"
+---| "issues.copy_url"
+---| "issues.copy_key"
+---| "issues.show_details"
+---| "issues.search"
+---| "issues.transition_issue"
+---| "issues.change_assignee"
+---| "issues.change_reporter"
+---| "issues.edit_issue"
+---| "issues.create_issue"
+---| "pulls.filter_status_open"
+---| "pulls.filter_status_merged"
+---| "pulls.filter_status_declined"
 
 ---@param value AtlasKeymapValue
 ---@return string[]|nil
@@ -176,41 +181,42 @@ function M.validate()
 			"ui.help",
 			"ui.close",
 			"ui.toggle_panel",
+			"ui.toggle_fold",
+			"ui.toggle_all_folds",
 			"ui.previous_panel_tab",
 			"ui.next_panel_tab",
-			"ui.refresh",
 		}, { "j", "k", "gg", "G" }),
-		jira = conflicts_for({
-			"jira.open_actions",
-			"jira.search",
-			"jira.edit_issue",
-			"jira.transition_issue",
-			"jira.change_assignee",
-			"jira.open_in_browser",
-			"jira.create_issue",
-			"jira.manage_templates",
-			"jira.refresh_issue",
-			"jira.refresh_view",
-			"jira.toggle_issue_children",
-			"jira.show_details",
-			"jira.copy_key",
-			"jira.copy_url",
+		pulls = conflicts_for({
+			"pulls.refresh",
+			"pulls.refresh_view",
+			"pulls.open_actions",
+			"pulls.open_in_browser",
+			"pulls.copy_url",
+			"pulls.copy_id",
+			"pulls.open_diff",
+			"pulls.checkout",
+			"pulls.show_details",
+			"pulls.search",
+			"pulls.pr_files_next_hunk",
+			"pulls.pr_files_previous_hunk",
+			"pulls.filter_status_open",
+			"pulls.filter_status_merged",
+			"pulls.filter_status_declined",
 		}, { "j", "k", "gg", "G" }),
-		bitbucket = conflicts_for({
-			"bitbucket.open_actions",
-			"bitbucket.search",
-			"bitbucket.toggle_repo_panel",
-			"bitbucket.checkout_pr",
-			"bitbucket.open_diffview",
-			"bitbucket.open_in_browser",
-			"bitbucket.refresh_pr",
-			"bitbucket.refresh_view",
-			"bitbucket.show_details",
-			"bitbucket.copy_id",
-			"bitbucket.copy_url",
-			"bitbucket.pr_files_toggle_fold",
-			"bitbucket.pr_files_next_hunk",
-			"bitbucket.pr_files_previous_hunk",
+		issues = conflicts_for({
+			"issues.open_actions",
+			"issues.open_in_browser",
+			"issues.copy_url",
+			"issues.copy_key",
+			"issues.show_details",
+			"issues.search",
+			"issues.refresh",
+			"issues.refresh_view",
+			"issues.transition_issue",
+			"issues.change_assignee",
+			"issues.change_reporter",
+			"issues.edit_issue",
+			"issues.create_issue",
 		}, { "j", "k", "gg", "G" }),
 	}
 end

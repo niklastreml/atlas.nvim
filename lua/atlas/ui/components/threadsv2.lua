@@ -1,8 +1,8 @@
 --- Thanks to claude code. Seems to work for now..
 local M = {}
 
-local utils = require("atlas.utils")
-local highlights = require("atlas.ui.utils.highlights")
+local utils = require("atlas.ui.shared.utils")
+local highlights = require("atlas.ui.shared.highlights")
 
 -------------------------------------------------------------------------------
 -- Types
@@ -199,9 +199,21 @@ local function render_header(lines, spans, line_map, item, depth, pfx, opts, wid
 		col_markers[#col_markers + 1] = { author_start, cursor, author_hl_val }
 	end
 
-	-- Additional
+	local right_text = tostring(item.right_text or "")
+	local right_text_dw = right_text ~= "" and (2 + vim.api.nvim_strwidth(right_text)) or 0
+
 	local additional = tostring(item.additional or "")
 	if additional ~= "" then
+		local padding_x = tonumber(opts.padding_x) or 2
+		local used_dw = vim.api.nvim_strwidth(pfx.meta_prefix .. table.concat(parts, ""))
+		local available = width - padding_x - used_dw - 2 - right_text_dw
+		if available > 0 then
+			local add_dw = vim.api.nvim_strwidth(additional)
+			if add_dw > available then
+				additional = utils.truncate(additional, available)
+			end
+		end
+
 		parts[#parts + 1] = "  " .. additional
 		cursor = cursor + 2
 		local add_start = cursor
@@ -212,8 +224,6 @@ local function render_header(lines, spans, line_map, item, depth, pfx, opts, wid
 		end
 	end
 
-	-- Right text (timestamp, hash, etc.)
-	local right_text = tostring(item.right_text or "")
 	if right_text ~= "" then
 		if opts.right_text_align == "right" then
 			-- Right-align: fill space between current position and right edge,
@@ -300,7 +310,13 @@ local function render_content(lines, spans, line_map, item, depth, pfx, opts, wi
 			local segments = opts.content_hl(item, wrap_row, row_index)
 			if segments then
 				for _, seg in ipairs(segments) do
-					span(spans, #lines - 1, #pfx.body_prefix + seg.start_col, #pfx.body_prefix + seg.end_col, seg.hl_group)
+					span(
+						spans,
+						#lines - 1,
+						#pfx.body_prefix + seg.start_col,
+						#pfx.body_prefix + seg.end_col,
+						seg.hl_group
+					)
 				end
 			end
 		end

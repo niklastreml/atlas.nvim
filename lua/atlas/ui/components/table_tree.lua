@@ -1,42 +1,10 @@
 local M = {}
 
-local utils = require("atlas.utils")
+local utils = require("atlas.ui.shared.utils")
+local ui_utils = require("atlas.ui.utils")
 
-local function display_width(text)
-	return vim.fn.strdisplaywidth(text or "")
-end
-
-local function pad_right(text, width)
-	local w = display_width(text)
-	if w >= width then
-		return text
-	end
-	return text .. string.rep(" ", width - w)
-end
-
----@param text string
----@param width integer
----@param align string|nil
----@return string
-local function pad_aligned(text, width, align)
-	local w = display_width(text)
-	if w >= width then
-		return text
-	end
-
-	local pad = width - w
-	if align == "center" then
-		local left = math.floor(pad / 2)
-		local right = pad - left
-		return string.rep(" ", left) .. text .. string.rep(" ", right)
-	end
-
-	if align == "right" then
-		return string.rep(" ", pad) .. text
-	end
-
-	return pad_right(text, width)
-end
+local display_width = ui_utils.text_width
+local pad_aligned = ui_utils.pad_aligned
 
 local function truncate(text, width, from_start)
 	return utils.truncate(tostring(text or ""), width, from_start)

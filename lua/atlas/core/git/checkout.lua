@@ -149,7 +149,7 @@ function M.resolve_repo_path(repo_paths, repo_name, opts)
 	return resolved, nil
 end
 
----@param pr BitbucketPR|nil
+---@param pr PullRequest|nil
 ---@param opts {require_git: boolean|nil, require_existing: boolean|nil }
 ---@return string|nil repo_path
 ---@return string|nil err
@@ -158,18 +158,17 @@ function M.resolve_repo_path_for_pr(pr, opts)
 		return nil, "no PR selected"
 	end
 
-	local ws = tostring(pr.workspace or "")
-	local slug = tostring(pr.repo or "")
-	if ws == "" or slug == "" then
-		return nil, "missing PR destination repository fields"
+	local repo_id = tostring(pr.repo_full_name or "")
+	if repo_id == "" then
+		return nil, "missing PR repo_full_name"
 	end
 
-	local repo_name = string.format("%s/%s", ws, slug)
-	local mapping = (((config.options.bitbucket or {}).repo_config or {}).paths) or {}
-	return M.resolve_repo_path(mapping, repo_name, opts)
+	local pulls_cfg = (config.options.pulls or {})
+	local mapping = ((pulls_cfg.repo_config or {}).paths) or {}
+	return M.resolve_repo_path(mapping, repo_id, opts)
 end
 
----@param pr BitbucketPR
+---@param pr PullRequest
 ---@param repo_path string
 ---@param on_done fun(err: string|nil)
 function M.fetch_pr_branches(pr, repo_path, on_done)
@@ -189,12 +188,12 @@ function M.fetch_pr_branches(pr, repo_path, on_done)
 	end))
 end
 
----@class BitbucketCheckoutResult
+---@class CheckoutResult
 ---@field repo_path string
 ---@field local_branch string
 
----@param pr BitbucketPR|nil
----@param on_done fun(result: BitbucketCheckoutResult|nil, err: string|nil)
+---@param pr PullRequest|nil
+---@param on_done fun(result: CheckoutResult|nil, err: string|nil)
 function M.checkout_pr(pr, on_done)
 	on_done = on_done or function() end
 

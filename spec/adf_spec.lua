@@ -1,4 +1,4 @@
-local adf = require("atlas.jira.converted.adf")
+local adf = require("atlas.issues.providers.jira.converted.adf")
 
 describe("adf to markdown", function()
 	describe("text", function()

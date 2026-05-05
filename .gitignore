@@ -2,7 +2,6 @@
 *.swp
 *.swo
 *~
-.dwight
 
 # Lua
 luac.out
@@ -24,3 +23,4 @@ Thumbs.db
 
 # Local worktrees
 .worktrees/
+atlas.bak

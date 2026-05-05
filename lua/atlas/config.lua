@@ -1,187 +1,265 @@
---- Jira ---
----@class JiraViewConfig
+--------------------------------------------------------------------------------
+-- Keymaps
+--------------------------------------------------------------------------------
+
+---@alias AtlasKeymapValue string|string[]|false|nil
+
+---@alias AtlasPullsProviderId "bitbucket"|"github"|"mock"
+---@alias AtlasIssuesProviderId "jira"|"mock"
+
+--------------------------------------------------------------------------------
+-- Pulls Provider Config
+--------------------------------------------------------------------------------
+
+---@class AtlasPullsViewConfig
 ---@field name string
 ---@field key string|nil
----@field jql string
+---@field layout "compact"|"plain"|nil
 
----@class JiraCustomFieldConfig
+---@class AtlasIssuesViewConfig
 ---@field name string
----@field format fun(value: any): string|nil
----@field hl_group string|nil
----@field display "table"|"chip"|nil
+---@field key string|nil
 
---- @class JiraConfig
---- @field base_url string
---- @field email string
---- @field token string
---- @field cache_ttl number|nil
---- @field max_result number|nil
---- @field views JiraViewConfig[]|nil
---- @field resolve_parent_issues boolean|nil
---- @field project_config table<string, table<string, JiraCustomFieldConfig>>|nil
-
---- Bitbucket ---
----@class BitbucketRepoRef
----@field workspace string
----@field repo string
-
----@class BitbucketRepoSettings
----@field readme string|nil
-
----@class BitbucketRepoConfig
----@field settings table<string, BitbucketRepoSettings>|nil
+---@class AtlasPullsRepoConfig
+---@field settings table<string, AtlasPullsRepoSettings>|nil
 ---@field paths table<string, string>|nil
 
----@class BitbucketDiffConfig
+---@class AtlasPullsRepoSettings
+---@field readme string|nil
+
+---@class AtlasPullsDiffConfig
 ---@field open_cmd "DiffviewOpen"|"CodeDiff"|string|nil
 
----@class BitbucketViewConfig
----@field name string
----@field key string|nil
----@field repos BitbucketRepoRef[]|nil
----@field layout "compact"|"plain"|nil
----@field filter? fun(pr: BitbucketPR, ctx: table): boolean
-
----@class BitbucketCustomActionContext
+---@class AtlasPullsCustomActionContext
 ---@field repo_path string|nil
----@field pr BitbucketPR
+---@field pr PullRequest
+---@field user PullsUser|nil
 
----@class BitbucketCustomAction
+---@class AtlasPullsCustomAction
 ---@field id string
 ---@field label string
 ---@field confirmation boolean|nil
----@field run fun(pr: BitbucketPR, ctx: BitbucketCustomActionContext, done: fun(ok: boolean|nil, message: string|nil))
+---@field run fun(pr: PullRequest, ctx: AtlasPullsCustomActionContext, done: fun(ok: boolean|nil, message: string|nil))
 
---- @class BitbucketConfig
---- @field user string
---- @field token string
---- @field cache_ttl number|nil
---- @field views BitbucketViewConfig[]|nil
---- @field repo_config BitbucketRepoConfig|nil
---- @field diff BitbucketDiffConfig|nil
---- @field custom_actions BitbucketCustomAction[]|nil
+--------------------------------------------------------------------------------
+-- Configs
+--------------------------------------------------------------------------------
 
---- @class AtlasConfig
---- @field jira JiraConfig
---- @field bitbucket BitbucketConfig
---- @field keymaps? AtlasKeymapsConfig
+---@class AtlasPullsProviders
+---@field bitbucket AtlasBitbucketConfig|nil
+---@field github AtlasGitHubConfig|nil
 
----@class AtlasKeymapsConfig
----@field ui? AtlasUIKeymaps
----@field jira? AtlasJiraKeymaps
----@field bitbucket? AtlasBitbucketKeymaps
+---@class AtlasIssuesProviders
+---@field jira AtlasJiraIssuesConfig|nil
+
+---@class AtlasPullsConfig
+---@field repo_config AtlasPullsRepoConfig|nil
+---@field diff AtlasPullsDiffConfig|nil
+---@field custom_actions AtlasPullsCustomAction[]|nil
+---@field providers AtlasPullsProviders|nil
+
+---@class AtlasIssuesCustomActionContext
+---@field issue Issue|nil
+---@field user IssueUser|nil
+
+---@class AtlasIssuesCustomAction
+---@field id string
+---@field label string
+---@field confirmation boolean|nil
+---@field run fun(issue: Issue, ctx: AtlasIssuesCustomActionContext, done: fun(ok: boolean|nil, message: string|nil))
+
+---@class AtlasIssuesConfig
+---@field max_results number|nil
+---@field fetch_parent_issues boolean|nil
+---@field custom_actions AtlasIssuesCustomAction[]|nil
+---@field providers AtlasIssuesProviders|nil
+
+--------------------------------------------------------------------------------
+-- Config
+--------------------------------------------------------------------------------
+
+---@class AtlasConfig
+---@field pulls AtlasPullsConfig|nil
+---@field issues AtlasIssuesConfig|nil
+---@field keymaps AtlasKeymapsConfig|nil  -- see core/keymaps.lua for type
 
 local M = {}
 
 ---@type AtlasConfig
 M.options = {
-	jira = {
-		base_url = vim.env.JIRA_BASE_URL or "",
-		email = vim.env.JIRA_EMAIL or "",
-		token = vim.env.JIRA_TOKEN or "",
-		cache_ttl = 300,
-		max_result = 100,
-		resolve_parent_issues = false,
-		views = nil,
-		project_config = {},
-	},
-
-	bitbucket = {
-		user = vim.env.BITBUCKET_USER or "",
-		token = vim.env.BITBUCKET_TOKEN or "",
-		cache_ttl = 300,
-		views = nil,
-		diff = {},
-		repo_config = {
-			settings = {},
-			paths = {},
-		},
-		custom_actions = {},
-	},
-
+	pulls = nil,
+	issues = nil,
 	keymaps = {
 		ui = {
 			help = "g?",
 			close = "q",
 			toggle_panel = "p",
+			toggle_fold = "za",
+			toggle_all_folds = "zA",
 			previous_panel_tab = "<S-Tab>",
 			next_panel_tab = "<Tab>",
+		},
+		pulls = {
 			refresh = "r",
-		},
-		jira = {
-			open_actions = "A",
-			search = "?",
-			edit_issue = "ge",
-			transition_issue = "gs",
-			change_assignee = "ga",
-			open_in_browser = "gx",
-			create_issue = "c",
-			manage_templates = "gT",
-			refresh_issue = "r",
 			refresh_view = "R",
-			show_details = "K",
-			copy_key = "y",
+			open_actions = "A",
+			open_in_browser = "gx",
 			copy_url = "Y",
-			toggle_issue_children = "za",
-		},
-		bitbucket = {
-			open_actions = "A",
-			search = "?",
-			toggle_repo_panel = "o",
-			checkout_pr = "gc",
-			open_diffview = "gd",
-			open_in_browser = "gx",
-			refresh_pr = "r",
-			refresh_view = "R",
-			show_details = "K",
 			copy_id = "y",
-			copy_url = "Y",
-			pr_files_toggle_fold = "za",
+			open_diff = "gd",
+			checkout = "gc",
+			show_details = "K",
+			search = "?",
 			pr_files_next_hunk = "]h",
 			pr_files_previous_hunk = "[h",
+			filter_status_open = "gpo",
+			filter_status_merged = "gpm",
+			filter_status_declined = "gpd",
+		},
+		issues = {
+			open_actions = "A",
+			open_in_browser = "gx",
+			copy_url = "Y",
+			copy_key = "y",
+			show_details = "K",
+			search = "?",
+			refresh = "r",
+			refresh_view = "R",
+			transition_issue = "gs",
+			change_assignee = "ga",
+			change_reporter = "gr",
+			edit_issue = "ge",
+			create_issue = "c",
 		},
 	},
 }
 
+--------------------------------------------------------------------------------
+-- Legacy config migration
+--------------------------------------------------------------------------------
+
+---@param opts table
+---@return table
+local function migrate_legacy_config(opts)
+	local migrated = vim.deepcopy(opts)
+
+	local function warn(msg)
+		vim.schedule(function()
+			vim.notify("[Atlas] " .. msg, vim.log.levels.WARN)
+		end)
+	end
+
+	local legacy = false
+
+	if migrated.bitbucket and not migrated.pulls then
+		legacy = true
+		migrated.pulls = migrated.pulls or {}
+		migrated.pulls.providers = migrated.pulls.providers or {}
+		migrated.pulls.providers.bitbucket = migrated.bitbucket
+		migrated.bitbucket = nil
+	end
+
+	if migrated.jira and not migrated.issues then
+		legacy = true
+		migrated.issues = migrated.issues or {}
+		migrated.issues.providers = migrated.issues.providers or {}
+		migrated.issues.providers.jira = migrated.jira
+		migrated.jira = nil
+	end
+
+	if migrated.issues and migrated.issues.jira then
+		legacy = true
+		migrated.issues.providers = migrated.issues.providers or {}
+		if migrated.issues.providers.jira == nil then
+			migrated.issues.providers.jira = migrated.issues.jira
+		end
+		migrated.issues.jira = nil
+	end
+
+	if legacy then
+		warn("Legacy config detected. Please update your config - see the README for the new structure.")
+	end
+
+	return migrated
+end
+
+--------------------------------------------------------------------------------
+-- Commands
+--------------------------------------------------------------------------------
+
 local function register_commands()
-	pcall(vim.api.nvim_del_user_command, "AtlasJira", nil)
-	pcall(vim.api.nvim_del_user_command, "AtlasJqlSearch", nil)
-	pcall(vim.api.nvim_del_user_command, "AtlasBitbucket", nil)
-	pcall(vim.api.nvim_del_user_command, "AtlasLogs", nil)
-	pcall(vim.api.nvim_del_user_command, "AtlasClearCache", nil)
-
-	vim.api.nvim_create_user_command("AtlasJira", function()
-		require("atlas").open("jira")
-	end, { desc = "Open Jira issue picker" })
-
-	vim.api.nvim_create_user_command("AtlasJqlSearch", function(opts)
-		require("atlas.jira.completion.search").command(opts)
-	end, {
-		desc = "Search Jira with text or JQL",
-		nargs = "*",
-		complete = function(arglead, cmdline, cursorpos)
-			return require("atlas.jira.completion.search").complete(arglead, cmdline, cursorpos)
-		end,
-	})
-
-	vim.api.nvim_create_user_command("AtlasBitbucket", function()
-		require("atlas").open("bitbucket")
-	end, { desc = "Open Bitbucket picker" })
+	pcall(vim.api.nvim_del_user_command, "AtlasPulls")
+	pcall(vim.api.nvim_del_user_command, "AtlasIssues")
+	pcall(vim.api.nvim_del_user_command, "AtlasJqlSearch")
+	pcall(vim.api.nvim_del_user_command, "AtlasLogs")
+	pcall(vim.api.nvim_del_user_command, "AtlasClearCache")
 
 	vim.api.nvim_create_user_command("AtlasLogs", function()
 		require("atlas.ui.logs").toggle()
-	end, { desc = "Open Atlas logs" })
+	end, { desc = "Toggle Atlas log viewer" })
 
 	vim.api.nvim_create_user_command("AtlasClearCache", function()
 		require("atlas.core.cache").clear_all()
 		require("atlas.core.memory_cache").clear_all()
 		vim.notify("Atlas cache cleared", vim.log.levels.INFO)
 	end, { desc = "Clear Atlas disk and memory cache" })
+
+	local pulls_providers = { "bitbucket", "github", "mock" }
+	local issues_providers = { "jira", "mock" }
+
+	vim.api.nvim_create_user_command("AtlasPulls", function(opts)
+		local provider_id = opts.fargs[1] and opts.fargs[1]:lower() or nil
+		require("atlas").open("pulls", provider_id)
+	end, {
+		desc = "Open Atlas pulls",
+		nargs = "?",
+		complete = function(arglead)
+			return vim.tbl_filter(function(p)
+				return p:find(arglead, 1, true) == 1
+			end, pulls_providers)
+		end,
+	})
+
+	vim.api.nvim_create_user_command("AtlasIssues", function(opts)
+		local provider_id = opts.fargs[1] and opts.fargs[1]:lower() or nil
+		require("atlas").open("issues", provider_id)
+	end, {
+		desc = "Open Atlas issues",
+		nargs = "?",
+		complete = function(arglead)
+			return vim.tbl_filter(function(p)
+				return p:find(arglead, 1, true) == 1
+			end, issues_providers)
+		end,
+	})
+
+	if M.options.issues then
+		if M.options.issues.providers and M.options.issues.providers.jira then
+			vim.api.nvim_create_user_command("AtlasJqlSearch", function(cmd_opts)
+				require("atlas.issues.providers.jira.completion.search").command(cmd_opts)
+			end, {
+				desc = "Search Jira issues with JQL",
+				nargs = "*",
+				complete = function(arglead, cmdline, cursorpos)
+					return require("atlas.issues.providers.jira.completion.search").complete(
+						arglead,
+						cmdline,
+						cursorpos
+					)
+				end,
+			})
+		end
+	end
 end
 
----@param opts AtlasConfig|nil
+--------------------------------------------------------------------------------
+-- Setup
+--------------------------------------------------------------------------------
+
+---@param opts AtlasConfig|table|nil
 function M.setup(opts)
-	M.options = vim.tbl_deep_extend("force", M.options, opts or {})
+	local resolved = migrate_legacy_config(opts or {})
+	M.options = vim.tbl_deep_extend("force", M.options, resolved)
 	register_commands()
 end
 
