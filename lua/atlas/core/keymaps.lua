@@ -20,6 +20,10 @@ local M = {}
 ---@field checkout? AtlasKeymapValue
 ---@field show_details? AtlasKeymapValue
 ---@field search? AtlasKeymapValue
+---@field open_notifications? AtlasKeymapValue
+---@field notifications_mark_read? AtlasKeymapValue
+---@field notifications_mark_done? AtlasKeymapValue
+---@field notifications_refresh? AtlasKeymapValue
 ---@field pr_files_next_hunk? AtlasKeymapValue
 ---@field pr_files_previous_hunk? AtlasKeymapValue
 ---@field filter_status_open? AtlasKeymapValue
@@ -64,6 +68,10 @@ local M = {}
 ---| "pulls.checkout"
 ---| "pulls.show_details"
 ---| "pulls.search"
+---| "pulls.open_notifications"
+---| "pulls.notifications_mark_read"
+---| "pulls.notifications_mark_done"
+---| "pulls.notifications_refresh"
 ---| "pulls.pr_files_next_hunk"
 ---| "pulls.pr_files_previous_hunk"
 ---| "issues.refresh"
@@ -197,6 +205,7 @@ function M.validate()
 			"pulls.checkout",
 			"pulls.show_details",
 			"pulls.search",
+			"pulls.open_notifications",
 			"pulls.pr_files_next_hunk",
 			"pulls.pr_files_previous_hunk",
 			"pulls.filter_status_open",

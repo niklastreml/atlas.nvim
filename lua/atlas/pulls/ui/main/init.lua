@@ -52,6 +52,7 @@ function M.init(provider)
 	local keymaps = require("atlas.pulls.ui.main.keymaps")
 	if state.provider ~= provider then
 		state.current_user = nil
+		require("atlas.pulls.ui.notifications.state").reset()
 	end
 	state.provider = provider
 
@@ -121,6 +122,13 @@ function M.init(provider)
 	ui_state.current_view = provider and provider.id or "pulls"
 	M.render()
 	controller.switch_view(state.active_view)
+
+	if provider and provider.fetch_notifications then
+		local notifications_ui = require("atlas.pulls.ui.notifications")
+		notifications_ui.refresh_in_background({ force_load = false }, function()
+			M.render()
+		end)
+	end
 end
 
 return M

@@ -18,6 +18,9 @@ local ICONS = {
 		warning = "",
 		error = "",
 		info = "",
+		bell = "󰂚",
+		bell_unread = "󱅫",
+		dot = "●",
 	},
 
 	pulls = {
