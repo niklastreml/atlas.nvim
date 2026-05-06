@@ -95,6 +95,7 @@ use {
 
 > [!tip]
 > It's a good idea to run `:checkhealth atlas` to see if everything is set up correctly.
+> Not ready to connect yet? Run `:AtlasIssues mock` or `:AtlasPulls mock` to explore the UI with some mock data.
 
 ## Requirements
 
@@ -117,10 +118,11 @@ use {
 
 ## Issues
 
-> [!TIP]
-> Not ready to connect to Jira yet? Run `:AtlasIssues mock` to explore the UI with local mock data.
-
 ### Jira
+
+> [!NOTE]
+> If you're only looking for Jira support, check out https://github.com/letieu/jira.nvim. This plugin was the main inspiration for this project.  
+> Jira support is included here mainly because I wanted a single tool that works with both Atlassian products.
 
 - [x] Create and Edit issues
 - [x] View and edit issues as markdown -> ADF conversion for issue descriptions (experimental)
@@ -252,9 +254,6 @@ Examples:
 ```
 
 ## Pulls
-
-> [!TIP]
-> Not ready to connect? Run `:AtlasPulls mock` to explore the UI with local mock data.
 
 - [x] Multiple views
 - [x] PR tabs: overview, activity, comments, commits, files
