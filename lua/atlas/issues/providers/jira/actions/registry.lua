@@ -20,6 +20,12 @@ local function has_issue_key(ctx)
 	return key ~= ""
 end
 
+---@return string
+local function current_jql()
+	local view = issues_state.active_view or issues_state.current_view or {}
+	return tostring(view.jql or "")
+end
+
 ---@type table[]
 local ACTIONS = {
 	{
@@ -346,7 +352,7 @@ local ACTIONS = {
 			local issue_key = issue.key
 			local adf = require("atlas.issues.providers.jira.converted.adf")
 			local md_to_adf = require("atlas.issues.providers.jira.converted.markdown")
-			local issue_editor = require("atlas.issues.providers.jira.ui.issue")
+			local issue_editor = require("atlas.issues.create.jira.issue")
 
 			local function open_editor(initial_description)
 				issue_editor.open(function(fields, submit_done)
@@ -424,7 +430,7 @@ local ACTIONS = {
 		run = function(_, done)
 			local projects_api = require("atlas.issues.providers.jira.api.projects")
 			local md_to_adf = require("atlas.issues.providers.jira.converted.markdown")
-			local issue_editor = require("atlas.issues.providers.jira.ui.issue")
+			local issue_editor = require("atlas.issues.create.jira.issue")
 
 			local function run_create(project_key)
 				issue_editor.open(function(fields, submit_done)
@@ -650,88 +656,13 @@ local ACTIONS = {
 		end,
 	},
 	{
-		id = "create_template",
-		label = "Create Issue Template",
-		is_available = function()
-			return true, nil
-		end,
-		run = function(ctx, done)
-			local template_store = require("atlas.issues.providers.jira.templates")
-			local markdown_editor = require("atlas.ui.popups.markdown_editor")
-
-			local finalized = false
-			local function finish(result, err)
-				if finalized then
-					return
-				end
-				finalized = true
-				done(result, err)
-			end
-
-			markdown_editor.open({
-				key = string.format("template_new_%d", vim.loop.hrtime()),
-				title = " New Issue Template ",
-				initial_text = tostring(ctx and ctx.description or ""),
-				on_save = function(text)
-					local markdown = tostring(text or "")
-
-					vim.ui.input({ prompt = "Template name: " }, function(name_input)
-						if name_input == nil then
-							finish({ changed_issue_key = nil, message = nil }, nil)
-							return
-						end
-
-						local name = vim.trim(tostring(name_input))
-						if name == "" then
-							finish(nil, "Template name is required")
-							return
-						end
-
-						local ok, write_err, existed, normalized_name =
-							template_store.write(name, markdown, { overwrite = false })
-						if ok then
-							finish({ changed_issue_key = nil, message = string.format("Created template %s", tostring(normalized_name or name)) }, nil)
-							return
-						end
-
-						if existed then
-							vim.ui.input({
-								prompt = string.format('Template "%s" exists. Overwrite? [y/N]: ', tostring(normalized_name or name)),
-							}, function(confirm)
-								if confirm == nil or vim.trim(tostring(confirm)):lower() ~= "y" then
-									finish({ changed_issue_key = nil, message = nil }, nil)
-									return
-								end
-
-								local overwrite_ok, overwrite_err, _, final_name =
-									template_store.write(name, markdown, { overwrite = true })
-								if not overwrite_ok then
-									finish(nil, overwrite_err or "Failed to overwrite template")
-									return
-								end
-
-								finish({ changed_issue_key = nil, message = string.format("Updated template %s", tostring(final_name or normalized_name or name)) }, nil)
-							end)
-							return
-						end
-
-						finish(nil, write_err or "Failed to create template")
-					end)
-				end,
-				on_cancel = function()
-					finish({ changed_issue_key = nil, message = nil }, nil)
-				end,
-			})
-		end,
-	},
-	{
 		id = "manage_templates",
 		label = "Manage Issue Templates",
 		is_available = function()
 			return true, nil
 		end,
 		run = function(ctx, done)
-			local template_store = require("atlas.issues.providers.jira.templates")
+			local template_store = require("atlas.issues.templates")
 			local markdown_editor = require("atlas.ui.popups.markdown_editor")
 
 			local options = {
@@ -752,8 +683,68 @@ local ACTIONS = {
 				end
 
 				if choice.id == "create" then
-					local jira_actions = require("atlas.issues.providers.jira.actions")
-					jira_actions.run("create_template", { issue = nil, source = nil, description = ctx and ctx.description or nil }, done)
+					local finalized = false
+					local function finish(result, err)
+						if finalized then
+							return
+						end
+						finalized = true
+						done(result, err)
+					end
+
+					markdown_editor.open({
+						key = string.format("template_new_%d", vim.loop.hrtime()),
+						title = " New Issue Template ",
+						initial_text = tostring(ctx and ctx.description or ""),
+						on_save = function(text)
+							local markdown = tostring(text or "")
+							vim.ui.input({ prompt = "Template name: " }, function(name_input)
+								if name_input == nil then
+									finish({ changed_issue_key = nil, message = nil }, nil)
+									return
+								end
+
+								local name = vim.trim(tostring(name_input))
+								if name == "" then
+									finish(nil, "Template name is required")
+									return
+								end
+
+								local ok, write_err, existed, normalized_name =
+									template_store.write(name, markdown, { overwrite = false })
+								if ok then
+									finish({ changed_issue_key = nil, message = string.format("Created template %s", tostring(normalized_name or name)) }, nil)
+									return
+								end
+
+								if existed then
+									vim.ui.input({
+										prompt = string.format('Template "%s" exists. Overwrite? [y/N]: ', tostring(normalized_name or name)),
+									}, function(confirm)
+										if confirm == nil or vim.trim(tostring(confirm)):lower() ~= "y" then
+											finish({ changed_issue_key = nil, message = nil }, nil)
+											return
+										end
+
+										local overwrite_ok, overwrite_err, _, final_name =
+											template_store.write(name, markdown, { overwrite = true })
+										if not overwrite_ok then
+											finish(nil, overwrite_err or "Failed to overwrite template")
+											return
+										end
+
+										finish({ changed_issue_key = nil, message = string.format("Updated template %s", tostring(final_name or normalized_name or name)) }, nil)
+									end)
+									return
+								end
+
+								finish(nil, write_err or "Failed to create template")
+							end)
+						end,
+						on_cancel = function()
+							finish({ changed_issue_key = nil, message = nil }, nil)
+						end,
+					})
 					return
 				end
 
@@ -854,8 +845,8 @@ local ACTIONS = {
 			return true, nil
 		end,
 		run = function(_, done)
-			require("atlas.issues.providers.jira.completion.search").open_cmdline()
-			done({ changed_issue_key = nil, message = "Type query and press Enter" }, nil)
+			require("atlas.issues.providers.jira.completion.search").open(current_jql())
+			done({ changed_issue_key = nil, message = "Searching..." }, nil)
 		end,
 	},
 	{

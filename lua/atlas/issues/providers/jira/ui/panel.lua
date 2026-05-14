@@ -3,10 +3,11 @@ local M = {}
 
 local icons = require("atlas.ui.shared.icons")
 local utils = require("atlas.ui.shared.utils")
+local helper = require("atlas.issues.ui.main.helper")
 
 local overview_state = require("atlas.issues.ui.panel.issue.tabs.overview.state")
 local comments_state = require("atlas.issues.ui.panel.issue.tabs.comments.state")
-local history_state = require("atlas.issues.ui.panel.issue.tabs.history.state")
+local history_state = require("atlas.issues.ui.panel.issue.tabs.activity.state")
 
 --------------------------------------------------------------------------------
 -- Header rows
@@ -15,7 +16,38 @@ local history_state = require("atlas.issues.ui.panel.issue.tabs.history.state")
 ---@param issue Issue
 ---@return IssuesPanelHeaderRow[]
 function M.header_rows(issue)
-	local rows = {}
+	local user_icon = icons.general("user")
+	local priority = tostring(issue.priority or "-")
+	local priority_icon = icons.issues_priority(priority)
+	local priority_text = priority_icon ~= "" and string.format("%s %s", priority_icon, priority) or priority
+	local assignee_name = type(issue.assignee) == "table" and tostring(issue.assignee.display_name or "") or ""
+	local reporter_name = type(issue.reporter) == "table" and tostring(issue.reporter.display_name or "") or ""
+
+	if assignee_name == "" then
+		assignee_name = "Unassigned"
+	end
+	if reporter_name == "" then
+		reporter_name = "Unknown"
+	end
+
+	local rows = {
+		{
+			k1 = "Status:",
+			v1 = tostring(issue.status or "Unknown"),
+			v1_hl = helper.status_hl(issue.status_id),
+			k2 = "Priority:",
+			v2 = priority_text,
+			v2_hl = helper.priority_hl(issue.priority),
+		},
+		{
+			k1 = "Assignee:",
+			v1 = assignee_name,
+			v1_hl = helper.person_hl(assignee_name),
+			k2 = "Reporter:",
+			v2 = string.format("%s %s", user_icon, reporter_name),
+			v2_hl = helper.person_hl(reporter_name),
+		},
+	}
 
 	local project_key = issue.project and issue.project.key or nil
 	if project_key then
@@ -193,10 +225,6 @@ function M.is_loading(issue)
 end
 
 --------------------------------------------------------------------------------
--- Tabs
---------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
 -- History rendering
 --------------------------------------------------------------------------------
 
@@ -234,9 +262,7 @@ function M.format_history_item(item)
 	local has_from = from ~= nil and vim.trim(from) ~= ""
 	local has_to = to ~= nil and vim.trim(to) ~= ""
 
-	local action = (has_from and not has_to) and "deleted"
-		or (not has_from and has_to) and "added"
-		or "updated"
+	local action = (has_from and not has_to) and "deleted" or (not has_from and has_to) and "added" or "updated"
 	local label = string.format("%s %s", action, FIELD_LABELS[field] or field)
 
 	local content
@@ -245,8 +271,12 @@ function M.format_history_item(item)
 	elseif field == "description" then
 		local f = has_from and vim.trim(from:gsub("%s+", " ")) or ""
 		local t = has_to and vim.trim(to:gsub("%s+", " ")) or ""
-		if #f > 200 then f = f:sub(1, 197) .. "..." end
-		if #t > 200 then t = t:sub(1, 197) .. "..." end
+		if #f > 200 then
+			f = f:sub(1, 197) .. "..."
+		end
+		if #t > 200 then
+			t = t:sub(1, 197) .. "..."
+		end
 		content = (f ~= "" and t ~= "") and string.format("%s\n\n↓\n\n%s", f, t)
 			or (f ~= "" and f or (t ~= "" and t or nil))
 	elseif field == "assignee" then
@@ -277,7 +307,6 @@ end
 ---@param row_index integer
 ---@return table[]|nil
 function M.history_item_hl(item, row, row_index)
-	local helper = require("atlas.issues.ui.main.helper")
 	local field = item.field or ""
 
 	if field == "description" then
@@ -288,10 +317,13 @@ function M.history_item_hl(item, row, row_index)
 		return nil
 	end
 
-	local arrow_fields = { assignee = true, priority = true, issuetype = true, status = true, IssueParentAssociation = true }
+	local arrow_fields =
+		{ assignee = true, priority = true, issuetype = true, status = true, IssueParentAssociation = true }
 	if arrow_fields[field] then
 		local s, e = row:find(" -> ", 1, true)
-		if not s then return nil end
+		if not s then
+			return nil
+		end
 		if field == "assignee" then
 			return {
 				{ start_col = 0, end_col = s - 1, hl_group = helper.person_hl(item.from_string or item.from) },
@@ -341,10 +373,10 @@ function M.tabs()
 			mod = require("atlas.issues.ui.panel.issue.tabs.comments"),
 		},
 		{
-			key = "history",
+			key = "activity",
 			label = "History",
 			icon = icons.pulls("activity"),
-			mod = require("atlas.issues.ui.panel.issue.tabs.history"),
+			mod = require("atlas.issues.ui.panel.issue.tabs.activity"),
 		},
 	}
 end

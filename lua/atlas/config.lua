@@ -4,8 +4,8 @@
 
 ---@alias AtlasKeymapValue string|string[]|false|nil
 
----@alias AtlasPullsProviderId "bitbucket"|"github"|"mock"
----@alias AtlasIssuesProviderId "jira"|"mock"
+---@alias AtlasPullsProviderId "bitbucket"|"github"
+---@alias AtlasIssuesProviderId "jira"|"github"
 
 --------------------------------------------------------------------------------
 -- Pulls Provider Config
@@ -19,6 +19,7 @@
 ---@class AtlasIssuesViewConfig
 ---@field name string
 ---@field key string|nil
+---@field layout "plain"|"compact"|nil
 
 ---@class AtlasPullsRepoConfig
 ---@field settings table<string, AtlasPullsRepoSettings>|nil
@@ -26,6 +27,7 @@
 
 ---@class AtlasPullsRepoSettings
 ---@field readme string|nil
+---@field pr_template string|nil
 
 ---@class AtlasPullsDiffConfig
 ---@field open_cmd "DiffviewOpen"|"CodeDiff"|string|nil
@@ -51,6 +53,7 @@
 
 ---@class AtlasIssuesProviders
 ---@field jira AtlasJiraIssuesConfig|nil
+---@field github AtlasGitHubIssuesConfig|nil
 
 ---@class AtlasPullsConfig
 ---@field repo_config AtlasPullsRepoConfig|nil
@@ -70,7 +73,7 @@
 
 ---@class AtlasIssuesConfig
 ---@field max_results number|nil
----@field fetch_parent_issues boolean|nil
+---@field with_relationships boolean|nil
 ---@field custom_actions AtlasIssuesCustomAction[]|nil
 ---@field providers AtlasIssuesProviders|nil
 
@@ -98,37 +101,31 @@ M.options = {
 			toggle_all_folds = "zA",
 			previous_panel_tab = "<S-Tab>",
 			next_panel_tab = "<Tab>",
-		},
-		pulls = {
+			open_notifications = "N",
+			notifications_mark_read = "r",
+			notifications_mark_done = "d",
+			notifications_refresh = "R",
+			toggle_subscription = "gS",
 			refresh = "r",
 			refresh_view = "R",
 			open_actions = "A",
 			open_in_browser = "gx",
 			copy_url = "Y",
+			show_details = "K",
+			search = "?",
+		},
+		pulls = {
 			copy_id = "y",
 			open_diff = "gd",
 			checkout = "gc",
-			show_details = "K",
-			search = "?",
-			open_notifications = "N",
-			notifications_mark_read = "r",
-			notifications_mark_done = "d",
-			notifications_refresh = "R",
-			pr_files_next_hunk = "]h",
-			pr_files_previous_hunk = "[h",
+			next_hunk = "]h",
+			previous_hunk = "[h",
 			filter_status_open = "gpo",
 			filter_status_merged = "gpm",
 			filter_status_declined = "gpd",
 		},
 		issues = {
-			open_actions = "A",
-			open_in_browser = "gx",
-			copy_url = "Y",
 			copy_key = "y",
-			show_details = "K",
-			search = "?",
-			refresh = "r",
-			refresh_view = "R",
 			transition_issue = "gs",
 			change_assignee = "ga",
 			change_reporter = "gr",
@@ -139,64 +136,17 @@ M.options = {
 }
 
 --------------------------------------------------------------------------------
--- Legacy config migration
---------------------------------------------------------------------------------
-
----@param opts table
----@return table
-local function migrate_legacy_config(opts)
-	local migrated = vim.deepcopy(opts)
-
-	local function warn(msg)
-		vim.schedule(function()
-			vim.notify("[Atlas] " .. msg, vim.log.levels.WARN)
-		end)
-	end
-
-	local legacy = false
-
-	if migrated.bitbucket and not migrated.pulls then
-		legacy = true
-		migrated.pulls = migrated.pulls or {}
-		migrated.pulls.providers = migrated.pulls.providers or {}
-		migrated.pulls.providers.bitbucket = migrated.bitbucket
-		migrated.bitbucket = nil
-	end
-
-	if migrated.jira and not migrated.issues then
-		legacy = true
-		migrated.issues = migrated.issues or {}
-		migrated.issues.providers = migrated.issues.providers or {}
-		migrated.issues.providers.jira = migrated.jira
-		migrated.jira = nil
-	end
-
-	if migrated.issues and migrated.issues.jira then
-		legacy = true
-		migrated.issues.providers = migrated.issues.providers or {}
-		if migrated.issues.providers.jira == nil then
-			migrated.issues.providers.jira = migrated.issues.jira
-		end
-		migrated.issues.jira = nil
-	end
-
-	if legacy then
-		warn("Legacy config detected. Please update your config - see the README for the new structure.")
-	end
-
-	return migrated
-end
-
---------------------------------------------------------------------------------
 -- Commands
 --------------------------------------------------------------------------------
 
 local function register_commands()
 	pcall(vim.api.nvim_del_user_command, "AtlasPulls")
 	pcall(vim.api.nvim_del_user_command, "AtlasIssues")
-	pcall(vim.api.nvim_del_user_command, "AtlasJqlSearch")
+	pcall(vim.api.nvim_del_user_command, "AtlasSearch")
 	pcall(vim.api.nvim_del_user_command, "AtlasLogs")
 	pcall(vim.api.nvim_del_user_command, "AtlasClearCache")
+	pcall(vim.api.nvim_del_user_command, "AtlasCreatePR")
+	pcall(vim.api.nvim_del_user_command, "AtlasCreateIssue")
 
 	vim.api.nvim_create_user_command("AtlasLogs", function()
 		require("atlas.ui.logs").toggle()
@@ -208,8 +158,8 @@ local function register_commands()
 		vim.notify("Atlas cache cleared", vim.log.levels.INFO)
 	end, { desc = "Clear Atlas disk and memory cache" })
 
-	local pulls_providers = { "bitbucket", "github", "mock" }
-	local issues_providers = { "jira", "mock" }
+	local pulls_providers = { "bitbucket", "github" }
+	local issues_providers = { "jira", "github" }
 
 	vim.api.nvim_create_user_command("AtlasPulls", function(opts)
 		local provider_id = opts.fargs[1] and opts.fargs[1]:lower() or nil
@@ -237,23 +187,24 @@ local function register_commands()
 		end,
 	})
 
-	if M.options.issues then
-		if M.options.issues.providers and M.options.issues.providers.jira then
-			vim.api.nvim_create_user_command("AtlasJqlSearch", function(cmd_opts)
-				require("atlas.issues.providers.jira.completion.search").command(cmd_opts)
-			end, {
-				desc = "Search Jira issues with JQL",
-				nargs = "*",
-				complete = function(arglead, cmdline, cursorpos)
-					return require("atlas.issues.providers.jira.completion.search").complete(
-						arglead,
-						cmdline,
-						cursorpos
-					)
-				end,
-			})
-		end
-	end
+	vim.api.nvim_create_user_command("AtlasCreatePR", function()
+		require("atlas.pulls.create.pr").start()
+	end, { desc = "Create a pull request from the current branch" })
+
+	vim.api.nvim_create_user_command("AtlasCreateIssue", function()
+		require("atlas.issues.create").start()
+	end, { desc = "Create an issue" })
+
+	vim.api.nvim_create_user_command("AtlasSearch", function(opts)
+		local provider_id = opts.fargs[1] and opts.fargs[1]:lower() or nil
+		require("atlas.search").run(provider_id)
+	end, {
+		desc = "Search across Atlas providers",
+		nargs = "?",
+		complete = function(arglead)
+			return require("atlas.search").complete(arglead)
+		end,
+	})
 end
 
 --------------------------------------------------------------------------------
@@ -262,7 +213,7 @@ end
 
 ---@param opts AtlasConfig|table|nil
 function M.setup(opts)
-	local resolved = migrate_legacy_config(opts or {})
+	local resolved = opts or {}
 	M.options = vim.tbl_deep_extend("force", M.options, resolved)
 	register_commands()
 end
