@@ -26,16 +26,19 @@ local ICONS = {
 		dot = "●",
 		activity_more = "󰉺",
 		star = "",
-		fork = "",
 		watching = "",
+		arrow_up = "",
+		arrow_right = "",
 	},
 
 	pulls = {
+		fork = "",
 		repo = "",
 		pr = "",
 		merged_pr = "",
 		declined_pr = "",
 		tasks = "󰘽",
+		pipeline = "󰜎",
 		check = "",
 		commit = "󰜘",
 		changes = "󱓉",
@@ -43,6 +46,7 @@ local ICONS = {
 		activity = "󱐋",
 		tag = "",
 		branch = "",
+		review = "",
 
 		status = {
 			successful = "",
@@ -58,6 +62,9 @@ local ICONS = {
 			},
 			github = {
 				provider = "",
+			},
+			gitlab = {
+				provider = "",
 			},
 		},
 	},
@@ -84,6 +91,9 @@ local ICONS = {
 		providers = {
 			jira = {
 				provider = "󰌃",
+			},
+			gitlab = {
+				provider = "",
 			},
 		},
 	},

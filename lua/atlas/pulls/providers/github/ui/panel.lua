@@ -149,15 +149,20 @@ function M.chips(pr)
 		table.insert(chips, { label = hash, hl = "AtlasTabInactive" })
 	end
 
-	local extras = state.header_extras or {}
-	local labels = type(extras.labels) == "table" and extras.labels or {}
-	local label_nodes = type(labels.nodes) == "table" and labels.nodes or {}
-	for _, lbl in ipairs(label_nodes) do
-		local name = tostring(lbl.name or "")
-		if name ~= "" then
-			local color = tostring(lbl.color or "")
-			local hl = color ~= "" and label_hl(color) or "AtlasTabInactive"
-			table.insert(chips, { label = name, hl = hl })
+	if state.header_loading and state.header_extras == nil then
+		local spinner = require("atlas.ui.components.spinner")
+		table.insert(chips, { label = spinner.with_text("Loading labels"), hl = "AtlasTextMuted" })
+	else
+		local extras = state.header_extras or {}
+		local labels = type(extras.labels) == "table" and extras.labels or {}
+		local label_nodes = type(labels.nodes) == "table" and labels.nodes or {}
+		for _, lbl in ipairs(label_nodes) do
+			local name = tostring(lbl.name or "")
+			if name ~= "" then
+				local color = tostring(lbl.color or "")
+				local hl = color ~= "" and label_hl(color) or "AtlasTabInactive"
+				table.insert(chips, { label = name, hl = hl })
+			end
 		end
 	end
 
@@ -256,9 +261,8 @@ end
 ---@return boolean
 function M.is_loading(pr, active_tab) ---@diagnostic disable-line: unused-local
 	local overview_state = require("atlas.pulls.ui.panel.pr.tabs.overview.state")
-	local activity_state = require("atlas.pulls.ui.panel.pr.tabs.activity.state")
-	local conversation_state = require("atlas.pulls.providers.github.ui.conversation.state")
-	local comments_state = require("atlas.pulls.ui.panel.pr.tabs.comments.state")
+	local conversation_state = require("atlas.pulls.ui.panel.pr.tabs.conversation.state")
+	local comments_state = require("atlas.pulls.ui.panel.pr.tabs.review.state")
 	local commits_state = require("atlas.pulls.ui.panel.pr.tabs.commits.state")
 	local files_state = require("atlas.pulls.ui.panel.pr.tabs.files.state")
 	if state.header_loading then
@@ -266,11 +270,9 @@ function M.is_loading(pr, active_tab) ---@diagnostic disable-line: unused-local
 	end
 	if active_tab == "overview" then
 		return overview_state.any_loading()
-	elseif active_tab == "activity" then
-		return activity_state.any_loading()
 	elseif active_tab == "conversation" then
 		return conversation_state.any_loading()
-	elseif active_tab == "comments" then
+	elseif active_tab == "review" then
 		return comments_state.any_loading()
 	elseif active_tab == "commits" then
 		return commits_state.any_loading()
@@ -298,19 +300,13 @@ function M.tabs()
 			key = "conversation",
 			label = "Conversation",
 			icon = icons.general("conversation"),
-			mod = require("atlas.pulls.providers.github.ui.conversation"),
+			mod = require("atlas.pulls.ui.panel.pr.tabs.conversation"),
 		},
 		{
-			key = "comments",
-			label = "Comments",
-			icon = icons.general("comment"),
-			mod = require("atlas.pulls.ui.panel.pr.tabs.comments"),
-		},
-		{
-			key = "activity",
-			label = "Activity",
-			icon = icons.pulls("activity"),
-			mod = require("atlas.pulls.ui.panel.pr.tabs.activity"),
+			key = "review",
+			label = "Review",
+			icon = icons.pulls("review"),
+			mod = require("atlas.pulls.ui.panel.pr.tabs.review"),
 		},
 		{
 			key = "commits",

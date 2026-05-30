@@ -1,6 +1,6 @@
 local M = {}
 
-local editor = require("atlas.ui.popups.editor")
+local form = require("atlas.ui.popups.form")
 local git_branch = require("atlas.core.git")
 local config = require("atlas.config")
 local spinner = require("atlas.ui.popups.spinner")
@@ -116,7 +116,7 @@ local function build_pr_content(root, repo_slug, base, head)
 	return title, table.concat(commit_lines, "\n"), #commits
 end
 
----@param provider_id "github"|"bitbucket"
+---@param provider_id "github"|"bitbucket"|"gitlab"
 ---@return PullsProvider|nil, string|nil
 local function load_provider(provider_id)
 	local ok, mod
@@ -124,6 +124,8 @@ local function load_provider(provider_id)
 		ok, mod = pcall(require, "atlas.pulls.providers.github")
 	elseif provider_id == "bitbucket" then
 		ok, mod = pcall(require, "atlas.pulls.providers.bitbucket")
+	elseif provider_id == "gitlab" then
+		ok, mod = pcall(require, "atlas.pulls.providers.gitlab")
 	else
 		return nil, "Unsupported provider: " .. tostring(provider_id)
 	end
@@ -226,13 +228,13 @@ end
 
 ---@param pr_state CreatePRState
 local function render_meta(pr_state)
-	editor.render_meta(pr_state, meta_rows(pr_state))
+	form.render_meta(pr_state, meta_rows(pr_state))
 end
 
 ---@param pr_state CreatePRState
 local function close(pr_state)
 	spinner.stop()
-	editor.close(pr_state.layout)
+	form.close(pr_state.layout)
 end
 
 ---@param pr_state CreatePRState
@@ -507,7 +509,7 @@ function M.open(opts)
 		is_submitting = false,
 	}
 
-	editor.open(pr_state, {
+	form.open(pr_state, {
 		title = " Create Pull Request ",
 		min_height = 20,
 		meta_height = 3,

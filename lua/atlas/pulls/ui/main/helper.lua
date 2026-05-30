@@ -68,10 +68,10 @@ function M.repo_hl(repo)
 	return highlights.dynamic_for(lower) or "AtlasTextMuted"
 end
 
----@param state string|nil
+---@param pr_state string|nil
 ---@return string
-function M.pr_state_hl(state)
-	local lower = tostring(state or ""):lower()
+function M.pr_state_hl(pr_state)
+	local lower = tostring(pr_state or ""):lower()
 	if lower == "open" then
 		return "AtlasPROpenChip"
 	end
@@ -96,7 +96,6 @@ function M.status_badge_hl(state_str)
 	end
 	return highlights.dynamic_for_bg("pr-state:" .. lower) or "AtlasTextMuted"
 end
-
 
 ---@param view AtlasPullsViewConfig|nil
 ---@return string
@@ -143,7 +142,8 @@ function M.cell_hl(row, col, ctx)
 	end
 	if col.key == "pr_icon" then
 		local is_reloading = row.kind == "pr" and row._pr_reloading == true
-		local hl_group = is_reloading and "AtlasTextMuted" or (row.kind == "pr" and (row._pr_icon_hl or "AtlasPROpen") or "AtlasTextMuted")
+		local hl_group = is_reloading and "AtlasTextMuted"
+			or (row.kind == "pr" and (row._pr_icon_hl or "AtlasPROpen") or "AtlasTextMuted")
 		return { { start_col = 0, end_col = #ctx.padded, hl_group = hl_group } }
 	end
 	if col.key == "branch" then
@@ -196,9 +196,9 @@ function M.build_footer_items(groups, current_user)
 			hl_group = "AtlasFooterText",
 		})
 	end
-	for _, name in ipairs(repo_names) do
+	if #repo_names > 0 then
 		table.insert(items, {
-			text = string.format("%s %s", REPO_ICON, name),
+			text = string.format("%s %s", REPO_ICON, table.concat(repo_names, ", ")),
 			hl_group = "AtlasFooterText",
 		})
 	end
@@ -254,7 +254,9 @@ function M.build_compact_table(groups)
 			local dst = (pr.destination and pr.destination.branch) or ""
 			local is_reloading = state.is_pr_reloading(pr.repo_full_name, pr.id)
 			local state_str = tostring(pr.state or "")
-			local state_label = state_str ~= "" and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ") or ""
+			local state_label = state_str ~= ""
+					and (" " .. state_str:sub(1, 1):upper() .. state_str:sub(2):lower() .. " ")
+				or ""
 			local author_display = utils.shorten_name(author_name, 20)
 			local icon, icon_hl = pr_icon_and_hl(pr)
 			table.insert(rows, {
@@ -345,7 +347,19 @@ function M.build_plain_tree_table(groups)
 	for i, group in ipairs(groups or {}) do
 		local repo_label = group.repo.name or ""
 		if i > 1 then
-			table.insert(rows, { kind = "spacer", pr_icon = "", name = "", conversation = "", tasks = "", status = "", status_raw = "", author = "", branch = "", created = "", updated = "" })
+			table.insert(rows, {
+				kind = "spacer",
+				pr_icon = "",
+				name = "",
+				conversation = "",
+				tasks = "",
+				status = "",
+				status_raw = "",
+				author = "",
+				branch = "",
+				created = "",
+				updated = "",
+			})
 		end
 		table.insert(rows, {
 			kind = "repo",
@@ -400,62 +414,26 @@ function M.build_plain_tree_table(groups)
 	}
 end
 
+local POPUP_MODULES = {
+	github = "atlas.pulls.providers.github.ui.popup",
+	gitlab = "atlas.pulls.providers.gitlab.ui.popup",
+	bitbucket = "atlas.pulls.providers.bitbucket.ui.popup",
+}
+
 ---@param pr PullRequest
 ---@return string[], table[]
-local function generic_pr_popup_content(pr)
-	local id = tostring(pr.id or "")
-	local title = tostring(pr.title or "")
-	local author_name = tostring((pr.author and pr.author.name) or "Unknown")
-	local repo_name = tostring(pr.repo_full_name or "")
-
-	local lines = {
-		string.format(" #%s: %s", id, title),
-		"",
-		string.format(" State:    %s", tostring(pr.state or "-")),
-		string.format(" Author:   %s", author_name),
-		string.format(" Repo:     %s", repo_name ~= "" and repo_name or "-"),
-		string.format(
-			" Branch:   %s -> %s",
-			tostring((pr.source or {}).branch or "?"),
-			tostring((pr.destination or {}).branch or "?")
-		),
-		string.format(" Comments: %s", tostring(pr.comments_count or 0)),
-		string.format(" Tasks:    %s", tostring(pr.tasks_count or 0)),
-		string.format(" Updated:  %s", utils.relative_time(pr.updated_on)),
-	}
-
-	local content_width = 1
-	for _, line in ipairs(lines) do
-		content_width = math.max(content_width, vim.fn.strdisplaywidth(line))
+function M.pr_popup_content(pr)
+	local provider_id = state.provider and state.provider.id or nil
+	local mod_path = provider_id and POPUP_MODULES[provider_id] or POPUP_MODULES.bitbucket
+	local ok, mod = pcall(require, mod_path)
+	if not ok or type(mod) ~= "table" or type(mod.content) ~= "function" then
+		local fallback_ok, fallback = pcall(require, POPUP_MODULES.bitbucket)
+		if fallback_ok and type(fallback) == "table" and type(fallback.content) == "function" then
+			return fallback.content(pr)
+		end
+		return { "" }, {}
 	end
-	lines[2] = " " .. ("━"):rep(content_width)
-
-	local hl = {
-		{ row = 1, col = 0, end_col = -1, hl_group = "AtlasTextMuted" },
-		{ row = 2, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
-		{ row = 2, col = 11, end_col = -1, hl_group = M.pr_state_hl(pr.state) },
-		{ row = 3, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
-		{ row = 3, col = 11, end_col = -1, hl_group = M.author_hl(author_name) },
-		{ row = 4, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
-		{ row = 4, col = 11, end_col = -1, hl_group = M.repo_hl(repo_name) },
-		{ row = 5, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
-		{ row = 5, col = 11, end_col = -1, hl_group = "AtlasTextMuted" },
-		{ row = 6, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
-		{ row = 7, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
-		{ row = 8, col = 1, end_col = 10, hl_group = "AtlasTextMuted" },
-		{ row = 8, col = 11, end_col = -1, hl_group = "AtlasTextMuted" },
-	}
-
-	if id ~= "" then
-		table.insert(hl, {
-			row = 0,
-			col = 2,
-			end_col = 2 + #id,
-			hl_group = "AtlasTextMuted",
-		})
-	end
-
-	return lines, hl
+	return mod.content(pr)
 end
 
 ---@param pr PullRequest

@@ -157,18 +157,22 @@
 --------------------------------------------------------------------------------
 
 ---@class PullsActivityEntry
----@field kind "approval"|"changes_requested"|"comment"|"update"|"review"|string
+---@field kind string
 ---@field actor PullsAuthor|nil
 ---@field date string
----@field content_raw string|nil
+---@field label string|nil
+---@field body string|nil
 ---@field deleted boolean|nil
----@field changes table|nil
----@field source_branch string|nil
----@field target_branch string|nil
+---@field always_render boolean|nil
 
 --------------------------------------------------------------------------------
 -- Comment
 --------------------------------------------------------------------------------
+
+---@class PullsReactionOption
+---@field key string         -- API key
+---@field emoji string       -- display glyph
+---@field label string|nil   -- optional label
 
 ---@class PullsComment
 ---@field id number|string
@@ -180,6 +184,8 @@
 ---@field inline_hunk DiffHunk|nil                       -- surrounding diff context for inline comments
 ---@field is_task boolean|nil                            -- true = render as task (checkbox)
 ---@field state "RESOLVED"|"DELETED"|"OUTDATED"|nil      -- nil = active/open
+---@field deleted boolean|nil
+---@field reactions table<string, integer>|nil
 ---@field url string|nil
 ---@field html_url string|nil
 ---@field _raw any|nil
