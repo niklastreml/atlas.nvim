@@ -181,6 +181,8 @@ issues = {
       email = "you@example.com",
       --- See: https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/
       token = "your_jira_api_token",
+      auth_method = "basic", -- "basic" or "bearer", defaults to "basic". If using bearer, set `token` to your API token.
+      api_type = "cloud", -- either "cloud" or "server", defaults to "cloud". Cloud API is v3, server API is v2
       cache_ttl = 300,
 
       project_config = {
@@ -221,6 +223,7 @@ issues = {
   },
 },
 ```
+
 <img alt="Edit/Create Issue" src="https://github.com/user-attachments/assets/76913fbf-1667-4f35-9962-d3c1b4619c7f">
 
 </details>
